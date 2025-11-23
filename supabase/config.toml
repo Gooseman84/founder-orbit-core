@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.generate-master-prompt]
 verify_jwt = true
+
+[functions.generate-micro-tasks]
+verify_jwt = true
