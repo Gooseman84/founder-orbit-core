@@ -1,12 +1,15 @@
 import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   LayoutDashboard, 
   Lightbulb, 
   Target, 
   Rss, 
   CheckSquare, 
-  User 
+  User,
+  LogOut
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -18,6 +21,8 @@ const navigation = [
 ];
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
+  const { signOut } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top Bar */}
@@ -43,6 +48,17 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 {item.name}
               </NavLink>
             ))}
+            
+            <div className="mt-auto pt-4 border-t border-border">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-4 py-3 text-sm font-medium"
+                onClick={signOut}
+              >
+                <LogOut className="w-5 h-5" />
+                Sign Out
+              </Button>
+            </div>
           </nav>
         </aside>
 
