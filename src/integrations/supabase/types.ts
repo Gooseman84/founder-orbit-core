@@ -14,13 +14,244 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      founder_profiles: {
+        Row: {
+          capital_available: number | null
+          created_at: string
+          id: string
+          lifestyle_goals: string | null
+          passions_tags: string[] | null
+          passions_text: string | null
+          risk_tolerance: string | null
+          skills_tags: string[] | null
+          skills_text: string | null
+          success_vision: string | null
+          tech_level: string | null
+          time_per_week: number | null
+          user_id: string
+        }
+        Insert: {
+          capital_available?: number | null
+          created_at?: string
+          id?: string
+          lifestyle_goals?: string | null
+          passions_tags?: string[] | null
+          passions_text?: string | null
+          risk_tolerance?: string | null
+          skills_tags?: string[] | null
+          skills_text?: string | null
+          success_vision?: string | null
+          tech_level?: string | null
+          time_per_week?: number | null
+          user_id: string
+        }
+        Update: {
+          capital_available?: number | null
+          created_at?: string
+          id?: string
+          lifestyle_goals?: string | null
+          passions_tags?: string[] | null
+          passions_text?: string | null
+          risk_tolerance?: string | null
+          skills_tags?: string[] | null
+          skills_text?: string | null
+          success_vision?: string | null
+          tech_level?: string | null
+          time_per_week?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      idea_analysis: {
+        Row: {
+          brutal_take: string | null
+          competition_snapshot: string | null
+          created_at: string
+          id: string
+          idea_id: string
+          main_risks: Json | null
+          market_overview: string | null
+          niche_score: number | null
+          pricing_range: string | null
+          problem_intensity: string | null
+          suggested_modifications: string | null
+          user_id: string
+        }
+        Insert: {
+          brutal_take?: string | null
+          competition_snapshot?: string | null
+          created_at?: string
+          id?: string
+          idea_id: string
+          main_risks?: Json | null
+          market_overview?: string | null
+          niche_score?: number | null
+          pricing_range?: string | null
+          problem_intensity?: string | null
+          suggested_modifications?: string | null
+          user_id: string
+        }
+        Update: {
+          brutal_take?: string | null
+          competition_snapshot?: string | null
+          created_at?: string
+          id?: string
+          idea_id?: string
+          main_risks?: Json | null
+          market_overview?: string | null
+          niche_score?: number | null
+          pricing_range?: string | null
+          problem_intensity?: string | null
+          suggested_modifications?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_analysis_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: true
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ideas: {
+        Row: {
+          business_model_type: string | null
+          complexity: string | null
+          constraint_fit_score: number | null
+          created_at: string
+          description: string | null
+          id: string
+          lifestyle_fit_score: number | null
+          overall_fit_score: number | null
+          passion_fit_score: number | null
+          skill_fit_score: number | null
+          status: string | null
+          target_customer: string | null
+          time_to_first_dollar: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          business_model_type?: string | null
+          complexity?: string | null
+          constraint_fit_score?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          lifestyle_fit_score?: number | null
+          overall_fit_score?: number | null
+          passion_fit_score?: number | null
+          skill_fit_score?: number | null
+          status?: string | null
+          target_customer?: string | null
+          time_to_first_dollar?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          business_model_type?: string | null
+          complexity?: string | null
+          constraint_fit_score?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          lifestyle_fit_score?: number | null
+          overall_fit_score?: number | null
+          passion_fit_score?: number | null
+          skill_fit_score?: number | null
+          status?: string | null
+          target_customer?: string | null
+          time_to_first_dollar?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          category: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          estimated_minutes: number | null
+          id: string
+          idea_id: string | null
+          status: string | null
+          title: string
+          user_id: string
+          xp_reward: number | null
+        }
+        Insert: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          idea_id?: string | null
+          status?: string | null
+          title: string
+          user_id: string
+          xp_reward?: number | null
+        }
+        Update: {
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          idea_id?: string | null
+          status?: string | null
+          title?: string
+          user_id?: string
+          xp_reward?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xp_events: {
+        Row: {
+          amount: number
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_total_xp: { Args: { p_user_id: string }; Returns: number }
     }
     Enums: {
       [_ in never]: never
