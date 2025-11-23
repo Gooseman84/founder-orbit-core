@@ -2,3 +2,6 @@ project_id = "empldatnfyczyiatmnfa"
 
 [functions.generate-ideas]
 verify_jwt = true
+
+[functions.analyze-idea]
+verify_jwt = true
