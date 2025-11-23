@@ -5,9 +5,12 @@ import { TaskCard } from "@/components/tasks/TaskCard";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { addXpEvent } from "@/lib/xpEngine";
-import { Loader2, Sparkles, ListTodo, CheckCircle2 } from "lucide-react";
+import { Loader2, Sparkles, ListTodo, CheckCircle2, Heart } from "lucide-react";
 
 interface Task {
   id: string;
@@ -29,6 +32,12 @@ const Tasks = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [chosenIdeaId, setChosenIdeaId] = useState<string | null>(null);
+  const [isSavingCheckIn, setIsSavingCheckIn] = useState(false);
+  const [checkIn, setCheckIn] = useState({
+    whatDid: "",
+    whatLearned: "",
+    feelings: ""
+  });
 
   useEffect(() => {
     if (user) {
@@ -160,6 +169,57 @@ const Tasks = () => {
     }
   };
 
+  const handleSaveCheckIn = async () => {
+    if (!user) return;
+
+    if (!checkIn.whatDid && !checkIn.whatLearned && !checkIn.feelings) {
+      toast({
+        title: "Nothing to save",
+        description: "Please fill in at least one field before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingCheckIn(true);
+    try {
+      const { error } = await supabase
+        .from('check_ins')
+        .insert({
+          user_id: user.id,
+          what_did: checkIn.whatDid || null,
+          what_learned: checkIn.whatLearned || null,
+          feelings: checkIn.feelings || null,
+        });
+
+      if (error) throw error;
+
+      // Award XP for daily check-in
+      await addXpEvent(user.id, 'daily_check_in', 5, {
+        has_what_did: !!checkIn.whatDid,
+        has_what_learned: !!checkIn.whatLearned,
+        has_feelings: !!checkIn.feelings,
+      });
+
+      toast({
+        title: "Check-in saved! 🎉",
+        description: "You earned 5 XP for reflecting on your day.",
+      });
+
+      // Clear form
+      setCheckIn({ whatDid: "", whatLearned: "", feelings: "" });
+    } catch (error) {
+      console.error('Error saving check-in:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save check-in. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingCheckIn(false);
+    }
+  };
+
   const openTasks = tasks.filter(t => t.status === 'open');
   const completedTasks = tasks.filter(t => t.status === 'completed');
 
@@ -207,6 +267,74 @@ const Tasks = () => {
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Daily Check-In Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Heart className="h-5 w-5 text-pink-500" />
+            Daily Check-In
+          </CardTitle>
+          <CardDescription>
+            Take a moment to reflect on your day and track your progress
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="what-did">What did you do today?</Label>
+            <Textarea
+              id="what-did"
+              placeholder="Tasks you completed, meetings you attended, progress you made..."
+              value={checkIn.whatDid}
+              onChange={(e) => setCheckIn(prev => ({ ...prev, whatDid: e.target.value }))}
+              rows={3}
+              maxLength={1000}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="what-learned">What did you learn?</Label>
+            <Textarea
+              id="what-learned"
+              placeholder="New insights, feedback received, mistakes to avoid..."
+              value={checkIn.whatLearned}
+              onChange={(e) => setCheckIn(prev => ({ ...prev, whatLearned: e.target.value }))}
+              rows={3}
+              maxLength={1000}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="feelings">What felt good or bad?</Label>
+            <Textarea
+              id="feelings"
+              placeholder="Wins to celebrate, challenges that frustrated you, energy levels..."
+              value={checkIn.feelings}
+              onChange={(e) => setCheckIn(prev => ({ ...prev, feelings: e.target.value }))}
+              rows={3}
+              maxLength={1000}
+            />
+          </div>
+
+          <Button 
+            onClick={handleSaveCheckIn}
+            disabled={isSavingCheckIn}
+            className="w-full"
+          >
+            {isSavingCheckIn ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Heart className="mr-2 h-4 w-4" />
+                Summarize my day
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="open" className="w-full">
         <TabsList>
