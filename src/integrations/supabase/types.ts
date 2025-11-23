@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      check_ins: {
+        Row: {
+          created_at: string
+          feelings: string | null
+          id: string
+          user_id: string
+          what_did: string | null
+          what_learned: string | null
+        }
+        Insert: {
+          created_at?: string
+          feelings?: string | null
+          id?: string
+          user_id: string
+          what_did?: string | null
+          what_learned?: string | null
+        }
+        Update: {
+          created_at?: string
+          feelings?: string | null
+          id?: string
+          user_id?: string
+          what_did?: string | null
+          what_learned?: string | null
+        }
+        Relationships: []
+      }
       founder_profiles: {
         Row: {
           capital_available: number | null
