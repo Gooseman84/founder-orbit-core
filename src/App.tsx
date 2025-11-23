@@ -3,8 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { MainLayout } from "./components/layout/MainLayout";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Ideas from "./pages/Ideas";
 import IdeaDetail from "./pages/IdeaDetail";
@@ -23,19 +26,22 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/onboarding" element={<MainLayout><Onboarding /></MainLayout>} />
-          <Route path="/ideas" element={<MainLayout><Ideas /></MainLayout>} />
-          <Route path="/ideas/:id" element={<MainLayout><IdeaDetail /></MainLayout>} />
-          <Route path="/north-star" element={<MainLayout><NorthStar /></MainLayout>} />
-          <Route path="/feed" element={<MainLayout><Feed /></MainLayout>} />
-          <Route path="/tasks" element={<MainLayout><Tasks /></MainLayout>} />
-          <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
-          <Route path="/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/onboarding" element={<ProtectedRoute><MainLayout><Onboarding /></MainLayout></ProtectedRoute>} />
+            <Route path="/ideas" element={<ProtectedRoute><MainLayout><Ideas /></MainLayout></ProtectedRoute>} />
+            <Route path="/ideas/:id" element={<ProtectedRoute><MainLayout><IdeaDetail /></MainLayout></ProtectedRoute>} />
+            <Route path="/north-star" element={<ProtectedRoute><MainLayout><NorthStar /></MainLayout></ProtectedRoute>} />
+            <Route path="/feed" element={<ProtectedRoute><MainLayout><Feed /></MainLayout></ProtectedRoute>} />
+            <Route path="/tasks" element={<ProtectedRoute><MainLayout><Tasks /></MainLayout></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><MainLayout><Profile /></MainLayout></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
