@@ -6,32 +6,47 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are an expert business idea generator for founders. You analyze founder profiles and generate highly personalized, actionable business ideas.
+const SYSTEM_PROMPT = `You are an expert business idea generator for founders. You analyze founder profiles and generate highly personalized, actionable business ideas that are realistic and well-matched to the founder's unique situation.
 
-Given a founder profile JSON with passions, skills, constraints (time, capital, risk tolerance), and lifestyle goals, generate 5-10 business ideas that are realistic and well-matched to the founder.
+You will receive a JSON object containing a founder profile with these fields:
+- passions_text: What the founder is passionate about
+- skills_text: The founder's professional skills and expertise
+- tech_level: Their technical capability level
+- time_per_week: Hours available per week to work on the business
+- capital_available: Amount of capital they can invest
+- risk_tolerance: Their comfort level with risk (low, medium, high)
+- lifestyle_goals: Their desired lifestyle and work-life balance
+- success_vision: What success looks like to them
 
-For each idea, provide:
-1. A compelling title (concise, 5-10 words)
-2. A clear description (2-3 sentences explaining the business)
-3. Business model type (e.g., "SaaS", "Marketplace", "Service", "E-commerce", "Content/Creator", "Agency", "Productized Service")
-4. Target customer (be specific: e.g., "Small business owners in healthcare", "Busy parents with young children")
-5. Time to first dollar (realistic estimate: "1-3 months", "3-6 months", "6-12 months", "12+ months")
-6. Complexity (one of: "Low", "Medium", "High")
-7. Fit scores (0-100 integers):
-   - passion_fit_score: How well does this align with their stated passions?
-   - skill_fit_score: How well does this match their existing skills?
-   - constraint_fit_score: How well does this fit their time, capital, and risk constraints?
-   - lifestyle_fit_score: How well does this support their lifestyle goals?
-   - overall_fit_score: Average of the four scores above
+Your task is to generate 5-10 business ideas that are:
+1. Realistic and achievable given their constraints
+2. Well-aligned with their passions, skills, and goals
+3. Practical and actionable, not overly complex or theoretical
+4. Ethical and legal - NO scams, deceptive practices, or unethical businesses
+5. Matched to their time and capital constraints
+
+For each idea, you must provide:
+- title: A compelling, concise title (5-10 words)
+- description: A clear 2-3 sentence explanation of the business
+- business_model_type: One of: "saas", "coaching", "productized_service", "community", "content", "marketplace", "hybrid"
+- target_customer: Be specific (e.g., "Small business owners in healthcare", "Busy parents with young children")
+- time_to_first_dollar: One of: "weeks", "months", "year_plus"
+- complexity: One of: "low", "medium", "high"
+- fit_scores: An object with four scores (0-100 integers):
+  - passion: How well this aligns with their stated passions
+  - skills: How well this matches their existing skills
+  - constraints: How well this fits their time, capital, and risk constraints
+  - lifestyle: How well this supports their lifestyle goals
 
 Guidelines:
-- Be realistic about constraints (if they have $1000 and 5 hours/week, don't suggest opening a restaurant)
-- Prioritize ideas with 70+ overall fit scores
-- Include a mix of complexity levels if the founder's constraints allow
-- Consider their risk tolerance when suggesting ideas
+- Be realistic about constraints: if they have $1000 and 5 hours/week, don't suggest opening a restaurant
+- Prioritize ideas with 70+ scores across all dimensions
+- Include a mix of complexity levels if constraints allow
+- Consider risk tolerance when suggesting ideas
 - Make descriptions actionable and specific, not generic
 - Ensure time_to_first_dollar reflects realistic market conditions
-- Base scores on genuine alignment, not wishful thinking`;
+- Base scores on genuine alignment, not wishful thinking
+- Focus on proven business models that can start small`;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -140,15 +155,30 @@ serve(async (req) => {
                       properties: {
                         title: { type: "string" },
                         description: { type: "string" },
-                        business_model_type: { type: "string" },
+                        business_model_type: { 
+                          type: "string",
+                          enum: ["saas", "coaching", "productized_service", "community", "content", "marketplace", "hybrid"]
+                        },
                         target_customer: { type: "string" },
-                        time_to_first_dollar: { type: "string" },
-                        complexity: { type: "string", enum: ["Low", "Medium", "High"] },
-                        passion_fit_score: { type: "integer", minimum: 0, maximum: 100 },
-                        skill_fit_score: { type: "integer", minimum: 0, maximum: 100 },
-                        constraint_fit_score: { type: "integer", minimum: 0, maximum: 100 },
-                        lifestyle_fit_score: { type: "integer", minimum: 0, maximum: 100 },
-                        overall_fit_score: { type: "integer", minimum: 0, maximum: 100 },
+                        time_to_first_dollar: { 
+                          type: "string",
+                          enum: ["weeks", "months", "year_plus"]
+                        },
+                        complexity: { 
+                          type: "string", 
+                          enum: ["low", "medium", "high"] 
+                        },
+                        fit_scores: {
+                          type: "object",
+                          properties: {
+                            passion: { type: "integer", minimum: 0, maximum: 100 },
+                            skills: { type: "integer", minimum: 0, maximum: 100 },
+                            constraints: { type: "integer", minimum: 0, maximum: 100 },
+                            lifestyle: { type: "integer", minimum: 0, maximum: 100 },
+                          },
+                          required: ["passion", "skills", "constraints", "lifestyle"],
+                          additionalProperties: false,
+                        },
                       },
                       required: [
                         "title",
@@ -157,11 +187,7 @@ serve(async (req) => {
                         "target_customer",
                         "time_to_first_dollar",
                         "complexity",
-                        "passion_fit_score",
-                        "skill_fit_score",
-                        "constraint_fit_score",
-                        "lifestyle_fit_score",
-                        "overall_fit_score",
+                        "fit_scores",
                       ],
                       additionalProperties: false,
                     },
@@ -218,21 +244,31 @@ serve(async (req) => {
     console.log(`Generated ${generatedIdeas.ideas.length} ideas`);
 
     // Insert ideas into database
-    const ideasToInsert = generatedIdeas.ideas.map((idea: any) => ({
-      user_id: user.id,
-      title: idea.title,
-      description: idea.description,
-      business_model_type: idea.business_model_type,
-      target_customer: idea.target_customer,
-      time_to_first_dollar: idea.time_to_first_dollar,
-      complexity: idea.complexity,
-      passion_fit_score: idea.passion_fit_score,
-      skill_fit_score: idea.skill_fit_score,
-      constraint_fit_score: idea.constraint_fit_score,
-      lifestyle_fit_score: idea.lifestyle_fit_score,
-      overall_fit_score: idea.overall_fit_score,
-      status: "candidate",
-    }));
+    const ideasToInsert = generatedIdeas.ideas.map((idea: any) => {
+      // Calculate overall fit score as average of the four scores
+      const overallFitScore = Math.round(
+        (idea.fit_scores.passion + 
+         idea.fit_scores.skills + 
+         idea.fit_scores.constraints + 
+         idea.fit_scores.lifestyle) / 4
+      );
+
+      return {
+        user_id: user.id,
+        title: idea.title,
+        description: idea.description,
+        business_model_type: idea.business_model_type,
+        target_customer: idea.target_customer,
+        time_to_first_dollar: idea.time_to_first_dollar,
+        complexity: idea.complexity,
+        passion_fit_score: idea.fit_scores.passion,
+        skill_fit_score: idea.fit_scores.skills,
+        constraint_fit_score: idea.fit_scores.constraints,
+        lifestyle_fit_score: idea.fit_scores.lifestyle,
+        overall_fit_score: overallFitScore,
+        status: "candidate",
+      };
+    });
 
     const { data: insertedIdeas, error: insertError } = await supabase
       .from("ideas")
