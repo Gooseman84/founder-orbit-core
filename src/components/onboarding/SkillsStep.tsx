@@ -1,3 +1,4 @@
+// src/components/onboarding/SkillsStep.tsx
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TagInput } from "./TagInput";
@@ -33,9 +34,7 @@ export const SkillsStep = ({ data, onUpdate }: SkillsStepProps) => {
 
         <div>
           <Label>Skill Tags (Optional)</Label>
-          <p className="text-sm text-muted-foreground mb-2">
-            Add quick tags for your key skills
-          </p>
+          <p className="text-sm text-muted-foreground mb-2">Add quick tags for your key skills</p>
           <TagInput
             tags={data.skills_tags}
             onTagsChange={(tags) => onUpdate({ skills_tags: tags })}
