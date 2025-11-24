@@ -52,6 +52,18 @@ const invokeAnalyzeIdea = async (ideaId: string, userId: string) => {
 };
 
 const updateIdeaStatusInDb = async (ideaId: string, userId: string, status: string): Promise<Idea> => {
+  // If setting to "chosen", first set all other ideas to "candidate"
+  if (status === "chosen") {
+    const { error: resetError } = await supabase
+      .from("ideas")
+      .update({ status: "candidate" })
+      .eq("user_id", userId)
+      .neq("id", ideaId);
+
+    if (resetError) throw resetError;
+  }
+
+  // Now update the current idea
   const { data, error } = await supabase
     .from("ideas")
     .update({ status })
