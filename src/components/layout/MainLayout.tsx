@@ -1,5 +1,6 @@
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboardingGuard } from "@/hooks/useOnboardingGuard";
 import { 
   LayoutDashboard, 
   Lightbulb, 
@@ -22,6 +23,7 @@ const navigation = [
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const { signOut } = useAuth();
+  useOnboardingGuard();
 
   return (
     <div className="min-h-screen bg-background">
