@@ -93,10 +93,10 @@ serve(async (req) => {
 
     console.log("generate-ideas: resolved userId", resolvedUserId);
 
-    // Initialize Supabase client for database operations
+    // Initialize Supabase client with service role key to bypass RLS
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
     // Fetch founder profile
