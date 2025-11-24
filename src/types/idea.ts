@@ -23,12 +23,16 @@ export interface IdeaAnalysis {
   user_id: string;
   idea_id: string;
   niche_score: number | null;
-  market_overview: string | null;
+  market_insight: string | null;
   problem_intensity: string | null;
   competition_snapshot: string | null;
-  pricing_range: string | null;
-  main_risks: any;
-  brutal_take: string | null;
-  suggested_modifications: string | null;
+  pricing_power: string | null;
+  success_likelihood: string | null;
+  biggest_risks: any;
+  unfair_advantages: any;
+  recommendations: any;
+  ideal_customer_profile: string | null;
+  elevator_pitch: string | null;
+  brutal_honesty: string | null;
   created_at: string;
 }
