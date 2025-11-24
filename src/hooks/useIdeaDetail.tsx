@@ -1,3 +1,4 @@
+// src/hooks/useIdeaDetail.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -18,56 +19,71 @@ export interface IdeaAnalysis {
   created_at: string;
 }
 
+const fetchIdea = async (ideaId: string, userId: string): Promise<Idea> => {
+  const { data, error } = await supabase.from("ideas").select("*").eq("id", ideaId).eq("user_id", userId).single();
+
+  if (error) throw error;
+  return data;
+};
+
+const fetchIdeaAnalysis = async (ideaId: string, userId: string): Promise<IdeaAnalysis | null> => {
+  const { data, error } = await supabase
+    .from("idea_analysis")
+    .select("*")
+    .eq("idea_id", ideaId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+};
+
+const invokeAnalyzeIdea = async (ideaId: string) => {
+  const { data, error } = await supabase.functions.invoke("analyze-idea", {
+    body: { idea_id: ideaId },
+  });
+
+  if (error) throw error;
+  return data;
+};
+
+const updateIdeaStatusInDb = async (ideaId: string, userId: string, status: string): Promise<Idea> => {
+  const { data, error } = await supabase
+    .from("ideas")
+    .update({ status })
+    .eq("id", ideaId)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
 export const useIdeaDetail = (ideaId: string | undefined) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: idea, isLoading: ideaLoading, error: ideaError } = useQuery({
+  const {
+    data: idea,
+    isLoading: ideaLoading,
+    error: ideaError,
+  } = useQuery({
     queryKey: ["idea", ideaId],
-    queryFn: async () => {
-      if (!ideaId || !user) return null;
-      
-      const { data, error } = await supabase
-        .from("ideas")
-        .select("*")
-        .eq("id", ideaId)
-        .eq("user_id", user.id)
-        .single();
-
-      if (error) throw error;
-      return data as Idea;
-    },
+    queryFn: () => fetchIdea(ideaId!, user!.id),
     enabled: !!ideaId && !!user,
   });
 
   const { data: analysis, isLoading: analysisLoading } = useQuery({
     queryKey: ["idea-analysis", ideaId],
-    queryFn: async () => {
-      if (!ideaId || !user) return null;
-      
-      const { data, error } = await supabase
-        .from("idea_analysis")
-        .select("*")
-        .eq("idea_id", ideaId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data as IdeaAnalysis | null;
-    },
+    queryFn: () => fetchIdeaAnalysis(ideaId!, user!.id),
     enabled: !!ideaId && !!user,
   });
 
   const analyzeIdea = useMutation({
-    mutationFn: async () => {
+    mutationFn: () => {
       if (!ideaId) throw new Error("No idea ID");
-      
-      const { data, error } = await supabase.functions.invoke("analyze-idea", {
-        body: { idea_id: ideaId },
-      });
-
-      if (error) throw error;
-      return data;
+      return invokeAnalyzeIdea(ideaId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["idea-analysis", ideaId] });
@@ -75,19 +91,9 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
   });
 
   const updateIdeaStatus = useMutation({
-    mutationFn: async (status: string) => {
+    mutationFn: (status: string) => {
       if (!ideaId || !user) throw new Error("Missing required data");
-      
-      const { data, error } = await supabase
-        .from("ideas")
-        .update({ status })
-        .eq("id", ideaId)
-        .eq("user_id", user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      return updateIdeaStatusInDb(ideaId, user.id, status);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
