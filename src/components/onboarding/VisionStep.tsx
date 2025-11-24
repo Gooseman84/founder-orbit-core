@@ -1,3 +1,4 @@
+// src/components/onboarding/VisionStep.tsx
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { OnboardingData } from "@/types/onboarding";
