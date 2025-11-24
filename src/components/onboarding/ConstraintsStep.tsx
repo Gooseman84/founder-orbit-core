@@ -1,3 +1,4 @@
+// src/components/onboarding/ConstraintsStep.tsx
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,6 +10,14 @@ interface ConstraintsStepProps {
 }
 
 export const ConstraintsStep = ({ data, onUpdate }: ConstraintsStepProps) => {
+  const handleTimeChange = (value: string) => {
+    onUpdate({ time_per_week: parseInt(value) || 0 });
+  };
+
+  const handleCapitalChange = (value: string) => {
+    onUpdate({ capital_available: parseInt(value) || 0 });
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -27,7 +36,7 @@ export const ConstraintsStep = ({ data, onUpdate }: ConstraintsStepProps) => {
             min="0"
             max="168"
             value={data.time_per_week || ""}
-            onChange={(e) => onUpdate({ time_per_week: parseInt(e.target.value) || 0 })}
+            onChange={(e) => handleTimeChange(e.target.value)}
             placeholder="e.g., 20"
             className="mt-2"
           />
@@ -43,21 +52,16 @@ export const ConstraintsStep = ({ data, onUpdate }: ConstraintsStepProps) => {
             type="number"
             min="0"
             value={data.capital_available || ""}
-            onChange={(e) => onUpdate({ capital_available: parseInt(e.target.value) || 0 })}
+            onChange={(e) => handleCapitalChange(e.target.value)}
             placeholder="e.g., 5000"
             className="mt-2"
           />
-          <p className="text-sm text-muted-foreground mt-1">
-            How much can you invest in starting your business?
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">How much can you invest in starting your business?</p>
         </div>
 
         <div>
           <Label htmlFor="risk_tolerance">Risk Tolerance</Label>
-          <Select
-            value={data.risk_tolerance}
-            onValueChange={(value) => onUpdate({ risk_tolerance: value })}
-          >
+          <Select value={data.risk_tolerance} onValueChange={(value) => onUpdate({ risk_tolerance: value })}>
             <SelectTrigger className="mt-2">
               <SelectValue placeholder="Select your risk tolerance" />
             </SelectTrigger>
