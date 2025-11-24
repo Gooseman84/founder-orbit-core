@@ -55,18 +55,18 @@ serve(async (req) => {
   }
 
   try {
-    // Parse request body
-    const requestJson = await req.json().catch(() => ({}));
-    const { userId: bodyUserId } = requestJson as { userId?: string };
+    // Parse request body safely
+    const requestJson = await req.json().catch(() => ({} as any));
+    const { userId } = requestJson as { userId?: string };
 
     // Try to get user from auth header if present
     const authHeader = req.headers.get("Authorization");
     let resolvedUserId: string | null = null;
 
-    if (bodyUserId) {
+    if (userId) {
       // Use userId from body if provided
-      resolvedUserId = bodyUserId;
-      console.log("Using userId from request body:", resolvedUserId);
+      resolvedUserId = userId;
+      console.log("generate-ideas: resolved userId from body", resolvedUserId);
     } else if (authHeader) {
       // Try to get user from auth header
       const supabaseAuth = createClient(
@@ -78,7 +78,7 @@ serve(async (req) => {
       const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
       if (user && !userError) {
         resolvedUserId = user.id;
-        console.log("Using userId from auth header:", resolvedUserId);
+        console.log("generate-ideas: resolved userId from auth header", resolvedUserId);
       }
     }
 
@@ -91,7 +91,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Generating ideas for user:", resolvedUserId);
+    console.log("generate-ideas: resolved userId", resolvedUserId);
 
     // Initialize Supabase client for database operations
     const supabase = createClient(
@@ -107,6 +107,7 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
+      console.log("generate-ideas: no founder profile found");
       console.error("Profile fetch error for user:", resolvedUserId, profileError);
       return new Response(
         JSON.stringify({ error: "Founder profile not found. Please complete onboarding first." }),
