@@ -36,9 +36,30 @@ const Auth = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
-    }
+    const checkProfileAndRedirect = async () => {
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from("founder_profiles")
+            .select("id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (error) throw error;
+
+          if (data) {
+            navigate("/dashboard");
+          } else {
+            navigate("/onboarding");
+          }
+        } catch (error) {
+          console.error("Error checking profile:", error);
+          navigate("/dashboard");
+        }
+      }
+    };
+
+    checkProfileAndRedirect();
   }, [user, navigate]);
 
   const handleSignUp = async (data: AuthFormData) => {
@@ -109,12 +130,27 @@ const Auth = () => {
         return;
       }
 
-      toast({
-        title: "Welcome back!",
-        description: "You've successfully signed in.",
-      });
+      // Check if user has completed onboarding
+      const { data: { user: signedInUser } } = await supabase.auth.getUser();
       
-      navigate("/dashboard");
+      if (signedInUser) {
+        const { data: profile } = await supabase
+          .from("founder_profiles")
+          .select("id")
+          .eq("user_id", signedInUser.id)
+          .maybeSingle();
+
+        toast({
+          title: "Welcome back!",
+          description: "You've successfully signed in.",
+        });
+
+        if (profile) {
+          navigate("/dashboard");
+        } else {
+          navigate("/onboarding");
+        }
+      }
     } catch (error: any) {
       toast({
         title: "Sign in failed",
