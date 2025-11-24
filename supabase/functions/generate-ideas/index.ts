@@ -55,43 +55,59 @@ serve(async (req) => {
   }
 
   try {
+    // Parse request body
+    const requestJson = await req.json().catch(() => ({}));
+    const { userId: bodyUserId } = requestJson as { userId?: string };
+
+    // Try to get user from auth header if present
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      console.error("No authorization header");
+    let resolvedUserId: string | null = null;
+
+    if (bodyUserId) {
+      // Use userId from body if provided
+      resolvedUserId = bodyUserId;
+      console.log("Using userId from request body:", resolvedUserId);
+    } else if (authHeader) {
+      // Try to get user from auth header
+      const supabaseAuth = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        { global: { headers: { Authorization: authHeader } } }
+      );
+
+      const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+      if (user && !userError) {
+        resolvedUserId = user.id;
+        console.log("Using userId from auth header:", resolvedUserId);
+      }
+    }
+
+    // If no user id could be determined, return error
+    if (!resolvedUserId) {
+      console.error("No user id found in request body or auth header");
       return new Response(
-        JSON.stringify({ error: "Authorization required" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing user id. Make sure you are logged in." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Initialize Supabase client
+    console.log("Generating ideas for user:", resolvedUserId);
+
+    // Initialize Supabase client for database operations
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error("User authentication error:", userError);
-      return new Response(
-        JSON.stringify({ error: "User not authenticated" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("Generating ideas for user:", user.id);
 
     // Fetch founder profile
     const { data: profile, error: profileError } = await supabase
       .from("founder_profiles")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", resolvedUserId)
       .single();
 
     if (profileError || !profile) {
-      console.error("Profile fetch error:", profileError);
+      console.error("Profile fetch error for user:", resolvedUserId, profileError);
       return new Response(
         JSON.stringify({ error: "Founder profile not found. Please complete onboarding first." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -254,7 +270,7 @@ serve(async (req) => {
       );
 
       return {
-        user_id: user.id,
+        user_id: resolvedUserId,
         title: idea.title,
         description: idea.description,
         business_model_type: idea.business_model_type,
