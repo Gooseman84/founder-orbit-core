@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { OnboardingData, INITIAL_ONBOARDING_DATA } from "@/types/onboarding";
 import { PassionsStep } from "@/components/onboarding/PassionsStep";
 import { SkillsStep } from "@/components/onboarding/SkillsStep";
@@ -20,6 +21,7 @@ const Onboarding = () => {
   const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const progress = (currentStep / TOTAL_STEPS) * 100;
 
@@ -40,25 +42,30 @@ const Onboarding = () => {
   };
 
   const handleSave = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to save your profile.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to save your profile.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const { error } = await supabase.from("founder_profiles").upsert({
         user_id: user.id,
-        ...formData,
+        passions_text: formData.passions_text,
+        passions_tags: formData.passions_tags,
+        skills_text: formData.skills_text,
+        skills_tags: formData.skills_tags,
+        tech_level: formData.tech_level,
+        time_per_week: formData.time_per_week,
+        capital_available: formData.capital_available,
+        risk_tolerance: formData.risk_tolerance,
+        lifestyle_goals: formData.lifestyle_goals,
+        success_vision: formData.success_vision,
       });
 
       if (error) throw error;
