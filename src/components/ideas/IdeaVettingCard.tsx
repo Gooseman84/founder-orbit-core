@@ -39,7 +39,9 @@ const parseRisks = (risks: any): string[] => {
 };
 
 export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
-  const risks = parseRisks(analysis.main_risks);
+  const risks = parseRisks(analysis.biggest_risks);
+  const advantages = parseRisks(analysis.unfair_advantages);
+  const recommendations = parseRisks(analysis.recommendations);
 
   return (
     <div className="space-y-6">
@@ -64,25 +66,25 @@ export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
         </CardContent>
       </Card>
 
-      {analysis.brutal_take && (
+      {analysis.brutal_honesty && (
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle className="font-bold">The Brutal Truth</AlertTitle>
-          <AlertDescription className="mt-2 text-sm leading-relaxed">{analysis.brutal_take}</AlertDescription>
+          <AlertDescription className="mt-2 text-sm leading-relaxed">{analysis.brutal_honesty}</AlertDescription>
         </Alert>
       )}
 
       <div className="grid md:grid-cols-2 gap-4">
-        {analysis.market_overview && (
+        {analysis.market_insight && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-primary" />
-                Market Overview
+                Market Insight
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground leading-relaxed">{analysis.market_overview}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{analysis.market_insight}</p>
             </CardContent>
           </Card>
         )}
@@ -115,16 +117,30 @@ export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
           </Card>
         )}
 
-        {analysis.pricing_range && (
+        {analysis.pricing_power && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-primary" />
-                Pricing Range
+                Pricing Power
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground leading-relaxed">{analysis.pricing_range}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{analysis.pricing_power}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {analysis.success_likelihood && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Target className="w-5 h-5 text-primary" />
+                Success Likelihood
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground leading-relaxed">{analysis.success_likelihood}</p>
             </CardContent>
           </Card>
         )}
@@ -133,7 +149,7 @@ export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
       {risks.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Main Risks</CardTitle>
+            <CardTitle className="text-lg">Biggest Risks</CardTitle>
             <CardDescription>Key threats to consider before pursuing this idea</CardDescription>
           </CardHeader>
           <CardContent>
@@ -149,14 +165,66 @@ export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
         </Card>
       )}
 
-      {analysis.suggested_modifications && (
-        <Card className="border-primary/20 bg-primary/5">
+      {advantages.length > 0 && (
+        <Card className="border-green-500/20 bg-green-500/5">
           <CardHeader>
-            <CardTitle className="text-lg">Suggested Improvements</CardTitle>
-            <CardDescription>Actionable changes to increase success odds</CardDescription>
+            <CardTitle className="text-lg">Unfair Advantages</CardTitle>
+            <CardDescription>Unique strengths that give you an edge</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm leading-relaxed">{analysis.suggested_modifications}</p>
+            <ul className="space-y-2">
+              {advantages.map((advantage: string, index: number) => (
+                <li key={index} className="flex items-start gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">{advantage}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {recommendations.length > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-lg">Recommendations</CardTitle>
+            <CardDescription>Actionable steps to increase success odds</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {recommendations.map((rec: string, index: number) => (
+                <li key={index} className="flex items-start gap-2">
+                  <Target className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                  <span className="text-sm leading-relaxed">{rec}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {analysis.ideal_customer_profile && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              Ideal Customer Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground leading-relaxed">{analysis.ideal_customer_profile}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {analysis.elevator_pitch && (
+        <Card className="border-blue-500/20 bg-blue-500/5">
+          <CardHeader>
+            <CardTitle className="text-lg">Elevator Pitch</CardTitle>
+            <CardDescription>One-line pitch for this business idea</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm font-medium leading-relaxed">{analysis.elevator_pitch}</p>
           </CardContent>
         </Card>
       )}

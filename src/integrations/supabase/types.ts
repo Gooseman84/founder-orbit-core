@@ -91,45 +91,57 @@ export type Database = {
       }
       idea_analysis: {
         Row: {
-          brutal_take: string | null
+          biggest_risks: Json | null
+          brutal_honesty: string | null
           competition_snapshot: string | null
           created_at: string
+          elevator_pitch: string | null
           id: string
           idea_id: string
-          main_risks: Json | null
-          market_overview: string | null
+          ideal_customer_profile: string | null
+          market_insight: string | null
           niche_score: number | null
-          pricing_range: string | null
+          pricing_power: string | null
           problem_intensity: string | null
-          suggested_modifications: string | null
+          recommendations: Json | null
+          success_likelihood: string | null
+          unfair_advantages: Json | null
           user_id: string
         }
         Insert: {
-          brutal_take?: string | null
+          biggest_risks?: Json | null
+          brutal_honesty?: string | null
           competition_snapshot?: string | null
           created_at?: string
+          elevator_pitch?: string | null
           id?: string
           idea_id: string
-          main_risks?: Json | null
-          market_overview?: string | null
+          ideal_customer_profile?: string | null
+          market_insight?: string | null
           niche_score?: number | null
-          pricing_range?: string | null
+          pricing_power?: string | null
           problem_intensity?: string | null
-          suggested_modifications?: string | null
+          recommendations?: Json | null
+          success_likelihood?: string | null
+          unfair_advantages?: Json | null
           user_id: string
         }
         Update: {
-          brutal_take?: string | null
+          biggest_risks?: Json | null
+          brutal_honesty?: string | null
           competition_snapshot?: string | null
           created_at?: string
+          elevator_pitch?: string | null
           id?: string
           idea_id?: string
-          main_risks?: Json | null
-          market_overview?: string | null
+          ideal_customer_profile?: string | null
+          market_insight?: string | null
           niche_score?: number | null
-          pricing_range?: string | null
+          pricing_power?: string | null
           problem_intensity?: string | null
-          suggested_modifications?: string | null
+          recommendations?: Json | null
+          success_likelihood?: string | null
+          unfair_advantages?: Json | null
           user_id?: string
         }
         Relationships: [
