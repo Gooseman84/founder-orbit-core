@@ -32,9 +32,11 @@ const fetchIdeas = async (userId: string): Promise<Idea[]> => {
   return data;
 };
 
-const invokeGenerateIdeas = async () => {
+const invokeGenerateIdeas = async (userId: string) => {
   const { data, error } = await supabase.functions.invoke("generate-ideas", {
-    body: {},
+    body: {
+      userId,
+    },
   });
 
   if (error) throw error;
@@ -56,7 +58,12 @@ export const useIdeas = () => {
   });
 
   const generateIdeas = useMutation({
-    mutationFn: invokeGenerateIdeas,
+    mutationFn: () => {
+      if (!user?.id) {
+        return Promise.reject(new Error("You must be logged in to generate ideas"));
+      }
+      return invokeGenerateIdeas(user.id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] });
     },
