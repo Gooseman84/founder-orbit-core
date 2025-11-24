@@ -1,3 +1,4 @@
+// src/components/onboarding/SummaryStep.tsx
 import { OnboardingData } from "@/types/onboarding";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -25,7 +26,9 @@ export const SummaryStep = ({ data }: SummaryStepProps) => {
           {data.passions_tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {data.passions_tags.map((tag) => (
-                <Badge key={tag} variant="secondary">{tag}</Badge>
+                <Badge key={tag} variant="secondary">
+                  {tag}
+                </Badge>
               ))}
             </div>
           )}
@@ -39,7 +42,9 @@ export const SummaryStep = ({ data }: SummaryStepProps) => {
           {data.skills_tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {data.skills_tags.map((tag) => (
-                <Badge key={tag} variant="secondary">{tag}</Badge>
+                <Badge key={tag} variant="secondary">
+                  {tag}
+                </Badge>
               ))}
             </div>
           )}
