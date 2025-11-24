@@ -5,10 +5,12 @@ import { useIdeas } from "@/hooks/useIdeas";
 import { IdeaCard } from "@/components/ideas/IdeaCard";
 import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
 import { RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Ideas = () => {
   const { ideas, isLoading, generateIdeas } = useIdeas();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleGenerateIdeas = async () => {
     try {
@@ -18,13 +20,23 @@ const Ideas = () => {
         description: "Your personalized business ideas are ready.",
       });
     } catch (error: any) {
-      const errorMessage = error.message?.includes("profile not found")
-        ? "Please complete your onboarding profile first."
-        : error.message?.includes("Rate limit")
-          ? "Too many requests. Please wait a moment and try again."
-          : error.message?.includes("Payment required")
-            ? "AI service requires payment. Please contact support."
-            : "Failed to generate ideas. Please try again.";
+      // Check if error is about missing founder profile
+      if (error.message?.includes("profile not found") || error.message?.includes("complete onboarding")) {
+        toast({
+          title: "Onboarding Required",
+          description: "Please complete your onboarding profile first.",
+          variant: "destructive",
+        });
+        // Redirect to onboarding after a brief delay
+        setTimeout(() => navigate("/onboarding"), 1500);
+        return;
+      }
+
+      const errorMessage = error.message?.includes("Rate limit")
+        ? "Too many requests. Please wait a moment and try again."
+        : error.message?.includes("Payment required")
+          ? "AI service requires payment. Please contact support."
+          : "Failed to generate ideas. Please try again.";
 
       toast({
         title: "Error",
