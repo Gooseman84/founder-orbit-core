@@ -1,3 +1,4 @@
+// src/components/ideas/IdeaVettingCard.tsx
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -9,32 +10,39 @@ interface IdeaVettingCardProps {
   analysis: IdeaAnalysis;
 }
 
+const getScoreColor = (score: number | null) => {
+  if (!score) return "text-muted-foreground";
+  if (score >= 80) return "text-green-600";
+  if (score >= 60) return "text-yellow-600";
+  return "text-orange-600";
+};
+
+const getScoreLabel = (score: number | null) => {
+  if (!score) return "Not scored";
+  if (score >= 90) return "Exceptional";
+  if (score >= 70) return "Solid";
+  if (score >= 50) return "Possible";
+  if (score >= 30) return "Challenging";
+  return "Not Recommended";
+};
+
+const parseRisks = (risks: any): string[] => {
+  if (Array.isArray(risks)) return risks;
+  if (typeof risks === "string") {
+    try {
+      return JSON.parse(risks);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
-  const getScoreColor = (score: number | null) => {
-    if (!score) return "text-muted-foreground";
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
-    return "text-orange-600";
-  };
-
-  const getScoreLabel = (score: number | null) => {
-    if (!score) return "Not scored";
-    if (score >= 90) return "Exceptional";
-    if (score >= 70) return "Solid";
-    if (score >= 50) return "Possible";
-    if (score >= 30) return "Challenging";
-    return "Not Recommended";
-  };
-
-  const risks = Array.isArray(analysis.main_risks) 
-    ? analysis.main_risks 
-    : typeof analysis.main_risks === 'string' 
-      ? JSON.parse(analysis.main_risks)
-      : [];
+  const risks = parseRisks(analysis.main_risks);
 
   return (
     <div className="space-y-6">
-      {/* Niche Score */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -56,18 +64,14 @@ export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
         </CardContent>
       </Card>
 
-      {/* Brutal Take */}
       {analysis.brutal_take && (
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle className="font-bold">The Brutal Truth</AlertTitle>
-          <AlertDescription className="mt-2 text-sm leading-relaxed">
-            {analysis.brutal_take}
-          </AlertDescription>
+          <AlertDescription className="mt-2 text-sm leading-relaxed">{analysis.brutal_take}</AlertDescription>
         </Alert>
       )}
 
-      {/* Market Analysis Grid */}
       <div className="grid md:grid-cols-2 gap-4">
         {analysis.market_overview && (
           <Card>
@@ -78,9 +82,7 @@ export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {analysis.market_overview}
-              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{analysis.market_overview}</p>
             </CardContent>
           </Card>
         )}
@@ -94,9 +96,7 @@ export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {analysis.problem_intensity}
-              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{analysis.problem_intensity}</p>
             </CardContent>
           </Card>
         )}
@@ -110,9 +110,7 @@ export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {analysis.competition_snapshot}
-              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{analysis.competition_snapshot}</p>
             </CardContent>
           </Card>
         )}
@@ -126,15 +124,12 @@ export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {analysis.pricing_range}
-              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{analysis.pricing_range}</p>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* Main Risks */}
       {risks.length > 0 && (
         <Card>
           <CardHeader>
@@ -154,7 +149,6 @@ export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
         </Card>
       )}
 
-      {/* Suggested Modifications */}
       {analysis.suggested_modifications && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
@@ -162,9 +156,7 @@ export const IdeaVettingCard = ({ analysis }: IdeaVettingCardProps) => {
             <CardDescription>Actionable changes to increase success odds</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm leading-relaxed">
-              {analysis.suggested_modifications}
-            </p>
+            <p className="text-sm leading-relaxed">{analysis.suggested_modifications}</p>
           </CardContent>
         </Card>
       )}
