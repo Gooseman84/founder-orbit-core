@@ -1,3 +1,4 @@
+// src/pages/Onboarding.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -40,10 +41,12 @@ const Onboarding = () => {
 
   const handleSave = async () => {
     setIsSaving(true);
-    
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         toast({
           title: "Authentication Required",
@@ -53,12 +56,10 @@ const Onboarding = () => {
         return;
       }
 
-      const { error } = await supabase
-        .from("founder_profiles")
-        .upsert({
-          user_id: user.id,
-          ...formData,
-        });
+      const { error } = await supabase.from("founder_profiles").upsert({
+        user_id: user.id,
+        ...formData,
+      });
 
       if (error) throw error;
 
@@ -69,7 +70,6 @@ const Onboarding = () => {
 
       navigate("/ideas");
     } catch (error) {
-      console.error("Error saving profile:", error);
       toast({
         title: "Error",
         description: "Failed to save your profile. Please try again.",
@@ -101,36 +101,28 @@ const Onboarding = () => {
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Welcome to FounderOS</h1>
-        <p className="text-muted-foreground">
-          Let's build your founder profile to generate personalized ideas
-        </p>
+        <p className="text-muted-foreground">Let's build your founder profile to generate personalized ideas</p>
       </div>
 
       <div className="mb-8">
         <div className="flex justify-between text-sm text-muted-foreground mb-2">
-          <span>Step {currentStep} of {TOTAL_STEPS}</span>
+          <span>
+            Step {currentStep} of {TOTAL_STEPS}
+          </span>
           <span>{Math.round(progress)}%</span>
         </div>
         <Progress value={progress} />
       </div>
 
-      <div className="bg-card border border-border rounded-lg p-8 mb-6">
-        {renderStep()}
-      </div>
+      <div className="bg-card border border-border rounded-lg p-8 mb-6">{renderStep()}</div>
 
       <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={handleBack}
-          disabled={currentStep === 1}
-        >
+        <Button variant="outline" onClick={handleBack} disabled={currentStep === 1}>
           Back
         </Button>
 
         {currentStep < TOTAL_STEPS ? (
-          <Button onClick={handleNext}>
-            Next
-          </Button>
+          <Button onClick={handleNext}>Next</Button>
         ) : (
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? "Saving..." : "Save and Continue"}
