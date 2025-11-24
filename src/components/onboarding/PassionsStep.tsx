@@ -1,3 +1,4 @@
+// src/components/onboarding/PassionsStep.tsx
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TagInput } from "./TagInput";
@@ -33,9 +34,7 @@ export const PassionsStep = ({ data, onUpdate }: PassionsStepProps) => {
 
         <div>
           <Label>Quick Tags (Optional)</Label>
-          <p className="text-sm text-muted-foreground mb-2">
-            Add quick tags to highlight key passions
-          </p>
+          <p className="text-sm text-muted-foreground mb-2">Add quick tags to highlight key passions</p>
           <TagInput
             tags={data.passions_tags}
             onTagsChange={(tags) => onUpdate({ passions_tags: tags })}
