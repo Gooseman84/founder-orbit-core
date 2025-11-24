@@ -42,9 +42,9 @@ const fetchIdeaAnalysis = async (ideaId: string, userId: string): Promise<IdeaAn
   return data;
 };
 
-const invokeAnalyzeIdea = async (ideaId: string) => {
+const invokeAnalyzeIdea = async (ideaId: string, userId: string) => {
   const { data, error } = await supabase.functions.invoke("analyze-idea", {
-    body: { ideaId },
+    body: { ideaId, userId },
   });
 
   if (error) throw error;
@@ -86,8 +86,8 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
 
   const analyzeIdea = useMutation({
     mutationFn: () => {
-      if (!ideaId) throw new Error("No idea ID");
-      return invokeAnalyzeIdea(ideaId);
+      if (!ideaId || !user) throw new Error("No idea ID or user");
+      return invokeAnalyzeIdea(ideaId, user.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["idea-analysis", ideaId] });
