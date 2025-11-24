@@ -1,3 +1,4 @@
+// src/components/ideas/EmptyIdeasState.tsx
 import { Button } from "@/components/ui/button";
 import { Lightbulb, Sparkles } from "lucide-react";
 
@@ -12,18 +13,14 @@ export const EmptyIdeasState = ({ onGenerateIdeas, isGenerating }: EmptyIdeasSta
       <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
         <Lightbulb className="w-10 h-10 text-primary" />
       </div>
-      
+
       <h2 className="text-3xl font-bold mb-3">No Ideas Yet</h2>
       <p className="text-muted-foreground text-lg mb-8 max-w-md">
-        Let AI analyze your profile and generate personalized business ideas tailored to your passions, skills, and constraints.
+        Let AI analyze your profile and generate personalized business ideas tailored to your passions, skills, and
+        constraints.
       </p>
-      
-      <Button
-        size="lg"
-        onClick={onGenerateIdeas}
-        disabled={isGenerating}
-        className="gap-2"
-      >
+
+      <Button size="lg" onClick={onGenerateIdeas} disabled={isGenerating} className="gap-2">
         {isGenerating ? (
           <>
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -36,12 +33,8 @@ export const EmptyIdeasState = ({ onGenerateIdeas, isGenerating }: EmptyIdeasSta
           </>
         )}
       </Button>
-      
-      {isGenerating && (
-        <p className="text-sm text-muted-foreground mt-4">
-          This may take 10-20 seconds...
-        </p>
-      )}
+
+      {isGenerating && <p className="text-sm text-muted-foreground mt-4">This may take 10-20 seconds...</p>}
     </div>
   );
 };
