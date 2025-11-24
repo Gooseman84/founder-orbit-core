@@ -1,3 +1,4 @@
+// src/pages/Ideas.tsx
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useIdeas } from "@/hooks/useIdeas";
@@ -17,18 +18,14 @@ const Ideas = () => {
         description: "Your personalized business ideas are ready.",
       });
     } catch (error: any) {
-      console.error("Error generating ideas:", error);
-      
-      let errorMessage = "Failed to generate ideas. Please try again.";
-      
-      if (error.message?.includes("profile not found")) {
-        errorMessage = "Please complete your onboarding profile first.";
-      } else if (error.message?.includes("Rate limit")) {
-        errorMessage = "Too many requests. Please wait a moment and try again.";
-      } else if (error.message?.includes("Payment required")) {
-        errorMessage = "AI service requires payment. Please contact support.";
-      }
-      
+      const errorMessage = error.message?.includes("profile not found")
+        ? "Please complete your onboarding profile first."
+        : error.message?.includes("Rate limit")
+          ? "Too many requests. Please wait a moment and try again."
+          : error.message?.includes("Payment required")
+            ? "AI service requires payment. Please contact support."
+            : "Failed to generate ideas. Please try again.";
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -49,12 +46,7 @@ const Ideas = () => {
   }
 
   if (ideas.length === 0) {
-    return (
-      <EmptyIdeasState
-        onGenerateIdeas={handleGenerateIdeas}
-        isGenerating={generateIdeas.isPending}
-      />
-    );
+    return <EmptyIdeasState onGenerateIdeas={handleGenerateIdeas} isGenerating={generateIdeas.isPending} />;
   }
 
   return (
@@ -66,12 +58,8 @@ const Ideas = () => {
             {ideas.length} {ideas.length === 1 ? "idea" : "ideas"} generated based on your profile
           </p>
         </div>
-        
-        <Button
-          onClick={handleGenerateIdeas}
-          disabled={generateIdeas.isPending}
-          className="gap-2"
-        >
+
+        <Button onClick={handleGenerateIdeas} disabled={generateIdeas.isPending} className="gap-2">
           {generateIdeas.isPending ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
