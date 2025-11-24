@@ -1,3 +1,4 @@
+// src/pages/IdeaDetail.tsx
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,16 +8,20 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useIdeaDetail } from "@/hooks/useIdeaDetail";
 import { IdeaVettingCard } from "@/components/ideas/IdeaVettingCard";
-import { 
-  ArrowLeft, 
-  Sparkles, 
-  Star, 
-  Clock, 
-  Target, 
-  Users, 
-  Briefcase,
-  BarChart3 
-} from "lucide-react";
+import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target } from "lucide-react";
+
+const getComplexityVariant = (complexity: string | null) => {
+  switch (complexity?.toLowerCase()) {
+    case "low":
+      return "secondary";
+    case "medium":
+      return "default";
+    case "high":
+      return "destructive";
+    default:
+      return "outline";
+  }
+};
 
 const IdeaDetail = () => {
   const { id } = useParams();
@@ -32,16 +37,12 @@ const IdeaDetail = () => {
         description: "Your idea has been vetted with market research and viability scoring.",
       });
     } catch (error: any) {
-      console.error("Error analyzing idea:", error);
-      
-      let errorMessage = "Failed to analyze idea. Please try again.";
-      
-      if (error.message?.includes("Rate limit")) {
-        errorMessage = "Too many requests. Please wait a moment and try again.";
-      } else if (error.message?.includes("Payment required")) {
-        errorMessage = "AI service requires payment. Please contact support.";
-      }
-      
+      const errorMessage = error.message?.includes("Rate limit")
+        ? "Too many requests. Please wait a moment and try again."
+        : error.message?.includes("Payment required")
+          ? "AI service requires payment. Please contact support."
+          : "Failed to analyze idea. Please try again.";
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -58,8 +59,7 @@ const IdeaDetail = () => {
         description: "This is now your main idea. Redirecting to North Star...",
       });
       setTimeout(() => navigate("/north-star"), 1500);
-    } catch (error: any) {
-      console.error("Error updating idea status:", error);
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to update idea status. Please try again.",
@@ -92,22 +92,8 @@ const IdeaDetail = () => {
     );
   }
 
-  const getComplexityVariant = (complexity: string | null) => {
-    switch (complexity?.toLowerCase()) {
-      case "low":
-        return "secondary";
-      case "medium":
-        return "default";
-      case "high":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-start justify-between">
         <Button variant="ghost" onClick={() => navigate("/ideas")} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -116,11 +102,7 @@ const IdeaDetail = () => {
 
         <div className="flex gap-2">
           {!analysis && (
-            <Button
-              onClick={handleVetIdea}
-              disabled={analyzeIdea.isPending}
-              className="gap-2"
-            >
+            <Button onClick={handleVetIdea} disabled={analyzeIdea.isPending} className="gap-2">
               {analyzeIdea.isPending ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -158,16 +140,13 @@ const IdeaDetail = () => {
         </div>
       </div>
 
-      {/* Idea Details Card */}
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2 flex-1">
               <CardTitle className="text-3xl">{idea.title}</CardTitle>
               {idea.business_model_type && (
-                <CardDescription className="text-lg font-medium">
-                  {idea.business_model_type}
-                </CardDescription>
+                <CardDescription className="text-lg font-medium">{idea.business_model_type}</CardDescription>
               )}
             </div>
             {idea.complexity && (
@@ -212,13 +191,12 @@ const IdeaDetail = () => {
 
           <Separator />
 
-          {/* Fit Scores */}
           <div>
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-primary" />
               Fit Scores
             </h3>
-            
+
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -266,17 +244,11 @@ const IdeaDetail = () => {
         </CardContent>
       </Card>
 
-      {/* Analysis Results */}
       {analysis ? (
         <>
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">Market Analysis</h2>
-            <Button
-              variant="outline"
-              onClick={handleVetIdea}
-              disabled={analyzeIdea.isPending}
-              className="gap-2"
-            >
+            <Button variant="outline" onClick={handleVetIdea} disabled={analyzeIdea.isPending} className="gap-2">
               {analyzeIdea.isPending ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
