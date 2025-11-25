@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { Idea } from "./useIdeas";
+import { recordXpEvent } from "@/lib/xpEngine";
 
 export interface IdeaAnalysis {
   id: string;
@@ -101,8 +102,14 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
       if (!ideaId || !user) throw new Error("No idea ID or user");
       return invokeAnalyzeIdea(ideaId, user.id);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Award XP for vetting an idea
+      if (user?.id && ideaId) {
+        await recordXpEvent(user.id, "idea_vetted", 30, { ideaId });
+      }
       queryClient.invalidateQueries({ queryKey: ["idea-analysis", ideaId] });
+      // Refresh XP summary
+      queryClient.invalidateQueries({ queryKey: ["xp", user?.id] });
     },
   });
 
@@ -111,9 +118,15 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
       if (!ideaId || !user) throw new Error("Missing required data");
       return updateIdeaStatusInDb(ideaId, user.id, status);
     },
-    onSuccess: () => {
+    onSuccess: async (_, status) => {
+      // Award XP for choosing main idea
+      if (status === "chosen" && user?.id && ideaId) {
+        await recordXpEvent(user.id, "idea_chosen", 100, { ideaId });
+      }
       queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
       queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] });
+      // Refresh XP summary
+      queryClient.invalidateQueries({ queryKey: ["xp", user?.id] });
     },
   });
 
