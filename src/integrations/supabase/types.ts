@@ -414,6 +414,54 @@ export type Database = {
           },
         ]
       }
+      workspace_documents: {
+        Row: {
+          ai_suggestions: string | null
+          content: string | null
+          created_at: string
+          doc_type: string | null
+          id: string
+          idea_id: string | null
+          metadata: Json | null
+          source_id: string | null
+          source_type: string | null
+          status: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_suggestions?: string | null
+          content?: string | null
+          created_at?: string
+          doc_type?: string | null
+          id?: string
+          idea_id?: string | null
+          metadata?: Json | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_suggestions?: string | null
+          content?: string | null
+          created_at?: string
+          doc_type?: string | null
+          id?: string
+          idea_id?: string | null
+          metadata?: Json | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       xp_events: {
         Row: {
           amount: number
