@@ -14,38 +14,27 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      console.error('No authorization header');
+    const { userId } = await req.json();
+    
+    if (!userId) {
+      console.error('No userId provided in request body');
       return new Response(
-        JSON.stringify({ error: 'No authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'userId is required in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`Generating master prompt for user: ${userId}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    // Get the authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error('User authentication failed:', userError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`Generating master prompt for user: ${user.id}`);
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch the user's chosen idea
     const { data: chosenIdea, error: ideaError } = await supabase
       .from('ideas')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('status', 'chosen')
       .maybeSingle();
 
@@ -72,7 +61,7 @@ serve(async (req) => {
       .from('idea_analysis')
       .select('*')
       .eq('idea_id', chosenIdea.id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle();
 
     if (analysisError) {
@@ -97,7 +86,7 @@ serve(async (req) => {
     const { data: profile, error: profileError } = await supabase
       .from('founder_profiles')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle();
 
     if (profileError) {
@@ -118,8 +107,78 @@ serve(async (req) => {
 
     console.log('Found founder profile');
 
-    // Read the prompt template
-    const promptTemplate = await Deno.readTextFile('./prompts/generateMasterPrompt.txt');
+    // Prompt template (embedded)
+    const promptTemplate = `You are an expert business strategist and founder coach. Your task is to synthesize a founder's profile, their chosen business idea, and a detailed market analysis into a comprehensive "Master Prompt" that they can use as a guiding North Star throughout their entrepreneurial journey.
+
+**INPUT:**
+You will receive three key pieces of data:
+1. **Founder Profile**: Their passions, skills, constraints (time, capital, tech level), risk tolerance, lifestyle goals, and success vision.
+2. **Chosen Idea**: The business idea they've selected, including title, description, business model, target customer, complexity, time to first dollar, and fit scores.
+3. **Market Analysis**: The brutal, honest assessment including niche score, market overview, problem intensity, competition snapshot, pricing range, main risks, brutal take, and suggested modifications.
+
+**OUTPUT:**
+Return a JSON object with a single field:
+{
+  "master_prompt": "string"
+}
+
+The master_prompt should be a **comprehensive, long-form guidance document** (800-1200 words) that the founder can copy and paste into any AI tool (ChatGPT, Claude, etc.) to get contextualized advice throughout their journey.
+
+**STRUCTURE OF THE MASTER PROMPT:**
+
+1. **Founder Identity & Context** (150-200 words)
+   - Summarize who they are: passions, core skills, and professional background
+   - Their constraints: time availability, capital, technical capabilities
+   - Risk tolerance and lifestyle priorities
+   - Their definition of success
+
+2. **The Chosen Path** (150-200 words)
+   - The business idea they've committed to
+   - Why it aligns with their strengths and constraints
+   - Target customer and business model
+   - Expected timeline to first revenue
+
+3. **Market Reality Check** (200-250 words)
+   - Honest assessment of the niche (niche score context)
+   - Market dynamics and problem intensity
+   - Competitive landscape
+   - Realistic pricing expectations
+   - Key risks they must navigate
+
+4. **Strategic Modifications & Approach** (150-200 words)
+   - Suggested tweaks to improve market fit
+   - How to position uniquely given their constraints
+   - Specific advantages they can leverage
+
+5. **Operating Principles** (200-250 words)
+   - How they should approach decision-making
+   - Guardrails based on their risk tolerance
+   - Time and capital allocation strategies
+   - When to pivot vs. persist
+   - How to measure progress aligned with their vision of success
+
+6. **Context for AI Assistants** (100-150 words)
+   - Clear instructions for any AI tool reading this prompt
+   - What kind of advice to prioritize
+   - What to avoid given their constraints
+   - How to tailor responses to their lifestyle goals
+
+**TONE & STYLE:**
+- Direct, honest, and motivating
+- Reference specific details from their profile and analysis
+- Actionable and concrete, not generic platitudes
+- Acknowledge both opportunities and real challenges
+- Write in second person ("You are a founder who...")
+- Make it feel like a personalized strategic brief
+
+**CRITICAL GUIDELINES:**
+- The master_prompt field should be a single cohesive string (use \\n for line breaks)
+- Integrate actual data points from the input (don't be vague)
+- Make it copy-paste ready for immediate use in other AI tools
+- Balance realism (from the brutal take) with encouragement
+- Ensure it's evergreen guidance, not time-sensitive advice
+
+Return ONLY the JSON object with the master_prompt field. No other commentary.`;
 
     // Prepare the data payload for the AI
     const inputData = {
