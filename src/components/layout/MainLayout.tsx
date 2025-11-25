@@ -9,6 +9,7 @@ import {
   Rss, 
   CheckSquare,
   Activity,
+  Radar,
   User,
   LogOut
 } from "lucide-react";
@@ -22,6 +23,7 @@ const navigation = [
   { name: "Feed", href: "/feed", icon: Rss },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Pulse Check", href: "/pulse", icon: Activity },
+  { name: "Radar", href: "/radar", icon: Radar },
   { name: "North Star", href: "/north-star", icon: Target },
   { name: "Profile", href: "/profile", icon: User },
 ];
