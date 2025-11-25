@@ -3,6 +3,108 @@
 import { supabase } from "@/integrations/supabase/client";
 import { FeedItem, FeedContext } from "@/types/feed";
 
+// Valid feed item types
+export const FEED_TYPES = ["insight", "idea_tweak", "competitor_snapshot", "micro_task"] as const;
+
+/**
+ * Build feed input for AI generation
+ * @param userId - The user's ID
+ * @returns Object with founder_profile, idea, and analysis for LLM
+ */
+export async function buildFeedInput(userId: string) {
+  try {
+    // Fetch founder profile
+    const { data: founder_profile, error: profileError } = await supabase
+      .from("founder_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("Error fetching founder profile:", profileError);
+    }
+
+    // Fetch chosen idea
+    const { data: idea, error: ideaError } = await supabase
+      .from("ideas")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "chosen")
+      .maybeSingle();
+
+    if (ideaError) {
+      console.error("Error fetching chosen idea:", ideaError);
+    }
+
+    // Fetch latest idea analysis if idea exists
+    let analysis = null;
+    if (idea) {
+      const { data: analysisData, error: analysisError } = await supabase
+        .from("idea_analysis")
+        .select("*")
+        .eq("idea_id", idea.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (analysisError) {
+        console.error("Error fetching idea analysis:", analysisError);
+      } else {
+        analysis = analysisData;
+      }
+    }
+
+    return {
+      founder_profile: founder_profile || null,
+      idea: idea || null,
+      analysis: analysis || null,
+    };
+  } catch (error) {
+    console.error("Error building feed input:", error);
+    return {
+      founder_profile: null,
+      idea: null,
+      analysis: null,
+    };
+  }
+}
+
+/**
+ * Format and validate raw feed items from AI
+ * @param rawItems - Raw items from LLM response
+ * @returns Validated and formatted feed items
+ */
+export function formatFeedItems(rawItems: any[]): any[] {
+  if (!Array.isArray(rawItems)) {
+    console.error("formatFeedItems: rawItems is not an array");
+    return [];
+  }
+
+  return rawItems
+    .filter((item) => {
+      // Validate required fields
+      if (!item.type || !item.title || !item.body) {
+        console.warn("formatFeedItems: skipping item missing required fields", item);
+        return false;
+      }
+      // Validate type
+      if (!FEED_TYPES.includes(item.type)) {
+        console.warn("formatFeedItems: skipping item with invalid type", item.type);
+        return false;
+      }
+      return true;
+    })
+    .map((item) => ({
+      type: item.type,
+      title: item.title,
+      body: item.body,
+      cta_label: item.cta_label || null,
+      cta_action: item.cta_action || null,
+      xp_reward: typeof item.xp_reward === "number" ? item.xp_reward : 2,
+      metadata: item.metadata || {},
+    }));
+}
+
 /**
  * Get personalized feed items for a user
  * @param userId - The user's ID
