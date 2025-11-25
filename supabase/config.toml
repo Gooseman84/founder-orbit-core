@@ -29,3 +29,6 @@ verify_jwt = true
 
 [functions.refresh-niche-radar]
 verify_jwt = false
+
+[functions.generate-workspace-doc]
+verify_jwt = true
