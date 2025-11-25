@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { recordXpEvent } from '@/lib/xpEngine';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 
 interface CreateDocumentParams {
@@ -110,10 +111,46 @@ export function useWorkspace() {
     }
 
     try {
+      // Get current document to compare content length
+      const { data: currentDoc, error: fetchError } = await supabase
+        .from('workspace_documents')
+        .select('content, metadata')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const oldContent = currentDoc?.content || '';
+      const oldLength = oldContent.length;
+      const newLength = newContent.length;
+      const contentGrowth = newLength - oldLength;
+
+      // Check if we should award XP (meaningful growth + rate limiting)
+      const shouldAwardXP = contentGrowth >= 50; // At least 50 characters added
+      
+      // Safely parse metadata
+      const metadata = currentDoc?.metadata && typeof currentDoc.metadata === 'object' && !Array.isArray(currentDoc.metadata)
+        ? currentDoc.metadata as Record<string, any>
+        : {};
+      
+      const lastXpAwarded = metadata.last_xp_awarded 
+        ? new Date(metadata.last_xp_awarded as string).getTime() 
+        : 0;
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
+      const canAwardXP = (now - lastXpAwarded) > fiveMinutes;
+
+      // Update metadata if awarding XP
+      const updatedMetadata = shouldAwardXP && canAwardXP
+        ? { ...metadata, last_xp_awarded: new Date().toISOString() }
+        : metadata;
+
       const { error: updateError } = await supabase
         .from('workspace_documents')
         .update({
           content: newContent,
+          metadata: updatedMetadata,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
@@ -121,18 +158,33 @@ export function useWorkspace() {
 
       if (updateError) throw updateError;
 
+      // Award XP if conditions met
+      if (shouldAwardXP && canAwardXP) {
+        await recordXpEvent(user.id, 'workspace_saved', 15, { documentId: id });
+      }
+
       // Update local state
       setDocuments(prev =>
         prev.map(doc =>
           doc.id === id
-            ? { ...doc, content: newContent, updated_at: new Date().toISOString() }
+            ? { 
+                ...doc, 
+                content: newContent, 
+                metadata: updatedMetadata as any,
+                updated_at: new Date().toISOString() 
+              }
             : doc
         )
       );
 
       if (currentDocument?.id === id) {
         setCurrentDocument(prev =>
-          prev ? { ...prev, content: newContent, updated_at: new Date().toISOString() } : null
+          prev ? { 
+            ...prev, 
+            content: newContent, 
+            metadata: updatedMetadata as any,
+            updated_at: new Date().toISOString() 
+          } : null
         );
       }
     } catch (err) {
