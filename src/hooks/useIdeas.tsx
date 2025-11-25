@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { recordXpEvent } from "@/lib/xpEngine";
 
 export interface Idea {
   id: string;
@@ -64,8 +65,16 @@ export const useIdeas = () => {
       }
       return invokeGenerateIdeas(user.id);
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      // Award XP for generating ideas
+      if (user?.id && data?.ideas) {
+        await recordXpEvent(user.id, "idea_generated", 20, { 
+          ideasCount: data.ideas.length 
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] });
+      // Also refresh XP summary
+      queryClient.invalidateQueries({ queryKey: ["xp", user?.id] });
     },
   });
 
