@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity, Radar } from "lucide-react";
+import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity, Radar, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { isToday } from "date-fns";
 
@@ -32,12 +32,18 @@ const Dashboard = () => {
     topSignal: null as any,
   });
   const [loadingRadar, setLoadingRadar] = useState(true);
+  const [workspaceStats, setWorkspaceStats] = useState({
+    totalDocs: 0,
+    recentDoc: null as any,
+  });
+  const [loadingWorkspace, setLoadingWorkspace] = useState(true);
 
   useEffect(() => {
     if (user) {
       fetchTaskStats();
       fetchLatestPulse();
       fetchRadarStats();
+      fetchWorkspaceStats();
     }
   }, [user]);
 
@@ -118,6 +124,30 @@ const Dashboard = () => {
       console.error("Error fetching radar stats:", error);
     } finally {
       setLoadingRadar(false);
+    }
+  };
+
+  const fetchWorkspaceStats = async () => {
+    if (!user) return;
+
+    setLoadingWorkspace(true);
+    try {
+      const { data, error } = await supabase
+        .from("workspace_documents")
+        .select("id, title, updated_at")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
+
+      if (error) throw error;
+
+      setWorkspaceStats({
+        totalDocs: data?.length || 0,
+        recentDoc: data?.[0] || null,
+      });
+    } catch (error) {
+      console.error("Error fetching workspace stats:", error);
+    } finally {
+      setLoadingWorkspace(false);
     }
   };
 
@@ -397,6 +427,74 @@ const Dashboard = () => {
                   className="w-full"
                 >
                   Generate Signals
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Workspace
+            </CardTitle>
+            <CardDescription>Your builder documents and content</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingWorkspace ? (
+              <div className="space-y-3">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : workspaceStats.totalDocs > 0 ? (
+              <div className="space-y-4">
+                {/* Document Count */}
+                <div className="p-3 rounded-lg border bg-card">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">Total Documents</span>
+                  </div>
+                  <p className="text-2xl font-bold">{workspaceStats.totalDocs}</p>
+                </div>
+
+                {/* Most Recent Document */}
+                {workspaceStats.recentDoc && (
+                  <div className="p-3 rounded-lg bg-secondary/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Recently Updated</p>
+                    <p className="text-sm font-semibold line-clamp-2">{workspaceStats.recentDoc.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(workspaceStats.recentDoc.updated_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+
+                {/* Open Workspace Button */}
+                <Button 
+                  onClick={() => navigate("/workspace")} 
+                  variant="default"
+                  className="w-full"
+                >
+                  Open Workspace
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-center py-6">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <h3 className="font-semibold mb-1">No documents yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Create documents to organize your ideas and strategies
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={() => navigate("/workspace")} 
+                  variant="default"
+                  className="w-full"
+                >
+                  Create Document
                 </Button>
               </div>
             )}
