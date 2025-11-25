@@ -275,7 +275,10 @@ export default function NorthStar() {
             </Button>
           </div>
 
-          <PromptViewer promptBody={masterPrompt.prompt_body} ideaTitle={ideaTitle} />
+          <PromptViewer 
+            prompt={masterPrompt.prompt_body} 
+            filename={`founderos-${ideaTitle.toLowerCase().replace(/\s+/g, "-")}`}
+          />
         </div>
       )}
 

@@ -1,20 +1,19 @@
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Copy, Download, Check } from "lucide-react";
+import { Copy, Check, Download } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 interface PromptViewerProps {
-  promptBody: string;
-  ideaTitle?: string;
+  prompt: string;
+  filename?: string;
 }
 
-export function PromptViewer({ promptBody, ideaTitle }: PromptViewerProps) {
+export function PromptViewer({ prompt, filename = "north-star-prompt" }: PromptViewerProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(promptBody);
+      await navigator.clipboard.writeText(prompt);
       setCopied(true);
       toast.success("Copied to clipboard!");
       setTimeout(() => setCopied(false), 2000);
@@ -25,11 +24,11 @@ export function PromptViewer({ promptBody, ideaTitle }: PromptViewerProps) {
 
   const handleDownload = () => {
     try {
-      const blob = new Blob([promptBody], { type: "text/plain" });
+      const blob = new Blob([prompt], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `north-star-${ideaTitle?.toLowerCase().replace(/\s+/g, "-") || "prompt"}.txt`;
+      link.download = `${filename}.txt`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -41,45 +40,42 @@ export function PromptViewer({ promptBody, ideaTitle }: PromptViewerProps) {
   };
 
   return (
-    <Card className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Your North Star Master Prompt</h3>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCopy}
-            className="gap-2"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copy
-              </>
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownload}
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Download
-          </Button>
-        </div>
+    <div className="relative">
+      <div className="absolute top-3 right-3 z-10 flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCopy}
+          className="gap-2"
+        >
+          {copied ? (
+            <>
+              <Check className="h-4 w-4" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <Copy className="h-4 w-4" />
+              Copy
+            </>
+          )}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDownload}
+          className="gap-2"
+        >
+          <Download className="h-4 w-4" />
+          Download
+        </Button>
       </div>
 
-      <div className="bg-muted rounded-lg p-4 max-h-[500px] overflow-y-auto">
+      <div className="bg-muted border rounded-lg p-4 overflow-auto max-h-[600px]">
         <pre className="whitespace-pre-wrap font-mono text-sm text-foreground">
-          {promptBody}
+          <code>{prompt}</code>
         </pre>
       </div>
-    </Card>
+    </div>
   );
 }
