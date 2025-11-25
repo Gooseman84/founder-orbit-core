@@ -4,7 +4,7 @@ import { FeedCard } from "@/components/feed/FeedCard";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getFeedItemsForUser } from "@/lib/feedEngine";
-import { addXpEvent } from "@/lib/xpEngine";
+import { recordXpEvent } from "@/lib/xpEngine";
 import { XP_EVENT_TYPES } from "@/types/xp";
 import { FeedItem } from "@/types/feed";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,7 +34,7 @@ export default function Feed() {
 
       // Award XP for viewing feed (only on initial load, not refresh)
       if (!isRefresh && items.length > 0) {
-        await addXpEvent(user.id, XP_EVENT_TYPES.FEED_VIEW, 2, {
+        await recordXpEvent(user.id, XP_EVENT_TYPES.FEED_VIEW, 2, {
           item_count: items.length,
         });
       }
@@ -64,7 +64,7 @@ export default function Feed() {
       
       // Award XP for interacting with feed item
       if (item.xpReward) {
-        await addXpEvent(user.id, 'feed_action', item.xpReward, {
+        await recordXpEvent(user.id, 'feed_action', item.xpReward, {
           item_id: item.id,
           item_type: item.type,
           action: 'cta_click',

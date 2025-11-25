@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { addXpEvent } from "@/lib/xpEngine";
+import { recordXpEvent } from "@/lib/xpEngine";
 import { Loader2, Sparkles, ListTodo, CheckCircle2, Heart } from "lucide-react";
 
 interface Task {
@@ -145,7 +145,7 @@ const Tasks = () => {
       if (updateError) throw updateError;
 
       // Add XP event
-      await addXpEvent(user.id, 'task_complete', task.xp_reward || 10, {
+      await recordXpEvent(user.id, 'task_complete', task.xp_reward || 10, {
         task_id: taskId,
         task_title: task.title,
         category: task.category,
@@ -195,7 +195,7 @@ const Tasks = () => {
       if (error) throw error;
 
       // Award XP for daily check-in
-      await addXpEvent(user.id, 'daily_check_in', 5, {
+      await recordXpEvent(user.id, 'daily_check_in', 5, {
         has_what_did: !!checkIn.whatDid,
         has_what_learned: !!checkIn.whatLearned,
         has_feelings: !!checkIn.feelings,
