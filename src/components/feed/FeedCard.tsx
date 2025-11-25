@@ -3,6 +3,10 @@ import { Lightbulb, Wrench, Radar, CheckSquare } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useXP } from "@/hooks/useXP";
+import { recordXpEvent } from "@/lib/xpEngine";
+import { toast } from "sonner";
 
 interface FeedCardProps {
   item: {
@@ -47,10 +51,28 @@ const TYPE_CONFIG = {
 } as const;
 
 export function FeedCard({ item, onClick }: FeedCardProps) {
+  const { user } = useAuth();
+  const { refresh: refreshXp } = useXP();
   const config = TYPE_CONFIG[item.type as keyof typeof TYPE_CONFIG] || TYPE_CONFIG.insight;
   const Icon = config.icon;
 
-  const handleCtaClick = () => {
+  const handleCtaClick = async () => {
+    if (!user) return;
+
+    // Award XP for interaction
+    const xpAmount = item.xp_reward ?? 2;
+    await recordXpEvent(user.id, "feed_interaction", xpAmount, {
+      feedItemId: item.id,
+      feedItemType: item.type,
+    });
+
+    // Refresh XP display
+    refreshXp();
+    
+    // Show toast notification
+    toast.success(`+${xpAmount} XP earned!`);
+
+    // Call parent onClick handler
     if (onClick) {
       onClick(item);
     }

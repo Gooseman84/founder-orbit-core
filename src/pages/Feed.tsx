@@ -113,21 +113,7 @@ export default function Feed() {
   const handleCtaClick = async (item: FeedItem) => {
     if (!user) return;
 
-    // Mark as viewed and award additional XP for interaction
-    if (!viewedItems.has(item.id)) {
-      setViewedItems((prev) => new Set(prev).add(item.id));
-
-      // Award bonus XP for interacting with the item
-      const bonusXp = Math.floor((item.xp_reward || 2) * 1.5);
-      await recordXpEvent(user.id, "feed_action", bonusXp, {
-        feedItemId: item.id,
-        feedItemType: item.type,
-        action: "cta_click",
-      });
-      toast.success(`+${bonusXp} XP earned!`);
-    }
-
-    // Handle the CTA action
+    // Handle the CTA action (navigation)
     if (item.cta_action) {
       if (item.cta_action.startsWith("/")) {
         navigate(item.cta_action);
