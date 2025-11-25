@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
 import { recordXpEvent } from "@/lib/xpEngine";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useState } from "react";
 
 interface FeedCardProps {
   item: {
@@ -53,28 +56,92 @@ const TYPE_CONFIG = {
 export function FeedCard({ item, onClick }: FeedCardProps) {
   const { user } = useAuth();
   const { refresh: refreshXp } = useXP();
+  const navigate = useNavigate();
+  const [isProcessing, setIsProcessing] = useState(false);
   const config = TYPE_CONFIG[item.type as keyof typeof TYPE_CONFIG] || TYPE_CONFIG.insight;
   const Icon = config.icon;
 
   const handleCtaClick = async () => {
-    if (!user) return;
+    if (!user || isProcessing) return;
 
-    // Award XP for interaction
-    const xpAmount = item.xp_reward ?? 2;
-    await recordXpEvent(user.id, "feed_interaction", xpAmount, {
-      feedItemId: item.id,
-      feedItemType: item.type,
-    });
+    setIsProcessing(true);
 
-    // Refresh XP display
-    refreshXp();
-    
-    // Show toast notification
-    toast.success(`+${xpAmount} XP earned!`);
+    try {
+      // Special handling for micro_task type
+      if (item.type === "micro_task") {
+        // Check if task already exists for this feed_item_id
+        const { data: existingTask, error: checkError } = await supabase
+          .from("tasks")
+          .select("id")
+          .eq("feed_item_id", item.id)
+          .eq("user_id", user.id)
+          .maybeSingle();
 
-    // Call parent onClick handler
-    if (onClick) {
-      onClick(item);
+        if (checkError) {
+          console.error("Error checking for existing task:", checkError);
+          throw new Error("Failed to check for existing task");
+        }
+
+        if (existingTask) {
+          toast.info("This task already exists in your task list!");
+          navigate("/tasks");
+          setIsProcessing(false);
+          return;
+        }
+
+        // Insert new task
+        const { error: insertError } = await supabase
+          .from("tasks")
+          .insert({
+            user_id: user.id,
+            feed_item_id: item.id,
+            type: "micro",
+            title: item.title,
+            description: item.body,
+            xp_reward: item.xp_reward || 10,
+            status: "pending",
+          });
+
+        if (insertError) {
+          console.error("Error inserting task:", insertError);
+          throw new Error("Failed to create task");
+        }
+
+        // Award XP for adding task to list
+        const xpAmount = 5; // Small XP reward for accepting a task
+        await recordXpEvent(user.id, "task_added", xpAmount, {
+          feedItemId: item.id,
+          taskTitle: item.title,
+        });
+
+        // Refresh XP display
+        refreshXp();
+
+        toast.success(`Task added to your list! (+${xpAmount} XP)`);
+        navigate("/tasks");
+      } else {
+        // Default handling for other feed item types
+        const xpAmount = item.xp_reward ?? 2;
+        await recordXpEvent(user.id, "feed_interaction", xpAmount, {
+          feedItemId: item.id,
+          feedItemType: item.type,
+        });
+
+        // Refresh XP display
+        refreshXp();
+        
+        toast.success(`+${xpAmount} XP earned!`);
+
+        // Call parent onClick handler
+        if (onClick) {
+          onClick(item);
+        }
+      }
+    } catch (error) {
+      console.error("Error handling CTA click:", error);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -125,8 +192,9 @@ export function FeedCard({ item, onClick }: FeedCardProps) {
             size="sm"
             variant="outline"
             className="ml-auto"
+            disabled={isProcessing}
           >
-            {item.cta_label}
+            {isProcessing ? "Processing..." : item.cta_label}
           </Button>
         )}
       </CardFooter>
