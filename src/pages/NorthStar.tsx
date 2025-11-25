@@ -58,6 +58,24 @@ export default function NorthStar() {
       setChosenIdeaId(chosenIdea.id);
       setIdeaTitle(chosenIdea.title);
 
+      // Step 1.5: Check if idea has been analyzed
+      const { data: analysis, error: analysisError } = await supabase
+        .from("idea_analysis")
+        .select("id")
+        .eq("idea_id", chosenIdea.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (analysisError && analysisError.code !== 'PGRST116') {
+        console.error("Error checking idea analysis:", analysisError);
+      }
+
+      if (!analysis) {
+        setError("Please analyze your chosen idea before generating your Master Prompt");
+        setLoading(false);
+        return;
+      }
+
       // Step 2: Check if master prompt already exists for this idea
       const { data: existingPrompt, error: promptError } = await supabase
         .from("master_prompts")
@@ -146,6 +164,31 @@ export default function NorthStar() {
             {generating ? "Generating your North Star master prompt..." : "Loading..."}
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (error === "Please analyze your chosen idea before generating your Master Prompt") {
+    return (
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-bold">Your FounderOS Master Prompt</h1>
+          </div>
+        </div>
+
+        <Card className="p-8 text-center space-y-4">
+          <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground" />
+          <h2 className="text-xl font-semibold">Idea Not Analyzed Yet</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Before generating your Master Prompt, you need to analyze your chosen idea.
+            This provides the strategic insights needed to create a personalized AI guidance system.
+          </p>
+          <Button onClick={() => navigate("/ideas")} className="mt-4">
+            Analyze My Idea
+          </Button>
+        </Card>
       </div>
     );
   }
