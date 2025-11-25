@@ -277,6 +277,45 @@ export type Database = {
         }
         Relationships: []
       }
+      pulse_checks: {
+        Row: {
+          ai_insight: string | null
+          created_at: string
+          emotional_state: string | null
+          energy_level: number | null
+          id: string
+          metadata: Json | null
+          recommended_action: string | null
+          reflection: string | null
+          stress_level: number | null
+          user_id: string
+        }
+        Insert: {
+          ai_insight?: string | null
+          created_at?: string
+          emotional_state?: string | null
+          energy_level?: number | null
+          id?: string
+          metadata?: Json | null
+          recommended_action?: string | null
+          reflection?: string | null
+          stress_level?: number | null
+          user_id: string
+        }
+        Update: {
+          ai_insight?: string | null
+          created_at?: string
+          emotional_state?: string | null
+          energy_level?: number | null
+          id?: string
+          metadata?: Json | null
+          recommended_action?: string | null
+          reflection?: string | null
+          stress_level?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           category: string | null
