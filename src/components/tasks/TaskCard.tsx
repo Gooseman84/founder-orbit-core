@@ -1,97 +1,163 @@
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Trophy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Zap, 
+  Target, 
+  Clock, 
+  CheckCircle2, 
+  Circle,
+  PlayCircle 
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface Task {
   id: string;
+  type?: string | null;
   title: string;
-  description: string | null;
-  category: string | null;
-  estimated_minutes: number | null;
-  xp_reward: number | null;
-  status: string;
-  completed_at: string | null;
+  description?: string | null;
+  xp_reward?: number | null;
+  status?: string | null;
+  created_at: string;
+  completed_at?: string | null;
+  category?: string | null;
+  estimated_minutes?: number | null;
 }
 
 interface TaskCardProps {
   task: Task;
   onComplete: (taskId: string) => void;
+  onStart?: (taskId: string) => void;
   isCompleting?: boolean;
 }
 
-const CATEGORY_STYLES: Record<string, { variant: "default" | "secondary" | "outline" | "destructive", icon?: string }> = {
-  Research: { variant: "secondary" },
-  Validation: { variant: "default" },
-  Planning: { variant: "outline" },
-  Building: { variant: "default" },
-  Marketing: { variant: "secondary" },
-  Operations: { variant: "outline" },
-};
+export function TaskCard({ task, onComplete, onStart, isCompleting = false }: TaskCardProps) {
+  const isMicro = task.type === "micro";
+  const isQuest = task.type === "quest";
+  const isPending = task.status === "pending";
+  const isInProgress = task.status === "in_progress";
+  const isCompleted = task.status === "completed";
 
-export const TaskCard = ({ task, onComplete, isCompleting = false }: TaskCardProps) => {
-  const categoryStyle = CATEGORY_STYLES[task.category || ''] || { variant: "outline" as const };
-  const isCompleted = task.status === 'completed';
+  const handleCheckboxChange = (checked: boolean) => {
+    if (checked && !isCompleted) {
+      onComplete(task.id);
+    }
+  };
+
+  const handleStartClick = () => {
+    if (onStart && isPending) {
+      onStart(task.id);
+    }
+  };
 
   return (
-    <Card className={`transition-all ${isCompleted ? 'opacity-60 border-muted' : 'hover:shadow-md'}`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg flex items-start gap-2">
-            {isCompleted && <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />}
-            <span className={isCompleted ? 'line-through text-muted-foreground' : ''}>
-              {task.title}
-            </span>
-          </CardTitle>
-          {task.category && (
-            <Badge variant={categoryStyle.variant} className="flex-shrink-0">
-              {task.category}
+    <Card className="p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start gap-3">
+        {/* Checkbox for completion */}
+        <div className="pt-1">
+          <Checkbox
+            checked={isCompleted}
+            onCheckedChange={handleCheckboxChange}
+            disabled={isCompleted}
+            className="h-5 w-5"
+          />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Header: Type badge and status */}
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            {/* Type Badge */}
+            {isMicro && (
+              <Badge variant="secondary" className="gap-1 text-xs font-semibold">
+                <Zap className="h-3 w-3" />
+                MICRO
+              </Badge>
+            )}
+            {isQuest && (
+              <Badge variant="default" className="gap-1 text-xs font-semibold">
+                <Target className="h-3 w-3" />
+                QUEST
+              </Badge>
+            )}
+
+            {/* Status Indicator */}
+            {isPending && (
+              <Badge variant="outline" className="gap-1 text-xs">
+                <Circle className="h-3 w-3" />
+                Pending
+              </Badge>
+            )}
+            {isInProgress && (
+              <Badge variant="outline" className="gap-1 text-xs text-primary">
+                <PlayCircle className="h-3 w-3" />
+                In Progress
+              </Badge>
+            )}
+            {isCompleted && (
+              <Badge variant="outline" className="gap-1 text-xs text-green-600">
+                <CheckCircle2 className="h-3 w-3" />
+                Completed
+              </Badge>
+            )}
+
+            {/* XP Reward */}
+            <Badge variant="outline" className="gap-1 text-xs font-bold ml-auto">
+              +{task.xp_reward || 10} XP
             </Badge>
-          )}
-        </div>
-      </CardHeader>
-      
-      {task.description && (
-        <CardContent className="pb-3">
-          <p className={`text-sm ${isCompleted ? 'text-muted-foreground' : 'text-foreground/80'}`}>
-            {task.description}
-          </p>
-        </CardContent>
-      )}
-      
-      <CardFooter className="flex items-center justify-between pt-3 border-t">
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          {task.estimated_minutes && (
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span>{task.estimated_minutes} min</span>
-            </div>
-          )}
-          {task.xp_reward && (
-            <div className="flex items-center gap-1 font-medium">
-              <Trophy className="h-4 w-4 text-amber-500" />
-              <span className="text-amber-600">{task.xp_reward} XP</span>
-            </div>
-          )}
-        </div>
-        
-        {!isCompleted && (
-          <Button 
-            onClick={() => onComplete(task.id)}
-            disabled={isCompleting}
-            size="sm"
-            variant="default"
+          </div>
+
+          {/* Title */}
+          <h3 
+            className={`font-bold text-base mb-1 ${
+              isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'
+            }`}
           >
-            {isCompleting ? 'Completing...' : 'Mark Complete'}
-          </Button>
-        )}
-        
-        {isCompleted && task.completed_at && (
-          <span className="text-xs text-muted-foreground">
-            Completed {new Date(task.completed_at).toLocaleDateString()}
-          </span>
-        )}
-      </CardFooter>
+            {task.title}
+          </h3>
+
+          {/* Description */}
+          {task.description && (
+            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+              {task.description}
+            </p>
+          )}
+
+          {/* Footer: Timestamp and Actions */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            {/* Timestamp */}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              {isPending && onStart && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleStartClick}
+                  className="h-8 text-xs"
+                >
+                  Start
+                </Button>
+              )}
+              {!isCompleted && (
+                <Button
+                  size="sm"
+                  onClick={() => onComplete(task.id)}
+                  disabled={isCompleting}
+                  className="h-8 text-xs"
+                >
+                  {isCompleting ? 'Completing...' : 'Mark Complete'}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </Card>
   );
-};
+}
