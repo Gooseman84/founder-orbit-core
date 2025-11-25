@@ -41,6 +41,48 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_items: {
+        Row: {
+          body: string
+          created_at: string
+          cta_action: string | null
+          cta_label: string | null
+          id: string
+          idea_id: string | null
+          metadata: Json | null
+          title: string
+          type: string
+          user_id: string
+          xp_reward: number | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          cta_action?: string | null
+          cta_label?: string | null
+          id?: string
+          idea_id?: string | null
+          metadata?: Json | null
+          title: string
+          type: string
+          user_id: string
+          xp_reward?: number | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          cta_action?: string | null
+          cta_label?: string | null
+          id?: string
+          idea_id?: string | null
+          metadata?: Json | null
+          title?: string
+          type?: string
+          user_id?: string
+          xp_reward?: number | null
+        }
+        Relationships: []
+      }
       founder_profiles: {
         Row: {
           capital_available: number | null
