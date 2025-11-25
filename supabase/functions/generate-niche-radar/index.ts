@@ -86,7 +86,7 @@ function formatRadarSignals(rawSignals: any[]) {
       signal_type: signal.signal_type,
       title: signal.title.trim(),
       description: signal.description.trim(),
-      priority_score: signal.priority_score ?? 50,
+      priority_score: Math.round(Number(signal.priority_score ?? 50)), // Convert to integer
       recommended_action: signal.recommended_action.trim(),
       metadata: signal.metadata ?? {},
     }));
