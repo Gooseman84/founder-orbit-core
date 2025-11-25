@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PromptViewer } from "@/components/shared/PromptViewer";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2, AlertCircle, Sparkles, RefreshCw } from "lucide-react";
 
@@ -16,26 +17,90 @@ interface MasterPromptData {
 
 export default function NorthStar() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [masterPrompt, setMasterPrompt] = useState<MasterPromptData | null>(null);
+  const [chosenIdeaId, setChosenIdeaId] = useState<string | null>(null);
   const [ideaTitle, setIdeaTitle] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  const fetchMasterPrompt = async () => {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!user) {
+        setError("You must be logged in");
+        setLoading(false);
+        return;
+      }
+
+      // Step 1: Fetch the chosen idea
+      const { data: chosenIdea, error: ideaError } = await supabase
+        .from("ideas")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "chosen")
+        .maybeSingle();
+
+      if (ideaError) {
+        console.error("Error fetching chosen idea:", ideaError);
+        throw new Error("Failed to fetch chosen idea");
+      }
+
+      if (!chosenIdea) {
+        setError("You must choose an idea before generating your Master Prompt");
+        setLoading(false);
+        return;
+      }
+
+      setChosenIdeaId(chosenIdea.id);
+      setIdeaTitle(chosenIdea.title);
+
+      // Step 2: Check if master prompt already exists for this idea
+      const { data: existingPrompt, error: promptError } = await supabase
+        .from("master_prompts")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("idea_id", chosenIdea.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (promptError && promptError.code !== 'PGRST116') {
+        console.error("Error fetching master prompt:", promptError);
+      }
+
+      if (existingPrompt) {
+        // Use existing prompt
+        setMasterPrompt({
+          idea_id: existingPrompt.idea_id,
+          platform_target: existingPrompt.platform_target,
+          prompt_body: existingPrompt.prompt_body,
+        });
+        setLoading(false);
+      } else {
+        // Step 3: Generate new master prompt if none exists
+        await generateMasterPrompt(user.id, chosenIdea.id);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load data";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      setLoading(false);
+    }
+  };
+
+  const generateMasterPrompt = async (userId: string, ideaId: string) => {
     try {
       setGenerating(true);
       setError(null);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("You must be logged in to generate a master prompt");
-      }
-
       const { data, error: functionError } = await supabase.functions.invoke(
         "generate-master-prompt",
         {
-          body: { userId: user.id },
+          body: { userId, ideaId },
         }
       );
 
@@ -49,18 +114,6 @@ export default function NorthStar() {
       }
 
       setMasterPrompt(data);
-
-      // Fetch the idea title
-      const { data: ideaData } = await supabase
-        .from("ideas")
-        .select("title")
-        .eq("id", data.idea_id)
-        .single();
-
-      if (ideaData) {
-        setIdeaTitle(ideaData.title);
-      }
-
       toast.success("Master prompt generated successfully!");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to generate master prompt";
@@ -73,11 +126,15 @@ export default function NorthStar() {
   };
 
   useEffect(() => {
-    fetchMasterPrompt();
-  }, []);
+    fetchData();
+  }, [user]);
 
-  const handleRegenerate = () => {
-    fetchMasterPrompt();
+  const handleRegenerate = async () => {
+    if (!user || !chosenIdeaId) {
+      toast.error("Cannot regenerate: missing user or idea information");
+      return;
+    }
+    await generateMasterPrompt(user.id, chosenIdeaId);
   };
 
   if (loading) {
@@ -85,8 +142,35 @@ export default function NorthStar() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Generating your North Star master prompt...</p>
+          <p className="text-muted-foreground">
+            {generating ? "Generating your North Star master prompt..." : "Loading..."}
+          </p>
         </div>
+      </div>
+    );
+  }
+
+  if (error === "You must choose an idea before generating your Master Prompt") {
+    return (
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-bold">Your FounderOS Master Prompt</h1>
+          </div>
+        </div>
+
+        <Card className="p-8 text-center space-y-4">
+          <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground" />
+          <h2 className="text-xl font-semibold">No Chosen Idea Yet</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            You must choose an idea before generating your Master Prompt. The Master Prompt
+            provides personalized AI guidance based on your chosen business idea.
+          </p>
+          <Button onClick={() => navigate("/ideas")} className="mt-4">
+            View Ideas
+          </Button>
+        </Card>
       </div>
     );
   }
@@ -100,7 +184,7 @@ export default function NorthStar() {
         </Alert>
 
         <Card className="p-6 text-center space-y-4">
-          <h2 className="text-xl font-semibold">No Master Prompt Available</h2>
+          <h2 className="text-xl font-semibold">Unable to Generate Master Prompt</h2>
           <p className="text-muted-foreground">
             To generate your North Star master prompt, you need to:
           </p>
