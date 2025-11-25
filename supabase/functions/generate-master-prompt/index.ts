@@ -14,54 +14,89 @@ serve(async (req) => {
   }
 
   try {
-    const { userId } = await req.json();
+    const { userId, ideaId } = await req.json();
     
-    if (!userId) {
-      console.error('No userId provided in request body');
+    // Resolve userId: prefer body, fallback to auth context
+    let resolvedUserId = userId;
+    
+    if (!resolvedUserId) {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+        const tempClient = createClient(supabaseUrl, supabaseAnonKey);
+        
+        const { data: { user } } = await tempClient.auth.getUser(authHeader.replace('Bearer ', ''));
+        if (user) {
+          resolvedUserId = user.id;
+        }
+      }
+    }
+    
+    if (!resolvedUserId) {
       return new Response(
-        JSON.stringify({ error: 'userId is required in request body' }),
+        JSON.stringify({ error: 'Missing user id' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Generating master prompt for user: ${userId}`);
+    console.log('generate-master-prompt: resolved userId');
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch the user's chosen idea
-    const { data: chosenIdea, error: ideaError } = await supabase
-      .from('ideas')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'chosen')
-      .maybeSingle();
-
-    if (ideaError) {
-      console.error('Error fetching chosen idea:', ideaError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch chosen idea' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Fetch the chosen idea (use ideaId if provided, otherwise find chosen idea)
+    let chosenIdea;
+    if (ideaId) {
+      const { data, error } = await supabase
+        .from('ideas')
+        .select('*')
+        .eq('id', ideaId)
+        .eq('user_id', resolvedUserId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching idea by id:', error);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch idea' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      chosenIdea = data;
+    } else {
+      const { data, error } = await supabase
+        .from('ideas')
+        .select('*')
+        .eq('user_id', resolvedUserId)
+        .eq('status', 'chosen')
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching chosen idea:', error);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch chosen idea' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      chosenIdea = data;
     }
 
     if (!chosenIdea) {
-      console.error('No chosen idea found');
       return new Response(
         JSON.stringify({ error: 'No chosen idea found. Please select an idea first.' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Found chosen idea: ${chosenIdea.id}`);
+    console.log('generate-master-prompt: idea found');
 
     // Fetch the idea analysis
     const { data: analysis, error: analysisError } = await supabase
       .from('idea_analysis')
       .select('*')
       .eq('idea_id', chosenIdea.id)
-      .eq('user_id', userId)
+      .eq('user_id', resolvedUserId)
       .maybeSingle();
 
     if (analysisError) {
@@ -73,20 +108,19 @@ serve(async (req) => {
     }
 
     if (!analysis) {
-      console.error('No analysis found for chosen idea');
       return new Response(
         JSON.stringify({ error: 'No analysis found for this idea. Please analyze the idea first.' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Found idea analysis');
+    console.log('generate-master-prompt: analysis found');
 
     // Fetch the founder profile
     const { data: profile, error: profileError } = await supabase
       .from('founder_profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', resolvedUserId)
       .maybeSingle();
 
     if (profileError) {
@@ -98,130 +132,65 @@ serve(async (req) => {
     }
 
     if (!profile) {
-      console.error('No founder profile found');
       return new Response(
         JSON.stringify({ error: 'No founder profile found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Found founder profile');
+    console.log('generate-master-prompt: profile found');
 
-    // Prompt template (embedded)
-    const promptTemplate = `You are an expert business strategist and founder coach. Your task is to synthesize a founder's profile, their chosen business idea, and a detailed market analysis into a comprehensive "Master Prompt" that they can use as a guiding North Star throughout their entrepreneurial journey.
+    // Load the prompt template from generateMasterPrompt.txt
+    const promptTemplate = `You are an elite meta-prompt engineer, startup strategist, and entrepreneurial execution architect.
 
-**INPUT:**
-You will receive three key pieces of data:
-1. **Founder Profile**: Their passions, skills, constraints (time, capital, tech level), risk tolerance, lifestyle goals, and success vision.
-2. **Chosen Idea**: The business idea they've selected, including title, description, business model, target customer, complexity, time to first dollar, and fit scores.
-3. **Market Analysis**: The brutal, honest assessment including niche score, market overview, problem intensity, competition snapshot, pricing range, main risks, brutal take, and suggested modifications.
+Your job is to generate a single, extremely powerful MASTER PROMPT that gives the user:
 
-**OUTPUT:**
-Return a JSON object with a single field:
+- A complete definition of their founder identity
+- A complete definition of their chosen business idea
+- A full problem → solution → execution framework
+- A business model outline
+- Go-to-market positioning
+- A 90-day execution plan
+- A weekly sprint structure
+- Key risks
+- Key assumptions
+- KPIs to track
+- The user's personal constraints and strengths
+- Instructions for the AI assistant receiving this prompt
+
+Input JSON includes:
 {
-  "master_prompt": "string"
+  "founder_profile": { ... },
+  "idea": { ... },
+  "analysis": { ... }
 }
 
-The master_prompt should be a **comprehensive, long-form guidance document** (800-1200 words) that the founder can copy and paste into any AI tool (ChatGPT, Claude, etc.) to get contextualized advice throughout their journey.
+Respond with STRICT JSON only:
 
-**STRUCTURE OF THE MASTER PROMPT:**
+{
+  "prompt_body": "string",
+  "platform_target": "general_strategy",
+  "idea_id": "string"
+}
 
-1. **Founder Identity & Context** (150-200 words)
-   - Summarize who they are: passions, core skills, and professional background
-   - Their constraints: time availability, capital, technical capabilities
-   - Risk tolerance and lifestyle priorities
-   - Their definition of success
+The prompt_body should be a SINGLE TEXT BLOCK that:
+- Describes the founder's context
+- Describes the chosen idea
+- Summarizes the idea analysis
+- Includes instructions for any model receiving the prompt
+- Includes business strategy guidance
+- Includes constraints and preferences
+- Includes initial steps for execution
+- Ends with: "Always ask me clarifying questions before generating answers."
 
-2. **The Chosen Path** (150-200 words)
-   - The business idea they've committed to
-   - Why it aligns with their strengths and constraints
-   - Target customer and business model
-   - Expected timeline to first revenue
+Return strictly JSON. Do not include markdown or commentary outside the JSON.`;
 
-3. **Market Reality Check** (200-250 words)
-   - Honest assessment of the niche (niche score context)
-   - Market dynamics and problem intensity
-   - Competitive landscape
-   - Realistic pricing expectations
-   - Key risks they must navigate
-
-4. **Strategic Modifications & Approach** (150-200 words)
-   - Suggested tweaks to improve market fit
-   - How to position uniquely given their constraints
-   - Specific advantages they can leverage
-
-5. **Operating Principles** (200-250 words)
-   - How they should approach decision-making
-   - Guardrails based on their risk tolerance
-   - Time and capital allocation strategies
-   - When to pivot vs. persist
-   - How to measure progress aligned with their vision of success
-
-6. **Context for AI Assistants** (100-150 words)
-   - Clear instructions for any AI tool reading this prompt
-   - What kind of advice to prioritize
-   - What to avoid given their constraints
-   - How to tailor responses to their lifestyle goals
-
-**TONE & STYLE:**
-- Direct, honest, and motivating
-- Reference specific details from their profile and analysis
-- Actionable and concrete, not generic platitudes
-- Acknowledge both opportunities and real challenges
-- Write in second person ("You are a founder who...")
-- Make it feel like a personalized strategic brief
-
-**CRITICAL GUIDELINES:**
-- The master_prompt field should be a single cohesive string (use \\n for line breaks)
-- Integrate actual data points from the input (don't be vague)
-- Make it copy-paste ready for immediate use in other AI tools
-- Balance realism (from the brutal take) with encouragement
-- Ensure it's evergreen guidance, not time-sensitive advice
-
-Return ONLY the JSON object with the master_prompt field. No other commentary.`;
-
-    // Prepare the data payload for the AI
+    // Construct input JSON for the LLM
     const inputData = {
-      profile: {
-        passions_text: profile.passions_text,
-        passions_tags: profile.passions_tags,
-        skills_text: profile.skills_text,
-        skills_tags: profile.skills_tags,
-        tech_level: profile.tech_level,
-        time_per_week: profile.time_per_week,
-        capital_available: profile.capital_available,
-        risk_tolerance: profile.risk_tolerance,
-        lifestyle_goals: profile.lifestyle_goals,
-        success_vision: profile.success_vision,
-      },
-      chosen_idea: {
-        title: chosenIdea.title,
-        description: chosenIdea.description,
-        business_model_type: chosenIdea.business_model_type,
-        target_customer: chosenIdea.target_customer,
-        time_to_first_dollar: chosenIdea.time_to_first_dollar,
-        complexity: chosenIdea.complexity,
-        passion_fit_score: chosenIdea.passion_fit_score,
-        skill_fit_score: chosenIdea.skill_fit_score,
-        constraint_fit_score: chosenIdea.constraint_fit_score,
-        lifestyle_fit_score: chosenIdea.lifestyle_fit_score,
-        overall_fit_score: chosenIdea.overall_fit_score,
-      },
-      analysis: {
-        niche_score: analysis.niche_score,
-        market_insight: analysis.market_insight,
-        problem_intensity: analysis.problem_intensity,
-        competition_snapshot: analysis.competition_snapshot,
-        pricing_power: analysis.pricing_power,
-        biggest_risks: analysis.biggest_risks,
-        brutal_honesty: analysis.brutal_honesty,
-        recommendations: analysis.recommendations,
-      },
+      founder_profile: profile,
+      idea: chosenIdea,
+      analysis: analysis
     };
-
-    const userPrompt = `Generate a comprehensive Master Prompt based on the following data:\n\n${JSON.stringify(inputData, null, 2)}`;
-
-    console.log('Calling Lovable AI Gateway...');
 
     // Call Lovable AI
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
@@ -243,7 +212,7 @@ Return ONLY the JSON object with the master_prompt field. No other commentary.`;
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: promptTemplate },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: JSON.stringify(inputData) }
         ],
         tools: [
           {
@@ -254,12 +223,20 @@ Return ONLY the JSON object with the master_prompt field. No other commentary.`;
               parameters: {
                 type: "object",
                 properties: {
-                  master_prompt: {
+                  prompt_body: {
                     type: "string",
-                    description: "The complete master prompt text (800-1200 words)"
+                    description: "The complete master prompt text"
+                  },
+                  platform_target: {
+                    type: "string",
+                    description: "Target platform for the prompt"
+                  },
+                  idea_id: {
+                    type: "string",
+                    description: "The ID of the idea"
                   }
                 },
-                required: ["master_prompt"],
+                required: ["prompt_body", "platform_target", "idea_id"],
                 additionalProperties: false
               }
             }
@@ -294,7 +271,6 @@ Return ONLY the JSON object with the master_prompt field. No other commentary.`;
     }
 
     const aiData = await aiResponse.json();
-    console.log('AI response received');
 
     // Extract from tool call response
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
@@ -319,22 +295,38 @@ Return ONLY the JSON object with the master_prompt field. No other commentary.`;
       );
     }
 
-    if (!masterPromptData.master_prompt) {
-      console.error('No master_prompt field in AI response');
+    if (!masterPromptData.prompt_body || !masterPromptData.platform_target || !masterPromptData.idea_id) {
+      console.error('Missing required fields in AI response');
       return new Response(
         JSON.stringify({ error: 'Invalid AI response format' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Master prompt generated successfully');
+    // Insert into master_prompts table
+    const { error: insertError } = await supabase
+      .from('master_prompts')
+      .insert({
+        user_id: resolvedUserId,
+        idea_id: chosenIdea.id,
+        prompt_body: masterPromptData.prompt_body,
+        platform_target: masterPromptData.platform_target
+      });
 
-    // Return the response in the format requested by the user
+    if (insertError) {
+      console.error('Error inserting master prompt:', insertError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to save master prompt' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Return the response
     return new Response(
       JSON.stringify({
-        idea_id: chosenIdea.id,
-        platform_target: 'general_strategy',
-        prompt_body: masterPromptData.master_prompt,
+        prompt_body: masterPromptData.prompt_body,
+        platform_target: masterPromptData.platform_target,
+        idea_id: masterPromptData.idea_id
       }),
       { 
         status: 200,
