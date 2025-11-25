@@ -209,13 +209,13 @@ Return ONLY the JSON object with the master_prompt field. No other commentary.`;
       },
       analysis: {
         niche_score: analysis.niche_score,
-        market_overview: analysis.market_overview,
+        market_insight: analysis.market_insight,
         problem_intensity: analysis.problem_intensity,
         competition_snapshot: analysis.competition_snapshot,
-        pricing_range: analysis.pricing_range,
-        main_risks: analysis.main_risks,
-        brutal_take: analysis.brutal_take,
-        suggested_modifications: analysis.suggested_modifications,
+        pricing_power: analysis.pricing_power,
+        biggest_risks: analysis.biggest_risks,
+        brutal_honesty: analysis.brutal_honesty,
+        recommendations: analysis.recommendations,
       },
     };
 
@@ -245,6 +245,27 @@ Return ONLY the JSON object with the master_prompt field. No other commentary.`;
           { role: 'system', content: promptTemplate },
           { role: 'user', content: userPrompt }
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "generate_master_prompt",
+              description: "Generate a comprehensive master prompt for the founder",
+              parameters: {
+                type: "object",
+                properties: {
+                  master_prompt: {
+                    type: "string",
+                    description: "The complete master prompt text (800-1200 words)"
+                  }
+                },
+                required: ["master_prompt"],
+                additionalProperties: false
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "generate_master_prompt" } }
       }),
     });
 
@@ -275,22 +296,23 @@ Return ONLY the JSON object with the master_prompt field. No other commentary.`;
     const aiData = await aiResponse.json();
     console.log('AI response received');
 
-    const aiContent = aiData.choices?.[0]?.message?.content;
-    if (!aiContent) {
-      console.error('No content in AI response');
+    // Extract from tool call response
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) {
+      console.error('No tool call in AI response');
       return new Response(
-        JSON.stringify({ error: 'No content generated' }),
+        JSON.stringify({ error: 'No tool call generated' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Parse the JSON response from AI
+    // Parse the JSON response from tool call
     let masterPromptData;
     try {
-      masterPromptData = JSON.parse(aiContent);
+      masterPromptData = JSON.parse(toolCall.function.arguments);
     } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', parseError);
-      console.error('AI content:', aiContent);
+      console.error('Failed to parse tool call arguments:', parseError);
+      console.error('Tool call arguments:', toolCall.function.arguments);
       return new Response(
         JSON.stringify({ error: 'Failed to parse AI response' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
