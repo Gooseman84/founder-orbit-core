@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.generate-feed-items]
 verify_jwt = true
+
+[functions.refresh-daily-feed]
+verify_jwt = false
