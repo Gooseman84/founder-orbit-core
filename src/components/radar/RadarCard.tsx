@@ -1,10 +1,18 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, AlertCircle, ArrowUpRight, Users, Zap, Plus } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useXP } from "@/hooks/useXP";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { recordXpEvent } from "@/lib/xpEngine";
+import { toast } from "sonner";
 
 interface RadarSignal {
   id: string;
+  idea_id?: string | null;
   signal_type: string;
   title: string;
   description: string;
@@ -15,7 +23,6 @@ interface RadarSignal {
 
 interface RadarCardProps {
   signal: RadarSignal;
-  onGenerateTask?: (signal: RadarSignal) => void;
 }
 
 const signalTypeConfig = {
@@ -65,9 +72,89 @@ const getPriorityLabel = (score: number) => {
   return "Low";
 };
 
-export function RadarCard({ signal, onGenerateTask }: RadarCardProps) {
+export function RadarCard({ signal }: RadarCardProps) {
+  const { user } = useAuth();
+  const { refresh: refreshXp } = useXP();
+  const navigate = useNavigate();
+  const [isCreating, setIsCreating] = useState(false);
   const config = signalTypeConfig[signal.signal_type as keyof typeof signalTypeConfig] || signalTypeConfig.trend;
   const Icon = config.icon;
+
+  const handleCreateTask = async () => {
+    if (!user || isCreating) return;
+
+    setIsCreating(true);
+
+    try {
+      // Check if task already exists for this radar signal
+      const { data: existingTask, error: checkError } = await supabase
+        .from("tasks")
+        .select("id")
+        .eq("metadata->>radar_origin", signal.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("Error checking for existing task:", checkError);
+        throw new Error("Failed to check for existing task");
+      }
+
+      if (existingTask) {
+        toast.info("Task already exists for this signal!");
+        navigate("/tasks");
+        return;
+      }
+
+      // Fetch chosen idea if signal doesn't have idea_id
+      let ideaId = signal.idea_id;
+      if (!ideaId) {
+        const { data: chosenIdea, error: ideaError } = await supabase
+          .from("ideas")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("status", "chosen")
+          .maybeSingle();
+
+        if (ideaError) {
+          console.error("Error fetching chosen idea:", ideaError);
+        }
+        ideaId = chosenIdea?.id || null;
+      }
+
+      // Insert new quest task from radar signal
+      const { error: insertError } = await supabase.from("tasks").insert({
+        user_id: user.id,
+        idea_id: ideaId,
+        type: "quest",
+        title: signal.title,
+        description: signal.recommended_action,
+        xp_reward: 20,
+        status: "pending",
+        metadata: {
+          radar_origin: signal.id,
+        },
+      });
+
+      if (insertError) {
+        console.error("Error inserting task:", insertError);
+        throw new Error("Failed to create task");
+      }
+
+      // Award XP for taking action on radar signal
+      await recordXpEvent(user.id, "radar_action", 20, {
+        signalId: signal.id,
+      });
+
+      refreshXp();
+      toast.success("Quest created from radar signal! (+20 XP)");
+      navigate("/tasks");
+    } catch (error) {
+      console.error("Error creating task from radar signal:", error);
+      toast.error("Failed to create task");
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <Card className={`transition-colors ${config.bgClass}`}>
@@ -95,17 +182,16 @@ export function RadarCard({ signal, onGenerateTask }: RadarCardProps) {
           <p className="text-sm">{signal.recommended_action}</p>
         </div>
 
-        {onGenerateTask && (
-          <Button
-            onClick={() => onGenerateTask(signal)}
-            variant="outline"
-            size="sm"
-            className="w-full"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Task
-          </Button>
-        )}
+        <Button
+          onClick={handleCreateTask}
+          variant="outline"
+          size="sm"
+          className="w-full"
+          disabled={isCreating}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          {isCreating ? "Creating..." : "Create Task"}
+        </Button>
       </CardContent>
     </Card>
   );

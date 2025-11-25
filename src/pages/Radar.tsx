@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Radar as RadarIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { recordXpEvent } from "@/lib/xpEngine";
-import { useNavigate } from "react-router-dom";
 
 interface RadarSignal {
   id: string;
@@ -25,7 +24,6 @@ interface RadarSignal {
 export default function Radar() {
   const { user } = useAuth();
   const { refresh: refreshXp } = useXP();
-  const navigate = useNavigate();
   const [signals, setSignals] = useState<RadarSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -104,66 +102,6 @@ export default function Radar() {
     }
   };
 
-  const handleCreateTask = async (signal: RadarSignal) => {
-    if (!user) return;
-
-    try {
-      // Check if task already exists for this signal
-      const { data: existingTask, error: checkError } = await supabase
-        .from("tasks")
-        .select("id")
-        .eq("metadata->>radarSignalId", signal.id)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error("Error checking for existing task:", checkError);
-        throw new Error("Failed to check for existing task");
-      }
-
-      if (existingTask) {
-        toast.info("Task already exists for this signal!");
-        navigate("/tasks");
-        return;
-      }
-
-      // Insert new task based on radar signal
-      const { error: insertError } = await supabase.from("tasks").insert({
-        user_id: user.id,
-        idea_id: signal.idea_id,
-        type: "micro",
-        title: signal.title,
-        description: signal.recommended_action,
-        xp_reward: Math.round(signal.priority_score / 5), // Higher priority = more XP
-        status: "pending",
-        metadata: {
-          radarSignalId: signal.id,
-          signalType: signal.signal_type,
-          priorityScore: signal.priority_score,
-        },
-      });
-
-      if (insertError) {
-        console.error("Error inserting task:", insertError);
-        throw new Error("Failed to create task");
-      }
-
-      // Award XP for creating task from signal
-      const xpAmount = 10;
-      await recordXpEvent(user.id, "task_added", xpAmount, {
-        radarSignalId: signal.id,
-        taskTitle: signal.title,
-      });
-
-      refreshXp();
-      toast.success(`Task created! (+${xpAmount} XP)`);
-      navigate("/tasks");
-    } catch (error) {
-      console.error("Error creating task from radar signal:", error);
-      toast.error("Failed to create task");
-    }
-  };
-
   if (loading) {
     return (
       <div className="container max-w-6xl mx-auto py-8">
@@ -235,7 +173,7 @@ export default function Radar() {
               onClick={() => handleSignalView(signal)}
               className="cursor-pointer"
             >
-              <RadarCard signal={signal} onGenerateTask={handleCreateTask} />
+              <RadarCard signal={signal} />
             </div>
           ))}
         </div>
