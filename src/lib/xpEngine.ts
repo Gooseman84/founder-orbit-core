@@ -1,105 +1,93 @@
 // XP engine for leveling and progress tracking
 
 import { supabase } from "@/integrations/supabase/client";
-import { XpEvent, XpSummary, LevelDefinition, LEVELS } from "@/types/xp";
+import { XpEvent, XpSummary, LEVELS } from "@/types/xp";
 
 /**
- * Add an XP event to the database
+ * Record an XP event to the database
  * @param userId - The user's ID
  * @param eventType - Type of event (e.g., 'task_completed', 'idea_generated')
  * @param amount - Amount of XP to award
  * @param metadata - Optional additional data about the event
- * @returns The created XP event or null if failed
  */
-export async function addXpEvent(
+export async function recordXpEvent(
   userId: string,
   eventType: string,
   amount: number,
   metadata?: Record<string, any>
-): Promise<XpEvent | null> {
+): Promise<void> {
+  // Ignore if amount is 0 or negative
+  if (amount <= 0) {
+    return;
+  }
+
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("xp_events")
       .insert({
         user_id: userId,
         event_type: eventType,
         amount,
         metadata: metadata || null,
-      })
-      .select()
-      .single();
+      });
 
     if (error) {
-      console.error("Error adding XP event:", error);
-      return null;
+      console.error("Error recording XP event:", error);
+      return;
     }
 
-    console.log(`Added ${amount} XP for ${eventType} to user ${userId}`);
-    return data as XpEvent;
+    console.log(`Recorded ${amount} XP for ${eventType} to user ${userId}`);
   } catch (error) {
-    console.error("Error in addXpEvent:", error);
-    return null;
+    console.error("Error in recordXpEvent:", error);
   }
 }
 
 /**
- * Get the level for a given XP amount
+ * Get level info for a given XP amount
  * @param totalXp - Total XP amount
- * @returns The current level object
+ * @returns Level info with progress
  */
-export function getLevelForXp(totalXp: number): LevelDefinition {
+export function getLevelForXp(totalXp: number): {
+  level: number;
+  nextLevelXp: number;
+  currentLevelMinXp: number;
+  progressPercent: number;
+} {
   // Find the highest level where minXp <= totalXp
+  let currentLevel = LEVELS[0];
   for (let i = LEVELS.length - 1; i >= 0; i--) {
     if (totalXp >= LEVELS[i].minXp) {
-      return LEVELS[i];
+      currentLevel = LEVELS[i];
+      break;
     }
   }
-  // Default to level 1 if somehow below minimum
-  return LEVELS[0];
-}
 
-/**
- * Get the next level after the current one
- * @param currentLevel - The current level object
- * @returns The next level object or null if at max level
- */
-export function getNextLevel(currentLevel: LevelDefinition): LevelDefinition | null {
+  // Find next level
   const currentIndex = LEVELS.findIndex(l => l.level === currentLevel.level);
-  if (currentIndex === -1 || currentIndex === LEVELS.length - 1) {
-    return null; // At max level
+  const nextLevel = currentIndex < LEVELS.length - 1 ? LEVELS[currentIndex + 1] : null;
+
+  // Calculate progress
+  let progressPercent = 100;
+  if (nextLevel) {
+    const xpInCurrentLevel = totalXp - currentLevel.minXp;
+    const xpNeededForNextLevel = nextLevel.minXp - currentLevel.minXp;
+    progressPercent = Math.min(Math.max((xpInCurrentLevel / xpNeededForNextLevel) * 100, 0), 100);
   }
-  return LEVELS[currentIndex + 1];
+
+  return {
+    level: currentLevel.level,
+    nextLevelXp: nextLevel ? nextLevel.minXp : currentLevel.maxXp,
+    currentLevelMinXp: currentLevel.minXp,
+    progressPercent,
+  };
 }
 
 /**
- * Calculate progress percentage to the next level
- * @param totalXp - Total XP amount
- * @param currentLevel - Current level object
- * @param nextLevel - Next level object (or null if at max)
- * @returns Progress percentage (0-100)
- */
-export function calculateProgressToNextLevel(
-  totalXp: number,
-  currentLevel: LevelDefinition,
-  nextLevel: LevelDefinition | null
-): number {
-  if (!nextLevel) {
-    return 100; // At max level
-  }
-
-  const xpInCurrentLevel = totalXp - currentLevel.minXp;
-  const xpNeededForNextLevel = nextLevel.minXp - currentLevel.minXp;
-  
-  const progress = (xpInCurrentLevel / xpNeededForNextLevel) * 100;
-  return Math.min(Math.max(progress, 0), 100); // Clamp between 0 and 100
-}
-
-/**
- * Get a comprehensive XP summary for a user
+ * Get comprehensive XP summary for a user
  * @param userId - The user's ID
- * @returns XP summary with total XP, current level, progress, etc.
+ * @returns XP summary with total XP, current level, and progress
  */
-export async function getUserXpSummary(userId: string): Promise<XpSummary | null> {
+export async function getXpSummary(userId: string): Promise<XpSummary> {
   try {
     // Use the database function to get total XP
     const { data, error } = await supabase.rpc("get_user_total_xp", {
@@ -108,24 +96,31 @@ export async function getUserXpSummary(userId: string): Promise<XpSummary | null
 
     if (error) {
       console.error("Error fetching user XP:", error);
-      return null;
+      return {
+        totalXp: 0,
+        level: 1,
+        nextLevelXp: LEVELS[1].minXp,
+        currentLevelMinXp: LEVELS[0].minXp,
+        progressPercent: 0,
+      };
     }
 
     const totalXp = data || 0;
-    const currentLevel = getLevelForXp(totalXp);
-    const nextLevel = getNextLevel(currentLevel);
-    const progressPercent = calculateProgressToNextLevel(totalXp, currentLevel, nextLevel);
+    const levelInfo = getLevelForXp(totalXp);
 
     return {
       totalXp,
-      level: currentLevel.level,
-      nextLevelXp: nextLevel ? nextLevel.minXp : currentLevel.maxXp,
-      currentLevelMinXp: currentLevel.minXp,
-      progressPercent,
+      ...levelInfo,
     };
   } catch (error) {
-    console.error("Error in getUserXpSummary:", error);
-    return null;
+    console.error("Error in getXpSummary:", error);
+    return {
+      totalXp: 0,
+      level: 1,
+      nextLevelXp: LEVELS[1].minXp,
+      currentLevelMinXp: LEVELS[0].minXp,
+      progressPercent: 0,
+    };
   }
 }
 
