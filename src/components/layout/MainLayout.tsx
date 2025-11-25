@@ -1,6 +1,7 @@
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingGuard } from "@/hooks/useOnboardingGuard";
+import { useXP } from "@/hooks/useXP";
 import { 
   LayoutDashboard, 
   Lightbulb, 
@@ -11,6 +12,8 @@ import {
   LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LevelBadge } from "@/components/shared/LevelBadge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -23,14 +26,24 @@ const navigation = [
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const { signOut } = useAuth();
+  const { xpSummary, loading } = useXP();
   useOnboardingGuard();
 
   return (
     <div className="min-h-screen bg-background">
       {/* Top Bar */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50">
-        <div className="flex items-center h-full px-6">
+        <div className="flex items-center justify-between h-full px-6">
           <h1 className="text-xl font-bold text-primary">FounderOS</h1>
+          
+          {/* XP Level Badge */}
+          <div className="flex items-center gap-3">
+            {loading ? (
+              <Skeleton className="h-7 w-24" />
+            ) : xpSummary ? (
+              <LevelBadge level={xpSummary.level} />
+            ) : null}
+          </div>
         </div>
       </header>
 
