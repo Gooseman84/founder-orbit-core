@@ -1,53 +1,61 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FeedCard } from "@/components/feed/FeedCard";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getFeedItemsForUser } from "@/lib/feedEngine";
+import { supabase } from "@/integrations/supabase/client";
 import { recordXpEvent } from "@/lib/xpEngine";
-import { XP_EVENT_TYPES } from "@/types/xp";
-import { FeedItem } from "@/types/feed";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, Sparkles, AlertCircle } from "lucide-react";
+
+interface FeedItem {
+  id: string;
+  user_id: string;
+  idea_id: string | null;
+  type: string;
+  title: string;
+  body: string;
+  cta_label: string | null;
+  cta_action: string | null;
+  xp_reward: number | null;
+  metadata: any;
+  created_at: string;
+}
 
 export default function Feed() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [viewedItems, setViewedItems] = useState<Set<string>>(new Set());
+  const viewedItemsRef = useRef<Set<string>>(new Set());
 
-  const loadFeedItems = async (isRefresh = false) => {
+  const loadFeedItems = async () => {
     if (!user) return;
 
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("feed_items")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error loading feed items:", error);
+        toast.error("Failed to load feed items");
+        return;
       }
 
-      const items = await getFeedItemsForUser(user.id);
-      setFeedItems(items);
-
-      // Award XP for viewing feed (only on initial load, not refresh)
-      if (!isRefresh && items.length > 0) {
-        await recordXpEvent(user.id, XP_EVENT_TYPES.FEED_VIEW, 2, {
-          item_count: items.length,
-        });
-      }
-
-      if (isRefresh) {
-        toast.success("Feed refreshed!");
-      }
+      setFeedItems(data || []);
     } catch (error) {
       console.error("Error loading feed:", error);
       toast.error("Failed to load feed items");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -55,36 +63,78 @@ export default function Feed() {
     loadFeedItems();
   }, [user]);
 
-  const handleCtaClick = async (item: FeedItem) => {
+  // Award XP when items first appear (viewed on mount)
+  useEffect(() => {
+    if (!user || feedItems.length === 0) return;
+
+    feedItems.forEach((item) => {
+      if (!viewedItemsRef.current.has(item.id)) {
+        viewedItemsRef.current.add(item.id);
+        
+        // Award XP for viewing the feed item
+        const xpAmount = item.xp_reward || 2;
+        recordXpEvent(user.id, "feed_view", xpAmount, {
+          feedItemId: item.id,
+          feedItemType: item.type,
+        });
+      }
+    });
+  }, [feedItems, user]);
+
+  const handleGenerateFeed = async () => {
     if (!user) return;
 
-    // Mark as viewed and award XP if not already viewed
-    if (!viewedItems.has(item.id)) {
-      setViewedItems(prev => new Set(prev).add(item.id));
-      
-      // Award XP for interacting with feed item
-      if (item.xpReward) {
-        await recordXpEvent(user.id, 'feed_action', item.xpReward, {
-          item_id: item.id,
-          item_type: item.type,
-          action: 'cta_click',
-        });
-        toast.success(`+${item.xpReward} XP earned!`);
-      }
-    }
+    try {
+      setGenerating(true);
+      toast.info("Generating personalized feed items...");
 
-    // Handle the CTA action
-    if (item.ctaAction) {
-      if (item.ctaAction.startsWith('/')) {
-        navigate(item.ctaAction);
-      } else if (item.ctaAction.startsWith('http')) {
-        window.open(item.ctaAction, '_blank');
+      const { data, error } = await supabase.functions.invoke("generate-feed-items", {
+        body: { userId: user.id },
+      });
+
+      if (error) {
+        console.error("Error generating feed:", error);
+        toast.error("Failed to generate feed items");
+        return;
       }
+
+      toast.success(`Generated ${data.items?.length || 0} new feed items!`);
+      
+      // Refresh feed items
+      await loadFeedItems();
+    } catch (error) {
+      console.error("Error generating feed:", error);
+      toast.error("Failed to generate feed items");
+    } finally {
+      setGenerating(false);
     }
   };
 
-  const handleRefresh = () => {
-    loadFeedItems(true);
+  const handleCtaClick = async (item: FeedItem) => {
+    if (!user) return;
+
+    // Mark as viewed and award additional XP for interaction
+    if (!viewedItems.has(item.id)) {
+      setViewedItems((prev) => new Set(prev).add(item.id));
+
+      // Award bonus XP for interacting with the item
+      const bonusXp = Math.floor((item.xp_reward || 2) * 1.5);
+      await recordXpEvent(user.id, "feed_action", bonusXp, {
+        feedItemId: item.id,
+        feedItemType: item.type,
+        action: "cta_click",
+      });
+      toast.success(`+${bonusXp} XP earned!`);
+    }
+
+    // Handle the CTA action
+    if (item.cta_action) {
+      if (item.cta_action.startsWith("/")) {
+        navigate(item.cta_action);
+      } else if (item.cta_action.startsWith("http")) {
+        window.open(item.cta_action, "_blank");
+      }
+    }
   };
 
   if (loading) {
@@ -112,21 +162,21 @@ export default function Feed() {
           </p>
         </div>
         <Button
-          variant="outline"
+          variant="default"
           size="sm"
-          onClick={handleRefresh}
-          disabled={refreshing}
+          onClick={handleGenerateFeed}
+          disabled={generating}
           className="gap-2"
         >
-          {refreshing ? (
+          {generating ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Refreshing...
+              Generating...
             </>
           ) : (
             <>
-              <RefreshCw className="h-4 w-4" />
-              Refresh
+              <Sparkles className="h-4 w-4" />
+              Generate Today's Feed
             </>
           )}
         </Button>
@@ -136,7 +186,7 @@ export default function Feed() {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          💡 Interact with feed items to earn XP and stay on track with your goals!
+          💡 View feed items to earn XP and interact with them for bonus rewards!
         </AlertDescription>
       </Alert>
 
@@ -144,20 +194,26 @@ export default function Feed() {
       {feedItems.length === 0 ? (
         <div className="text-center py-12 space-y-4">
           <p className="text-muted-foreground">
-            No feed items available yet. Complete your profile and choose an idea to get personalized insights!
+            No feed items available yet. Generate your personalized feed to get started!
           </p>
-          <Button onClick={() => navigate("/ideas")}>
-            View Ideas
+          <Button onClick={handleGenerateFeed} disabled={generating}>
+            {generating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate Feed
+              </>
+            )}
           </Button>
         </div>
       ) : (
         <div className="space-y-4">
           {feedItems.map((item) => (
-            <FeedCard
-              key={item.id}
-              item={item}
-              onClick={handleCtaClick}
-            />
+            <FeedCard key={item.id} item={item} onClick={handleCtaClick} />
           ))}
         </div>
       )}
