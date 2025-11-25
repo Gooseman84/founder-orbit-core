@@ -1,7 +1,7 @@
 // XP engine for leveling and progress tracking
 
 import { supabase } from "@/integrations/supabase/client";
-import { XpEvent, XpSummary, Level, LEVELS } from "@/types/xp";
+import { XpEvent, XpSummary, LevelDefinition, LEVELS } from "@/types/xp";
 
 /**
  * Add an XP event to the database
@@ -47,7 +47,7 @@ export async function addXpEvent(
  * @param totalXp - Total XP amount
  * @returns The current level object
  */
-export function getLevelForXp(totalXp: number): Level {
+export function getLevelForXp(totalXp: number): LevelDefinition {
   // Find the highest level where minXp <= totalXp
   for (let i = LEVELS.length - 1; i >= 0; i--) {
     if (totalXp >= LEVELS[i].minXp) {
@@ -63,7 +63,7 @@ export function getLevelForXp(totalXp: number): Level {
  * @param currentLevel - The current level object
  * @returns The next level object or null if at max level
  */
-export function getNextLevel(currentLevel: Level): Level | null {
+export function getNextLevel(currentLevel: LevelDefinition): LevelDefinition | null {
   const currentIndex = LEVELS.findIndex(l => l.level === currentLevel.level);
   if (currentIndex === -1 || currentIndex === LEVELS.length - 1) {
     return null; // At max level
@@ -80,8 +80,8 @@ export function getNextLevel(currentLevel: Level): Level | null {
  */
 export function calculateProgressToNextLevel(
   totalXp: number,
-  currentLevel: Level,
-  nextLevel: Level | null
+  currentLevel: LevelDefinition,
+  nextLevel: LevelDefinition | null
 ): number {
   if (!nextLevel) {
     return 100; // At max level
@@ -114,15 +114,14 @@ export async function getUserXpSummary(userId: string): Promise<XpSummary | null
     const totalXp = data || 0;
     const currentLevel = getLevelForXp(totalXp);
     const nextLevel = getNextLevel(currentLevel);
-    const progressToNextLevel = calculateProgressToNextLevel(totalXp, currentLevel, nextLevel);
-    const xpToNextLevel = nextLevel ? nextLevel.minXp - totalXp : 0;
+    const progressPercent = calculateProgressToNextLevel(totalXp, currentLevel, nextLevel);
 
     return {
       totalXp,
-      currentLevel,
-      nextLevel,
-      progressToNextLevel,
-      xpToNextLevel: Math.max(xpToNextLevel, 0),
+      level: currentLevel.level,
+      nextLevelXp: nextLevel ? nextLevel.minXp : currentLevel.maxXp,
+      currentLevelMinXp: currentLevel.minXp,
+      progressPercent,
     };
   } catch (error) {
     console.error("Error in getUserXpSummary:", error);
