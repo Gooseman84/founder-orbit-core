@@ -3,6 +3,9 @@ project_id = "empldatnfyczyiatmnfa"
 [functions.generate-ideas]
 verify_jwt = true
 
+[functions.generate-pulse-check]
+verify_jwt = true
+
 [functions.analyze-idea]
 verify_jwt = true
 
