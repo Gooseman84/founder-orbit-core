@@ -22,21 +22,26 @@ export async function recordXpEvent(
   }
 
   try {
-    const { error } = await supabase
-      .from("xp_events")
-      .insert({
-        user_id: userId,
-        event_type: eventType,
+    // Call the edge function with service role permissions to bypass RLS
+    const { data, error } = await supabase.functions.invoke('record-xp-event', {
+      body: {
+        userId,
+        eventType,
         amount,
         metadata: metadata || null,
-      });
+      },
+    });
 
     if (error) {
       console.error("Error recording XP event:", error);
       return;
     }
 
-    console.log(`Recorded ${amount} XP for ${eventType} to user ${userId}`);
+    if (data?.success) {
+      console.log(`Recorded ${amount} XP for ${eventType} to user ${userId}`);
+    } else {
+      console.error("XP event recording failed:", data);
+    }
   } catch (error) {
     console.error("Error in recordXpEvent:", error);
   }
