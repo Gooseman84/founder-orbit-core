@@ -156,7 +156,7 @@ export default function Feed() {
             <FeedCard
               key={item.id}
               item={item}
-              onCtaClick={handleCtaClick}
+              onClick={handleCtaClick}
             />
           ))}
         </div>
