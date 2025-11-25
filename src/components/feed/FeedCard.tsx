@@ -69,6 +69,83 @@ export function FeedCard({ item, onClick }: FeedCardProps) {
     try {
       // Special handling for micro_task type
       if (item.type === "micro_task") {
+        // Check if this is an outlining action
+        const isOutliningAction = 
+          item.cta_action === "start_outlining" || 
+          (item.cta_label && item.cta_label.toLowerCase().includes("start outlining"));
+
+        if (isOutliningAction) {
+          // Handle workspace document creation/navigation
+          // 1. Check if workspace document already exists
+          const { data: existingDoc, error: checkError } = await supabase
+            .from("workspace_documents")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("source_type", "feed")
+            .eq("source_id", item.id)
+            .maybeSingle();
+
+          if (checkError) {
+            console.error("Error checking for existing workspace document:", checkError);
+            throw new Error("Failed to check for existing document");
+          }
+
+          if (existingDoc) {
+            // Document already exists, navigate to it
+            await recordXpEvent(user.id, "workspace_opened", 10, {
+              source: "feed",
+              feedItemId: item.id,
+            });
+            refreshXp();
+            toast.success("Opening your workspace document! (+10 XP)");
+            navigate(`/workspace/${existingDoc.id}`);
+            setIsProcessing(false);
+            return;
+          }
+
+          // 2. Fetch chosen idea if available
+          const { data: chosenIdea } = await supabase
+            .from("ideas")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("status", "chosen")
+            .maybeSingle();
+
+          // 3. Create new workspace document
+          const { data: newDoc, error: insertError } = await supabase
+            .from("workspace_documents")
+            .insert({
+              user_id: user.id,
+              idea_id: chosenIdea?.id || null,
+              source_type: "feed",
+              source_id: item.id,
+              doc_type: "outline",
+              title: item.title,
+              content: item.body, // Include feed item body as starter content
+              status: "draft",
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error("Error creating workspace document:", insertError);
+            throw new Error("Failed to create workspace document");
+          }
+
+          // 4. Award XP for opening workspace
+          await recordXpEvent(user.id, "workspace_opened", 10, {
+            source: "feed",
+            feedItemId: item.id,
+          });
+          refreshXp();
+
+          toast.success("Workspace document created! (+10 XP)");
+          navigate(`/workspace/${newDoc.id}`);
+          setIsProcessing(false);
+          return;
+        }
+
+        // Default micro_task handling (create task)
         // Check if task already exists for this feed_item_id
         const { data: existingTask, error: checkError } = await supabase
           .from("tasks")
