@@ -208,6 +208,33 @@ export type Database = {
         }
         Relationships: []
       }
+      master_prompts: {
+        Row: {
+          created_at: string
+          id: string
+          idea_id: string
+          platform_target: string | null
+          prompt_body: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idea_id: string
+          platform_target?: string | null
+          prompt_body: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idea_id?: string
+          platform_target?: string | null
+          prompt_body?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           category: string | null
