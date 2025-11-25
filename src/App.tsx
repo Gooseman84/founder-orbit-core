@@ -14,6 +14,8 @@ import IdeaDetail from "./pages/IdeaDetail";
 import NorthStar from "./pages/NorthStar";
 import Feed from "./pages/Feed";
 import Tasks from "./pages/Tasks";
+import Pulse from "./pages/Pulse";
+import PulseHistory from "./pages/PulseHistory";
 import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -36,6 +38,8 @@ const App = () => (
             <Route path="/north-star" element={<ProtectedRoute><MainLayout><NorthStar /></MainLayout></ProtectedRoute>} />
             <Route path="/feed" element={<ProtectedRoute><MainLayout><Feed /></MainLayout></ProtectedRoute>} />
             <Route path="/tasks" element={<ProtectedRoute><MainLayout><Tasks /></MainLayout></ProtectedRoute>} />
+            <Route path="/pulse" element={<ProtectedRoute><MainLayout><Pulse /></MainLayout></ProtectedRoute>} />
+            <Route path="/pulse/history" element={<ProtectedRoute><MainLayout><PulseHistory /></MainLayout></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><MainLayout><Profile /></MainLayout></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
