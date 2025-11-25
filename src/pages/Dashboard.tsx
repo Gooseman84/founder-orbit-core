@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity } from "lucide-react";
+import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity, Radar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { isToday } from "date-fns";
 
@@ -27,11 +27,17 @@ const Dashboard = () => {
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [latestPulse, setLatestPulse] = useState<any>(null);
   const [loadingPulse, setLoadingPulse] = useState(true);
+  const [radarStats, setRadarStats] = useState({
+    recentCount: 0,
+    topSignal: null as any,
+  });
+  const [loadingRadar, setLoadingRadar] = useState(true);
 
   useEffect(() => {
     if (user) {
       fetchTaskStats();
       fetchLatestPulse();
+      fetchRadarStats();
     }
   }, [user]);
 
@@ -83,6 +89,35 @@ const Dashboard = () => {
       console.error("Error fetching latest pulse:", error);
     } finally {
       setLoadingPulse(false);
+    }
+  };
+
+  const fetchRadarStats = async () => {
+    if (!user) return;
+
+    setLoadingRadar(true);
+    try {
+      // Get signals from last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const { data: allSignals, error } = await supabase
+        .from("niche_radar")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("created_at", sevenDaysAgo.toISOString())
+        .order("priority_score", { ascending: false });
+
+      if (error) throw error;
+
+      setRadarStats({
+        recentCount: allSignals?.length || 0,
+        topSignal: allSignals?.[0] || null,
+      });
+    } catch (error) {
+      console.error("Error fetching radar stats:", error);
+    } finally {
+      setLoadingRadar(false);
     }
   };
 
@@ -302,11 +337,69 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent Feed</CardTitle>
-            <CardDescription>Latest insights and recommendations</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Radar className="h-5 w-5" />
+              Niche Radar
+            </CardTitle>
+            <CardDescription>Market signals and emerging opportunities</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Coming soon...</p>
+            {loadingRadar ? (
+              <div className="space-y-3">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : radarStats.recentCount > 0 ? (
+              <div className="space-y-4">
+                {/* Signal Count */}
+                <div className="p-3 rounded-lg border bg-card">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">Signals (Last 7 Days)</span>
+                  </div>
+                  <p className="text-2xl font-bold">{radarStats.recentCount}</p>
+                </div>
+
+                {/* Top Priority Signal */}
+                {radarStats.topSignal && (
+                  <div className="p-3 rounded-lg bg-secondary/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Highest Priority</p>
+                    <p className="text-sm font-semibold line-clamp-2">{radarStats.topSignal.title}</p>
+                    <Badge variant="outline" className="mt-2">
+                      Priority: {radarStats.topSignal.priority_score}
+                    </Badge>
+                  </div>
+                )}
+
+                {/* View Radar Button */}
+                <Button 
+                  onClick={() => navigate("/radar")} 
+                  variant="default"
+                  className="w-full"
+                >
+                  View Radar
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-center py-6">
+                  <Radar className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <h3 className="font-semibold mb-1">No signals yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Generate market signals to discover emerging opportunities
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={() => navigate("/radar")} 
+                  variant="default"
+                  className="w-full"
+                >
+                  Generate Signals
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
