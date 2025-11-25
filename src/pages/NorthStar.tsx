@@ -27,10 +27,15 @@ export default function NorthStar() {
       setGenerating(true);
       setError(null);
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("You must be logged in to generate a master prompt");
+      }
+
       const { data, error: functionError } = await supabase.functions.invoke(
         "generate-master-prompt",
         {
-          body: {},
+          body: { userId: user.id },
         }
       );
 
