@@ -6,6 +6,153 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Embedded prompt from src/prompts/generateMicroTasks.txt
+const TASK_GENERATION_PROMPT = `You are an elite execution strategist. Your job is to turn the founder's profile, chosen idea, and idea analysis into actionable MICRO TASKS and FOUNDER QUESTS that move them forward.
+
+Micro Tasks:
+- 2–10 minutes
+- Simple, actionable, low friction
+
+Founder Quests:
+- 20–60 minutes
+- Higher leverage
+- Strategy, positioning, research, or execution
+
+Input JSON includes:
+{
+  "founder_profile": { ... },
+  "idea": { ... },
+  "analysis": { ... }
+}
+
+Output STRICT JSON ONLY:
+
+{
+  "tasks": [
+    {
+      "type": "micro" | "quest",
+      "title": "string",
+      "description": "string",
+      "xp_reward": number,
+      "metadata": { ... }
+    }
+  ]
+}
+
+Rules:
+- No fluff.
+- Keep tasks extremely concrete.
+- Use simple language.
+- Suggest only tasks aligned with the founder's constraints.
+- Always return valid JSON.`;
+
+// Build task input (inlined from tasksEngine)
+async function buildTaskInput(supabaseClient: any, userId: string) {
+  console.log('Building task input for userId:', userId);
+
+  // Fetch founder profile
+  const { data: profile, error: profileError } = await supabaseClient
+    .from("founder_profiles")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error("Error fetching founder profile:", profileError);
+    throw new Error("Failed to fetch founder profile");
+  }
+
+  if (!profile) {
+    throw new Error("No founder profile found. Please complete onboarding first.");
+  }
+
+  // Fetch chosen idea
+  const { data: idea, error: ideaError } = await supabaseClient
+    .from("ideas")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "chosen")
+    .maybeSingle();
+
+  if (ideaError) {
+    console.error("Error fetching chosen idea:", ideaError);
+    throw new Error("Failed to fetch chosen idea");
+  }
+
+  if (!idea) {
+    throw new Error("No chosen idea found. Please choose an idea first.");
+  }
+
+  // Fetch latest analysis for the chosen idea
+  const { data: analysis, error: analysisError } = await supabaseClient
+    .from("idea_analysis")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("idea_id", idea.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (analysisError) {
+    console.error("Error fetching idea analysis:", analysisError);
+    throw new Error("Failed to fetch idea analysis");
+  }
+
+  if (!analysis) {
+    throw new Error("No analysis found for chosen idea. Please analyze the idea first.");
+  }
+
+  return {
+    founder_profile: profile,
+    idea: idea,
+    analysis: analysis,
+  };
+}
+
+// Format tasks (inlined from tasksEngine)
+function formatTasks(rawTasks: any[], userId: string, ideaId: string) {
+  if (!Array.isArray(rawTasks)) {
+    throw new Error("Tasks must be an array");
+  }
+
+  return rawTasks.map((task: any, index: number) => {
+    // Validate required fields
+    if (!task.title || typeof task.title !== "string") {
+      throw new Error(`Task at index ${index} is missing a valid title`);
+    }
+
+    // Enforce type: must be "micro" or "quest", default to "micro"
+    let type: string = "micro";
+    if (task.type === "quest" || task.type === "micro") {
+      type = task.type;
+    }
+
+    // Apply defaults
+    const xp_reward = typeof task.xp_reward === "number" && task.xp_reward > 0
+      ? task.xp_reward
+      : 10;
+
+    const description = typeof task.description === "string" 
+      ? task.description 
+      : "";
+
+    const metadata = typeof task.metadata === "object" && task.metadata !== null
+      ? task.metadata
+      : {};
+
+    return {
+      user_id: userId,
+      idea_id: ideaId,
+      type,
+      title: task.title.trim(),
+      description: description.trim(),
+      xp_reward,
+      metadata,
+      status: 'pending',
+    };
+  });
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -13,198 +160,46 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
+    // Parse request body
+    const body = await req.json();
+    let userId = body.userId;
+
+    // If no userId in body, try to get from auth
+    if (!userId) {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const anonClient = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+          {
+            global: {
+              headers: { Authorization: authHeader },
+            },
+          }
+        );
+        const { data: { user } } = await anonClient.auth.getUser();
+        userId = user?.id;
       }
-    );
-
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser();
-
-    if (authError || !user) {
-      console.error('Auth error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
-    const { idea_id } = await req.json();
-
-    if (!idea_id) {
+    if (!userId) {
+      console.error('No userId provided in body or auth');
       return new Response(
-        JSON.stringify({ error: 'idea_id is required' }),
+        JSON.stringify({ error: 'userId is required in request body or auth header' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Generating micro-tasks for user:', user.id, 'idea:', idea_id);
+    console.log('Resolved userId:', userId);
 
-    // Fetch founder profile
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('founder_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
+    // Create service role client to bypass RLS
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    if (profileError) {
-      console.error('Profile fetch error:', profileError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch founder profile' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Fetch the chosen idea
-    const { data: idea, error: ideaError } = await supabaseClient
-      .from('ideas')
-      .select('*')
-      .eq('id', idea_id)
-      .eq('user_id', user.id)
-      .single();
-
-    if (ideaError) {
-      console.error('Idea fetch error:', ideaError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch idea' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Fetch completed tasks to avoid duplicates
-    const { data: completedTasks, error: tasksError } = await supabaseClient
-      .from('tasks')
-      .select('title, description')
-      .eq('user_id', user.id)
-      .eq('status', 'completed');
-
-    if (tasksError) {
-      console.error('Tasks fetch error:', tasksError);
-      // Non-critical, continue with empty array
-    }
-
-    // Embedded prompt template
-    const promptTemplate = `You are an expert startup advisor who creates actionable micro-tasks for founders. Your goal is to break down the founder's journey into small, achievable actions that build momentum.
-
-**INPUT:**
-You will receive:
-1. **Founder Profile**: Their skills, constraints (time, capital), and current focus
-2. **Business Idea**: The chosen idea they're working on
-3. **Completed Tasks**: Tasks they've already finished (to avoid duplicates)
-
-**OUTPUT:**
-Return a JSON object with a single field:
-\`\`\`json
-{
-  "tasks": [
-    {
-      "title": "string",
-      "description": "string",
-      "category": "string",
-      "estimated_minutes": "number",
-      "xp_reward": "number"
-    }
-  ]
-}
-\`\`\`
-
-**TASK GENERATION GUIDELINES:**
-
-1. **Generate 3-5 micro-tasks** that are:
-   - Small enough to complete in one sitting (5-60 minutes each)
-   - Specific and actionable (not vague goals)
-   - Relevant to their current stage and idea
-   - Progressive (building on completed tasks)
-
-2. **Categories** should be one of:
-   - "Research" - market research, competitor analysis
-   - "Validation" - customer interviews, surveys
-   - "Planning" - strategy, roadmap, MVP definition
-   - "Building" - creating prototypes, MVPs, landing pages
-   - "Marketing" - content, outreach, positioning
-   - "Operations" - setup, legal, tools
-
-3. **XP Rewards** based on effort:
-   - 5-10 XP: Quick wins (5-15 min)
-   - 15-25 XP: Moderate tasks (20-45 min)
-   - 30-50 XP: Substantial work (45-60 min)
-
-4. **Prioritize based on**:
-   - Their time constraints (don't suggest 60-min tasks if they have limited time)
-   - Their skill level (match complexity to their abilities)
-   - What moves the needle (focus on validation and customer connection early on)
-
-5. **Avoid**:
-   - Tasks they've already completed
-   - Generic advice ("work on your business")
-   - Tasks requiring resources they don't have
-
-**EXAMPLES:**
-
-For an early-stage founder with a SaaS idea:
-\`\`\`json
-{
-  "tasks": [
-    {
-      "title": "Write down 3 customer pain points",
-      "description": "List the top 3 specific problems your target customer faces daily that your solution addresses. Be concrete.",
-      "category": "Planning",
-      "estimated_minutes": 10,
-      "xp_reward": 10
-    },
-    {
-      "title": "Find 5 potential customers on LinkedIn",
-      "description": "Search for and save 5 profiles that match your ideal customer profile. Note why each is a good fit.",
-      "category": "Research",
-      "estimated_minutes": 20,
-      "xp_reward": 15
-    },
-    {
-      "title": "Draft a cold outreach message",
-      "description": "Write a 3-sentence email introducing your idea and asking for a 15-minute call. Make it about them, not you.",
-      "category": "Validation",
-      "estimated_minutes": 15,
-      "xp_reward": 20
-    }
-  ]
-}
-\`\`\`
-
-Return ONLY the JSON object. No other text or commentary.`;
-
-    // Build the user prompt with context
-    const userPrompt = `
-**Founder Profile:**
-- Skills: ${profile.skills_text || 'Not specified'}
-- Skills Tags: ${profile.skills_tags?.join(', ') || 'None'}
-- Tech Level: ${profile.tech_level || 'Not specified'}
-- Time per week: ${profile.time_per_week || 'Not specified'} hours
-- Capital available: $${profile.capital_available || 0}
-- Risk tolerance: ${profile.risk_tolerance || 'Not specified'}
-
-**Business Idea:**
-- Title: ${idea.title}
-- Description: ${idea.description || 'No description'}
-- Business Model: ${idea.business_model_type || 'Not specified'}
-- Target Customer: ${idea.target_customer || 'Not specified'}
-- Time to First Dollar: ${idea.time_to_first_dollar || 'Not specified'}
-- Complexity: ${idea.complexity || 'Not specified'}
-
-**Completed Tasks:**
-${completedTasks && completedTasks.length > 0 
-  ? completedTasks.map(t => `- ${t.title}`).join('\n') 
-  : '- None yet'}
-
-Generate 3-5 actionable micro-tasks for this founder.
-`;
+    // Build task input using tasksEngine logic
+    const taskInput = await buildTaskInput(supabaseClient, userId);
 
     // Call Lovable AI with tool calling for structured output
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -221,15 +216,15 @@ Generate 3-5 actionable micro-tasks for this founder.
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: promptTemplate },
-          { role: 'user', content: userPrompt }
+          { role: 'system', content: TASK_GENERATION_PROMPT },
+          { role: 'user', content: JSON.stringify(taskInput) }
         ],
         tools: [
           {
             type: "function",
             function: {
               name: "generate_tasks",
-              description: "Generate 3-5 actionable micro-tasks for the founder",
+              description: "Generate 3-5 actionable micro-tasks and quests for the founder",
               parameters: {
                 type: "object",
                 properties: {
@@ -238,13 +233,13 @@ Generate 3-5 actionable micro-tasks for this founder.
                     items: {
                       type: "object",
                       properties: {
+                        type: { type: "string", enum: ["micro", "quest"] },
                         title: { type: "string" },
                         description: { type: "string" },
-                        category: { type: "string", enum: ["Research", "Validation", "Planning", "Building", "Marketing", "Operations"] },
-                        estimated_minutes: { type: "number" },
-                        xp_reward: { type: "number" }
+                        xp_reward: { type: "number" },
+                        metadata: { type: "object" }
                       },
-                      required: ["title", "description", "category", "estimated_minutes", "xp_reward"],
+                      required: ["type", "title", "description", "xp_reward"],
                       additionalProperties: false
                     }
                   }
@@ -269,7 +264,6 @@ Generate 3-5 actionable micro-tasks for this founder.
     }
 
     const aiData = await aiResponse.json();
-    console.log('AI response:', JSON.stringify(aiData, null, 2));
 
     // Extract structured output from tool call
     const toolCall = aiData.choices[0]?.message?.tool_calls?.[0];
@@ -287,7 +281,7 @@ Generate 3-5 actionable micro-tasks for this founder.
     } catch (parseError) {
       console.error('Failed to parse tool call arguments:', parseError);
       return new Response(
-        JSON.stringify({ error: 'Failed to parse AI response', details: toolCall.function.arguments }),
+        JSON.stringify({ error: 'Failed to parse AI response', details: String(parseError) }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -300,21 +294,15 @@ Generate 3-5 actionable micro-tasks for this founder.
       );
     }
 
-    // Insert tasks into database
-    const tasksToInsert = parsedTasks.tasks.map((task: any) => ({
-      user_id: user.id,
-      idea_id: idea_id,
-      title: task.title,
-      description: task.description,
-      category: task.category,
-      estimated_minutes: task.estimated_minutes,
-      xp_reward: task.xp_reward,
-      status: 'open',
-    }));
+    console.log('Number of tasks generated:', parsedTasks.tasks.length);
 
+    // Format tasks using tasksEngine logic
+    const formattedTasks = formatTasks(parsedTasks.tasks, userId, taskInput.idea.id);
+
+    // Insert tasks into database
     const { data: insertedTasks, error: insertError } = await supabaseClient
       .from('tasks')
-      .insert(tasksToInsert)
+      .insert(formattedTasks)
       .select();
 
     if (insertError) {
