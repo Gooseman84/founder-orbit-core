@@ -11,6 +11,7 @@ import {
   Activity,
   Radar,
   User,
+  FileText,
   LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ const navigation = [
   { name: "Ideas", href: "/ideas", icon: Lightbulb },
   { name: "Feed", href: "/feed", icon: Rss },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "Workspace", href: "/workspace", icon: FileText },
   { name: "Pulse Check", href: "/pulse", icon: Activity },
   { name: "Radar", href: "/radar", icon: Radar },
   { name: "North Star", href: "/north-star", icon: Target },

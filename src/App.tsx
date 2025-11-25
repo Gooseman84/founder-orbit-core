@@ -19,6 +19,7 @@ import PulseHistory from "./pages/PulseHistory";
 import Radar from "./pages/Radar";
 import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
+import Workspace from "./pages/Workspace";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,8 @@ const App = () => (
             <Route path="/radar" element={<ProtectedRoute><MainLayout><Radar /></MainLayout></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><MainLayout><Profile /></MainLayout></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
+            <Route path="/workspace" element={<ProtectedRoute><MainLayout><Workspace /></MainLayout></ProtectedRoute>} />
+            <Route path="/workspace/:id" element={<ProtectedRoute><MainLayout><Workspace /></MainLayout></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
