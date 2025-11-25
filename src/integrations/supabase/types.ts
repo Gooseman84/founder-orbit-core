@@ -284,10 +284,13 @@ export type Database = {
           created_at: string
           description: string | null
           estimated_minutes: number | null
+          feed_item_id: string | null
           id: string
           idea_id: string | null
+          metadata: Json | null
           status: string | null
           title: string
+          type: string | null
           user_id: string
           xp_reward: number | null
         }
@@ -297,10 +300,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           estimated_minutes?: number | null
+          feed_item_id?: string | null
           id?: string
           idea_id?: string | null
+          metadata?: Json | null
           status?: string | null
           title: string
+          type?: string | null
           user_id: string
           xp_reward?: number | null
         }
@@ -310,10 +316,13 @@ export type Database = {
           created_at?: string
           description?: string | null
           estimated_minutes?: number | null
+          feed_item_id?: string | null
           id?: string
           idea_id?: string | null
+          metadata?: Json | null
           status?: string | null
           title?: string
+          type?: string | null
           user_id?: string
           xp_reward?: number | null
         }
