@@ -9,7 +9,7 @@ export interface XpEvent {
   created_at: string;
 }
 
-export interface Level {
+export interface LevelDefinition {
   level: number;
   minXp: number;
   maxXp: number;
@@ -18,10 +18,10 @@ export interface Level {
 
 export interface XpSummary {
   totalXp: number;
-  currentLevel: Level;
-  nextLevel: Level | null;
-  progressToNextLevel: number; // 0-100 percentage
-  xpToNextLevel: number;
+  level: number;
+  nextLevelXp: number;
+  currentLevelMinXp: number;
+  progressPercent: number; // 0-100
 }
 
 // Event types for XP rewards
@@ -39,22 +39,17 @@ export const XP_EVENT_TYPES = {
 export type XpEventType = typeof XP_EVENT_TYPES[keyof typeof XP_EVENT_TYPES];
 
 // Level progression: exponential growth with milestone titles
-export const LEVELS: Level[] = [
+export const LEVELS: LevelDefinition[] = [
   { level: 1, minXp: 0, maxXp: 100, title: 'Aspiring Founder' },
   { level: 2, minXp: 100, maxXp: 250, title: 'Ideation Explorer' },
   { level: 3, minXp: 250, maxXp: 500, title: 'Market Researcher' },
-  { level: 4, minXp: 500, maxXp: 850, title: 'Validated Visionary' },
-  { level: 5, minXp: 850, maxXp: 1300, title: 'Strategic Builder' },
-  { level: 6, minXp: 1300, maxXp: 1900, title: 'MVP Architect' },
-  { level: 7, minXp: 1900, maxXp: 2650, title: 'Launch Ready' },
-  { level: 8, minXp: 2650, maxXp: 3600, title: 'Growth Hacker' },
-  { level: 9, minXp: 3600, maxXp: 4800, title: 'Scale Master' },
-  { level: 10, minXp: 4800, maxXp: 6300, title: 'Seasoned Entrepreneur' },
-  { level: 11, minXp: 6300, maxXp: 8200, title: 'Industry Leader' },
-  { level: 12, minXp: 8200, maxXp: 10500, title: 'Ecosystem Builder' },
-  { level: 13, minXp: 10500, maxXp: 13300, title: 'Innovation Pioneer' },
-  { level: 14, minXp: 13300, maxXp: 16700, title: 'Venture Expert' },
-  { level: 15, minXp: 16700, maxXp: 20700, title: 'Legendary Founder' },
+  { level: 4, minXp: 500, maxXp: 1000, title: 'Validated Visionary' },
+  { level: 5, minXp: 1000, maxXp: 1750, title: 'Strategic Builder' },
+  { level: 6, minXp: 1750, maxXp: 2750, title: 'MVP Architect' },
+  { level: 7, minXp: 2750, maxXp: 4000, title: 'Launch Ready' },
+  { level: 8, minXp: 4000, maxXp: 5500, title: 'Growth Hacker' },
+  { level: 9, minXp: 5500, maxXp: 7500, title: 'Scale Master' },
+  { level: 10, minXp: 7500, maxXp: 10000, title: 'Seasoned Entrepreneur' },
 ];
 
 // Standard XP rewards for different actions
