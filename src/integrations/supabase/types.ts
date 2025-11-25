@@ -277,6 +277,45 @@ export type Database = {
         }
         Relationships: []
       }
+      niche_radar: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          idea_id: string | null
+          metadata: Json | null
+          priority_score: number | null
+          recommended_action: string | null
+          signal_type: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          idea_id?: string | null
+          metadata?: Json | null
+          priority_score?: number | null
+          recommended_action?: string | null
+          signal_type: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          idea_id?: string | null
+          metadata?: Json | null
+          priority_score?: number | null
+          recommended_action?: string | null
+          signal_type?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pulse_checks: {
         Row: {
           ai_insight: string | null
