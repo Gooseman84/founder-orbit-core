@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.record-xp-event]
 verify_jwt = true
+
+[functions.generate-feed-items]
+verify_jwt = true
