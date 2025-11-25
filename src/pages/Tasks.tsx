@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useXP } from "@/hooks/useXP";
 import { supabase } from "@/integrations/supabase/client";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { recordXpEvent } from "@/lib/xpEngine";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Sparkles, ListTodo, CheckCircle2, Heart } from "lucide-react";
 
 interface Task {
@@ -27,6 +29,8 @@ interface Task {
 const Tasks = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { refresh: refreshXp } = useXP();
+  const queryClient = useQueryClient();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -144,16 +148,23 @@ const Tasks = () => {
 
       if (updateError) throw updateError;
 
+      // Determine XP amount: use task's xp_reward or default to 10
+      const xpAmount = task.xp_reward || 10;
+
       // Add XP event
-      await recordXpEvent(user.id, 'task_complete', task.xp_reward || 10, {
-        task_id: taskId,
+      await recordXpEvent(user.id, 'task_completed', xpAmount, {
+        taskId,
         task_title: task.title,
         category: task.category,
       });
 
+      // Refresh XP summary immediately
+      queryClient.invalidateQueries({ queryKey: ["xp", user.id] });
+      await refreshXp();
+
       toast({
         title: "Task Completed! 🎉",
-        description: `You earned ${task.xp_reward || 10} XP!`,
+        description: `You earned ${xpAmount} XP!`,
       });
 
       await fetchTasks();
@@ -200,6 +211,10 @@ const Tasks = () => {
         has_what_learned: !!checkIn.whatLearned,
         has_feelings: !!checkIn.feelings,
       });
+
+      // Refresh XP summary immediately
+      queryClient.invalidateQueries({ queryKey: ["xp", user.id] });
+      await refreshXp();
 
       toast({
         title: "Check-in saved! 🎉",
