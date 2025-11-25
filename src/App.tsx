@@ -16,6 +16,7 @@ import Feed from "./pages/Feed";
 import Tasks from "./pages/Tasks";
 import Pulse from "./pages/Pulse";
 import PulseHistory from "./pages/PulseHistory";
+import Radar from "./pages/Radar";
 import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/tasks" element={<ProtectedRoute><MainLayout><Tasks /></MainLayout></ProtectedRoute>} />
             <Route path="/pulse" element={<ProtectedRoute><MainLayout><Pulse /></MainLayout></ProtectedRoute>} />
             <Route path="/pulse/history" element={<ProtectedRoute><MainLayout><PulseHistory /></MainLayout></ProtectedRoute>} />
+            <Route path="/radar" element={<ProtectedRoute><MainLayout><Radar /></MainLayout></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><MainLayout><Profile /></MainLayout></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
