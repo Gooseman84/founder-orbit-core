@@ -206,7 +206,7 @@ ${completedTasks && completedTasks.length > 0
 Generate 3-5 actionable micro-tasks for this founder.
 `;
 
-    // Call Lovable AI
+    // Call Lovable AI with tool calling for structured output
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
@@ -224,7 +224,38 @@ Generate 3-5 actionable micro-tasks for this founder.
           { role: 'system', content: promptTemplate },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7,
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "generate_tasks",
+              description: "Generate 3-5 actionable micro-tasks for the founder",
+              parameters: {
+                type: "object",
+                properties: {
+                  tasks: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        title: { type: "string" },
+                        description: { type: "string" },
+                        category: { type: "string", enum: ["Research", "Validation", "Planning", "Building", "Marketing", "Operations"] },
+                        estimated_minutes: { type: "number" },
+                        xp_reward: { type: "number" }
+                      },
+                      required: ["title", "description", "category", "estimated_minutes", "xp_reward"],
+                      additionalProperties: false
+                    }
+                  }
+                },
+                required: ["tasks"],
+                additionalProperties: false
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "generate_tasks" } }
       }),
     });
 
@@ -238,18 +269,25 @@ Generate 3-5 actionable micro-tasks for this founder.
     }
 
     const aiData = await aiResponse.json();
-    const generatedContent = aiData.choices[0].message.content;
+    console.log('AI response:', JSON.stringify(aiData, null, 2));
 
-    console.log('AI response:', generatedContent);
+    // Extract structured output from tool call
+    const toolCall = aiData.choices[0]?.message?.tool_calls?.[0];
+    if (!toolCall || !toolCall.function?.arguments) {
+      console.error('No tool call found in response:', aiData);
+      return new Response(
+        JSON.stringify({ error: 'AI did not return structured output' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Parse JSON response
     let parsedTasks;
     try {
-      parsedTasks = JSON.parse(generatedContent);
+      parsedTasks = JSON.parse(toolCall.function.arguments);
     } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError);
+      console.error('Failed to parse tool call arguments:', parseError);
       return new Response(
-        JSON.stringify({ error: 'Failed to parse AI response', details: generatedContent }),
+        JSON.stringify({ error: 'Failed to parse AI response', details: toolCall.function.arguments }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
