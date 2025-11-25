@@ -1,0 +1,224 @@
+import { useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
+import type { WorkspaceDocument } from '@/lib/workspaceEngine';
+
+interface CreateDocumentParams {
+  doc_type: string;
+  title: string;
+  source_type?: string;
+  source_id?: string;
+  idea_id?: string;
+}
+
+export function useWorkspace() {
+  const { user } = useAuth();
+  const [documents, setDocuments] = useState<WorkspaceDocument[]>([]);
+  const [currentDocument, setCurrentDocument] = useState<WorkspaceDocument | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Load a single document by ID
+   */
+  const loadDocument = useCallback(async (id: string) => {
+    if (!user) {
+      setError('User not authenticated');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('workspace_documents')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      if (!data) {
+        setError('Document not found');
+        setCurrentDocument(null);
+        return;
+      }
+
+      setCurrentDocument(data as WorkspaceDocument);
+    } catch (err) {
+      console.error('Error loading document:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load document');
+      setCurrentDocument(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  /**
+   * Create a new workspace document
+   */
+  const createDocument = useCallback(async (params: CreateDocumentParams) => {
+    if (!user) {
+      setError('User not authenticated');
+      return null;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: insertError } = await supabase
+        .from('workspace_documents')
+        .insert({
+          user_id: user.id,
+          doc_type: params.doc_type,
+          title: params.title,
+          source_type: params.source_type || 'manual',
+          source_id: params.source_id || null,
+          idea_id: params.idea_id || null,
+          content: '',
+          status: 'draft',
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      const newDoc = data as WorkspaceDocument;
+      setDocuments(prev => [newDoc, ...prev]);
+      setCurrentDocument(newDoc);
+      
+      return newDoc;
+    } catch (err) {
+      console.error('Error creating document:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create document');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  /**
+   * Update document content
+   */
+  const updateContent = useCallback(async (id: string, newContent: string) => {
+    if (!user) {
+      setError('User not authenticated');
+      return;
+    }
+
+    try {
+      const { error: updateError } = await supabase
+        .from('workspace_documents')
+        .update({
+          content: newContent,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setDocuments(prev =>
+        prev.map(doc =>
+          doc.id === id
+            ? { ...doc, content: newContent, updated_at: new Date().toISOString() }
+            : doc
+        )
+      );
+
+      if (currentDocument?.id === id) {
+        setCurrentDocument(prev =>
+          prev ? { ...prev, content: newContent, updated_at: new Date().toISOString() } : null
+        );
+      }
+    } catch (err) {
+      console.error('Error updating content:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update content');
+    }
+  }, [user, currentDocument]);
+
+  /**
+   * Request AI suggestion for a document
+   */
+  const requestAISuggestion = useCallback(async (id: string) => {
+    if (!user) {
+      setError('User not authenticated');
+      return null;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: functionError } = await supabase.functions.invoke(
+        'generate-workspace-doc',
+        {
+          body: {
+            userId: user.id,
+            documentId: id,
+          },
+        }
+      );
+
+      if (functionError) throw functionError;
+
+      // Refresh the document to get updated title and ai_suggestions
+      await loadDocument(id);
+
+      return data;
+    } catch (err) {
+      console.error('Error requesting AI suggestion:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate AI suggestion');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, loadDocument]);
+
+  /**
+   * Refresh the list of documents
+   */
+  const refreshList = useCallback(async () => {
+    if (!user) {
+      setDocuments([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('workspace_documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      setDocuments((data || []) as WorkspaceDocument[]);
+    } catch (err) {
+      console.error('Error refreshing documents:', err);
+      setError(err instanceof Error ? err.message : 'Failed to refresh documents');
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  return {
+    documents,
+    currentDocument,
+    loading,
+    error,
+    loadDocument,
+    createDocument,
+    updateContent,
+    requestAISuggestion,
+    refreshList,
+  };
+}
