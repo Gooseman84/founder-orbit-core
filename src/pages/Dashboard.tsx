@@ -9,7 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Target, Zap, ListTodo, TrendingUp } from "lucide-react";
+import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { isToday } from "date-fns";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -23,10 +25,13 @@ const Dashboard = () => {
     quests: 0,
   });
   const [loadingTasks, setLoadingTasks] = useState(true);
+  const [latestPulse, setLatestPulse] = useState<any>(null);
+  const [loadingPulse, setLoadingPulse] = useState(true);
 
   useEffect(() => {
     if (user) {
       fetchTaskStats();
+      fetchLatestPulse();
     }
   }, [user]);
 
@@ -55,6 +60,29 @@ const Dashboard = () => {
       console.error("Error fetching task stats:", error);
     } finally {
       setLoadingTasks(false);
+    }
+  };
+
+  const fetchLatestPulse = async () => {
+    if (!user) return;
+
+    setLoadingPulse(true);
+    try {
+      const { data, error } = await supabase
+        .from("pulse_checks")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      setLatestPulse(data);
+    } catch (error) {
+      console.error("Error fetching latest pulse:", error);
+    } finally {
+      setLoadingPulse(false);
     }
   };
 
@@ -111,8 +139,101 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Task Statistics and Recent Feed */}
+      {/* Task Statistics, Daily Pulse, and Recent Feed */}
       <div className="grid gap-6 md:grid-cols-2">
+        {/* Daily Pulse Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Your Daily Pulse
+            </CardTitle>
+            <CardDescription>Track your energy, stress, and progress</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingPulse ? (
+              <div className="space-y-3">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : latestPulse && isToday(new Date(latestPulse.created_at)) ? (
+              <div className="space-y-4">
+                {/* Today's Pulse Check */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Today's Check-In</span>
+                  <Badge variant="secondary" className="gap-1">
+                    <Activity className="h-3 w-3" />
+                    Completed
+                  </Badge>
+                </div>
+
+                {/* Energy & Stress Levels */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg border bg-card">
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Energy</div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold">{latestPulse.energy_level}</span>
+                      <span className="text-sm text-muted-foreground">/5</span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg border bg-card">
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Stress</div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold">{latestPulse.stress_level}</span>
+                      <span className="text-sm text-muted-foreground">/5</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* AI Insight Preview */}
+                <div className="p-3 rounded-lg bg-secondary/50">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Today's Insight</p>
+                  <p className="text-sm line-clamp-2">{latestPulse.ai_insight}</p>
+                </div>
+
+                {/* View Full Button */}
+                <Button 
+                  onClick={() => navigate("/pulse")} 
+                  variant="outline"
+                  className="w-full"
+                >
+                  View Full Insight
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* No Pulse Today - CTA */}
+                <div className="text-center py-6">
+                  <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <h3 className="font-semibold mb-1">No pulse check today</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Take a moment to check in with yourself and get personalized insights
+                  </p>
+                </div>
+
+                {/* Latest Pulse Info (if exists) */}
+                {latestPulse && (
+                  <div className="p-3 rounded-lg border bg-muted/30 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      Last check-in: {new Date(latestPulse.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+
+                {/* Record Pulse Button */}
+                <Button 
+                  onClick={() => navigate("/pulse")} 
+                  className="w-full"
+                  size="lg"
+                >
+                  Record Today's Pulse
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
