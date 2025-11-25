@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
 import { supabase } from "@/integrations/supabase/client";
-import { TaskCard } from "@/components/tasks/TaskCard";
+import { TaskList } from "@/components/tasks/TaskList";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -105,14 +105,14 @@ const Tasks = () => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-micro-tasks', {
-        body: { idea_id: chosenIdeaId },
+        body: { userId: user.id },
       });
 
       if (error) throw error;
 
       toast({
         title: "Tasks Generated!",
-        description: `Created ${data.tasks?.length || 0} new tasks for you.`,
+        description: `Created ${data.tasks?.length || 0} new micro-tasks and quests for you.`,
       });
 
       await fetchTasks();
@@ -235,7 +235,7 @@ const Tasks = () => {
     }
   };
 
-  const openTasks = tasks.filter(t => t.status === 'open');
+  const openTasks = tasks.filter(t => t.status !== 'completed');
   const completedTasks = tasks.filter(t => t.status === 'completed');
 
   if (isLoading) {
@@ -364,50 +364,17 @@ const Tasks = () => {
         </TabsList>
 
         <TabsContent value="open" className="mt-6">
-          {openTasks.length === 0 ? (
-            <div className="text-center py-12 border-2 border-dashed rounded-lg">
-              <ListTodo className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Open Tasks</h3>
-              <p className="text-muted-foreground mb-4">
-                {chosenIdeaId 
-                  ? "Generate some tasks to get started on your founder journey!"
-                  : "Choose an idea first, then generate tasks to begin."}
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {openTasks.map(task => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onComplete={handleCompleteTask}
-                  isCompleting={completingTaskId === task.id}
-                />
-              ))}
-            </div>
-          )}
+          <TaskList
+            tasks={openTasks}
+            onTaskCompleted={handleCompleteTask}
+          />
         </TabsContent>
 
         <TabsContent value="completed" className="mt-6">
-          {completedTasks.length === 0 ? (
-            <div className="text-center py-12 border-2 border-dashed rounded-lg">
-              <CheckCircle2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Completed Tasks Yet</h3>
-              <p className="text-muted-foreground">
-                Complete some tasks to see them here!
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {completedTasks.map(task => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onComplete={handleCompleteTask}
-                />
-              ))}
-            </div>
-          )}
+          <TaskList
+            tasks={completedTasks}
+            onTaskCompleted={handleCompleteTask}
+          />
         </TabsContent>
       </Tabs>
     </div>
