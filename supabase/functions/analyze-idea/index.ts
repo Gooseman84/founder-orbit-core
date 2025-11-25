@@ -86,9 +86,35 @@ serve(async (req) => {
       );
     }
 
-    // Load AI prompt template
-    const promptPath = new URL("../../src/prompts/analyzeIdea.txt", import.meta.url);
-    const systemPrompt = await Deno.readTextFile(promptPath);
+    // AI prompt template (embedded)
+    const systemPrompt = `You are an expert startup evaluator, market strategist, business model analyst, and product validation specialist.
+
+Given:
+1. A founder profile (passions, skills, constraints, lifestyle goals)
+2. A business idea (title, description, business model type, target customer, fit scores)
+3. Constraints such as time availability, capital available, and risk tolerance
+
+Produce a JSON object ONLY with the following structure:
+
+{
+  "niche_score": number,          // 0–100 overall viability score
+  "market_insight": "string",     // insight about the market
+  "problem_intensity": "string",  // how painful / urgent the problem is
+  "competition_snapshot": "string",
+  "pricing_power": "string",
+  "success_likelihood": "string",
+  "biggest_risks": ["string"],
+  "unfair_advantages": ["string"],
+  "recommendations": ["string"],
+  "ideal_customer_profile": "string",
+  "elevator_pitch": "string",
+  "brutal_honesty": "string"
+}
+
+Rules:
+- DO NOT add extra fields
+- DO NOT output commentary or disclaimers
+- Respond with STRICT JSON only`;
 
     // Prepare input data for AI
     const inputData = {
