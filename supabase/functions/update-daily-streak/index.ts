@@ -96,6 +96,12 @@ Deno.serve(async (req) => {
     const streak = await markDayComplete(supabase, userId);
     console.log('[update-daily-streak] Updated streak:', streak);
 
+    // Award XP for daily streak check-in
+    console.log('[update-daily-streak] Recording XP for daily streak check...');
+    await recordXpEvent(supabase, userId, "daily_streak_check", 10, { 
+      current_streak: streak.current_streak 
+    });
+
     // Load user stats
     console.log('[update-daily-streak] Loading user stats...');
     const stats = await loadUserStats(supabase, userId, streak.current_streak);
@@ -240,6 +246,35 @@ async function loadUserStats(supabase: any, userId: string, currentStreak: numbe
   };
 }
 
+async function recordXpEvent(
+  supabase: any,
+  userId: string,
+  eventType: string,
+  amount: number,
+  metadata: any
+) {
+  if (amount <= 0) {
+    console.log(`[recordXpEvent] Skipping event with amount <= 0: ${amount}`);
+    return;
+  }
+
+  const { error } = await supabase
+    .from("xp_events")
+    .insert({
+      user_id: userId,
+      event_type: eventType,
+      amount: amount,
+      metadata: metadata,
+    });
+
+  if (error) {
+    console.error('[recordXpEvent] Error recording XP:', error);
+    throw error;
+  }
+
+  console.log(`[recordXpEvent] Recorded ${amount} XP for ${eventType}`);
+}
+
 async function checkAndAwardBadges(supabase: any, userId: string, stats: any) {
   const newlyEarned = [];
 
@@ -293,22 +328,11 @@ async function checkAndAwardBadges(supabase: any, userId: string, stats: any) {
       continue;
     }
 
-    // Record XP event
-    const { error: xpError } = await supabase
-      .from("xp_events")
-      .insert({
-        user_id: userId,
-        event_type: "badge_earned",
-        amount: badge.xp_reward,
-        metadata: {
-          badge_code: def.badge_code,
-          badge_title: badge.title,
-        },
-      });
-
-    if (xpError) {
-      console.error('[checkAndAwardBadges] Error recording XP:', xpError);
-    }
+    // Record XP event for badge
+    await recordXpEvent(supabase, userId, "badge_earned", badge.xp_reward, {
+      badge_code: def.badge_code,
+      badge_title: badge.title,
+    });
 
     newlyEarned.push({
       ...userBadge,
