@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.generate-workspace-doc]
 verify_jwt = true
+
+[functions.update-daily-streak]
+verify_jwt = true
