@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIdeas } from "@/hooks/useIdeas";
 import { IdeaCard } from "@/components/ideas/IdeaCard";
 import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Scale } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Ideas = () => {
@@ -71,19 +71,27 @@ const Ideas = () => {
           </p>
         </div>
 
-        <Button onClick={handleGenerateIdeas} disabled={generateIdeas.isPending} className="gap-2">
-          {generateIdeas.isPending ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              Generating...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-4 h-4" />
-              Generate More Ideas
-            </>
+        <div className="flex gap-2">
+          {ideas.length >= 2 && (
+            <Button onClick={() => navigate("/ideas/compare")} variant="outline" className="gap-2">
+              <Scale className="w-4 h-4" />
+              Compare Ideas
+            </Button>
           )}
-        </Button>
+          <Button onClick={handleGenerateIdeas} disabled={generateIdeas.isPending} className="gap-2">
+            {generateIdeas.isPending ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Generating...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Generate More Ideas
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
