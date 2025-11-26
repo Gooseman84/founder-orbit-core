@@ -12,6 +12,7 @@ import {
   Radar,
   User,
   FileText,
+  Zap,
   LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Daily Streak", href: "/streak", icon: Zap },
   { name: "Ideas", href: "/ideas", icon: Lightbulb },
   { name: "Feed", href: "/feed", icon: Rss },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
