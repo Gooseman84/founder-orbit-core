@@ -20,6 +20,7 @@ import Radar from "./pages/Radar";
 import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import Workspace from "./pages/Workspace";
+import DailyStreak from "./pages/DailyStreak";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
             <Route path="/workspace" element={<ProtectedRoute><MainLayout><Workspace /></MainLayout></ProtectedRoute>} />
             <Route path="/workspace/:id" element={<ProtectedRoute><MainLayout><Workspace /></MainLayout></ProtectedRoute>} />
+            <Route path="/streak" element={<ProtectedRoute><MainLayout><DailyStreak /></MainLayout></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
