@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity, Radar, FileText } from "lucide-react";
+import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity, Radar, FileText, Flame } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { isToday } from "date-fns";
 
@@ -37,6 +37,11 @@ const Dashboard = () => {
     recentDoc: null as any,
   });
   const [loadingWorkspace, setLoadingWorkspace] = useState(true);
+  const [streakData, setStreakData] = useState({
+    current_streak: 0,
+    longest_streak: 0,
+  });
+  const [loadingStreak, setLoadingStreak] = useState(true);
 
   useEffect(() => {
     if (user) {
@@ -44,6 +49,7 @@ const Dashboard = () => {
       fetchLatestPulse();
       fetchRadarStats();
       fetchWorkspaceStats();
+      fetchStreakData();
     }
   }, [user]);
 
@@ -148,6 +154,30 @@ const Dashboard = () => {
       console.error("Error fetching workspace stats:", error);
     } finally {
       setLoadingWorkspace(false);
+    }
+  };
+
+  const fetchStreakData = async () => {
+    if (!user) return;
+
+    setLoadingStreak(true);
+    try {
+      const { data, error } = await supabase
+        .from("daily_streaks")
+        .select("current_streak, longest_streak")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      setStreakData({
+        current_streak: data?.current_streak || 0,
+        longest_streak: data?.longest_streak || 0,
+      });
+    } catch (error) {
+      console.error("Error fetching streak data:", error);
+    } finally {
+      setLoadingStreak(false);
     }
   };
 
@@ -495,6 +525,60 @@ const Dashboard = () => {
                   className="w-full"
                 >
                   Create Document
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Daily Streak Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Flame className="h-5 w-5 text-orange-500" />
+              Daily Streak
+            </CardTitle>
+            <CardDescription>Build momentum with daily consistency</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingStreak ? (
+              <div className="space-y-3">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Current Streak */}
+                <div className="flex items-center gap-4">
+                  <Flame 
+                    className={`h-12 w-12 ${
+                      streakData.current_streak > 0 
+                        ? "text-orange-500 fill-orange-500" 
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                  <div>
+                    <div className="text-2xl font-bold">
+                      {streakData.current_streak > 0 ? (
+                        <>Day {streakData.current_streak}</>
+                      ) : (
+                        <span className="text-muted-foreground">No streak</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Longest: {streakData.longest_streak} {streakData.longest_streak === 1 ? "day" : "days"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Record Today Button */}
+                <Button 
+                  onClick={() => navigate("/streak")} 
+                  variant="default"
+                  className="w-full"
+                >
+                  Record Today
                 </Button>
               </div>
             )}
