@@ -1,7 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { FileText, TrendingUp, Users, Zap, Shield, Target, Wind } from "lucide-react";
+import { FileText, TrendingUp, Users, Zap, Shield, Target, Wind, Download } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface OpportunityScore {
   id: string;
@@ -21,9 +25,65 @@ interface OpportunityScore {
 
 interface OpportunityScoreCardProps {
   score: OpportunityScore;
+  ideaId: string;
 }
 
-export function OpportunityScoreCard({ score }: OpportunityScoreCardProps) {
+export function OpportunityScoreCard({ score, ideaId }: OpportunityScoreCardProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadReport = async () => {
+    if (!user?.id) return;
+
+    setDownloading(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/opportunity-report`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            ideaId: ideaId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report');
+      }
+
+      // Get the blob from response
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `opportunity-report-${ideaId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Report Downloaded!",
+        description: "Your opportunity report has been downloaded successfully.",
+      });
+    } catch (error: any) {
+      console.error("Error downloading report:", error);
+      toast({
+        title: "Download Failed",
+        description: error.message || "Failed to download opportunity report.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const getScoreColor = (value: number) => {
     if (value >= 70) return "text-green-600";
     if (value >= 40) return "text-yellow-600";
@@ -177,12 +237,25 @@ export function OpportunityScoreCard({ score }: OpportunityScoreCardProps) {
           </ul>
         </div>
 
-        {/* Optional Generate Report Button */}
+        {/* Download Report Button */}
         <div className="pt-4 border-t">
-          <Button variant="outline" className="w-full" disabled>
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Full Report
-            <span className="ml-2 text-xs text-muted-foreground">(Coming Soon)</span>
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            onClick={handleDownloadReport}
+            disabled={downloading}
+          >
+            {downloading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Download Opportunity Report
+              </>
+            )}
           </Button>
         </div>
       </CardContent>
