@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.generate-opportunity-score]
 verify_jwt = true
+
+[functions.opportunity-report]
+verify_jwt = true

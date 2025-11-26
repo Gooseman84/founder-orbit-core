@@ -396,7 +396,7 @@ const IdeaDetail = () => {
               )}
             </Button>
           </div>
-          <OpportunityScoreCard score={opportunityScore} />
+          <OpportunityScoreCard score={opportunityScore} ideaId={id!} />
         </>
       ) : analysis ? (
         <Card className="border-dashed">
