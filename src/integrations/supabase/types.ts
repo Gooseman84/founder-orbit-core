@@ -41,6 +41,33 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_streaks: {
+        Row: {
+          current_streak: number
+          id: string
+          last_completed_date: string | null
+          longest_streak: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number
+          id?: string
+          last_completed_date?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak?: number
+          id?: string
+          last_completed_date?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       feed_items: {
         Row: {
           body: string
