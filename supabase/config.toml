@@ -35,3 +35,6 @@ verify_jwt = true
 
 [functions.update-daily-streak]
 verify_jwt = true
+
+[functions.check-missed-streaks]
+verify_jwt = false
