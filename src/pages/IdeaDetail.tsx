@@ -12,6 +12,7 @@ import { IdeaVettingCard } from "@/components/ideas/IdeaVettingCard";
 import { OpportunityScoreCard } from "@/components/opportunity/OpportunityScoreCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { recordXpEvent } from "@/lib/xpEngine";
 import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp } from "lucide-react";
 
 const getComplexityVariant = (complexity: string | null) => {
@@ -120,9 +121,13 @@ const IdeaDetail = () => {
       if (error) throw error;
 
       setOpportunityScore(data);
+      
+      // Award XP for generating opportunity score
+      await recordXpEvent(user.id, "opportunity_scored", 25, { ideaId: id });
+      
       toast({
         title: "Score Generated!",
-        description: "Opportunity score has been calculated successfully.",
+        description: "Opportunity score has been calculated successfully. +25 XP earned!",
       });
     } catch (error: any) {
       const errorMessage = error.message?.includes("Rate limit")
