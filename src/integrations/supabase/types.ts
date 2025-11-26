@@ -406,6 +406,39 @@ export type Database = {
         }
         Relationships: []
       }
+      opportunity_scores: {
+        Row: {
+          created_at: string
+          explanation: string | null
+          id: string
+          idea_id: string
+          recommendations: Json | null
+          sub_scores: Json | null
+          total_score: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          idea_id: string
+          recommendations?: Json | null
+          sub_scores?: Json | null
+          total_score?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          idea_id?: string
+          recommendations?: Json | null
+          sub_scores?: Json | null
+          total_score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       pulse_checks: {
         Row: {
           ai_insight: string | null
