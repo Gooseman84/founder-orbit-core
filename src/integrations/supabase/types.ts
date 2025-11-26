@@ -334,6 +334,39 @@ export type Database = {
         }
         Relationships: []
       }
+      milestones: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          milestone_code: string
+          title: string
+          trigger_type: string
+          trigger_value: number
+          xp_reward: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          milestone_code: string
+          title: string
+          trigger_type: string
+          trigger_value: number
+          xp_reward?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          milestone_code?: string
+          title?: string
+          trigger_type?: string
+          trigger_value?: number
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       niche_radar: {
         Row: {
           created_at: string
@@ -496,6 +529,35 @@ export type Database = {
             columns: ["badge_id"]
             isOneToOne: false
             referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_milestones: {
+        Row: {
+          earned_at: string
+          id: string
+          milestone_id: string
+          user_id: string
+        }
+        Insert: {
+          earned_at?: string
+          id?: string
+          milestone_id: string
+          user_id: string
+        }
+        Update: {
+          earned_at?: string
+          id?: string
+          milestone_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_milestones_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
             referencedColumns: ["id"]
           },
         ]
