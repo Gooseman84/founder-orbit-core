@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Ideas from "./pages/Ideas";
 import IdeaDetail from "./pages/IdeaDetail";
+import CompareIdeas from "./pages/CompareIdeas";
 import NorthStar from "./pages/NorthStar";
 import Feed from "./pages/Feed";
 import Tasks from "./pages/Tasks";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/onboarding" element={<ProtectedRoute><MainLayout><Onboarding /></MainLayout></ProtectedRoute>} />
             <Route path="/ideas" element={<ProtectedRoute><MainLayout><Ideas /></MainLayout></ProtectedRoute>} />
             <Route path="/ideas/:id" element={<ProtectedRoute><MainLayout><IdeaDetail /></MainLayout></ProtectedRoute>} />
+            <Route path="/ideas/compare" element={<ProtectedRoute><MainLayout><CompareIdeas /></MainLayout></ProtectedRoute>} />
             <Route path="/north-star" element={<ProtectedRoute><MainLayout><NorthStar /></MainLayout></ProtectedRoute>} />
             <Route path="/feed" element={<ProtectedRoute><MainLayout><Feed /></MainLayout></ProtectedRoute>} />
             <Route path="/tasks" element={<ProtectedRoute><MainLayout><Tasks /></MainLayout></ProtectedRoute>} />
