@@ -9,9 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity, Radar, FileText, Flame } from "lucide-react";
+import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity, Radar, FileText, Flame, BarChart3, Scale } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { isToday } from "date-fns";
+import { ScoreGauge } from "@/components/opportunity/ScoreGauge";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -42,6 +43,8 @@ const Dashboard = () => {
     longest_streak: 0,
   });
   const [loadingStreak, setLoadingStreak] = useState(true);
+  const [highestScore, setHighestScore] = useState<any>(null);
+  const [loadingScore, setLoadingScore] = useState(true);
 
   useEffect(() => {
     if (user) {
@@ -50,6 +53,7 @@ const Dashboard = () => {
       fetchRadarStats();
       fetchWorkspaceStats();
       fetchStreakData();
+      fetchHighestScore();
     }
   }, [user]);
 
@@ -178,6 +182,30 @@ const Dashboard = () => {
       console.error("Error fetching streak data:", error);
     } finally {
       setLoadingStreak(false);
+    }
+  };
+
+  const fetchHighestScore = async () => {
+    if (!user) return;
+
+    setLoadingScore(true);
+    try {
+      // Fetch all opportunity scores for user
+      const { data: scores, error: scoresError } = await supabase
+        .from("opportunity_scores")
+        .select("*, ideas!inner(id, title)")
+        .eq("user_id", user.id)
+        .order("total_score", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (scoresError) throw scoresError;
+
+      setHighestScore(scores);
+    } catch (error) {
+      console.error("Error fetching highest score:", error);
+    } finally {
+      setLoadingScore(false);
     }
   };
 
@@ -579,6 +607,76 @@ const Dashboard = () => {
                   className="w-full"
                 >
                   Record Today
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Opportunity Score Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Opportunity Score
+            </CardTitle>
+            <CardDescription>Your highest-rated business idea</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingScore ? (
+              <div className="space-y-3">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : highestScore ? (
+              <div className="space-y-4">
+                {/* Idea Title */}
+                <div className="p-3 rounded-lg border bg-card">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Top Idea</p>
+                  <p className="text-sm font-semibold line-clamp-2">{highestScore.ideas?.title || "Unknown Idea"}</p>
+                </div>
+
+                {/* Score Gauge */}
+                <div className="flex justify-center py-2">
+                  <ScoreGauge value={highestScore.total_score || 0} size={140} />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  <Button 
+                    onClick={() => navigate("/ideas")} 
+                    variant="default"
+                    className="w-full"
+                  >
+                    View All Scores
+                  </Button>
+                  <Button 
+                    onClick={() => navigate("/ideas/compare")} 
+                    variant="outline"
+                    className="w-full gap-2"
+                  >
+                    <Scale className="w-4 h-4" />
+                    Compare Ideas
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-center py-6">
+                  <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <h3 className="font-semibold mb-1">No scores yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Generate opportunity scores to evaluate your ideas
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={() => navigate("/ideas")} 
+                  variant="default"
+                  className="w-full"
+                >
+                  View Ideas
                 </Button>
               </div>
             )}
