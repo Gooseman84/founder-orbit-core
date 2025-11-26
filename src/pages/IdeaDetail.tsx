@@ -1,4 +1,5 @@
 // src/pages/IdeaDetail.tsx
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,10 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useIdeaDetail } from "@/hooks/useIdeaDetail";
 import { IdeaVettingCard } from "@/components/ideas/IdeaVettingCard";
-import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target } from "lucide-react";
+import { OpportunityScoreCard } from "@/components/opportunity/OpportunityScoreCard";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp } from "lucide-react";
 
 const getComplexityVariant = (complexity: string | null) => {
   switch (complexity?.toLowerCase()) {
@@ -27,7 +31,12 @@ const IdeaDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { idea, analysis, isLoading, analyzeIdea, updateIdeaStatus } = useIdeaDetail(id);
+  
+  const [opportunityScore, setOpportunityScore] = useState<any>(null);
+  const [loadingScore, setLoadingScore] = useState(true);
+  const [generatingScore, setGeneratingScore] = useState(false);
 
   const handleVetIdea = async () => {
     try {
@@ -65,6 +74,72 @@ const IdeaDetail = () => {
         description: "Failed to update idea status. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  // Fetch existing opportunity score on mount
+  useEffect(() => {
+    const fetchOpportunityScore = async () => {
+      if (!user || !id) return;
+
+      setLoadingScore(true);
+      try {
+        const { data, error } = await supabase
+          .from("opportunity_scores")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("idea_id", id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching opportunity score:", error);
+        } else {
+          setOpportunityScore(data);
+        }
+      } catch (error) {
+        console.error("Error fetching opportunity score:", error);
+      } finally {
+        setLoadingScore(false);
+      }
+    };
+
+    fetchOpportunityScore();
+  }, [user, id]);
+
+  const handleGenerateScore = async () => {
+    if (!user || !id) return;
+
+    setGeneratingScore(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-opportunity-score", {
+        body: { userId: user.id, ideaId: id },
+      });
+
+      if (error) throw error;
+
+      setOpportunityScore(data);
+      toast({
+        title: "Score Generated!",
+        description: "Opportunity score has been calculated successfully.",
+      });
+    } catch (error: any) {
+      const errorMessage = error.message?.includes("Rate limit")
+        ? "Too many requests. Please wait a moment and try again."
+        : error.message?.includes("Payment required")
+          ? "AI service requires payment. Please contact support."
+          : error.message?.includes("not found")
+            ? "Please analyze the idea first before calculating opportunity score."
+            : "Failed to generate score. Please try again.";
+
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingScore(false);
     }
   };
 
@@ -279,6 +354,69 @@ const IdeaDetail = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Opportunity Score Section */}
+      {loadingScore ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
+              <p className="text-sm text-muted-foreground">Loading opportunity score...</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : opportunityScore ? (
+        <>
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <TrendingUp className="h-6 w-6 text-primary" />
+              Opportunity Score
+            </h2>
+            <Button 
+              variant="outline" 
+              onClick={handleGenerateScore} 
+              disabled={generatingScore}
+              className="gap-2"
+            >
+              {generatingScore ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  Regenerating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Regenerate
+                </>
+              )}
+            </Button>
+          </div>
+          <OpportunityScoreCard score={opportunityScore} />
+        </>
+      ) : analysis ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <TrendingUp className="w-12 h-12 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Calculate Opportunity Score</h3>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              Get a comprehensive evaluation of this opportunity based on founder fit, market size, competition, and more.
+            </p>
+            <Button onClick={handleGenerateScore} disabled={generatingScore} className="gap-2">
+              {generatingScore ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <TrendingUp className="w-4 h-4" />
+                  Generate Opportunity Score
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 };
