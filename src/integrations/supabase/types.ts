@@ -613,7 +613,7 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           id?: string
-          plan: string
+          plan?: string
           renewal_period?: string | null
           status?: string | null
           stripe_customer_id?: string | null
