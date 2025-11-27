@@ -1,6 +1,6 @@
 # AI Contracts & Response Formats
 
-This document defines the expected input/output formats for AI-powered features in FounderOS.
+This document defines the expected input/output formats for AI-powered features in TrueBlazer.AI.
 
 ## Generate Ideas
 

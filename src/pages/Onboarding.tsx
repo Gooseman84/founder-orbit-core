@@ -107,7 +107,7 @@ const Onboarding = () => {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Welcome to FounderOS</h1>
+        <h1 className="text-4xl font-bold mb-2">Welcome to TrueBlazer.AI</h1>
         <p className="text-muted-foreground">Let's build your founder profile to generate personalized ideas</p>
       </div>
 

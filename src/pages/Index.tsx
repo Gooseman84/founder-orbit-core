@@ -21,7 +21,7 @@ const Index = () => {
       <div className="container mx-auto px-4 py-20">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            FounderOS
+            TrueBlazer.AI
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8">
             Your AI-powered operating system for building successful businesses
