@@ -566,6 +566,51 @@ export type Database = {
           },
         ]
       }
+      user_intake_extended: {
+        Row: {
+          business_archetypes: Json | null
+          created_at: string
+          deep_desires: string | null
+          energy_drainers: string | null
+          energy_givers: string | null
+          fears: string | null
+          id: string
+          identity_statements: string | null
+          personality_flags: Json | null
+          updated_at: string
+          user_id: string
+          work_preferences: Json | null
+        }
+        Insert: {
+          business_archetypes?: Json | null
+          created_at?: string
+          deep_desires?: string | null
+          energy_drainers?: string | null
+          energy_givers?: string | null
+          fears?: string | null
+          id?: string
+          identity_statements?: string | null
+          personality_flags?: Json | null
+          updated_at?: string
+          user_id: string
+          work_preferences?: Json | null
+        }
+        Update: {
+          business_archetypes?: Json | null
+          created_at?: string
+          deep_desires?: string | null
+          energy_drainers?: string | null
+          energy_givers?: string | null
+          fears?: string | null
+          id?: string
+          identity_statements?: string | null
+          personality_flags?: Json | null
+          updated_at?: string
+          user_id?: string
+          work_preferences?: Json | null
+        }
+        Relationships: []
+      }
       user_milestones: {
         Row: {
           earned_at: string
