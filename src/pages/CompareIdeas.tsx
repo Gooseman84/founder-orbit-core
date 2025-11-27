@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { ScoreGauge } from "@/components/opportunity/ScoreGauge";
+import { PaywallModal } from "@/components/paywall/PaywallModal";
 import { useIdeas } from "@/hooks/useIdeas";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, ArrowRight } from "lucide-react";
+import { Trophy, ArrowRight, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface OpportunityScore {
@@ -26,6 +28,7 @@ const CompareIdeas = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { gate } = useFeatureAccess();
 
   const [ideaA, setIdeaA] = useState<string>("");
   const [ideaB, setIdeaB] = useState<string>("");
@@ -34,6 +37,7 @@ const CompareIdeas = () => {
   const [loadingA, setLoadingA] = useState(false);
   const [loadingB, setLoadingB] = useState(false);
   const [pickingWinner, setPickingWinner] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   // Fetch score for idea A
   useEffect(() => {
@@ -140,6 +144,61 @@ const CompareIdeas = () => {
   const winner = scoreA && scoreB ? (scoreA.total_score > scoreB.total_score ? "A" : scoreB.total_score > scoreA.total_score ? "B" : null) : null;
 
   const availableIdeas = ideas.filter((idea) => idea.id !== ideaA && idea.id !== ideaB);
+
+  // Feature gating - show promotional view if user doesn't have access
+  if (!gate("compare_engine")) {
+    return (
+      <div className="space-y-6">
+        <div className="max-w-2xl mx-auto text-center py-12">
+          <div className="mb-6 flex justify-center">
+            <div className="rounded-full bg-primary/10 p-6">
+              <Lock className="w-12 h-12 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-4xl font-bold mb-4">Compare Ideas is a Pro Feature</h1>
+          <p className="text-lg text-muted-foreground mb-8">
+            Unlock side-by-side opportunity score comparisons to make data-driven decisions about which idea to pursue.
+          </p>
+          
+          <div className="space-y-4 mb-8">
+            <Card className="text-left">
+              <CardContent className="pt-6">
+                <ul className="space-y-3 text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <Trophy className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                    <span>Compare opportunity scores side-by-side</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Trophy className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                    <span>See detailed sub-score breakdowns</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Trophy className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                    <span>Get AI-powered recommendations for each idea</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Trophy className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                    <span>Make confident decisions with data</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Button size="lg" onClick={() => setShowPaywall(true)} className="gap-2">
+            <Lock className="w-4 h-4" />
+            Upgrade to Pro
+          </Button>
+        </div>
+
+        <PaywallModal 
+          featureName="compare_engine" 
+          open={showPaywall} 
+          onClose={() => setShowPaywall(false)} 
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -333,6 +392,12 @@ const CompareIdeas = () => {
           </CardContent>
         </Card>
       )}
+
+      <PaywallModal 
+        featureName="compare_engine" 
+        open={showPaywall} 
+        onClose={() => setShowPaywall(false)} 
+      />
     </div>
   );
 };
