@@ -13,6 +13,7 @@ import {
   User,
   FileText,
   Zap,
+  CreditCard,
   LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ const navigation = [
   { name: "Radar", href: "/radar", icon: Radar },
   { name: "North Star", href: "/north-star", icon: Target },
   { name: "Profile", href: "/profile", icon: User },
+  { name: "Billing", href: "/billing", icon: CreditCard },
 ];
 
 export const MainLayout = ({ children }: { children: React.ReactNode }) => {
