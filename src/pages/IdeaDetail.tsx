@@ -10,8 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useIdeaDetail } from "@/hooks/useIdeaDetail";
 import { IdeaVettingCard } from "@/components/ideas/IdeaVettingCard";
 import { OpportunityScoreCard } from "@/components/opportunity/OpportunityScoreCard";
+import { PaywallModal } from "@/components/paywall/PaywallModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { recordXpEvent } from "@/lib/xpEngine";
 import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp } from "lucide-react";
 
@@ -33,11 +35,13 @@ const IdeaDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { gate } = useFeatureAccess();
   const { idea, analysis, isLoading, analyzeIdea, updateIdeaStatus } = useIdeaDetail(id);
   
   const [opportunityScore, setOpportunityScore] = useState<any>(null);
   const [loadingScore, setLoadingScore] = useState(true);
   const [generatingScore, setGeneratingScore] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const handleVetIdea = async () => {
     try {
@@ -111,6 +115,12 @@ const IdeaDetail = () => {
 
   const handleGenerateScore = async () => {
     if (!user || !id) return;
+
+    // Check feature access
+    if (!gate("opportunity_score")) {
+      setShowPaywall(true);
+      return;
+    }
 
     setGeneratingScore(true);
     try {
@@ -422,6 +432,12 @@ const IdeaDetail = () => {
           </CardContent>
         </Card>
       ) : null}
+
+      <PaywallModal 
+        featureName="opportunity_score" 
+        open={showPaywall} 
+        onClose={() => setShowPaywall(false)} 
+      />
     </div>
   );
 };
