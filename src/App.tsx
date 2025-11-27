@@ -9,6 +9,7 @@ import { MainLayout } from "./components/layout/MainLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
+import ExtendedOnboarding from "./pages/ExtendedOnboarding";
 import Ideas from "./pages/Ideas";
 import IdeaDetail from "./pages/IdeaDetail";
 import CompareIdeas from "./pages/CompareIdeas";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<ProtectedRoute><MainLayout><Onboarding /></MainLayout></ProtectedRoute>} />
+            <Route path="/onboarding/extended" element={<ProtectedRoute><ExtendedOnboarding /></ProtectedRoute>} />
             <Route path="/ideas" element={<ProtectedRoute><MainLayout><Ideas /></MainLayout></ProtectedRoute>} />
             <Route path="/ideas/:id" element={<ProtectedRoute><MainLayout><IdeaDetail /></MainLayout></ProtectedRoute>} />
             <Route path="/ideas/compare" element={<ProtectedRoute><MainLayout><CompareIdeas /></MainLayout></ProtectedRoute>} />
