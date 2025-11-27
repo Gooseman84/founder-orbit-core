@@ -6,37 +6,64 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are an expert business idea generator for founders. You analyze founder profiles and generate highly personalized, actionable business ideas that are realistic and well-matched to the founder's unique situation.
+const buildSystemPrompt = (hasExtendedIntake: boolean) => `You are TrueBlazer.AI, the world's greatest business ideation engine for founders. You analyze founder profiles deeply and generate highly personalized, actionable business ideas that are realistic and well-matched to the founder's unique situation.
 
 You will receive a JSON object containing a founder profile with these fields:
+
+**Core Profile:**
 - passions_text: What the founder is passionate about
+- passions_tags: Specific passion categories
 - skills_text: The founder's professional skills and expertise
+- skills_tags: Specific skill categories
 - tech_level: Their technical capability level
 - time_per_week: Hours available per week to work on the business
 - capital_available: Amount of capital they can invest
 - risk_tolerance: Their comfort level with risk (low, medium, high)
 - lifestyle_goals: Their desired lifestyle and work-life balance
 - success_vision: What success looks like to them
+${hasExtendedIntake ? `
+**Extended Profile (Deep Psychological & Preference Data):**
+- deep_desires: Their deepest motivations and dreams they rarely share
+- fears: What holds them back or worries them
+- identity_statements: How they want to be seen and remembered
+- energy_givers: Activities and situations that energize them
+- energy_drainers: Activities and situations that exhaust them
+- business_archetypes: Preferred business models (e.g., saas, content_brand, coaching_consulting)
+- work_preferences: How they like to work (e.g., writing, selling, building_systems)
+- personality_flags: Key traits like wants_autopilot, wants_to_be_face, wants_predictable_income, thrives_under_pressure, prefers_structure, loves_experimenting
 
-Your task is to generate 5-10 business ideas that are:
+Use ALL of this context to generate deeply personalized business ideas. The extended profile data is particularly valuable for understanding:
+- WHY certain businesses will resonate emotionally
+- What work styles will sustain their motivation long-term
+- Hidden fears that might sabotage certain business types
+- Natural energy patterns that predict success or burnout` : ''}
+
+Your task is to generate 3-7 business ideas that are:
 1. Realistic and achievable given their constraints
-2. Well-aligned with their passions, skills, and goals
+2. Deeply aligned with their passions, skills, psychological profile, and goals
 3. Practical and actionable, not overly complex or theoretical
 4. Ethical and legal - NO scams, deceptive practices, or unethical businesses
-5. Matched to their time and capital constraints
+5. Matched to their time, capital, and energy constraints
+6. ${hasExtendedIntake ? 'Aligned with their preferred business archetypes and work preferences' : 'Suited to their available resources'}
+7. ${hasExtendedIntake ? 'Designed to leverage energy givers and avoid energy drainers' : 'Designed for sustainable execution'}
 
 For each idea, you must provide:
 - title: A compelling, concise title (5-10 words)
 - description: A clear 2-3 sentence explanation of the business
+- why_it_fits: ${hasExtendedIntake ? 'A personalized explanation of why THIS specific person should pursue this idea, referencing their deep desires, energy patterns, and personality' : 'A brief explanation of why this fits their profile'}
 - business_model_type: One of: "saas", "coaching", "productized_service", "community", "content", "marketplace", "hybrid"
 - target_customer: Be specific (e.g., "Small business owners in healthcare", "Busy parents with young children")
+- how_it_makes_money: Clear revenue model explanation
 - time_to_first_dollar: One of: "weeks", "months", "year_plus"
 - complexity: One of: "low", "medium", "high"
+- difficulty_level: Integer 1-5 (1=easiest, 5=hardest)
+- time_intensity_hours_per_week: Estimated hours needed per week
+- first_three_steps: Array of 3 concrete, actionable first steps to start
 - fit_scores: An object with four scores (0-100 integers):
-  - passion: How well this aligns with their stated passions
+  - passion: How well this aligns with their stated passions${hasExtendedIntake ? ' and deep desires' : ''}
   - skills: How well this matches their existing skills
   - constraints: How well this fits their time, capital, and risk constraints
-  - lifestyle: How well this supports their lifestyle goals
+  - lifestyle: How well this supports their lifestyle goals${hasExtendedIntake ? ' and personality flags' : ''}
 
 Guidelines:
 - Be realistic about constraints: if they have $1000 and 5 hours/week, don't suggest opening a restaurant
@@ -46,7 +73,11 @@ Guidelines:
 - Make descriptions actionable and specific, not generic
 - Ensure time_to_first_dollar reflects realistic market conditions
 - Base scores on genuine alignment, not wishful thinking
-- Focus on proven business models that can start small`;
+- Focus on proven business models that can start small
+${hasExtendedIntake ? `- If they want autopilot income, prioritize passive/semi-passive models
+- If they want to be the face, suggest personal brand opportunities
+- If they prefer structure, suggest businesses with clear frameworks
+- Match business archetypes to their stated preferences` : ''}`;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -64,11 +95,9 @@ serve(async (req) => {
     let resolvedUserId: string | null = null;
 
     if (userId) {
-      // Use userId from body if provided
       resolvedUserId = userId;
       console.log("generate-ideas: resolved userId from body", resolvedUserId);
     } else if (authHeader) {
-      // Try to get user from auth header
       const supabaseAuth = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
         Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -82,7 +111,6 @@ serve(async (req) => {
       }
     }
 
-    // If no user id could be determined, return error
     if (!resolvedUserId) {
       console.error("No user id found in request body or auth header");
       return new Response(
@@ -115,10 +143,23 @@ serve(async (req) => {
       );
     }
 
-    console.log("Profile found, calling AI...");
+    // Fetch extended intake (optional - backward compatible)
+    const { data: extendedIntake, error: extendedError } = await supabase
+      .from("user_intake_extended")
+      .select("*")
+      .eq("user_id", resolvedUserId)
+      .maybeSingle();
+
+    if (extendedError) {
+      console.log("generate-ideas: error fetching extended intake (non-fatal):", extendedError);
+    }
+
+    const hasExtendedIntake = !!extendedIntake;
+    console.log("generate-ideas: hasExtendedIntake =", hasExtendedIntake);
 
     // Prepare profile data for AI
-    const profileData = {
+    const profileData: Record<string, any> = {
+      // Core profile
       passions_text: profile.passions_text,
       passions_tags: profile.passions_tags,
       skills_text: profile.skills_text,
@@ -130,6 +171,20 @@ serve(async (req) => {
       lifestyle_goals: profile.lifestyle_goals,
       success_vision: profile.success_vision,
     };
+
+    // Add extended intake if available
+    if (extendedIntake) {
+      profileData.extended_profile = {
+        deep_desires: extendedIntake.deep_desires,
+        fears: extendedIntake.fears,
+        identity_statements: extendedIntake.identity_statements,
+        energy_givers: extendedIntake.energy_givers,
+        energy_drainers: extendedIntake.energy_drainers,
+        business_archetypes: extendedIntake.business_archetypes,
+        work_preferences: extendedIntake.work_preferences,
+        personality_flags: extendedIntake.personality_flags,
+      };
+    }
 
     const userPrompt = `Generate business ideas for this founder profile:\n\n${JSON.stringify(profileData, null, 2)}`;
 
@@ -143,6 +198,9 @@ serve(async (req) => {
       );
     }
 
+    // Build dynamic system prompt based on available data
+    const systemPrompt = buildSystemPrompt(hasExtendedIntake);
+
     // Call Lovable AI with tool calling for structured output
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -153,7 +211,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
         tools: [
@@ -161,7 +219,7 @@ serve(async (req) => {
             type: "function",
             function: {
               name: "generate_business_ideas",
-              description: "Generate personalized business ideas with fit scores",
+              description: "Generate personalized business ideas with fit scores and detailed information",
               parameters: {
                 type: "object",
                 properties: {
@@ -172,11 +230,13 @@ serve(async (req) => {
                       properties: {
                         title: { type: "string" },
                         description: { type: "string" },
+                        why_it_fits: { type: "string" },
                         business_model_type: { 
                           type: "string",
                           enum: ["saas", "coaching", "productized_service", "community", "content", "marketplace", "hybrid"]
                         },
                         target_customer: { type: "string" },
+                        how_it_makes_money: { type: "string" },
                         time_to_first_dollar: { 
                           type: "string",
                           enum: ["weeks", "months", "year_plus"]
@@ -184,6 +244,14 @@ serve(async (req) => {
                         complexity: { 
                           type: "string", 
                           enum: ["low", "medium", "high"] 
+                        },
+                        difficulty_level: { type: "integer", minimum: 1, maximum: 5 },
+                        time_intensity_hours_per_week: { type: "integer", minimum: 1, maximum: 80 },
+                        first_three_steps: {
+                          type: "array",
+                          items: { type: "string" },
+                          minItems: 3,
+                          maxItems: 3
                         },
                         fit_scores: {
                           type: "object",
@@ -200,10 +268,15 @@ serve(async (req) => {
                       required: [
                         "title",
                         "description",
+                        "why_it_fits",
                         "business_model_type",
                         "target_customer",
+                        "how_it_makes_money",
                         "time_to_first_dollar",
                         "complexity",
+                        "difficulty_level",
+                        "time_intensity_hours_per_week",
+                        "first_three_steps",
                         "fit_scores",
                       ],
                       additionalProperties: false,
@@ -302,8 +375,12 @@ serve(async (req) => {
 
     console.log(`Successfully inserted ${insertedIdeas.length} ideas`);
 
+    // Return both inserted ideas and the full generated data (for UI display of extra fields)
     return new Response(
-      JSON.stringify({ ideas: insertedIdeas }),
+      JSON.stringify({ 
+        ideas: insertedIdeas,
+        generated_details: generatedIdeas.ideas // Include extra fields like why_it_fits, first_three_steps, etc.
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
