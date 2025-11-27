@@ -241,7 +241,7 @@ serve(async (req) => {
 
     // Footer
     const now = new Date().toLocaleDateString();
-    page.drawText(`Generated on ${now} | FounderOS`, {
+    page.drawText(`Generated on ${now} | TrueBlazer.AI`, {
       x: 50,
       y: 30,
       size: 8,

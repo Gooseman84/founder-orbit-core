@@ -174,7 +174,7 @@ export default function NorthStar() {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold">Your FounderOS Master Prompt</h1>
+            <h1 className="text-3xl font-bold">Your TrueBlazer Master Prompt</h1>
           </div>
         </div>
 
@@ -199,7 +199,7 @@ export default function NorthStar() {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold">Your FounderOS Master Prompt</h1>
+            <h1 className="text-3xl font-bold">Your TrueBlazer Master Prompt</h1>
           </div>
         </div>
 
@@ -320,7 +320,7 @@ export default function NorthStar() {
 
           <PromptViewer 
             prompt={masterPrompt.prompt_body} 
-            filename={`founderos-${ideaTitle.toLowerCase().replace(/\s+/g, "-")}`}
+            filename={`trueblazer-${ideaTitle.toLowerCase().replace(/\s+/g, "-")}`}
           />
         </div>
       )}

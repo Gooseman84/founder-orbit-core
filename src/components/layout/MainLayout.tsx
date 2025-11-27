@@ -44,7 +44,7 @@ export const MainLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Top Bar */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50">
         <div className="flex items-center justify-between h-full px-6">
-          <h1 className="text-xl font-bold text-primary">FounderOS</h1>
+          <h1 className="text-xl font-bold text-primary">TrueBlazer.AI</h1>
           
           {/* XP Level Badge */}
           <div className="flex items-center gap-3">
