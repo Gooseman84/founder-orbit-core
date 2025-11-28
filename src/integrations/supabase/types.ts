@@ -140,6 +140,120 @@ export type Database = {
         }
         Relationships: []
       }
+      founder_blueprints: {
+        Row: {
+          ai_recommendations: Json | null
+          ai_summary: string | null
+          capital_available: number | null
+          created_at: string | null
+          current_commitments: string | null
+          distribution_channels: string | null
+          energy_pattern: string | null
+          focus_quarters: Json | null
+          id: string
+          income_target: number | null
+          last_refreshed_at: string | null
+          life_time_horizon: string | null
+          life_vision: string | null
+          monetization_strategy: string | null
+          non_negotiables: string | null
+          north_star_idea_id: string | null
+          north_star_one_liner: string | null
+          offer_model: string | null
+          preferred_work_style: string | null
+          problem_statement: string | null
+          promise_statement: string | null
+          risk_profile: string | null
+          runway_notes: string | null
+          status: string
+          strengths: string | null
+          success_metrics: Json | null
+          target_audience: string | null
+          time_available_hours_per_week: number | null
+          traction_definition: string | null
+          unfair_advantage: string | null
+          updated_at: string | null
+          user_id: string
+          validation_stage: string | null
+          version: number
+          weaknesses: string | null
+        }
+        Insert: {
+          ai_recommendations?: Json | null
+          ai_summary?: string | null
+          capital_available?: number | null
+          created_at?: string | null
+          current_commitments?: string | null
+          distribution_channels?: string | null
+          energy_pattern?: string | null
+          focus_quarters?: Json | null
+          id?: string
+          income_target?: number | null
+          last_refreshed_at?: string | null
+          life_time_horizon?: string | null
+          life_vision?: string | null
+          monetization_strategy?: string | null
+          non_negotiables?: string | null
+          north_star_idea_id?: string | null
+          north_star_one_liner?: string | null
+          offer_model?: string | null
+          preferred_work_style?: string | null
+          problem_statement?: string | null
+          promise_statement?: string | null
+          risk_profile?: string | null
+          runway_notes?: string | null
+          status?: string
+          strengths?: string | null
+          success_metrics?: Json | null
+          target_audience?: string | null
+          time_available_hours_per_week?: number | null
+          traction_definition?: string | null
+          unfair_advantage?: string | null
+          updated_at?: string | null
+          user_id: string
+          validation_stage?: string | null
+          version?: number
+          weaknesses?: string | null
+        }
+        Update: {
+          ai_recommendations?: Json | null
+          ai_summary?: string | null
+          capital_available?: number | null
+          created_at?: string | null
+          current_commitments?: string | null
+          distribution_channels?: string | null
+          energy_pattern?: string | null
+          focus_quarters?: Json | null
+          id?: string
+          income_target?: number | null
+          last_refreshed_at?: string | null
+          life_time_horizon?: string | null
+          life_vision?: string | null
+          monetization_strategy?: string | null
+          non_negotiables?: string | null
+          north_star_idea_id?: string | null
+          north_star_one_liner?: string | null
+          offer_model?: string | null
+          preferred_work_style?: string | null
+          problem_statement?: string | null
+          promise_statement?: string | null
+          risk_profile?: string | null
+          runway_notes?: string | null
+          status?: string
+          strengths?: string | null
+          success_metrics?: Json | null
+          target_audience?: string | null
+          time_available_hours_per_week?: number | null
+          traction_definition?: string | null
+          unfair_advantage?: string | null
+          updated_at?: string | null
+          user_id?: string
+          validation_stage?: string | null
+          version?: number
+          weaknesses?: string | null
+        }
+        Relationships: []
+      }
       founder_profiles: {
         Row: {
           capital_available: number | null
