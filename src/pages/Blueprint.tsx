@@ -1,11 +1,38 @@
+import { useState } from "react";
 import { useBlueprint } from "@/hooks/useBlueprint";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Heart, Target, Briefcase } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { Sparkles, Heart, Target, Briefcase, RefreshCw } from "lucide-react";
 
 const Blueprint = () => {
-  const { blueprint, loading, error, saveUpdates } = useBlueprint();
+  const { user } = useAuth();
+  const { blueprint, loading, error, saveUpdates, refresh } = useBlueprint();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefreshWithAI = async () => {
+    if (!user) return;
+    
+    setRefreshing(true);
+    try {
+      const { error: fnError } = await supabase.functions.invoke("refresh-blueprint", {
+        body: { userId: user.id },
+      });
+
+      if (fnError) throw fnError;
+
+      await refresh();
+      toast({ title: "Blueprint refreshed", description: "AI summary and recommendations updated." });
+    } catch (err) {
+      console.error("Failed to refresh blueprint:", err);
+      toast({ title: "Error", description: "Failed to refresh blueprint", variant: "destructive" });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleGenerateBlueprint = async () => {
     try {
@@ -70,11 +97,17 @@ const Blueprint = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Founder Blueprint</h1>
-        <p className="text-muted-foreground mt-1">
-          Your unified life + business strategy
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Founder Blueprint</h1>
+          <p className="text-muted-foreground mt-1">
+            Your unified life + business strategy
+          </p>
+        </div>
+        <Button onClick={handleRefreshWithAI} disabled={refreshing} variant="outline">
+          <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Refreshing..." : "Refresh with AI"}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
