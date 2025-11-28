@@ -1,8 +1,18 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Target, Sparkles, RefreshCw, Pencil } from "lucide-react";
 import { FounderBlueprint } from "@/types/founderBlueprint";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+
+interface Recommendation {
+  title: string;
+  description: string;
+  priority?: string;
+}
 
 interface NorthStarSnapshotProps {
   blueprint: FounderBlueprint;
@@ -15,8 +25,56 @@ export const NorthStarSnapshot = ({
   onEditSection, 
   onGenerateMoves 
 }: NorthStarSnapshotProps) => {
+  const { user } = useAuth();
+  const [generatingMoves, setGeneratingMoves] = useState(false);
   // Get first quarter from focus_quarters if it exists
   const currentQuarterFocus = blueprint.focus_quarters?.[0] as Record<string, unknown> | undefined;
+
+  const handleGenerateMoves = async () => {
+    if (!user) return;
+    
+    const recommendations = blueprint.ai_recommendations as unknown as Recommendation[] | null;
+    
+    if (!recommendations || recommendations.length === 0) {
+      toast({ 
+        title: "No recommendations", 
+        description: "Refresh your blueprint with AI first to generate recommendations.",
+        variant: "destructive" 
+      });
+      onGenerateMoves();
+      return;
+    }
+
+    setGeneratingMoves(true);
+    try {
+      const tasks = recommendations.slice(0, 5).map((rec) => ({
+        user_id: user.id,
+        type: "blueprint_move",
+        title: rec.title,
+        description: rec.description,
+        xp_reward: 10,
+        status: "pending",
+      }));
+
+      const { error } = await supabase.from("tasks").insert(tasks);
+
+      if (error) throw error;
+
+      toast({ 
+        title: "5 new moves added to your Tasks", 
+        description: "Check your Tasks page to get started." 
+      });
+    } catch (err) {
+      console.error("Failed to create tasks:", err);
+      toast({ 
+        title: "Error", 
+        description: "Failed to create tasks from recommendations", 
+        variant: "destructive" 
+      });
+    } finally {
+      setGeneratingMoves(false);
+    }
+  };
 
   return (
     <Card className="border-primary/30 bg-gradient-to-b from-primary/5 to-transparent h-full">
@@ -136,10 +194,11 @@ export const NorthStarSnapshot = ({
           <Button 
             variant="outline" 
             className="w-full"
-            onClick={onGenerateMoves}
+            onClick={handleGenerateMoves}
+            disabled={generatingMoves}
           >
-            <Sparkles className="h-4 w-4 mr-2" />
-            Generate Next 5 Moves
+            <Sparkles className={`h-4 w-4 mr-2 ${generatingMoves ? "animate-pulse" : ""}`} />
+            {generatingMoves ? "Adding moves..." : "Generate Next 5 Moves"}
           </Button>
         </div>
       </CardContent>
