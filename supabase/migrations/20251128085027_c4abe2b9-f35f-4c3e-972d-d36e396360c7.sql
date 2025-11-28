@@ -1,0 +1,1 @@
+ALTER TABLE founder_blueprints ADD CONSTRAINT founder_blueprints_user_id_key UNIQUE (user_id);
