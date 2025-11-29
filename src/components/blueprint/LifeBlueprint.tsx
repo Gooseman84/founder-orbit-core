@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Heart, Clock, Wallet, Zap, Pencil } from "lucide-react";
-import { FounderBlueprint } from "@/types/founderBlueprint";
+import { FounderBlueprint } from "@/types/blueprint";
 
 interface LifeBlueprintProps {
   blueprint: FounderBlueprint;

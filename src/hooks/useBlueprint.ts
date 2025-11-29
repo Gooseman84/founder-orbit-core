@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { FounderBlueprint } from "@/types/founderBlueprint";
+import { FounderBlueprint } from "@/types/blueprint";
 
 export function useBlueprint() {
   const { user } = useAuth();
