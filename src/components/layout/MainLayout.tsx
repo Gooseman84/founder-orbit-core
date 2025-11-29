@@ -28,7 +28,7 @@ const navigation = [
   { name: "Feed", href: "/feed", icon: Rss },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Workspace", href: "/workspace", icon: FileText },
-  { name: "Pulse Check", href: "/pulse", icon: Activity },
+  { name: "Daily Pulse", href: "/daily-reflection", icon: Activity },
   { name: "Radar", href: "/radar", icon: Radar },
   { name: "North Star", href: "/north-star", icon: Target },
   { name: "Blueprint", href: "/blueprint", icon: Map },

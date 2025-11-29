@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,13 +7,11 @@ import { TaskList } from "@/components/tasks/TaskList";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { recordXpEvent } from "@/lib/xpEngine";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Sparkles, ListTodo, CheckCircle2, Heart } from "lucide-react";
+import { Loader2, Sparkles, ListTodo, CheckCircle2, Activity, ArrowRight } from "lucide-react";
 
 interface Task {
   id: string;
@@ -27,6 +26,7 @@ interface Task {
 }
 
 const Tasks = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const { refresh: refreshXp } = useXP();
@@ -36,12 +36,6 @@ const Tasks = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [chosenIdeaId, setChosenIdeaId] = useState<string | null>(null);
-  const [isSavingCheckIn, setIsSavingCheckIn] = useState(false);
-  const [checkIn, setCheckIn] = useState({
-    whatDid: "",
-    whatLearned: "",
-    feelings: ""
-  });
 
   useEffect(() => {
     if (user) {
@@ -52,22 +46,17 @@ const Tasks = () => {
 
   const fetchChosenIdea = async () => {
     if (!user) return;
-
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('ideas')
       .select('id')
       .eq('user_id', user.id)
       .eq('status', 'chosen')
       .maybeSingle();
-
-    if (!error && data) {
-      setChosenIdeaId(data.id);
-    }
+    if (data) setChosenIdeaId(data.id);
   };
 
   const fetchTasks = async () => {
     if (!user) return;
-
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -75,54 +64,29 @@ const Tasks = () => {
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
-
       if (error) throw error;
       setTasks(data || []);
     } catch (error) {
       console.error('Error fetching tasks:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load tasks. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to load tasks.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGenerateTasks = async () => {
-    if (!user) return;
-
-    if (!chosenIdeaId) {
-      toast({
-        title: "No Chosen Idea",
-        description: "Please choose an idea first before generating tasks.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (!user || !chosenIdeaId) return;
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-micro-tasks', {
         body: { userId: user.id },
       });
-
       if (error) throw error;
-
-      toast({
-        title: "Tasks Generated!",
-        description: `Created ${data.tasks?.length || 0} new micro-tasks and quests for you.`,
-      });
-
+      toast({ title: "Tasks Generated!", description: `Created ${data.tasks?.length || 0} new tasks.` });
       await fetchTasks();
     } catch (error) {
       console.error('Error generating tasks:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate tasks. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to generate tasks.", variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
@@ -130,108 +94,27 @@ const Tasks = () => {
 
   const handleCompleteTask = async (taskId: string) => {
     if (!user) return;
-
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
-
     setCompletingTaskId(taskId);
     try {
-      // Update task status
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from('tasks')
-        .update({ 
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', taskId)
         .eq('user_id', user.id);
-
-      if (updateError) throw updateError;
-
-      // Determine XP amount: use task's xp_reward or default to 10
+      if (error) throw error;
       const xpAmount = task.xp_reward || 10;
-
-      // Add XP event
-      await recordXpEvent(user.id, 'task_completed', xpAmount, {
-        taskId,
-        task_title: task.title,
-        category: task.category,
-      });
-
-      // Refresh XP summary immediately
+      await recordXpEvent(user.id, 'task_completed', xpAmount, { taskId, task_title: task.title });
       queryClient.invalidateQueries({ queryKey: ["xp", user.id] });
       await refreshXp();
-
-      toast({
-        title: "Task Completed! 🎉",
-        description: `You earned ${xpAmount} XP!`,
-      });
-
+      toast({ title: "Task Completed! 🎉", description: `You earned ${xpAmount} XP!` });
       await fetchTasks();
     } catch (error) {
       console.error('Error completing task:', error);
-      toast({
-        title: "Error",
-        description: "Failed to complete task. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to complete task.", variant: "destructive" });
     } finally {
       setCompletingTaskId(null);
-    }
-  };
-
-  const handleSaveCheckIn = async () => {
-    if (!user) return;
-
-    if (!checkIn.whatDid && !checkIn.whatLearned && !checkIn.feelings) {
-      toast({
-        title: "Nothing to save",
-        description: "Please fill in at least one field before saving.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSavingCheckIn(true);
-    try {
-      const { error } = await supabase
-        .from('check_ins')
-        .insert({
-          user_id: user.id,
-          what_did: checkIn.whatDid || null,
-          what_learned: checkIn.whatLearned || null,
-          feelings: checkIn.feelings || null,
-        });
-
-      if (error) throw error;
-
-      // Award XP for daily check-in
-      await recordXpEvent(user.id, 'daily_check_in', 5, {
-        has_what_did: !!checkIn.whatDid,
-        has_what_learned: !!checkIn.whatLearned,
-        has_feelings: !!checkIn.feelings,
-      });
-
-      // Refresh XP summary immediately
-      queryClient.invalidateQueries({ queryKey: ["xp", user.id] });
-      await refreshXp();
-
-      toast({
-        title: "Check-in saved! 🎉",
-        description: "You earned 5 XP for reflecting on your day.",
-      });
-
-      // Clear form
-      setCheckIn({ whatDid: "", whatLearned: "", feelings: "" });
-    } catch (error) {
-      console.error('Error saving check-in:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save check-in. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingCheckIn(false);
     }
   };
 
@@ -251,102 +134,33 @@ const Tasks = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold">Founder Quests</h1>
-          <p className="text-muted-foreground mt-1">
-            Complete micro-tasks to build momentum and earn XP
-          </p>
+          <p className="text-muted-foreground mt-1">Complete micro-tasks to build momentum and earn XP</p>
         </div>
-        <Button 
-          onClick={handleGenerateTasks}
-          disabled={isGenerating || !chosenIdeaId}
-          size="lg"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Generate Today's Tasks
-            </>
-          )}
+        <Button onClick={handleGenerateTasks} disabled={isGenerating || !chosenIdeaId} size="lg">
+          {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Today's Tasks</>}
         </Button>
       </div>
 
       {!chosenIdeaId && (
         <Alert>
           <AlertDescription>
-            You need to choose an idea first before generating tasks. Visit the{' '}
-            <a href="/ideas" className="underline font-medium">Ideas page</a> to select one.
+            You need to choose an idea first. Visit the <a href="/ideas" className="underline font-medium">Ideas page</a> to select one.
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Daily Check-In Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Heart className="h-5 w-5 text-pink-500" />
-            Daily Check-In
-          </CardTitle>
-          <CardDescription>
-            Take a moment to reflect on your day and track your progress
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="what-did">What did you do today?</Label>
-            <Textarea
-              id="what-did"
-              placeholder="Tasks you completed, meetings you attended, progress you made..."
-              value={checkIn.whatDid}
-              onChange={(e) => setCheckIn(prev => ({ ...prev, whatDid: e.target.value }))}
-              rows={3}
-              maxLength={1000}
-            />
+      {/* Daily Pulse Link */}
+      <Card className="border-primary/20 bg-gradient-to-r from-background to-primary/5">
+        <CardContent className="flex items-center justify-between py-4">
+          <div className="flex items-center gap-3">
+            <Activity className="h-5 w-5 text-primary" />
+            <div>
+              <p className="font-medium">Daily Pulse & Check-In</p>
+              <p className="text-sm text-muted-foreground">Reflect on your day and get AI insights</p>
+            </div>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="what-learned">What did you learn?</Label>
-            <Textarea
-              id="what-learned"
-              placeholder="New insights, feedback received, mistakes to avoid..."
-              value={checkIn.whatLearned}
-              onChange={(e) => setCheckIn(prev => ({ ...prev, whatLearned: e.target.value }))}
-              rows={3}
-              maxLength={1000}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="feelings">What felt good or bad?</Label>
-            <Textarea
-              id="feelings"
-              placeholder="Wins to celebrate, challenges that frustrated you, energy levels..."
-              value={checkIn.feelings}
-              onChange={(e) => setCheckIn(prev => ({ ...prev, feelings: e.target.value }))}
-              rows={3}
-              maxLength={1000}
-            />
-          </div>
-
-          <Button 
-            onClick={handleSaveCheckIn}
-            disabled={isSavingCheckIn}
-            className="w-full"
-          >
-            {isSavingCheckIn ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Heart className="mr-2 h-4 w-4" />
-                Summarize my day
-              </>
-            )}
+          <Button onClick={() => navigate("/daily-reflection")} variant="outline" className="gap-2">
+            Start Check-In <ArrowRight className="h-4 w-4" />
           </Button>
         </CardContent>
       </Card>
@@ -354,27 +168,17 @@ const Tasks = () => {
       <Tabs defaultValue="open" className="w-full">
         <TabsList>
           <TabsTrigger value="open" className="flex items-center gap-2">
-            <ListTodo className="h-4 w-4" />
-            Open Tasks ({openTasks.length})
+            <ListTodo className="h-4 w-4" />Open Tasks ({openTasks.length})
           </TabsTrigger>
           <TabsTrigger value="completed" className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Completed ({completedTasks.length})
+            <CheckCircle2 className="h-4 w-4" />Completed ({completedTasks.length})
           </TabsTrigger>
         </TabsList>
-
         <TabsContent value="open" className="mt-6">
-          <TaskList
-            tasks={openTasks}
-            onTaskCompleted={handleCompleteTask}
-          />
+          <TaskList tasks={openTasks} onTaskCompleted={handleCompleteTask} />
         </TabsContent>
-
         <TabsContent value="completed" className="mt-6">
-          <TaskList
-            tasks={completedTasks}
-            onTaskCompleted={handleCompleteTask}
-          />
+          <TaskList tasks={completedTasks} onTaskCompleted={handleCompleteTask} />
         </TabsContent>
       </Tabs>
     </div>

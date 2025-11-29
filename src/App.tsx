@@ -18,6 +18,8 @@ import Feed from "./pages/Feed";
 import Tasks from "./pages/Tasks";
 import Pulse from "./pages/Pulse";
 import PulseHistory from "./pages/PulseHistory";
+import DailyReflection from "./pages/DailyReflection";
+import WeeklyReview from "./pages/WeeklyReview";
 import Radar from "./pages/Radar";
 import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
@@ -49,6 +51,9 @@ const App = () => (
             <Route path="/tasks" element={<ProtectedRoute><MainLayout><Tasks /></MainLayout></ProtectedRoute>} />
             <Route path="/pulse" element={<ProtectedRoute><MainLayout><Pulse /></MainLayout></ProtectedRoute>} />
             <Route path="/pulse/history" element={<ProtectedRoute><MainLayout><PulseHistory /></MainLayout></ProtectedRoute>} />
+            <Route path="/daily-reflection" element={<ProtectedRoute><MainLayout><DailyReflection /></MainLayout></ProtectedRoute>} />
+            <Route path="/weekly-review" element={<ProtectedRoute><MainLayout><WeeklyReview /></MainLayout></ProtectedRoute>} />
+            <Route path="/reflection/history" element={<ProtectedRoute><MainLayout><PulseHistory /></MainLayout></ProtectedRoute>} />
             <Route path="/radar" element={<ProtectedRoute><MainLayout><Radar /></MainLayout></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><MainLayout><Profile /></MainLayout></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />

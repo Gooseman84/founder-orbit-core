@@ -71,6 +71,69 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_reflections: {
+        Row: {
+          ai_micro_actions: Json | null
+          ai_suggested_task: Json | null
+          ai_summary: string | null
+          ai_theme: string | null
+          blockers: string | null
+          created_at: string
+          energy_level: number | null
+          id: string
+          metadata: Json | null
+          mood_tags: string[] | null
+          reflection_date: string
+          stress_level: number | null
+          top_priority: string | null
+          updated_at: string
+          user_id: string
+          what_did: string | null
+          what_felt: string | null
+          what_learned: string | null
+        }
+        Insert: {
+          ai_micro_actions?: Json | null
+          ai_suggested_task?: Json | null
+          ai_summary?: string | null
+          ai_theme?: string | null
+          blockers?: string | null
+          created_at?: string
+          energy_level?: number | null
+          id?: string
+          metadata?: Json | null
+          mood_tags?: string[] | null
+          reflection_date?: string
+          stress_level?: number | null
+          top_priority?: string | null
+          updated_at?: string
+          user_id: string
+          what_did?: string | null
+          what_felt?: string | null
+          what_learned?: string | null
+        }
+        Update: {
+          ai_micro_actions?: Json | null
+          ai_suggested_task?: Json | null
+          ai_summary?: string | null
+          ai_theme?: string | null
+          blockers?: string | null
+          created_at?: string
+          energy_level?: number | null
+          id?: string
+          metadata?: Json | null
+          mood_tags?: string[] | null
+          reflection_date?: string
+          stress_level?: number | null
+          top_priority?: string | null
+          updated_at?: string
+          user_id?: string
+          what_did?: string | null
+          what_felt?: string | null
+          what_learned?: string | null
+        }
+        Relationships: []
+      }
       daily_streaks: {
         Row: {
           current_streak: number
