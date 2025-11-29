@@ -53,3 +53,12 @@ verify_jwt = false
 
 [functions.refresh-blueprint]
 verify_jwt = true
+
+[functions.generate-blueprint]
+verify_jwt = true
+
+[functions.generate-daily-reflection]
+verify_jwt = true
+
+[functions.generate-weekly-summary]
+verify_jwt = true
