@@ -330,7 +330,19 @@ serve(async (req) => {
     // Parse AI response
     let parsed;
     try {
-      const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+      let cleanContent = content.trim();
+      // Remove markdown code block wrapper if present
+      if (cleanContent.startsWith("```json")) {
+        cleanContent = cleanContent.slice(7);
+      } else if (cleanContent.startsWith("```")) {
+        cleanContent = cleanContent.slice(3);
+      }
+      if (cleanContent.endsWith("```")) {
+        cleanContent = cleanContent.slice(0, -3);
+      }
+      cleanContent = cleanContent.trim();
+      
+      console.log("[refresh-blueprint] Cleaned content for parsing:", cleanContent.substring(0, 100));
       parsed = JSON.parse(cleanContent);
     } catch (parseError) {
       console.error("[refresh-blueprint] Failed to parse AI response:", content);
