@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, AlertCircle, Gift, DollarSign, Megaphone, Shield, Pencil } from "lucide-react";
-import { FounderBlueprint } from "@/types/founderBlueprint";
+import { FounderBlueprint } from "@/types/blueprint";
 
 interface BusinessBlueprintProps {
   blueprint: FounderBlueprint;

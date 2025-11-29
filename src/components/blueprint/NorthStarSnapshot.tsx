@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Target, Sparkles, RefreshCw, Pencil } from "lucide-react";
-import { FounderBlueprint } from "@/types/founderBlueprint";
+import { FounderBlueprint } from "@/types/blueprint";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";

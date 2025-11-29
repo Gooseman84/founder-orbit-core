@@ -6,4 +6,4 @@ export * from './xp';
 export * from './tasks';
 export * from './profile';
 export * from './blueprint';
-export * from './founderBlueprint';
+// Note: founderBlueprint types are now consolidated in blueprint.ts

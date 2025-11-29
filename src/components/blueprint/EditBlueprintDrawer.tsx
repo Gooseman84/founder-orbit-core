@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FounderBlueprint } from "@/types/founderBlueprint";
+import { FounderBlueprint } from "@/types/blueprint";
 
 type SectionType = "life" | "business" | "northstar" | "traction";
 
