@@ -41,6 +41,8 @@ const Onboarding = () => {
     }
   };
 
+  const [showExtendedPrompt, setShowExtendedPrompt] = useState(false);
+
   const handleSave = async () => {
     if (!user) {
       toast({
@@ -75,7 +77,8 @@ const Onboarding = () => {
         description: "Your founder profile has been created successfully.",
       });
 
-      navigate("/ideas");
+      // Show prompt to complete extended profile
+      setShowExtendedPrompt(true);
     } catch (error) {
       toast({
         title: "Error",
@@ -86,6 +89,36 @@ const Onboarding = () => {
       setIsSaving(false);
     }
   };
+
+  // If showing extended prompt, render that instead
+  if (showExtendedPrompt) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-12">
+        <div className="bg-card border border-border rounded-lg p-8">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Profile Created!</h2>
+          <p className="text-muted-foreground mb-6">
+            Want better, more personalized ideas? Complete your extended profile to help us understand your deeper motivations, energy patterns, and work preferences.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={() => navigate("/onboarding/extended")} size="lg">
+              Complete Extended Profile
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/ideas")} size="lg">
+              Skip for Now
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-4">
+            You can always complete this later from your Profile page.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const renderStep = () => {
     switch (currentStep) {
