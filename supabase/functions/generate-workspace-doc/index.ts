@@ -11,16 +11,16 @@ You are an expert startup copywriter, strategist, and execution coach.
 
 Your job is to help the founder create ONE focused document based on:
 - their founder profile
-- their chosen idea
-- the idea analysis
+- their chosen idea (if available)
+- the idea analysis (if available)
 - the triggering context (feed item or task)
 - any notes they have already started
 
 Input JSON example:
 {
   "founder_profile": { ... },
-  "idea": { ... },
-  "analysis": { ... },
+  "idea": { ... } or null,
+  "analysis": { ... } or null,
   "doc_type": "outline" | "offer" | "script" | "plan" | "brain_dump",
   "title": "string",
   "current_content": "string",
@@ -42,7 +42,8 @@ Rules:
 - Use plain, punchy language.
 - Make content immediately usable.
 - If current_content is non-empty, IMPROVE and EXTEND it instead of rewriting from scratch.
-- Tailor everything to the specific idea and founder constraints.
+- Tailor everything to the founder's profile and constraints.
+- If no idea is provided, focus on the founder's passions, skills, and the document type.
 ---`;
 
 // workspaceEngine utilities embedded
@@ -75,7 +76,7 @@ function formatWorkspaceSuggestion(rawJson: any) {
 
 async function buildWorkspaceInput(supabase: any, userId: string, doc: any) {
   try {
-    // Fetch founder profile
+    // Fetch founder profile (required)
     const { data: profile, error: profileError } = await supabase
       .from("founder_profiles")
       .select("*")
@@ -88,7 +89,7 @@ async function buildWorkspaceInput(supabase: any, userId: string, doc: any) {
       return null;
     }
 
-    // Fetch chosen idea
+    // Fetch chosen idea (optional - not all workspace docs need an idea)
     const { data: idea, error: ideaError } = await supabase
       .from("ideas")
       .select("*")
@@ -96,26 +97,34 @@ async function buildWorkspaceInput(supabase: any, userId: string, doc: any) {
       .eq("status", "chosen")
       .maybeSingle();
 
-    if (ideaError) throw ideaError;
+    if (ideaError) {
+      console.warn("Error fetching chosen idea:", ideaError);
+    }
+    
     if (!idea) {
-      console.error("No chosen idea found for user:", userId);
-      return null;
+      console.log("No chosen idea found for user - proceeding without idea context");
     }
 
-    // Fetch latest idea analysis
-    const { data: analysis, error: analysisError } = await supabase
-      .from("idea_analysis")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("idea_id", idea.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Fetch latest idea analysis only if we have an idea
+    let analysis = null;
+    if (idea) {
+      const { data: analysisData, error: analysisError } = await supabase
+        .from("idea_analysis")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("idea_id", idea.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (analysisError) throw analysisError;
-    if (!analysis) {
-      console.error("No analysis found for chosen idea:", idea.id);
-      return null;
+      if (analysisError) {
+        console.warn("Error fetching idea analysis:", analysisError);
+      }
+      analysis = analysisData;
+      
+      if (!analysis) {
+        console.log("No analysis found for chosen idea - proceeding without analysis");
+      }
     }
 
     // Build trigger context based on source_type
@@ -154,8 +163,8 @@ async function buildWorkspaceInput(supabase: any, userId: string, doc: any) {
 
     return {
       founder_profile: profile,
-      idea: idea,
-      analysis: analysis,
+      idea: idea || null,
+      analysis: analysis || null,
       doc_type: doc.doc_type || "brain_dump",
       title: doc.title,
       current_content: doc.content || "",
@@ -242,12 +251,12 @@ Deno.serve(async (req) => {
     if (!input) {
       console.error('Failed to build workspace input');
       return new Response(
-        JSON.stringify({ error: 'Failed to build input data' }),
+        JSON.stringify({ error: 'Failed to build input data - please complete your founder profile first' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Built input for doc_type:', input.doc_type);
+    console.log('Built input for doc_type:', input.doc_type, 'has idea:', !!input.idea);
 
     // Call AI
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
