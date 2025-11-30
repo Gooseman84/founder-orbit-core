@@ -2,20 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, Clock, Plus, CheckCircle2 } from "lucide-react";
+import { Sparkles, Plus, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 
-interface MicroAction {
-  title: string;
-  description: string;
-  estimated_minutes: number;
-}
-
-interface SuggestedTask {
-  title: string;
-  description: string;
-  xp_reward: number;
-  type: "micro" | "quest";
+// The ai_suggested_task from the edge function uses { title, notes }
+interface AISuggestedTask {
+  title?: string;
+  notes?: string;
 }
 
 interface DailyReflection {
@@ -26,13 +19,13 @@ interface DailyReflection {
   mood_tags: string[];
   ai_summary: string;
   ai_theme: string;
-  ai_micro_actions: MicroAction[];
-  ai_suggested_task: SuggestedTask | null;
+  ai_micro_actions: string[] | null; // Array of strings from edge function
+  ai_suggested_task: AISuggestedTask | null;
 }
 
 interface DailyReflectionInsightsProps {
   reflection: DailyReflection;
-  onAcceptTask?: (task: SuggestedTask) => void;
+  onAcceptTask?: (task: { title: string; description: string; xp_reward: number; type: string }) => void;
   taskAccepted?: boolean;
 }
 
@@ -53,13 +46,29 @@ export function DailyReflectionInsights({
     return "text-yellow-500";
   };
 
+  const handleAcceptTask = () => {
+    if (onAcceptTask && reflection.ai_suggested_task?.title) {
+      onAcceptTask({
+        title: reflection.ai_suggested_task.title,
+        description: reflection.ai_suggested_task.notes || "",
+        xp_reward: 10,
+        type: "micro",
+      });
+    }
+  };
+
+  // Normalize micro_actions to always be an array of strings
+  const microActions = Array.isArray(reflection.ai_micro_actions) 
+    ? reflection.ai_micro_actions 
+    : [];
+
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-background to-primary/5">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Your Daily Insights
+            Summary of Your Day
           </CardTitle>
           <span className="text-sm text-muted-foreground">
             {format(new Date(reflection.reflection_date), "MMMM d, yyyy")}
@@ -101,24 +110,17 @@ export function DailyReflectionInsights({
 
         <Separator />
 
-        {/* Micro Actions */}
-        {reflection.ai_micro_actions && reflection.ai_micro_actions.length > 0 && (
+        {/* Micro Actions - now handles string[] */}
+        {microActions.length > 0 && (
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold">Tomorrow's Micro Actions</h4>
+            <h4 className="text-sm font-semibold">Micro Tweaks for Tomorrow</h4>
             <ul className="space-y-2">
-              {reflection.ai_micro_actions.map((action, index) => (
+              {microActions.map((action, index) => (
                 <li key={index} className="flex items-start gap-3 rounded-md border p-3">
                   <div className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
                     {index + 1}
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{action.title}</p>
-                    <p className="text-sm text-muted-foreground">{action.description}</p>
-                    <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      ~{action.estimated_minutes} min
-                    </div>
-                  </div>
+                  <p className="flex-1 text-sm">{action}</p>
                 </li>
               ))}
             </ul>
@@ -126,7 +128,7 @@ export function DailyReflectionInsights({
         )}
 
         {/* Suggested Task */}
-        {reflection.ai_suggested_task && (
+        {reflection.ai_suggested_task?.title && (
           <>
             <Separator />
             <div className="space-y-3">
@@ -135,15 +137,17 @@ export function DailyReflectionInsights({
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <p className="font-medium">{reflection.ai_suggested_task.title}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {reflection.ai_suggested_task.description}
-                    </p>
+                    {reflection.ai_suggested_task.notes && (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {reflection.ai_suggested_task.notes}
+                      </p>
+                    )}
                     <div className="mt-2 flex items-center gap-2">
                       <Badge variant="outline" className="text-xs">
-                        {reflection.ai_suggested_task.type}
+                        micro
                       </Badge>
                       <Badge variant="secondary" className="text-xs">
-                        +{reflection.ai_suggested_task.xp_reward} XP
+                        +10 XP
                       </Badge>
                     </div>
                   </div>
@@ -151,7 +155,7 @@ export function DailyReflectionInsights({
                     <Button
                       size="sm"
                       variant={taskAccepted ? "secondary" : "default"}
-                      onClick={() => onAcceptTask(reflection.ai_suggested_task!)}
+                      onClick={handleAcceptTask}
                       disabled={taskAccepted}
                     >
                       {taskAccepted ? (
@@ -162,7 +166,7 @@ export function DailyReflectionInsights({
                       ) : (
                         <>
                           <Plus className="mr-1 h-4 w-4" />
-                          Add to Tasks
+                          Add to My Tasks
                         </>
                       )}
                     </Button>
