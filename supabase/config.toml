@@ -62,3 +62,6 @@ verify_jwt = true
 
 [functions.generate-weekly-summary]
 verify_jwt = true
+
+[functions.generate-context-interpretation]
+verify_jwt = true
