@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity, Radar, FileText, Flame, BarChart3, Scale } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScoreGauge } from "@/components/opportunity/ScoreGauge";
+import { calculateReflectionStreak } from "@/lib/streakEngine";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -44,6 +45,8 @@ const Dashboard = () => {
   const [loadingStreak, setLoadingStreak] = useState(true);
   const [highestScore, setHighestScore] = useState<any>(null);
   const [loadingScore, setLoadingScore] = useState(true);
+  const [reflectionStreak, setReflectionStreak] = useState(0);
+  const [loadingReflectionStreak, setLoadingReflectionStreak] = useState(true);
 
   useEffect(() => {
     if (user) {
@@ -53,6 +56,7 @@ const Dashboard = () => {
       fetchWorkspaceStats();
       fetchStreakData();
       fetchHighestScore();
+      fetchReflectionStreak();
     }
   }, [user]);
 
@@ -105,6 +109,20 @@ const Dashboard = () => {
       console.error("Error fetching today's reflection:", error);
     } finally {
       setLoadingReflection(false);
+    }
+  };
+
+  const fetchReflectionStreak = async () => {
+    if (!user) return;
+
+    setLoadingReflectionStreak(true);
+    try {
+      const streak = await calculateReflectionStreak(user.id);
+      setReflectionStreak(streak);
+    } catch (error) {
+      console.error("Error fetching reflection streak:", error);
+    } finally {
+      setLoadingReflectionStreak(false);
     }
   };
 
@@ -270,9 +288,19 @@ const Dashboard = () => {
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
               {todayReflection ? "Today's Pulse & Check-In" : "Daily Pulse & Check-In"}
+              {!loadingReflectionStreak && (
+                <Badge variant={reflectionStreak > 0 ? "default" : "secondary"} className="gap-1 ml-auto">
+                  <Flame className={`h-3 w-3 ${reflectionStreak > 0 ? "text-orange-300" : ""}`} />
+                  {reflectionStreak} day{reflectionStreak !== 1 ? "s" : ""}
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription>
-              {todayReflection ? "Reflection complete" : "You haven't checked in yet today."}
+              {todayReflection 
+                ? "Reflection complete" 
+                : reflectionStreak === 0 
+                  ? "Do your first check-in today to start your streak."
+                  : "You haven't checked in yet today."}
             </CardDescription>
           </CardHeader>
           <CardContent>
