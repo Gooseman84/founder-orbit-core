@@ -35,6 +35,15 @@ type AIDailyReflectionParsed = {
   suggested_task: AISuggestedTask;
 };
 
+interface UserContext {
+  profile: any | null;
+  extendedIntake: any | null;
+  chosenIdea: any | null;
+  ideaAnalysis: any | null;
+  recentDocs: any[];
+  recentReflections: any[];
+}
+
 // --- CORS Headers --------------------------------------------
 
 const corsHeaders = {
@@ -48,7 +57,84 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-const openaiApiKey = Deno.env.get("OPENAI_API_KEY")!;
+const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
+
+// --- Context Builder (embedded for edge function) ----------------
+
+async function buildUserContext(userId: string, client: any): Promise<UserContext> {
+  const [
+    profileRes,
+    extendedIntakeRes,
+    chosenIdeaRes,
+    recentDocsRes,
+    recentReflectionsRes,
+  ] = await Promise.all([
+    client.from('founder_profiles').select('*').eq('user_id', userId).maybeSingle(),
+    client.from('user_intake_extended').select('*').eq('user_id', userId).maybeSingle(),
+    client.from('ideas').select('*').eq('user_id', userId).eq('status', 'chosen').maybeSingle(),
+    client.from('workspace_documents')
+      .select('id, title, content, doc_type, status, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(3),
+    client.from('daily_reflections')
+      .select('reflection_date, ai_summary, ai_theme, energy_level, stress_level, mood_tags, what_did, top_priority')
+      .eq('user_id', userId)
+      .order('reflection_date', { ascending: false })
+      .limit(7),
+  ]);
+
+  let ideaAnalysis = null;
+  if (chosenIdeaRes.data?.id) {
+    const { data: analysis } = await client
+      .from('idea_analysis')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('idea_id', chosenIdeaRes.data.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    ideaAnalysis = analysis;
+  }
+
+  return {
+    profile: profileRes.data ?? null,
+    extendedIntake: extendedIntakeRes.data ?? null,
+    chosenIdea: chosenIdeaRes.data ?? null,
+    ideaAnalysis,
+    recentDocs: recentDocsRes.data ?? [],
+    recentReflections: recentReflectionsRes.data ?? [],
+  };
+}
+
+function formatDocsForPrompt(docs: { title: string | null; content: string | null; doc_type?: string | null }[]): string {
+  if (!docs?.length) return 'No recent workspace notes.';
+  return docs
+    .map((doc, idx) => {
+      const title = doc.title || `Document ${idx + 1}`;
+      const docType = doc.doc_type ? ` (${doc.doc_type})` : '';
+      const content = (doc.content || '').slice(0, 500).trim();
+      const truncated = content.length >= 500 ? '...' : '';
+      return `- [${title}${docType}]: ${content}${truncated}`;
+    })
+    .join('\n');
+}
+
+function formatReflectionsForPrompt(reflections: any[]): string {
+  if (!reflections?.length) return 'No recent reflections.';
+  return reflections
+    .slice(0, 5)
+    .map((r) => {
+      const date = r.reflection_date;
+      const theme = r.ai_theme ? `Theme: "${r.ai_theme}"` : '';
+      const energy = r.energy_level ? `Energy: ${r.energy_level}/5` : '';
+      const stress = r.stress_level ? `Stress: ${r.stress_level}/5` : '';
+      const moods = r.mood_tags?.length ? `Mood: ${r.mood_tags.slice(0, 3).join(', ')}` : '';
+      const parts = [theme, energy, stress, moods].filter(Boolean).join(' | ');
+      return `- [${date}] ${parts}`;
+    })
+    .join('\n');
+}
 
 // --- Helper: Safe JSON Parsing + Fallbacks -----------------------
 
@@ -220,10 +306,19 @@ You MUST return ONLY valid JSON with this structure:
 "suggested_task" can be null if nothing stands out.
 `;
 
+    // --- Fetch user context for richer, personalized reflections ---
+    
+    console.log('[generate-daily-reflection] Fetching user context...');
+    const userContext = await buildUserContext(userId, supabase);
+    const docsSnippet = formatDocsForPrompt(userContext.recentDocs);
+    const reflectionsSnippet = formatReflectionsForPrompt(userContext.recentReflections);
+    
+    console.log('[generate-daily-reflection] Context loaded - profile:', !!userContext.profile, 'idea:', !!userContext.chosenIdea, 'docs:', userContext.recentDocs.length);
+
     const userPrompt = `
 You are generating a daily reflection for this founder.
 
-Here is today's data as JSON:
+## Today's Check-in Data
 
 ${JSON.stringify(
   {
@@ -241,41 +336,82 @@ ${JSON.stringify(
   2
 )}
 
-Tasks:
-1. Decide what the real story of the day is.
-2. Choose a short, sharp theme for the day.
-3. Suggest 1–3 micro-actions that would make tomorrow better.
-4. If useful, propose ONE suggested task.
+## Additional Context About This Founder
+
+### Founder Profile
+${userContext.profile ? JSON.stringify({
+  passions: userContext.profile.passions_text || userContext.profile.passions_tags?.join(', ') || 'Not specified',
+  skills: userContext.profile.skills_text || userContext.profile.skills_tags?.join(', ') || 'Not specified',
+  time_per_week: userContext.profile.time_per_week,
+  risk_tolerance: userContext.profile.risk_tolerance,
+  success_vision: userContext.profile.success_vision?.slice(0, 300),
+}, null, 2) : 'No profile available'}
+
+### Extended Intake (Deeper Self-Knowledge)
+${userContext.extendedIntake ? JSON.stringify({
+  deep_desires: userContext.extendedIntake.deep_desires?.slice(0, 200),
+  fears: userContext.extendedIntake.fears?.slice(0, 200),
+  energy_givers: userContext.extendedIntake.energy_givers?.slice(0, 150),
+  energy_drainers: userContext.extendedIntake.energy_drainers?.slice(0, 150),
+}, null, 2) : 'No extended intake available'}
+
+### Chosen Idea (Current Main Project)
+${userContext.chosenIdea ? JSON.stringify({
+  title: userContext.chosenIdea.title,
+  description: userContext.chosenIdea.description?.slice(0, 200),
+  business_model: userContext.chosenIdea.business_model_type,
+  target_customer: userContext.chosenIdea.target_customer,
+}, null, 2) : 'No chosen idea yet'}
+
+### Recent Workspace Notes
+${docsSnippet}
+
+### Recent Reflection Patterns (Last 7 days)
+${reflectionsSnippet}
+
+## Your Task
+
+Use ALL the context above to:
+1. Understand what actually happened today in the context of their bigger picture.
+2. Decide on a short, sharp theme that captures today's essence.
+3. Suggest 1–3 micro-actions that would make tomorrow better, considering their constraints (time, energy patterns, current project).
+4. If useful, propose ONE practical suggested task aligned with their chosen idea.
 
 Remember: output ONLY JSON in the structure from the system message.
 `;
 
-    // --- Call the AI model -------------------------------------
+    // --- Call the AI model (Lovable AI Gateway) -------------------
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.7,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[generate-daily-reflection] OpenAI API error:', response.status, errorText);
+      console.error('[generate-daily-reflection] AI API error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add funds to continue.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
