@@ -163,7 +163,8 @@ export function useWorkspace() {
         await recordXpEvent(user.id, 'workspace_saved', 15, { documentId: id });
       }
 
-      // Update local state
+      // Update documents list (for sidebar display), but NOT currentDocument
+      // The editor maintains its own local state - updating currentDocument causes race conditions
       setDocuments(prev =>
         prev.map(doc =>
           doc.id === id
@@ -176,22 +177,13 @@ export function useWorkspace() {
             : doc
         )
       );
-
-      if (currentDocument?.id === id) {
-        setCurrentDocument(prev =>
-          prev ? { 
-            ...prev, 
-            content: newContent, 
-            metadata: updatedMetadata as any,
-            updated_at: new Date().toISOString() 
-          } : null
-        );
-      }
+      // Note: We intentionally do NOT update currentDocument here
+      // The editor's local state is the source of truth during active editing
     } catch (err) {
       console.error('Error updating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to update content');
     }
-  }, [user, currentDocument]);
+  }, [user]);
 
   /**
    * Request AI suggestion for a document
