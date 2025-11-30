@@ -6,99 +6,176 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are TrueBlazer's Founder Blueprint Synthesizer.
+// --- Context Builder (embedded for edge function) ----------------
 
-Your job:
-Take everything we know about a founder and their business context, then generate:
-1) A clear, motivational summary of where they are now.
-2) A short, prioritized list of next moves that align with their life, strengths, and chosen idea.
-
-You are NOT a generic startup coach. 
-You are a focused, honest, supportive co-founder who cares about ALIGNMENT and MOMENTUM.
-
---------------------
-INPUT FORMAT (JSON)
---------------------
-
-You will receive a single JSON object with some or all of these keys:
-
-{
-  "founder_profile": {
-    "passions_text": string,
-    "skills_text": string,
-    "time_per_week": number,
-    "capital_available": number,
-    "risk_tolerance": string,
-    "lifestyle_goals": string,
-    "success_vision": string
-  },
-  "blueprint": {
-    "life_vision": string | null,
-    "life_time_horizon": string | null,
-    "income_target": number | null,
-    "time_available_hours_per_week": number | null,
-    "capital_available": number | null,
-    "risk_profile": string | null,
-    "non_negotiables": string | null,
-    "current_commitments": string | null,
-    "strengths": string | null,
-    "weaknesses": string | null,
-    "preferred_work_style": string | null,
-    "energy_pattern": string | null,
-    "north_star_one_liner": string | null,
-    "target_audience": string | null,
-    "problem_statement": string | null,
-    "promise_statement": string | null,
-    "offer_model": string | null,
-    "monetization_strategy": string | null,
-    "distribution_channels": string | null,
-    "unfair_advantage": string | null,
-    "traction_definition": string | null,
-    "success_metrics": any,
-    "runway_notes": string | null,
-    "validation_stage": string | null,
-    "focus_quarters": any
-  },
-  "chosen_idea": {
-    "id": string,
-    "title": string,
-    "summary": string,
-    "customer": string,
-    "problem": string,
-    "solution": string,
-    "revenue_model": string,
-    "channels": string
-  },
-  "opportunity_score": {
-    "total_score": number,
-    "sub_scores": {
-      "founder_fit": number,
-      "market_size": number,
-      "pain_intensity": number,
-      "competition": number,
-      "difficulty": number,
-      "tailwinds": number
-    }
-  },
-  "validation_status": {
-    "stage": string,
-    "recent_signals": string[],
-    "known_risks": string[]
-  },
-  "recent_activity": {
-    "completed_tasks": string[],
-    "streak_days": number,
-    "xp_level": number
-  }
+interface UserContext {
+  profile: any | null;
+  extendedIntake: any | null;
+  chosenIdea: any | null;
+  ideaAnalysis: any | null;
+  opportunityScore: any | null;
+  blueprint: any | null;
+  recentDocs: any[];
+  recentReflections: any[];
+  recentTasks: any[];
+  streakData: any | null;
+  xpTotal: number;
 }
 
-You might not get all of these. Always do the best you can with what you have.
+async function buildUserContext(client: any, userId: string): Promise<UserContext> {
+  const [
+    profileRes,
+    extendedIntakeRes,
+    blueprintRes,
+    chosenIdeaRes,
+    recentDocsRes,
+    recentReflectionsRes,
+    recentTasksRes,
+    streakRes,
+  ] = await Promise.all([
+    client.from('founder_profiles').select('*').eq('user_id', userId).maybeSingle(),
+    client.from('user_intake_extended').select('*').eq('user_id', userId).maybeSingle(),
+    client.from('founder_blueprints').select('*').eq('user_id', userId).maybeSingle(),
+    client.from('ideas').select('*').eq('user_id', userId).eq('status', 'chosen').maybeSingle(),
+    client.from('workspace_documents')
+      .select('id, title, content, doc_type, status, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(5),
+    client.from('daily_reflections')
+      .select('reflection_date, ai_summary, ai_theme, energy_level, stress_level, mood_tags, what_did, top_priority, blockers')
+      .eq('user_id', userId)
+      .order('reflection_date', { ascending: false })
+      .limit(7),
+    client.from('tasks')
+      .select('title, status, completed_at')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false })
+      .limit(10),
+    client.from('daily_streaks')
+      .select('current_streak, longest_streak')
+      .eq('user_id', userId)
+      .maybeSingle(),
+  ]);
 
---------------------
+  // Fetch idea analysis and opportunity score if we have a chosen idea
+  let ideaAnalysis = null;
+  let opportunityScore = null;
+  if (chosenIdeaRes.data?.id) {
+    const [analysisRes, scoreRes] = await Promise.all([
+      client.from('idea_analysis')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('idea_id', chosenIdeaRes.data.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      client.from('opportunity_scores')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('idea_id', chosenIdeaRes.data.id)
+        .maybeSingle(),
+    ]);
+    ideaAnalysis = analysisRes.data;
+    opportunityScore = scoreRes.data;
+  }
+
+  // Fetch XP total
+  const { data: xpTotal } = await client.rpc("get_user_total_xp", { p_user_id: userId });
+
+  return {
+    profile: profileRes.data ?? null,
+    extendedIntake: extendedIntakeRes.data ?? null,
+    blueprint: blueprintRes.data ?? null,
+    chosenIdea: chosenIdeaRes.data ?? null,
+    ideaAnalysis,
+    opportunityScore,
+    recentDocs: recentDocsRes.data ?? [],
+    recentReflections: recentReflectionsRes.data ?? [],
+    recentTasks: recentTasksRes.data ?? [],
+    streakData: streakRes.data ?? null,
+    xpTotal: xpTotal || 0,
+  };
+}
+
+function formatDocsForPrompt(docs: { title: string | null; content: string | null; doc_type?: string | null }[]): string {
+  if (!docs?.length) return 'No recent workspace notes.';
+  return docs
+    .map((doc, idx) => {
+      const title = doc.title || `Document ${idx + 1}`;
+      const docType = doc.doc_type ? ` (${doc.doc_type})` : '';
+      const content = (doc.content || '').slice(0, 500).trim();
+      const truncated = content.length >= 500 ? '...' : '';
+      return `- [${title}${docType}]: ${content}${truncated}`;
+    })
+    .join('\n');
+}
+
+function formatReflectionsForPrompt(reflections: any[]): string {
+  if (!reflections?.length) return 'No recent reflections.';
+  
+  // Aggregate patterns
+  const energyLevels = reflections.map(r => r.energy_level).filter(Boolean);
+  const stressLevels = reflections.map(r => r.stress_level).filter(Boolean);
+  const avgEnergy = energyLevels.length ? (energyLevels.reduce((a, b) => a + b, 0) / energyLevels.length).toFixed(1) : 'N/A';
+  const avgStress = stressLevels.length ? (stressLevels.reduce((a, b) => a + b, 0) / stressLevels.length).toFixed(1) : 'N/A';
+  
+  const themes = reflections.map(r => r.ai_theme).filter(Boolean);
+  const blockers = reflections.map(r => r.blockers).filter(Boolean);
+  const priorities = reflections.map(r => r.top_priority).filter(Boolean);
+  
+  let summary = `Average energy: ${avgEnergy}/5 | Average stress: ${avgStress}/5\n`;
+  
+  if (themes.length) {
+    summary += `Recent themes: ${themes.slice(0, 3).join(', ')}\n`;
+  }
+  
+  if (blockers.length) {
+    summary += `Recurring blockers: ${blockers.slice(0, 2).join('; ')}\n`;
+  }
+  
+  if (priorities.length) {
+    summary += `Recent priorities: ${priorities.slice(0, 3).join('; ')}\n`;
+  }
+  
+  summary += '\nDaily entries:\n';
+  summary += reflections
+    .slice(0, 5)
+    .map((r) => {
+      const date = r.reflection_date;
+      const theme = r.ai_theme ? `"${r.ai_theme}"` : '';
+      const energy = r.energy_level ? `E:${r.energy_level}` : '';
+      const stress = r.stress_level ? `S:${r.stress_level}` : '';
+      const parts = [theme, energy, stress].filter(Boolean).join(' | ');
+      return `- [${date}] ${parts}`;
+    })
+    .join('\n');
+  
+  return summary;
+}
+
+// --- System Prompt ------------------------------------------------
+
+const SYSTEM_PROMPT = `You are TrueBlazer's Founder Blueprint Synthesizer.
+
+Your job is to take EVERYTHING we know about a founder - their profile, their actual work (workspace documents), their emotional patterns (daily reflections), and their business context - then generate:
+
+1) A clear, motivational summary of where they are NOW (based on actual evidence, not assumptions)
+2) A short, prioritized list of next moves that align with their life, strengths, and what they've actually been working on
+
+You are NOT a generic startup coach.
+You are a focused, honest, supportive co-founder who:
+- READS what they've actually written in their workspace documents
+- NOTICES patterns in their energy, stress, and blockers
+- ADJUSTS recommendations based on their real behavior, not just their stated goals
+
+---
+
 OUTPUT FORMAT (STRICT JSON)
---------------------
+---
 
-You MUST respond with **ONLY** this JSON structure and nothing else:
+You MUST respond with **ONLY** this JSON structure:
 
 {
   "ai_summary": string,
@@ -114,46 +191,42 @@ You MUST respond with **ONLY** this JSON structure and nothing else:
   ]
 }
 
-Rules for fields:
+Rules:
 
-- ai_summary:
-  - 2–4 sentences.
-  - Plain language, encouraging but honest.
-  - Capture: Who they are, What they're trying to build, Where they are in the journey right now (stage), What matters most in the next season.
+ai_summary:
+- 2–4 sentences
+- Reference SPECIFIC things from their workspace docs when relevant
+- Acknowledge their recent energy/stress patterns
+- Capture: Who they are, What they're building, Where they actually are (based on evidence), What matters most next
 
-- Each recommendation:
-  - title: Short, action-oriented (e.g. "Run 3 customer interviews", "Ship a simple waitlist page").
-  - description: 1–3 sentences explaining what to do and why it matters. Reference their constraints (time, capital, risk) when relevant.
-  - priority: "high" if it directly reduces risk or moves toward validation/revenue. "medium" for supporting work. "low" for nice-to-have or longer-term.
-  - time_horizon: "today" / "this_week" for small steps. "this_month" / "this_quarter" for larger projects.
-  - category: "validation" (talking to customers, tests, offers, pricing, proof), "audience" (content, email list, followers, community), "offer" (packaging, positioning, guarantee, pricing), "distribution" (channels, partnerships, placements), "systems" (tools, workflows, automation), "mindset" (confidence, reducing fear, dealing with overwhelm).
-  - suggested_task_count: Number of micro-tasks you expect this recommendation to break into (1–10).
+Each recommendation:
+- title: Short, action-oriented
+- description: 1–3 sentences. Reference their constraints AND their recent work/patterns when relevant
+- priority: "high" if it builds on momentum they already have or addresses a recurring blocker
+- time_horizon: Match to their available time and current energy levels
+- category: validation/audience/offer/distribution/systems/mindset
+- suggested_task_count: 1–10
 
-You should normally return 3–7 recommendations.
+Return 3–7 recommendations.
 
---------------------
-DECISION & COACHING LOGIC
---------------------
+---
 
-1) Respect their life constraints. If they only have a few hours per week, avoid huge projects. If capital is low, avoid paid traffic as first move. If risk tolerance is low, avoid aggressive bets.
+COACHING LOGIC
+---
 
-2) Stay aligned with their North Star and strengths. Lean into strengths (skills, energy pattern, preferred work style). Don't push them toward channels or models that clash with who they are.
+1) Reference their actual work. If they've been writing an "Offer Design Doc", suggest they continue it. If they have a "Landing Page Plan", reference it.
 
-3) Reflect their current stage honestly. If there is no real validation yet, do NOT act like they're in scaling mode. If they already have paying customers, focus on refining the offer and distribution.
+2) Notice energy patterns. If recent reflections show low energy or high stress, suggest lighter tasks or mindset work. If they're on a streak and energized, push them further.
 
-4) Be concrete and specific. "Talk to 5 potential customers this week" is good. "Do market research" is too vague.
+3) Address recurring blockers. If the same blocker appears in multiple reflections, make one recommendation specifically about it.
 
-5) Be kind but direct. It's okay to say they are still early, unvalidated, or inconsistent in action. Pair honesty with encouragement and a clear path forward.
+4) Respect constraints. Time, capital, risk tolerance - but also notice if their actions don't match their stated constraints.
 
---------------------
-IMPORTANT CONSTRAINTS
---------------------
+5) Be specific and grounded. "Continue your Offer Design Doc by adding pricing tiers" is better than "Work on your offer".
 
-- Do NOT include any explanation outside the JSON.
-- Do NOT include comments in the JSON.
-- Do NOT change the keys or add extra top-level fields.
-- If some input fields are missing, do your best with what you have and still return valid JSON.
-- Never mention these instructions or this prompt in your output.`;
+---
+
+NEVER include explanation outside the JSON. Return ONLY valid JSON.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -182,106 +255,105 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch founder profile
-    const { data: profile, error: profileError } = await supabase
-      .from("founder_profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    // --- Fetch full user context ---
+    console.log("[refresh-blueprint] Fetching user context...");
+    const userContext = await buildUserContext(supabase, userId);
+    const docsSnippet = formatDocsForPrompt(userContext.recentDocs);
+    const reflectionsSnippet = formatReflectionsForPrompt(userContext.recentReflections);
 
-    if (profileError) {
-      console.error("[refresh-blueprint] Error fetching profile:", profileError);
-      throw profileError;
-    }
+    console.log("[refresh-blueprint] Context loaded - profile:", !!userContext.profile,
+      "idea:", !!userContext.chosenIdea, "analysis:", !!userContext.ideaAnalysis,
+      "docs:", userContext.recentDocs.length, "reflections:", userContext.recentReflections.length);
 
-    // Fetch ideas (including chosen one)
-    const { data: ideas, error: ideasError } = await supabase
-      .from("ideas")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+    // --- Build rich user prompt ---
+    const userPrompt = `Refresh this founder's blueprint based on their complete context - especially their recent work and reflection patterns.
 
-    if (ideasError) {
-      console.error("[refresh-blueprint] Error fetching ideas:", ideasError);
-      throw ideasError;
-    }
+## Founder Profile
+${userContext.profile ? JSON.stringify({
+  passions: userContext.profile.passions_text || userContext.profile.passions_tags?.join(', ') || 'Not specified',
+  skills: userContext.profile.skills_text || userContext.profile.skills_tags?.join(', ') || 'Not specified',
+  time_per_week: userContext.profile.time_per_week,
+  capital_available: userContext.profile.capital_available,
+  risk_tolerance: userContext.profile.risk_tolerance,
+  tech_level: userContext.profile.tech_level,
+  lifestyle_goals: userContext.profile.lifestyle_goals,
+  success_vision: userContext.profile.success_vision?.slice(0, 400),
+}, null, 2) : 'No profile available'}
 
-    // Fetch current blueprint
-    const { data: blueprint, error: blueprintError } = await supabase
-      .from("founder_blueprints")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+## Extended Intake (Deeper Self-Knowledge)
+${userContext.extendedIntake ? JSON.stringify({
+  deep_desires: userContext.extendedIntake.deep_desires?.slice(0, 200),
+  fears: userContext.extendedIntake.fears?.slice(0, 200),
+  energy_givers: userContext.extendedIntake.energy_givers?.slice(0, 150),
+  energy_drainers: userContext.extendedIntake.energy_drainers?.slice(0, 150),
+  personality_flags: userContext.extendedIntake.personality_flags,
+  work_preferences: userContext.extendedIntake.work_preferences,
+}, null, 2) : 'No extended intake available'}
 
-    if (blueprintError) {
-      console.error("[refresh-blueprint] Error fetching blueprint:", blueprintError);
-      throw blueprintError;
-    }
+## Current Blueprint State
+${userContext.blueprint ? JSON.stringify({
+  life_vision: userContext.blueprint.life_vision?.slice(0, 200),
+  life_time_horizon: userContext.blueprint.life_time_horizon,
+  income_target: userContext.blueprint.income_target,
+  validation_stage: userContext.blueprint.validation_stage,
+  north_star_one_liner: userContext.blueprint.north_star_one_liner,
+  target_audience: userContext.blueprint.target_audience,
+  problem_statement: userContext.blueprint.problem_statement?.slice(0, 200),
+  offer_model: userContext.blueprint.offer_model,
+  distribution_channels: userContext.blueprint.distribution_channels,
+  unfair_advantage: userContext.blueprint.unfair_advantage,
+}, null, 2) : 'No existing blueprint'}
 
-    const chosenIdea = ideas?.find((i: any) => i.status === "chosen");
+## Chosen Idea
+${userContext.chosenIdea ? JSON.stringify({
+  title: userContext.chosenIdea.title,
+  description: userContext.chosenIdea.description?.slice(0, 300),
+  business_model_type: userContext.chosenIdea.business_model_type,
+  target_customer: userContext.chosenIdea.target_customer,
+  complexity: userContext.chosenIdea.complexity,
+  overall_fit_score: userContext.chosenIdea.overall_fit_score,
+}, null, 2) : 'No chosen idea yet'}
 
-    // Fetch opportunity score for chosen idea
-    let opportunityScore = null;
-    if (chosenIdea) {
-      const { data: score } = await supabase
-        .from("opportunity_scores")
-        .select("*")
-        .eq("idea_id", chosenIdea.id)
-        .eq("user_id", userId)
-        .maybeSingle();
-      opportunityScore = score;
-    }
+## Idea Analysis (Market Intelligence)
+${userContext.ideaAnalysis ? JSON.stringify({
+  niche_score: userContext.ideaAnalysis.niche_score,
+  market_insight: userContext.ideaAnalysis.market_insight?.slice(0, 200),
+  problem_intensity: userContext.ideaAnalysis.problem_intensity,
+  competition_snapshot: userContext.ideaAnalysis.competition_snapshot?.slice(0, 200),
+  biggest_risks: userContext.ideaAnalysis.biggest_risks,
+  recommendations: userContext.ideaAnalysis.recommendations,
+}, null, 2) : 'No idea analysis available'}
 
-    // Fetch recent completed tasks
-    const { data: recentTasks } = await supabase
-      .from("tasks")
-      .select("title")
-      .eq("user_id", userId)
-      .eq("status", "completed")
-      .order("completed_at", { ascending: false })
-      .limit(5);
+## Opportunity Score
+${userContext.opportunityScore ? JSON.stringify({
+  total_score: userContext.opportunityScore.total_score,
+  sub_scores: userContext.opportunityScore.sub_scores,
+  explanation: userContext.opportunityScore.explanation?.slice(0, 200),
+}, null, 2) : 'No opportunity score available'}
 
-    // Fetch streak data
-    const { data: streakData } = await supabase
-      .from("daily_streaks")
-      .select("current_streak")
-      .eq("user_id", userId)
-      .maybeSingle();
+## RECENT WORKSPACE DOCUMENTS (What they've actually been working on)
+${docsSnippet}
 
-    // Fetch XP level
-    const { data: xpTotal } = await supabase.rpc("get_user_total_xp", { p_user_id: userId });
+## RECENT REFLECTION PATTERNS (Their emotional/energy state)
+${reflectionsSnippet}
 
-    // Build context for AI
-    const context = {
-      founder_profile: profile,
-      blueprint: blueprint,
-      chosen_idea: chosenIdea ? {
-        id: chosenIdea.id,
-        title: chosenIdea.title,
-        summary: chosenIdea.description,
-        customer: chosenIdea.target_customer,
-        problem: blueprint?.problem_statement,
-        solution: blueprint?.promise_statement,
-        revenue_model: chosenIdea.business_model_type,
-        channels: blueprint?.distribution_channels
-      } : null,
-      opportunity_score: opportunityScore ? {
-        total_score: opportunityScore.total_score,
-        sub_scores: opportunityScore.sub_scores
-      } : null,
-      validation_status: {
-        stage: blueprint?.validation_stage || "idea",
-        recent_signals: [],
-        known_risks: []
-      },
-      recent_activity: {
-        completed_tasks: recentTasks?.map((t: any) => t.title) || [],
-        streak_days: streakData?.current_streak || 0,
-        xp_level: Math.floor((xpTotal || 0) / 100)
-      }
-    };
+## Recent Activity
+- Completed tasks: ${userContext.recentTasks?.map((t: any) => t.title).slice(0, 5).join(', ') || 'None recently'}
+- Current streak: ${userContext.streakData?.current_streak || 0} days
+- XP level: ${Math.floor(userContext.xpTotal / 100)}
 
-    console.log("[refresh-blueprint] Calling AI with context");
+---
+
+Based on ALL this context, generate an updated blueprint that:
+1. References their actual workspace documents when making recommendations
+2. Adjusts for their recent energy/stress patterns
+3. Addresses any recurring blockers from their reflections
+4. Builds on momentum they already have (continue what's working)
+5. Is specific to THEIR situation, not generic advice
+
+Return ONLY the JSON with ai_summary and ai_recommendations.`;
+
+    console.log("[refresh-blueprint] Calling AI with enriched context");
 
     // Call Lovable AI
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -294,7 +366,7 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: JSON.stringify(context, null, 2) },
+          { role: "user", content: userPrompt },
         ],
       }),
     });
@@ -331,7 +403,6 @@ serve(async (req) => {
     let parsed;
     try {
       let cleanContent = content.trim();
-      // Remove markdown code block wrapper if present
       if (cleanContent.startsWith("```json")) {
         cleanContent = cleanContent.slice(7);
       } else if (cleanContent.startsWith("```")) {
@@ -342,7 +413,6 @@ serve(async (req) => {
       }
       cleanContent = cleanContent.trim();
       
-      console.log("[refresh-blueprint] Cleaned content for parsing:", cleanContent.substring(0, 100));
       parsed = JSON.parse(cleanContent);
     } catch (parseError) {
       console.error("[refresh-blueprint] Failed to parse AI response:", content);
@@ -369,7 +439,7 @@ serve(async (req) => {
       throw updateError;
     }
 
-    console.log("[refresh-blueprint] Blueprint updated successfully");
+    console.log("[refresh-blueprint] Blueprint updated successfully with enriched context");
 
     return new Response(
       JSON.stringify({ success: true }),
