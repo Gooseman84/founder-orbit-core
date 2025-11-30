@@ -131,8 +131,8 @@ serve(async (req) => {
       .eq('status', 'chosen')
       .maybeSingle();
 
-    // Build reflections data for user prompt
-    const reflectionsData = reflections.map(r => ({
+    // Build reflections array for user prompt
+    const reflectionsArray = reflections.map(r => ({
       reflection_date: r.reflection_date,
       energy_level: r.energy_level,
       stress_level: r.stress_level,
@@ -146,22 +146,46 @@ serve(async (req) => {
       ai_micro_actions: r.ai_micro_actions,
     }));
 
-    // Build user prompt with context
+    const startDate = sevenDaysAgo.toISOString().split('T')[0];
+    const endDate = today.toISOString().split('T')[0];
+
+    // Build user prompt with the exact template
     const userPrompt = `
-Here are the daily reflections from the past week:
+You are generating a weekly review for this founder.
 
-${JSON.stringify(reflectionsData, null, 2)}
+Here is the raw data for the last 7 days as JSON:
 
-${founderProfile ? `Founder context:
-- Passions: ${founderProfile.passions_tags?.join(', ') || 'Not specified'}
-- Skills: ${founderProfile.skills_tags?.join(', ') || 'Not specified'}
-- Time available: ${founderProfile.time_per_week || 'Not specified'} hours/week` : ''}
+${JSON.stringify({
+  startDate,
+  endDate,
+  reflections: reflectionsArray,
+}, null, 2)}
 
-${chosenIdea ? `Current business idea:
-- Title: ${chosenIdea.title}
-- Description: ${chosenIdea.description}` : ''}
+Data notes:
+- "reflections" is an array of objects. Some days may be missing if they did not check in.
+- Each object may include:
+  - reflection_date (YYYY-MM-DD)
+  - energy_level (1–5)
+  - stress_level (1–5)
+  - mood_tags (string[])
+  - what_did
+  - what_learned
+  - what_felt
+  - top_priority
+  - blockers
+  - ai_theme
+  - ai_micro_actions
 
-Based on these ${reflections.length} daily reflection${reflections.length !== 1 ? 's' : ''}, generate a weekly summary following the output format specified in the system message.
+Your tasks:
+1. Infer the real story of the week from these entries.
+2. Identify the strongest wins (even if they're small but meaningful).
+3. Call out the key constraints or patterns getting in the way.
+4. Recommend 2–4 focus areas for the upcoming week that are specific and actionable.
+5. Offer grounded encouragement that keeps them moving forward.
+
+Remember:
+- You must output ONLY valid JSON in the exact structure described in the system message.
+- Be specific and practical. This is for a founder who wants signal, not generic motivation.
 `;
 
     console.log('[generate-weekly-summary] Processing', reflections.length, 'reflections');
