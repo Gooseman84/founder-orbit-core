@@ -1,36 +1,210 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// --- Types ---------------------------------------------------
+
+type DailyReflectionRequest = {
+  userId: string;
+  reflectionDate: string; // "YYYY-MM-DD"
+  energyLevel?: number;   // 1–5
+  stressLevel?: number;   // 1–5
+  moodTags?: string[];
+  whatDid?: string;
+  whatLearned?: string;
+  whatFelt?: string;
+  topPriority?: string;
+  blockers?: string;
+};
+
+type AISuggestedTask = {
+  title?: string;
+  notes?: string;
+} | null;
+
+type AIDailyReflectionRaw = {
+  summary?: unknown;
+  theme?: unknown;
+  micro_actions?: unknown;
+  suggested_task?: unknown;
+};
+
+type AIDailyReflectionParsed = {
+  summary: string;
+  theme: string;
+  micro_actions: string[];
+  suggested_task: AISuggestedTask;
+};
+
+// --- CORS Headers --------------------------------------------
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SYSTEM_PROMPT = `You are an AI cofounder and performance partner for an ambitious entrepreneur.
+// --- Environment ------------------------------------------------
+
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+const openaiApiKey = Deno.env.get("OPENAI_API_KEY")!;
+
+// --- Helper: Safe JSON Parsing + Fallbacks -----------------------
+
+function safeParseDailyReflectionResult(rawText: string): AIDailyReflectionParsed {
+  let parsed: AIDailyReflectionRaw;
+
+  // Strip markdown code blocks if present
+  let cleanText = rawText.trim();
+  if (cleanText.startsWith('```json')) {
+    cleanText = cleanText.slice(7);
+  } else if (cleanText.startsWith('```')) {
+    cleanText = cleanText.slice(3);
+  }
+  if (cleanText.endsWith('```')) {
+    cleanText = cleanText.slice(0, -3);
+  }
+  cleanText = cleanText.trim();
+
+  try {
+    parsed = JSON.parse(cleanText);
+  } catch (err) {
+    console.error("[generate-daily-reflection] Failed to parse AI JSON:", err, "Raw:", rawText);
+    // Hard fallback if the AI returns something totally invalid
+    return {
+      summary: "Today you made progress, even if the details are unclear. Focus on one meaningful action tomorrow.",
+      theme: "Keep moving",
+      micro_actions: [
+        "Choose one specific task for tomorrow and schedule a time to do it.",
+      ],
+      suggested_task: null,
+    };
+  }
+
+  // Summary
+  const summary =
+    typeof parsed.summary === "string" && parsed.summary.trim().length > 0
+      ? parsed.summary.trim()
+      : "Today you showed up and moved things forward. Tomorrow is a chance to tighten your focus.";
+
+  // Theme
+  const theme =
+    typeof parsed.theme === "string" && parsed.theme.trim().length > 0
+      ? parsed.theme.trim()
+      : "Showing up";
+
+  // Micro actions
+  let microActions: string[] = [];
+
+  if (Array.isArray(parsed.micro_actions)) {
+    microActions = parsed.micro_actions
+      .filter((item) => typeof item === "string")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+
+  if (microActions.length === 0) {
+    microActions = [
+      "Pick one important task and do it before checking email or messages.",
+    ];
+  }
+
+  // Suggested task
+  let suggestedTask: AISuggestedTask = null;
+
+  if (parsed.suggested_task && typeof parsed.suggested_task === "object") {
+    const obj = parsed.suggested_task as Record<string, unknown>;
+    const title =
+      typeof obj.title === "string" && obj.title.trim().length > 0
+        ? obj.title.trim()
+        : undefined;
+    const notes =
+      typeof obj.notes === "string" && obj.notes.trim().length > 0
+        ? obj.notes.trim()
+        : undefined;
+
+    if (title || notes) {
+      suggestedTask = { title, notes };
+    }
+  }
+
+  return {
+    summary,
+    theme,
+    micro_actions: microActions,
+    suggested_task: suggestedTask,
+  };
+}
+
+// --- Helper: clamp numeric values into 1–5 -----------------------
+
+function clamp1to5(n: number | undefined, fallback: number): number {
+  if (typeof n !== "number" || Number.isNaN(n)) return fallback;
+  return Math.min(5, Math.max(1, Math.round(n)));
+}
+
+// --- Main handler -----------------------------------------------
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+  }
+
+  try {
+    const body = (await req.json()) as DailyReflectionRequest;
+
+    if (!body.userId || !body.reflectionDate) {
+      return new Response(
+        JSON.stringify({ error: "Missing userId or reflectionDate" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const {
+      userId,
+      reflectionDate,
+      energyLevel,
+      stressLevel,
+      moodTags,
+      whatDid,
+      whatLearned,
+      whatFelt,
+      topPriority,
+      blockers,
+    } = body;
+
+    console.log('[generate-daily-reflection] Processing for user:', userId, 'date:', reflectionDate);
+
+    // Normalize fields before sending to the model
+    const normalizedEnergy = clamp1to5(energyLevel, 3);
+    const normalizedStress = clamp1to5(stressLevel, 3);
+    const normalizedMoodTags = Array.isArray(moodTags)
+      ? moodTags.filter((t) => typeof t === "string" && t.trim().length > 0)
+      : [];
+
+    // --- Build LLM prompt ---------------------------------------
+
+    const systemPrompt = `
+You are an AI cofounder and performance partner for an ambitious entrepreneur.
 
 Your job is to:
 - Read their daily check-in and pulse data.
-- Quickly understand what actually happened today.
-- Reflect back a clear story, a sharp theme, and 1–3 specific micro-actions that make tomorrow better.
-- Optionally propose ONE practical task that could be added to their task list.
+- Understand what actually happened today.
+- Reflect back a clear story, a sharp theme, and 1–3 specific micro-actions for tomorrow.
+- Optionally propose ONE practical task for their task list.
 
 Tone:
-- Direct, supportive, grounded in reality.
-- Talk like a smart operator and cofounder, not a therapist or motivational poster.
-- Avoid clichés like "crush it", "you got this", or overly generic advice.
-- Prioritize clarity, honesty, and tiny behavioral tweaks.
+- Direct, supportive, grounded.
+- No clichés, no generic self-help, no therapy language.
+- Focus on tiny, realistic behavior changes.
 
-Content rules:
-- Focus on what is **within their control** tomorrow (actions, decisions, environment).
-- When energy is low or stress is high, acknowledge it briefly and pivot to concrete adjustments.
-- Never offer medical, mental health, or legal advice. If something is serious, gently suggest talking to a qualified professional.
-- Assume they are capable and serious about building a meaningful business and life.
-
-Output format:
-- You MUST return ONLY valid JSON.
-- NO Markdown, NO commentary outside the JSON.
-- Use this exact structure:
+You MUST return ONLY valid JSON with this structure:
 
 {
   "summary": "string",
@@ -42,132 +216,43 @@ Output format:
   }
 }
 
-Field guidance:
-- "summary": 2–4 sentences that describe what actually happened today in plain language. Reflect their actions, learning, and emotional tone.
-- "theme": a short phrase like "Planting seeds", "High output, low energy", "Avoiding the hard thing", "Momentum building", "Protect the asset".
-- "micro_actions": 1–3 very specific actions for tomorrow. Tiny, high-impact, and realistic (e.g. "Block 60 minutes to finish the proposal before checking email", not "Work harder").
-- "suggested_task":
-  - If there is a clear, concrete task that would materially improve momentum, set a title and notes.
-  - If not, set this to null.
-  - Title should be short and action-focused.
-  - Notes should give just enough context to be useful when seen on a task list.
+"micro_actions" should be 1–3 short, concrete actions.
+"suggested_task" can be null if nothing stands out.
+`;
 
-If the input is very light or vague, still produce helpful, grounded output, but be explicit about uncertainty in the "summary" and keep the "micro_actions" simple and doable.`;
-
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    const body = await req.json();
-    
-    // Accept both camelCase and snake_case inputs for flexibility
-    const userId = body.userId || body.user_id;
-    const reflectionDate = body.reflectionDate || body.reflection_date || new Date().toISOString().split('T')[0];
-    const energyLevel = body.energyLevel ?? body.energy_level;
-    const stressLevel = body.stressLevel ?? body.stress_level;
-    const moodTags = body.moodTags || body.mood_tags || [];
-    const whatDid = body.whatDid || body.what_did || '';
-    const whatLearned = body.whatLearned || body.what_learned || '';
-    const whatFelt = body.whatFelt || body.what_felt || '';
-    const topPriority = body.topPriority || body.top_priority || '';
-    const blockers = body.blockers || '';
-
-    console.log('[generate-daily-reflection] Received request for userId:', userId);
-
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'Missing userId' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-
-    if (!openaiApiKey) {
-      console.error('[generate-daily-reflection] Missing OPENAI_API_KEY');
-      return new Response(JSON.stringify({ error: 'AI service not configured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Fetch founder profile for additional context
-    const { data: founderProfile } = await supabase
-      .from('founder_profiles')
-      .select('passions_tags, skills_tags, time_per_week')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    // Fetch chosen idea for context
-    const { data: chosenIdea } = await supabase
-      .from('ideas')
-      .select('title, description')
-      .eq('user_id', userId)
-      .eq('status', 'chosen')
-      .maybeSingle();
-
-    // Build user prompt with interpretation guidance
     const userPrompt = `
 You are generating a daily reflection for this founder.
 
-Here is today's raw data as JSON:
+Here is today's data as JSON:
 
-${JSON.stringify({
-  reflectionDate,
-  energy_level: energyLevel,
-  stress_level: stressLevel,
-  mood_tags: moodTags,
-  what_did: whatDid,
-  what_learned: whatLearned,
-  what_felt: whatFelt,
-  top_priority: topPriority,
-  blockers: blockers,
-  founder_context: founderProfile ? {
-    passions: founderProfile.passions_tags,
-    skills: founderProfile.skills_tags,
-    time_per_week: founderProfile.time_per_week,
-  } : null,
-  chosen_idea: chosenIdea ? {
-    title: chosenIdea.title,
-    description: chosenIdea.description,
-  } : null,
-}, null, 2)}
+${JSON.stringify(
+  {
+    reflection_date: reflectionDate,
+    energy_level: normalizedEnergy,
+    stress_level: normalizedStress,
+    mood_tags: normalizedMoodTags,
+    what_did: whatDid ?? "",
+    what_learned: whatLearned ?? "",
+    what_felt: whatFelt ?? "",
+    top_priority: topPriority ?? "",
+    blockers: blockers ?? "",
+  },
+  null,
+  2
+)}
 
-Interpretation guidance:
+Tasks:
+1. Decide what the real story of the day is.
+2. Choose a short, sharp theme for the day.
+3. Suggest 1–3 micro-actions that would make tomorrow better.
+4. If useful, propose ONE suggested task.
 
-- energy_level: 1–5 (1 = very low, 5 = very high).
-- stress_level: 1–5 (1 = minimal, 5 = overwhelming).
-- mood_tags: emotional keywords they selected.
-- what_did: what they actually worked on or accomplished.
-- what_learned: insights, lessons, or realizations.
-- what_felt: how they feel about their progress and day.
-- top_priority: what they say matters most for tomorrow.
-- blockers: what they feel is in the way.
-- founder_context: their passions, skills, and available time (if available).
-- chosen_idea: their current business idea they're building (if available).
-
-Task:
-1. Read the data.
-2. Decide what the real story of the day is.
-3. Identify a short, sharp theme that captures the day.
-4. Suggest 1–3 micro-actions that would make tomorrow meaningfully better.
-5. If relevant, propose ONE suggested task that would belong on their task list.
-
-Remember:
-- You must output ONLY valid JSON with the exact structure described in the system message.
-- If you are unsure about some details, acknowledge that in the "summary", but still provide practical micro-actions.
+Remember: output ONLY JSON in the structure from the system message.
 `;
 
-    console.log('[generate-daily-reflection] User prompt built for date:', reflectionDate);
+    // --- Call the AI model -------------------------------------
 
-    // Call OpenAI
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
@@ -176,117 +261,92 @@ Remember:
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,
       }),
     });
 
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      console.error('[generate-daily-reflection] OpenAI error:', openaiResponse.status, errorText);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[generate-daily-reflection] OpenAI API error:', response.status, errorText);
       
-      if (openaiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       
-      throw new Error(`OpenAI API error: ${openaiResponse.status}`);
+      return new Response(
+        JSON.stringify({ error: 'AI service error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const openaiData = await openaiResponse.json();
-    const rawContent = openaiData.choices[0]?.message?.content || '{}';
-    
-    console.log('[generate-daily-reflection] AI raw response:', rawContent);
+    const completion = await response.json();
+    const aiText = completion.choices?.[0]?.message?.content ?? "{}";
 
-    // Parse AI response defensively
-    let aiResult;
-    try {
-      // Strip markdown code blocks if present
-      let cleanContent = rawContent.trim();
-      if (cleanContent.startsWith('```json')) {
-        cleanContent = cleanContent.slice(7);
-      } else if (cleanContent.startsWith('```')) {
-        cleanContent = cleanContent.slice(3);
-      }
-      if (cleanContent.endsWith('```')) {
-        cleanContent = cleanContent.slice(0, -3);
-      }
-      
-      aiResult = JSON.parse(cleanContent.trim());
-    } catch (parseError) {
-      console.error('[generate-daily-reflection] Failed to parse AI response:', parseError);
-      // Fall back to safe defaults
-      aiResult = {
-        summary: 'Thank you for checking in today. Taking time to reflect is an important step in your founder journey.',
-        theme: 'Daily Reflection',
-        micro_actions: ['Review your top priority for tomorrow', 'Take a 5-minute break to reset'],
-        suggested_task: null,
-      };
-    }
+    console.log('[generate-daily-reflection] AI response received');
 
-    // Ensure arrays and objects are properly structured
-    const summary = typeof aiResult.summary === 'string' ? aiResult.summary : 'Reflection recorded successfully.';
-    const theme = typeof aiResult.theme === 'string' ? aiResult.theme : 'Daily Check-In';
-    const microActions = Array.isArray(aiResult.micro_actions) ? aiResult.micro_actions : [];
-    const suggestedTask = aiResult.suggested_task && typeof aiResult.suggested_task === 'object' 
-      ? { title: aiResult.suggested_task.title || '', notes: aiResult.suggested_task.notes || '' }
-      : null;
+    // --- Parse + normalize AI output safely --------------------
 
-    console.log('[generate-daily-reflection] Parsed AI result:', { summary, theme, microActions, suggestedTask });
+    const aiResult = safeParseDailyReflectionResult(aiText);
 
-    // Upsert into daily_reflections using (user_id, reflection_date) as key
-    const upsertData = {
-      user_id: userId,
-      reflection_date: reflectionDate,
-      energy_level: energyLevel,
-      stress_level: stressLevel,
-      mood_tags: moodTags,
-      what_did: whatDid || null,
-      what_learned: whatLearned || null,
-      what_felt: whatFelt || null,
-      top_priority: topPriority || null,
-      blockers: blockers || null,
-      ai_summary: summary,
-      ai_theme: theme,
-      ai_micro_actions: microActions,
-      ai_suggested_task: suggestedTask,
-      updated_at: new Date().toISOString(),
-    };
+    // --- Upsert into daily_reflections -------------------------
 
-    console.log('[generate-daily-reflection] Upserting data:', JSON.stringify(upsertData));
-
-    const { data: reflection, error: upsertError } = await supabase
-      .from('daily_reflections')
-      .upsert(upsertData, {
-        onConflict: 'user_id,reflection_date',
-      })
-      .select()
+    const { data, error } = await supabase
+      .from("daily_reflections")
+      .upsert(
+        {
+          user_id: userId,
+          reflection_date: reflectionDate,
+          energy_level: normalizedEnergy,
+          stress_level: normalizedStress,
+          mood_tags: normalizedMoodTags,
+          what_did: whatDid ?? "",
+          what_learned: whatLearned ?? "",
+          what_felt: whatFelt ?? "",
+          top_priority: topPriority ?? "",
+          blockers: blockers ?? "",
+          ai_summary: aiResult.summary,
+          ai_theme: aiResult.theme,
+          ai_micro_actions: aiResult.micro_actions,
+          ai_suggested_task: aiResult.suggested_task,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id,reflection_date",
+        }
+      )
+      .select("*")
       .single();
 
-    if (upsertError) {
-      console.error('[generate-daily-reflection] Upsert error:', upsertError);
-      throw upsertError;
+    if (error) {
+      console.error("[generate-daily-reflection] Error upserting:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to store reflection" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log('[generate-daily-reflection] Reflection saved successfully:', reflection.id);
+    console.log('[generate-daily-reflection] Reflection saved successfully:', data.id);
 
-    return new Response(JSON.stringify({
-      success: true,
-      reflection,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    // --- Respond to frontend ----------------------------------
 
-  } catch (error) {
-    console.error('[generate-daily-reflection] Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        reflection: data,
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (err) {
+    console.error("[generate-daily-reflection] Unhandled error:", err);
+    return new Response(
+      JSON.stringify({ error: "Internal error processing reflection" }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });
