@@ -8,6 +8,7 @@ import { ExecutionPatternsCard } from "@/components/context-inspector/ExecutionP
 import { AIInterpretationCard } from "@/components/context-inspector/AIInterpretationCard";
 import { Eye, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 
 export default function ContextInspector() {
   const { context, loading, error } = useUserContext();
@@ -15,16 +16,57 @@ export default function ContextInspector() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-primary/10">
-          <Eye className="h-6 w-6 text-primary" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Eye className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">AI Context Inspector</h1>
+            <p className="text-muted-foreground">
+              Everything your AI cofounder knows about you right now
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold">AI Context Inspector</h1>
-          <p className="text-muted-foreground">
-            Everything your AI cofounder knows about you right now
-          </p>
-        </div>
+
+        {/* Profile Completeness */}
+        {!loading && context && (
+          <div className="w-full sm:w-64 p-4 rounded-lg border bg-card">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Profile Completeness</span>
+              <span className={`text-sm font-semibold ${
+                context.profileCompleteness < 45 
+                  ? "text-destructive" 
+                  : context.profileCompleteness < 85 
+                    ? "text-foreground" 
+                    : "text-green-600 dark:text-green-400"
+              }`}>
+                {context.profileCompleteness}%
+              </span>
+            </div>
+            <Progress 
+              value={context.profileCompleteness} 
+              className={`h-2 ${
+                context.profileCompleteness < 45 
+                  ? "[&>div]:bg-destructive" 
+                  : context.profileCompleteness < 85 
+                    ? "[&>div]:bg-primary" 
+                    : "[&>div]:bg-green-600 dark:[&>div]:bg-green-400"
+              }`}
+            />
+            <p className={`text-xs mt-2 ${
+              context.profileCompleteness < 45 
+                ? "text-destructive" 
+                : "text-muted-foreground"
+            }`}>
+              {context.profileCompleteness < 45 
+                ? "AI is missing important info." 
+                : context.profileCompleteness < 85 
+                  ? "Solid foundation. You can still go deeper." 
+                  : "Your AI has rich context to work with."}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Info Alert */}
