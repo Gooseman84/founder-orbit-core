@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFounderProfile } from "@/hooks/useFounderProfile";
 import { useXP } from "@/hooks/useXP";
@@ -7,12 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LevelBadge } from "@/components/shared/LevelBadge";
 import { XpProgressBar } from "@/components/shared/XpProgressBar";
+import { ProfileEditDrawer, ProfileSection } from "@/components/profile/ProfileEditDrawer";
 import { 
   User, 
   Heart, 
   Briefcase, 
   Clock, 
-  DollarSign, 
   Target,
   Sparkles,
   Zap,
@@ -59,8 +60,16 @@ const PERSONALITY_FLAG_LABELS: Record<string, string> = {
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { profile, loading, error } = useFounderProfile();
+  const { profile, loading, error, refresh } = useFounderProfile();
   const { xpSummary, loading: xpLoading } = useXP();
+  
+  const [editSection, setEditSection] = useState<ProfileSection | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const openEditor = (section: ProfileSection) => {
+    setEditSection(section);
+    setDrawerOpen(true);
+  };
 
   if (loading) {
     return (
@@ -157,7 +166,7 @@ const Profile = () => {
                 </CardTitle>
                 <CardDescription>What drives and excites you</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding")}>
+              <Button variant="ghost" size="sm" onClick={() => openEditor("passions")}>
                 <Edit className="h-4 w-4 mr-1" />
                 Edit
               </Button>
@@ -188,7 +197,7 @@ const Profile = () => {
                 </CardTitle>
                 <CardDescription>Your expertise and capabilities</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding")}>
+              <Button variant="ghost" size="sm" onClick={() => openEditor("skills")}>
                 <Edit className="h-4 w-4 mr-1" />
                 Edit
               </Button>
@@ -220,7 +229,7 @@ const Profile = () => {
                 </CardTitle>
                 <CardDescription>Your current situation and limits</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding")}>
+              <Button variant="ghost" size="sm" onClick={() => openEditor("constraints")}>
                 <Edit className="h-4 w-4 mr-1" />
                 Edit
               </Button>
@@ -257,7 +266,7 @@ const Profile = () => {
                 </CardTitle>
                 <CardDescription>What success looks like for you</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding")}>
+              <Button variant="ghost" size="sm" onClick={() => openEditor("vision")}>
                 <Edit className="h-4 w-4 mr-1" />
                 Edit
               </Button>
@@ -303,7 +312,7 @@ const Profile = () => {
                 </CardTitle>
                 <CardDescription>Your inner motivations</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding/extended")}>
+              <Button variant="ghost" size="sm" onClick={() => openEditor("deep_desires")}>
                 <Edit className="h-4 w-4 mr-1" />
                 Edit
               </Button>
@@ -334,7 +343,7 @@ const Profile = () => {
                 </CardTitle>
                 <CardDescription>What fuels and drains you</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding/extended")}>
+              <Button variant="ghost" size="sm" onClick={() => openEditor("energy")}>
                 <Edit className="h-4 w-4 mr-1" />
                 Edit
               </Button>
@@ -366,13 +375,13 @@ const Profile = () => {
                   </CardTitle>
                   <CardDescription>How you see yourself</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding/extended")}>
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <p className="text-foreground whitespace-pre-wrap">{extended.identity_statements}</p>
+              <Button variant="ghost" size="sm" onClick={() => openEditor("identity")}>
+                <Edit className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <p className="text-foreground whitespace-pre-wrap">{extended.identity_statements}</p>
               </CardContent>
             </Card>
           )}
@@ -388,13 +397,13 @@ const Profile = () => {
                   </CardTitle>
                   <CardDescription>Types of businesses that appeal to you</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding/extended")}>
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" size="sm" onClick={() => openEditor("archetypes")}>
+                <Edit className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
                   {extended.business_archetypes.map((arch, i) => (
                     <Badge key={i} variant="outline">
                       {ARCHETYPE_LABELS[arch] || arch}
@@ -416,13 +425,13 @@ const Profile = () => {
                   </CardTitle>
                   <CardDescription>Types of work you enjoy</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding/extended")}>
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" size="sm" onClick={() => openEditor("work_preferences")}>
+                <Edit className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
                   {extended.work_preferences.map((pref, i) => (
                     <Badge key={i} variant="outline">
                       {WORK_PREF_LABELS[pref] || pref}
@@ -444,13 +453,13 @@ const Profile = () => {
                   </CardTitle>
                   <CardDescription>Your working style preferences</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding/extended")}>
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" size="sm" onClick={() => openEditor("personality")}>
+                <Edit className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
                   {Object.entries(extended.personality_flags)
                     .filter(([_, value]) => value === true)
                     .map(([key]) => (
@@ -485,6 +494,16 @@ const Profile = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Drawer */}
+      <ProfileEditDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        section={editSection}
+        coreData={core}
+        extendedData={extended}
+        onSaved={refresh}
+      />
     </div>
   );
 };
