@@ -6,43 +6,120 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// --- Context Builder (embedded for edge function) ----------------
+
+interface UserContext {
+  profile: any | null;
+  extendedIntake: any | null;
+  chosenIdea: any | null;
+  ideaAnalysis: any | null;
+  recentDocs: any[];
+  recentReflections: any[];
+}
+
+async function buildUserContext(client: any, userId: string): Promise<UserContext> {
+  const [
+    profileRes,
+    extendedIntakeRes,
+    chosenIdeaRes,
+    recentDocsRes,
+    recentReflectionsRes,
+  ] = await Promise.all([
+    client.from('founder_profiles').select('*').eq('user_id', userId).maybeSingle(),
+    client.from('user_intake_extended').select('*').eq('user_id', userId).maybeSingle(),
+    client.from('ideas').select('*').eq('user_id', userId).eq('status', 'chosen').maybeSingle(),
+    client.from('workspace_documents')
+      .select('id, title, content, doc_type, status, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(3),
+    client.from('daily_reflections')
+      .select('reflection_date, ai_summary, ai_theme, energy_level, stress_level, mood_tags, what_did, top_priority')
+      .eq('user_id', userId)
+      .order('reflection_date', { ascending: false })
+      .limit(7),
+  ]);
+
+  // If we have a chosen idea, also fetch its analysis
+  let ideaAnalysis = null;
+  if (chosenIdeaRes.data?.id) {
+    const { data: analysis } = await client
+      .from('idea_analysis')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('idea_id', chosenIdeaRes.data.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    ideaAnalysis = analysis;
+  }
+
+  return {
+    profile: profileRes.data ?? null,
+    extendedIntake: extendedIntakeRes.data ?? null,
+    chosenIdea: chosenIdeaRes.data ?? null,
+    ideaAnalysis,
+    recentDocs: recentDocsRes.data ?? [],
+    recentReflections: recentReflectionsRes.data ?? [],
+  };
+}
+
+function formatDocsForPrompt(docs: { title: string | null; content: string | null; doc_type?: string | null }[]): string {
+  if (!docs?.length) return 'No recent workspace notes.';
+  return docs
+    .map((doc, idx) => {
+      const title = doc.title || `Document ${idx + 1}`;
+      const docType = doc.doc_type ? ` (${doc.doc_type})` : '';
+      const content = (doc.content || '').slice(0, 400).trim();
+      const truncated = content.length >= 400 ? '...' : '';
+      return `- [${title}${docType}]: ${content}${truncated}`;
+    })
+    .join('\n');
+}
+
+function formatReflectionsForPrompt(reflections: any[]): string {
+  if (!reflections?.length) return 'No recent reflections.';
+  return reflections
+    .slice(0, 5)
+    .map((r) => {
+      const date = r.reflection_date;
+      const theme = r.ai_theme ? `Theme: "${r.ai_theme}"` : '';
+      const energy = r.energy_level ? `Energy: ${r.energy_level}/5` : '';
+      const stress = r.stress_level ? `Stress: ${r.stress_level}/5` : '';
+      const priority = r.top_priority ? `Priority: "${r.top_priority}"` : '';
+      const parts = [theme, energy, stress, priority].filter(Boolean).join(' | ');
+      return `- [${date}] ${parts}`;
+    })
+    .join('\n');
+}
+
+// --- System Prompt ------------------------------------------------
+
 const SYSTEM_PROMPT = `You are an expert startup advisor, idea refinement coach, competitor analyst, and micro-task creator.
 
-Your job is to produce DAILY FEED ITEMS tailored to the founder's profile, their chosen idea, and the latest idea analysis.
+Your job is to produce DAILY FEED ITEMS that are HIGHLY PERSONALIZED to:
+1. The founder's profile, passions, skills, and constraints
+2. Their current chosen idea and its analysis
+3. What they've been working on (workspace notes)
+4. Their recent emotional/energy state (reflections)
 
-Each feed item should be short, punchy, and immediately actionable.
+Each feed item should be short, punchy, and immediately actionable. Items should feel like they were written by a co-founder who deeply understands their situation.
 
-Given input JSON:
-{
-  "founder_profile": { ... },
-  "idea": { ... },
-  "analysis": { ... }
-}
-
-Respond with STRICT JSON ONLY:
-
-{
-  "items": [
-    {
-      "type": "insight" | "idea_tweak" | "competitor_snapshot" | "micro_task",
-      "title": "string",
-      "body": "string",
-      "cta_label": "string or null",
-      "cta_action": "string or null",
-      "xp_reward": number,
-      "metadata": { ... }
-    }
-  ]
-}
+Feed item types:
+- "insight": Strategic truths relevant to their specific idea and stage
+- "idea_tweak": Concrete modifications to improve their specific idea
+- "competitor_snapshot": Analysis of competitor types in their specific market
+- "micro_task": Small tasks (<10 min) that move their specific project forward
 
 Rules:
-- Use simple language.
-- Every item must be immediately useful.
-- micro_task items should be doable in <10 minutes.
-- idea_tweak items should modify the idea slightly.
-- competitor_snapshot should point out a real competitor type (no specific company names required).
-- insights should be strategic truths.
-- Always output valid JSON only.`;
+- Use simple, direct language
+- Every item must be immediately useful and relevant to THEIR situation
+- Reference their workspace notes when relevant (e.g., "Building on your outline about X...")
+- Consider their energy/stress levels when suggesting tasks
+- Align with their passions and skills
+- Respect their time and capital constraints
+- NO generic advice - everything must be specific to their context
+- Always output valid JSON only`;
 
 // Valid feed item types
 const FEED_TYPES = ["insight", "idea_tweak", "competitor_snapshot", "micro_task"];
@@ -56,12 +133,10 @@ function formatFeedItems(rawItems: any[]): any[] {
 
   return rawItems
     .filter((item) => {
-      // Validate required fields
       if (!item.type || !item.title || !item.body) {
         console.warn("formatFeedItems: skipping item missing required fields", item);
         return false;
       }
-      // Validate type
       if (!FEED_TYPES.includes(item.type)) {
         console.warn("formatFeedItems: skipping item with invalid type", item.type);
         return false;
@@ -80,7 +155,6 @@ function formatFeedItems(rawItems: any[]): any[] {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -88,7 +162,6 @@ serve(async (req) => {
   try {
     const { userId } = await req.json();
 
-    // Resolve userId
     if (!userId) {
       console.error("generate-feed-items: userId is required");
       return new Response(
@@ -99,44 +172,82 @@ serve(async (req) => {
 
     console.log("generate-feed-items: resolved userId", userId);
 
-    // Initialize Supabase client with service role key
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    // Build feed input using feedEngine logic
-    const { data: founder_profile } = await supabase
-      .from("founder_profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    // --- Fetch full user context ---
+    console.log("generate-feed-items: fetching user context...");
+    const userContext = await buildUserContext(supabase, userId);
+    const docsSnippet = formatDocsForPrompt(userContext.recentDocs);
+    const reflectionsSnippet = formatReflectionsForPrompt(userContext.recentReflections);
 
-    const { data: idea } = await supabase
-      .from("ideas")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("status", "chosen")
-      .maybeSingle();
+    console.log("generate-feed-items: context loaded - profile:", !!userContext.profile, 
+      "idea:", !!userContext.chosenIdea, "docs:", userContext.recentDocs.length,
+      "reflections:", userContext.recentReflections.length);
 
-    let analysis = null;
-    if (idea) {
-      const { data: analysisData } = await supabase
-        .from("idea_analysis")
-        .select("*")
-        .eq("idea_id", idea.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      analysis = analysisData;
-    }
+    // --- Build rich user prompt with full context ---
+    const userPrompt = `Generate personalized feed items for this founder based on their complete context.
 
-    const feedInput = {
-      founder_profile: founder_profile || null,
-      idea: idea || null,
-      analysis: analysis || null,
-    };
+## Founder Profile
+${userContext.profile ? JSON.stringify({
+  passions: userContext.profile.passions_text || userContext.profile.passions_tags?.join(', ') || 'Not specified',
+  skills: userContext.profile.skills_text || userContext.profile.skills_tags?.join(', ') || 'Not specified',
+  time_per_week: userContext.profile.time_per_week,
+  capital_available: userContext.profile.capital_available,
+  risk_tolerance: userContext.profile.risk_tolerance,
+  tech_level: userContext.profile.tech_level,
+  success_vision: userContext.profile.success_vision?.slice(0, 300),
+}, null, 2) : 'No profile available yet'}
 
-    console.log("generate-feed-items: sending input", JSON.stringify(feedInput).substring(0, 200));
+## Extended Intake (Deeper Self-Knowledge)
+${userContext.extendedIntake ? JSON.stringify({
+  deep_desires: userContext.extendedIntake.deep_desires?.slice(0, 200),
+  fears: userContext.extendedIntake.fears?.slice(0, 200),
+  energy_givers: userContext.extendedIntake.energy_givers?.slice(0, 150),
+  energy_drainers: userContext.extendedIntake.energy_drainers?.slice(0, 150),
+  personality_flags: userContext.extendedIntake.personality_flags,
+}, null, 2) : 'No extended intake available'}
+
+## Current Chosen Idea
+${userContext.chosenIdea ? JSON.stringify({
+  title: userContext.chosenIdea.title,
+  description: userContext.chosenIdea.description?.slice(0, 300),
+  business_model_type: userContext.chosenIdea.business_model_type,
+  target_customer: userContext.chosenIdea.target_customer,
+  complexity: userContext.chosenIdea.complexity,
+  time_to_first_dollar: userContext.chosenIdea.time_to_first_dollar,
+  overall_fit_score: userContext.chosenIdea.overall_fit_score,
+}, null, 2) : 'No chosen idea yet - generate exploratory content'}
+
+## Idea Analysis
+${userContext.ideaAnalysis ? JSON.stringify({
+  niche_score: userContext.ideaAnalysis.niche_score,
+  market_insight: userContext.ideaAnalysis.market_insight?.slice(0, 200),
+  problem_intensity: userContext.ideaAnalysis.problem_intensity,
+  competition_snapshot: userContext.ideaAnalysis.competition_snapshot?.slice(0, 200),
+  elevator_pitch: userContext.ideaAnalysis.elevator_pitch?.slice(0, 200),
+  biggest_risks: userContext.ideaAnalysis.biggest_risks,
+}, null, 2) : 'No idea analysis available'}
+
+## Recent Workspace Notes (what they're actively working on)
+${docsSnippet}
+
+## Recent Reflection Patterns (emotional/energy state)
+${reflectionsSnippet}
+
+---
+
+Based on ALL the context above, generate 4-6 feed items that:
+1. Are directly relevant to their chosen idea (if they have one) or help them find direction (if not)
+2. Reference their workspace notes when helpful (e.g., "Building on your offer outline...")
+3. Consider their energy/stress patterns when suggesting tasks
+4. Align with their passions, skills, and constraints
+5. Address any risks or opportunities from their idea analysis
+6. Feel like advice from a co-founder who truly knows their situation
+
+Return the items as a JSON object with an "items" array.`;
 
     // Call Lovable AI
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -154,7 +265,7 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: JSON.stringify(feedInput) },
+          { role: "user", content: userPrompt },
         ],
         tools: [
           {
@@ -196,6 +307,21 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("generate-feed-items: AI API error", response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "AI credits exhausted. Please add funds to continue." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: "AI API error", details: errorText }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -234,7 +360,7 @@ serve(async (req) => {
     // Insert feed items into database
     const itemsToInsert = formattedItems.map((item) => ({
       user_id: userId,
-      idea_id: idea?.id || null,
+      idea_id: userContext.chosenIdea?.id || null,
       type: item.type,
       title: item.title,
       body: item.body,
