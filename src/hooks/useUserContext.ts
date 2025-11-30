@@ -12,6 +12,38 @@ export interface UserContextData {
   recentTasks: any[];
   streakData: any | null;
   xpTotal: number;
+  profileCompleteness: number;
+}
+
+function calculateProfileCompleteness(
+  profile: any | null,
+  extendedIntake: any | null,
+  chosenIdea: any | null
+): number {
+  let score = 0;
+
+  // Founder profile fields (70 points max)
+  if (profile) {
+    if (profile.passions_text || profile.passions_tags?.length) score += 15;
+    if (profile.skills_text || profile.skills_tags?.length) score += 15;
+    if (profile.time_per_week) score += 10;
+    if (profile.capital_available) score += 10;
+    if (profile.risk_tolerance) score += 10;
+    if (profile.success_vision) score += 10;
+  }
+
+  // Extended intake fields (20 points max)
+  if (extendedIntake) {
+    if (extendedIntake.deep_desires) score += 10;
+    if (extendedIntake.fears) score += 5;
+    if (extendedIntake.energy_givers || extendedIntake.energy_drainers) score += 5;
+  }
+
+  // Chosen idea (10 points)
+  if (chosenIdea) score += 10;
+
+  // Cap at 100 and round to nearest 5
+  return Math.min(100, Math.round(score / 5) * 5);
 }
 
 export function useUserContext() {
@@ -96,16 +128,21 @@ export function useUserContext() {
         ideaAnalysis = analysis;
       }
 
+      const profileData = profileRes.data ?? null;
+      const extendedIntakeData = extendedIntakeRes.data ?? null;
+      const chosenIdeaData = chosenIdeaRes.data ?? null;
+
       setContext({
-        profile: profileRes.data ?? null,
-        extendedIntake: extendedIntakeRes.data ?? null,
-        chosenIdea: chosenIdeaRes.data ?? null,
+        profile: profileData,
+        extendedIntake: extendedIntakeData,
+        chosenIdea: chosenIdeaData,
         ideaAnalysis,
         recentDocs: recentDocsRes.data ?? [],
         recentReflections: recentReflectionsRes.data ?? [],
         recentTasks: recentTasksRes.data ?? [],
         streakData: streakRes.data ?? null,
         xpTotal: xpRes.data ?? 0,
+        profileCompleteness: calculateProfileCompleteness(profileData, extendedIntakeData, chosenIdeaData),
       });
     } catch (err) {
       console.error("Error fetching user context:", err);
