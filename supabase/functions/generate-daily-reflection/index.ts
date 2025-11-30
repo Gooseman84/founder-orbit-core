@@ -112,28 +112,59 @@ serve(async (req) => {
       .eq('status', 'chosen')
       .maybeSingle();
 
-    // Build AI input
-    const aiInput = {
-      energy_level: energyLevel,
-      stress_level: stressLevel,
-      mood_tags: moodTags,
-      what_did: whatDid,
-      what_learned: whatLearned,
-      what_felt: whatFelt,
-      top_priority: topPriority,
-      blockers: blockers,
-      founder_context: founderProfile ? {
-        passions: founderProfile.passions_tags,
-        skills: founderProfile.skills_tags,
-        time_per_week: founderProfile.time_per_week,
-      } : null,
-      chosen_idea: chosenIdea ? {
-        title: chosenIdea.title,
-        description: chosenIdea.description,
-      } : null,
-    };
+    // Build user prompt with interpretation guidance
+    const userPrompt = `
+You are generating a daily reflection for this founder.
 
-    console.log('[generate-daily-reflection] AI input:', JSON.stringify(aiInput));
+Here is today's raw data as JSON:
+
+${JSON.stringify({
+  reflectionDate,
+  energy_level: energyLevel,
+  stress_level: stressLevel,
+  mood_tags: moodTags,
+  what_did: whatDid,
+  what_learned: whatLearned,
+  what_felt: whatFelt,
+  top_priority: topPriority,
+  blockers: blockers,
+  founder_context: founderProfile ? {
+    passions: founderProfile.passions_tags,
+    skills: founderProfile.skills_tags,
+    time_per_week: founderProfile.time_per_week,
+  } : null,
+  chosen_idea: chosenIdea ? {
+    title: chosenIdea.title,
+    description: chosenIdea.description,
+  } : null,
+}, null, 2)}
+
+Interpretation guidance:
+
+- energy_level: 1–5 (1 = very low, 5 = very high).
+- stress_level: 1–5 (1 = minimal, 5 = overwhelming).
+- mood_tags: emotional keywords they selected.
+- what_did: what they actually worked on or accomplished.
+- what_learned: insights, lessons, or realizations.
+- what_felt: how they feel about their progress and day.
+- top_priority: what they say matters most for tomorrow.
+- blockers: what they feel is in the way.
+- founder_context: their passions, skills, and available time (if available).
+- chosen_idea: their current business idea they're building (if available).
+
+Task:
+1. Read the data.
+2. Decide what the real story of the day is.
+3. Identify a short, sharp theme that captures the day.
+4. Suggest 1–3 micro-actions that would make tomorrow meaningfully better.
+5. If relevant, propose ONE suggested task that would belong on their task list.
+
+Remember:
+- You must output ONLY valid JSON with the exact structure described in the system message.
+- If you are unsure about some details, acknowledge that in the "summary", but still provide practical micro-actions.
+`;
+
+    console.log('[generate-daily-reflection] User prompt built for date:', reflectionDate);
 
     // Call OpenAI
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -146,7 +177,7 @@ serve(async (req) => {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: JSON.stringify(aiInput) }
+          { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
       }),
