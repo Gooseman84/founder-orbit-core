@@ -670,6 +670,7 @@ export type Database = {
           title: string
           type: string | null
           user_id: string
+          workspace_document_id: string | null
           xp_reward: number | null
         }
         Insert: {
@@ -686,6 +687,7 @@ export type Database = {
           title: string
           type?: string | null
           user_id: string
+          workspace_document_id?: string | null
           xp_reward?: number | null
         }
         Update: {
@@ -702,6 +704,7 @@ export type Database = {
           title?: string
           type?: string | null
           user_id?: string
+          workspace_document_id?: string | null
           xp_reward?: number | null
         }
         Relationships: [
@@ -710,6 +713,13 @@ export type Database = {
             columns: ["idea_id"]
             isOneToOne: false
             referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_workspace_document_id_fkey"
+            columns: ["workspace_document_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_documents"
             referencedColumns: ["id"]
           },
         ]
@@ -864,6 +874,7 @@ export type Database = {
           doc_type: string | null
           id: string
           idea_id: string | null
+          linked_task_id: string | null
           metadata: Json | null
           source_id: string | null
           source_type: string | null
@@ -879,6 +890,7 @@ export type Database = {
           doc_type?: string | null
           id?: string
           idea_id?: string | null
+          linked_task_id?: string | null
           metadata?: Json | null
           source_id?: string | null
           source_type?: string | null
@@ -894,6 +906,7 @@ export type Database = {
           doc_type?: string | null
           id?: string
           idea_id?: string | null
+          linked_task_id?: string | null
           metadata?: Json | null
           source_id?: string | null
           source_type?: string | null
@@ -902,7 +915,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workspace_documents_linked_task_id_fkey"
+            columns: ["linked_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       xp_events: {
         Row: {
