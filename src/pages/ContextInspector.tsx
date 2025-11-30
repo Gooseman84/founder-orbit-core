@@ -6,6 +6,7 @@ import { WorkspaceDocsCard } from "@/components/context-inspector/WorkspaceDocsC
 import { ReflectionPatternsCard } from "@/components/context-inspector/ReflectionPatternsCard";
 import { ExecutionPatternsCard } from "@/components/context-inspector/ExecutionPatternsCard";
 import { AIInterpretationCard } from "@/components/context-inspector/AIInterpretationCard";
+import { ContextHistoryCard } from "@/components/context-inspector/ContextHistoryCard";
 import { Eye, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
@@ -112,6 +113,12 @@ export default function ContextInspector() {
           />
         </div>
       </div>
+
+      {/* Context History Timeline */}
+      <ContextHistoryCard 
+        events={context?.contextHistory || []} 
+        loading={loading} 
+      />
     </div>
   );
 }
