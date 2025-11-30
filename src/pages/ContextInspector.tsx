@@ -1,4 +1,7 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useUserContext } from "@/hooks/useUserContext";
+import { useAuth } from "@/hooks/useAuth";
 import { FounderProfileCard } from "@/components/context-inspector/FounderProfileCard";
 import { ExtendedIntakeCard } from "@/components/context-inspector/ExtendedIntakeCard";
 import { ChosenIdeaCard } from "@/components/context-inspector/ChosenIdeaCard";
@@ -7,12 +10,72 @@ import { ReflectionPatternsCard } from "@/components/context-inspector/Reflectio
 import { ExecutionPatternsCard } from "@/components/context-inspector/ExecutionPatternsCard";
 import { AIInterpretationCard } from "@/components/context-inspector/AIInterpretationCard";
 import { ContextHistoryCard } from "@/components/context-inspector/ContextHistoryCard";
-import { Eye, Info } from "lucide-react";
+import { Eye, Info, FileDown, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 export default function ContextInspector() {
   const { context, loading, error } = useUserContext();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportContextDoc = async () => {
+    if (!context || !user?.id) {
+      toast.error("No context available to export");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      // Call the edge function to generate the document
+      const { data: funcData, error: funcError } = await supabase.functions.invoke(
+        "generate-context-doc",
+        { body: { context } }
+      );
+
+      if (funcError) throw funcError;
+      if (funcData?.error) throw new Error(funcData.error);
+
+      const content = funcData?.content;
+      if (!content) throw new Error("No content generated");
+
+      // Save as workspace document
+      const today = format(new Date(), "yyyy-MM-dd");
+      const title = `AI Context Snapshot – ${today}`;
+
+      const { data: doc, error: insertError } = await supabase
+        .from("workspace_documents")
+        .insert({
+          user_id: user.id,
+          title,
+          doc_type: "context_snapshot",
+          content,
+          status: "draft",
+        })
+        .select("id")
+        .single();
+
+      if (insertError) throw insertError;
+
+      toast.success("Context snapshot created in your Workspace.", {
+        action: {
+          label: "View Document",
+          onClick: () => navigate(`/workspace?doc=${doc.id}`),
+        },
+      });
+    } catch (err) {
+      console.error("Export error:", err);
+      const message = err instanceof Error ? err.message : "Failed to export context";
+      toast.error(message);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -30,44 +93,61 @@ export default function ContextInspector() {
           </div>
         </div>
 
-        {/* Profile Completeness */}
-        {!loading && context && (
-          <div className="w-full sm:w-64 p-4 rounded-lg border bg-card">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Profile Completeness</span>
-              <span className={`text-sm font-semibold ${
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-start">
+          {/* Export Button */}
+          <Button
+            variant="outline"
+            onClick={handleExportContextDoc}
+            disabled={loading || exporting || !context}
+            className="gap-2"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileDown className="h-4 w-4" />
+            )}
+            Export as Context Doc
+          </Button>
+
+          {/* Profile Completeness */}
+          {!loading && context && (
+            <div className="w-full sm:w-64 p-4 rounded-lg border bg-card">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Profile Completeness</span>
+                <span className={`text-sm font-semibold ${
+                  context.profileCompleteness < 45 
+                    ? "text-destructive" 
+                    : context.profileCompleteness < 85 
+                      ? "text-foreground" 
+                      : "text-green-600 dark:text-green-400"
+                }`}>
+                  {context.profileCompleteness}%
+                </span>
+              </div>
+              <Progress 
+                value={context.profileCompleteness} 
+                className={`h-2 ${
+                  context.profileCompleteness < 45 
+                    ? "[&>div]:bg-destructive" 
+                    : context.profileCompleteness < 85 
+                      ? "[&>div]:bg-primary" 
+                      : "[&>div]:bg-green-600 dark:[&>div]:bg-green-400"
+                }`}
+              />
+              <p className={`text-xs mt-2 ${
                 context.profileCompleteness < 45 
                   ? "text-destructive" 
-                  : context.profileCompleteness < 85 
-                    ? "text-foreground" 
-                    : "text-green-600 dark:text-green-400"
+                  : "text-muted-foreground"
               }`}>
-                {context.profileCompleteness}%
-              </span>
-            </div>
-            <Progress 
-              value={context.profileCompleteness} 
-              className={`h-2 ${
-                context.profileCompleteness < 45 
-                  ? "[&>div]:bg-destructive" 
+                {context.profileCompleteness < 45 
+                  ? "AI is missing important info." 
                   : context.profileCompleteness < 85 
-                    ? "[&>div]:bg-primary" 
-                    : "[&>div]:bg-green-600 dark:[&>div]:bg-green-400"
-              }`}
-            />
-            <p className={`text-xs mt-2 ${
-              context.profileCompleteness < 45 
-                ? "text-destructive" 
-                : "text-muted-foreground"
-            }`}>
-              {context.profileCompleteness < 45 
-                ? "AI is missing important info." 
-                : context.profileCompleteness < 85 
-                  ? "Solid foundation. You can still go deeper." 
-                  : "Your AI has rich context to work with."}
-            </p>
-          </div>
-        )}
+                    ? "Solid foundation. You can still go deeper." 
+                    : "Your AI has rich context to work with."}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Info Alert */}
