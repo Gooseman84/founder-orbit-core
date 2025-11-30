@@ -15,7 +15,8 @@ import {
   Zap,
   CreditCard,
   LogOut,
-  Map
+  Map,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LevelBadge } from "@/components/shared/LevelBadge";
@@ -32,6 +33,7 @@ const navigation = [
   { name: "Radar", href: "/radar", icon: Radar },
   { name: "North Star", href: "/north-star", icon: Target },
   { name: "Blueprint", href: "/blueprint", icon: Map },
+  { name: "AI Context", href: "/context-inspector", icon: Eye },
   { name: "Profile", href: "/profile", icon: User },
   { name: "Billing", href: "/billing", icon: CreditCard },
 ];

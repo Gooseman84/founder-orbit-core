@@ -28,6 +28,7 @@ import Workspace from "./pages/Workspace";
 import DailyStreak from "./pages/DailyStreak";
 import Billing from "./pages/Billing";
 import Blueprint from "./pages/Blueprint";
+import ContextInspector from "./pages/ContextInspector";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/streak" element={<ProtectedRoute><MainLayout><DailyStreak /></MainLayout></ProtectedRoute>} />
             <Route path="/billing" element={<ProtectedRoute><MainLayout><Billing /></MainLayout></ProtectedRoute>} />
             <Route path="/blueprint" element={<ProtectedRoute><MainLayout><Blueprint /></MainLayout></ProtectedRoute>} />
+            <Route path="/context-inspector" element={<ProtectedRoute><MainLayout><ContextInspector /></MainLayout></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
