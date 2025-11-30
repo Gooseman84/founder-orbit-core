@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, isToday, isYesterday, parseISO } from "date-fns";
+import { format, subDays, isToday, isYesterday, parseISO, differenceInDays } from "date-fns";
 
 export interface StreakData {
   current_streak: number;
@@ -124,4 +124,98 @@ export async function markDayComplete(userId: string): Promise<StreakData> {
   }
 
   return data;
+}
+
+/**
+ * Calculate the current reflection streak from daily_reflections table
+ * This is the "live" streak based on consecutive days of reflections
+ */
+export async function calculateReflectionStreak(userId: string): Promise<number> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Fetch the last 60 days of reflections ordered by date desc
+  const { data, error } = await supabase
+    .from("daily_reflections")
+    .select("reflection_date")
+    .eq("user_id", userId)
+    .order("reflection_date", { ascending: false })
+    .limit(60);
+
+  if (error) {
+    console.error("Error calculating reflection streak:", error);
+    return 0;
+  }
+
+  if (!data || data.length === 0) {
+    return 0;
+  }
+
+  // Convert to date objects and sort descending
+  const dates = data
+    .map(r => parseISO(r.reflection_date))
+    .sort((a, b) => b.getTime() - a.getTime());
+
+  let streak = 0;
+  let currentDate = today;
+
+  for (const reflectionDate of dates) {
+    reflectionDate.setHours(0, 0, 0, 0);
+    const daysDiff = differenceInDays(currentDate, reflectionDate);
+    
+    if (daysDiff === 0) {
+      // Same day - count it
+      streak++;
+      currentDate = subDays(currentDate, 1);
+    } else if (daysDiff === 1) {
+      // Yesterday - this is expected, count it
+      streak++;
+      currentDate = subDays(currentDate, 1);
+    } else {
+      // Gap found - stop counting
+      break;
+    }
+  }
+
+  return streak;
+}
+
+/**
+ * Streak milestone definitions
+ */
+export const STREAK_MILESTONES = [
+  { days: 3, xp: 10, eventType: "daily_reflection_streak_3", emoji: "🔥", message: "3-day streak!" },
+  { days: 7, xp: 25, eventType: "daily_reflection_streak_7", emoji: "💪", message: "7-day streak!" },
+  { days: 30, xp: 100, eventType: "daily_reflection_streak_30", emoji: "🏆", message: "30-day streak!" },
+];
+
+/**
+ * Check if a streak milestone bonus has already been awarded
+ */
+export async function hasReceivedStreakBonus(userId: string, eventType: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("xp_events")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("event_type", eventType)
+    .limit(1);
+
+  if (error) {
+    console.error("Error checking streak bonus:", error);
+    return false;
+  }
+
+  return (data?.length ?? 0) > 0;
+}
+
+/**
+ * Get the next milestone the user can earn
+ */
+export function getNextMilestone(currentStreak: number): typeof STREAK_MILESTONES[0] | null {
+  for (const milestone of STREAK_MILESTONES) {
+    if (currentStreak < milestone.days) {
+      return milestone;
+    }
+  }
+  return null;
 }

@@ -7,8 +7,10 @@ import { useToast } from "@/hooks/use-toast";
 import { DailyReflectionForm } from "@/components/reflection/DailyReflectionForm";
 import { DailyReflectionInsights } from "@/components/reflection/DailyReflectionInsights";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { recordXpEvent } from "@/lib/xpEngine";
-import { History, Calendar, Loader2 } from "lucide-react";
+import { calculateReflectionStreak, STREAK_MILESTONES, hasReceivedStreakBonus } from "@/lib/streakEngine";
+import { History, Calendar, Loader2, Flame } from "lucide-react";
 
 export default function DailyReflection() {
   const navigate = useNavigate();
@@ -20,6 +22,8 @@ export default function DailyReflection() {
   const [isFetching, setIsFetching] = useState(true);
   const [todayReflection, setTodayReflection] = useState<any>(null);
   const [taskAccepted, setTaskAccepted] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [loadingStreak, setLoadingStreak] = useState(true);
 
   // Fetch today's reflection on load
   useEffect(() => {
@@ -53,6 +57,25 @@ export default function DailyReflection() {
 
     fetchTodayReflection();
   }, [user?.id]);
+
+  // Fetch current streak
+  useEffect(() => {
+    const fetchStreak = async () => {
+      if (!user?.id) return;
+      
+      setLoadingStreak(true);
+      try {
+        const streak = await calculateReflectionStreak(user.id);
+        setCurrentStreak(streak);
+      } catch (error) {
+        console.error("Error fetching streak:", error);
+      } finally {
+        setLoadingStreak(false);
+      }
+    };
+
+    fetchStreak();
+  }, [user?.id, todayReflection]);
 
   // Memoize initial form values from today's reflection
   const initialFormValues = useMemo(() => {
@@ -128,11 +151,39 @@ export default function DailyReflection() {
         await recordXpEvent(user.id, "daily_reflection", 20, { 
           reflectionId: data.reflection.id 
         });
+        
+        // Calculate streak after saving and check for milestone bonuses
+        const newStreak = await calculateReflectionStreak(user.id);
+        setCurrentStreak(newStreak);
+        
+        // Check for streak milestones and award bonus XP
+        let bonusMessage = "";
+        for (const milestone of STREAK_MILESTONES) {
+          if (newStreak >= milestone.days) {
+            const alreadyAwarded = await hasReceivedStreakBonus(user.id, milestone.eventType);
+            if (!alreadyAwarded) {
+              await recordXpEvent(user.id, milestone.eventType, milestone.xp, {
+                reflectionId: data.reflection.id,
+                streak: newStreak
+              });
+              bonusMessage = `${milestone.emoji} ${milestone.message} +${milestone.xp} bonus XP`;
+            }
+          }
+        }
+        
         refreshXP();
-        toast({
-          title: "Check-in complete!",
-          description: "Your insights are ready. You earned 20 XP!",
-        });
+        
+        if (bonusMessage) {
+          toast({
+            title: "Check-in complete!",
+            description: `Your insights are ready. You earned 20 XP! ${bonusMessage}`,
+          });
+        } else {
+          toast({
+            title: "Check-in complete!",
+            description: "Your insights are ready. You earned 20 XP!",
+          });
+        }
       } else {
         toast({
           title: "Reflection updated!",
@@ -206,9 +257,19 @@ export default function DailyReflection() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Daily Pulse & Check-In</h1>
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-3xl font-bold">Daily Pulse & Check-In</h1>
+            {!loadingStreak && (
+              <Badge variant={currentStreak > 0 ? "default" : "secondary"} className="gap-1">
+                <Flame className={`h-3.5 w-3.5 ${currentStreak > 0 ? "text-orange-300" : ""}`} />
+                {currentStreak} day{currentStreak !== 1 ? "s" : ""}
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground mt-1">
-            Reflect on your day and get AI-powered insights
+            {currentStreak === 0 && !todayReflection 
+              ? "Start your streak today with your first check-in."
+              : "Reflect on your day and get AI-powered insights"}
           </p>
         </div>
         <div className="flex gap-2">
