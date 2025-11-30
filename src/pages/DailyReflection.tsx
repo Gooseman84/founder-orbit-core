@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,6 +54,21 @@ export default function DailyReflection() {
     fetchTodayReflection();
   }, [user?.id]);
 
+  // Memoize initial form values from today's reflection
+  const initialFormValues = useMemo(() => {
+    if (!todayReflection) return undefined;
+    return {
+      energy_level: todayReflection.energy_level,
+      stress_level: todayReflection.stress_level,
+      mood_tags: todayReflection.mood_tags,
+      what_did: todayReflection.what_did,
+      what_learned: todayReflection.what_learned,
+      what_felt: todayReflection.what_felt,
+      top_priority: todayReflection.top_priority,
+      blockers: todayReflection.blockers,
+    };
+  }, [todayReflection]);
+
   const handleSubmit = async (formData: {
     energy_level: number;
     stress_level: number;
@@ -76,12 +91,22 @@ export default function DailyReflection() {
     setIsLoading(true);
 
     try {
+      const today = new Date().toISOString().split('T')[0];
+
       const { data, error } = await supabase.functions.invoke(
         "generate-daily-reflection",
         {
           body: {
             userId: user.id,
-            ...formData,
+            reflectionDate: today,
+            energyLevel: formData.energy_level,
+            stressLevel: formData.stress_level,
+            moodTags: formData.mood_tags,
+            whatDid: formData.what_did,
+            whatLearned: formData.what_learned,
+            whatFelt: formData.what_felt,
+            topPriority: formData.top_priority,
+            blockers: formData.blockers,
           },
         }
       );
@@ -98,16 +123,22 @@ export default function DailyReflection() {
       setTodayReflection(data.reflection);
       setTaskAccepted(false);
 
-      // Award XP
-      await recordXpEvent(user.id, "daily_reflection", 20, { 
-        reflectionId: data.reflection.id 
-      });
-      refreshXP();
-
-      toast({
-        title: "Check-in complete!",
-        description: "Your insights are ready. You earned 20 XP!",
-      });
+      // Award XP only if this is a new reflection (no previous AI summary)
+      if (!todayReflection?.ai_summary) {
+        await recordXpEvent(user.id, "daily_reflection", 20, { 
+          reflectionId: data.reflection.id 
+        });
+        refreshXP();
+        toast({
+          title: "Check-in complete!",
+          description: "Your insights are ready. You earned 20 XP!",
+        });
+      } else {
+        toast({
+          title: "Reflection updated!",
+          description: "Your daily insights have been refreshed.",
+        });
+      }
 
     } catch (error) {
       console.error("Error:", error);
@@ -216,7 +247,11 @@ export default function DailyReflection() {
             {todayReflection?.ai_summary ? "Update Today's Check-In" : "Start Today's Check-In"}
           </h2>
         </div>
-        <DailyReflectionForm onSubmit={handleSubmit} isLoading={isLoading} />
+        <DailyReflectionForm 
+          onSubmit={handleSubmit} 
+          isLoading={isLoading} 
+          initialValues={initialFormValues}
+        />
       </div>
 
       {/* Info for first-timers */}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,17 +23,41 @@ interface DailyReflectionFormProps {
     blockers: string;
   }) => void;
   isLoading: boolean;
+  initialValues?: {
+    energy_level?: number;
+    stress_level?: number;
+    mood_tags?: string[];
+    what_did?: string;
+    what_learned?: string;
+    what_felt?: string;
+    top_priority?: string;
+    blockers?: string;
+  };
 }
 
-export function DailyReflectionForm({ onSubmit, isLoading }: DailyReflectionFormProps) {
-  const [energyLevel, setEnergyLevel] = useState(3);
-  const [stressLevel, setStressLevel] = useState(3);
-  const [moodTags, setMoodTags] = useState<string[]>([]);
-  const [whatDid, setWhatDid] = useState("");
-  const [whatLearned, setWhatLearned] = useState("");
-  const [whatFelt, setWhatFelt] = useState("");
-  const [topPriority, setTopPriority] = useState("");
-  const [blockers, setBlockers] = useState("");
+export function DailyReflectionForm({ onSubmit, isLoading, initialValues }: DailyReflectionFormProps) {
+  const [energyLevel, setEnergyLevel] = useState(initialValues?.energy_level ?? 3);
+  const [stressLevel, setStressLevel] = useState(initialValues?.stress_level ?? 3);
+  const [moodTags, setMoodTags] = useState<string[]>(initialValues?.mood_tags ?? []);
+  const [whatDid, setWhatDid] = useState(initialValues?.what_did ?? "");
+  const [whatLearned, setWhatLearned] = useState(initialValues?.what_learned ?? "");
+  const [whatFelt, setWhatFelt] = useState(initialValues?.what_felt ?? "");
+  const [topPriority, setTopPriority] = useState(initialValues?.top_priority ?? "");
+  const [blockers, setBlockers] = useState(initialValues?.blockers ?? "");
+
+  // Update form when initialValues change (e.g., after fetching existing reflection)
+  useEffect(() => {
+    if (initialValues) {
+      setEnergyLevel(initialValues.energy_level ?? 3);
+      setStressLevel(initialValues.stress_level ?? 3);
+      setMoodTags(initialValues.mood_tags ?? []);
+      setWhatDid(initialValues.what_did ?? "");
+      setWhatLearned(initialValues.what_learned ?? "");
+      setWhatFelt(initialValues.what_felt ?? "");
+      setTopPriority(initialValues.top_priority ?? "");
+      setBlockers(initialValues.blockers ?? "");
+    }
+  }, [initialValues]);
 
   const toggleMoodTag = (tag: string) => {
     setMoodTags(prev => 
@@ -188,7 +212,7 @@ export function DailyReflectionForm({ onSubmit, isLoading }: DailyReflectionForm
             ) : (
               <>
                 <Sparkles className="mr-2 h-4 w-4" />
-                Complete Check-In
+                Generate My Daily Reflection
               </>
             )}
           </Button>
