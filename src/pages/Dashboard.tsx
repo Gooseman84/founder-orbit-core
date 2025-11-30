@@ -11,7 +11,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity, Radar, FileText, Flame, BarChart3, Scale } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { isToday } from "date-fns";
 import { ScoreGauge } from "@/components/opportunity/ScoreGauge";
 
 const Dashboard = () => {
@@ -26,8 +25,8 @@ const Dashboard = () => {
     quests: 0,
   });
   const [loadingTasks, setLoadingTasks] = useState(true);
-  const [latestPulse, setLatestPulse] = useState<any>(null);
-  const [loadingPulse, setLoadingPulse] = useState(true);
+  const [todayReflection, setTodayReflection] = useState<any>(null);
+  const [loadingReflection, setLoadingReflection] = useState(true);
   const [radarStats, setRadarStats] = useState({
     recentCount: 0,
     topSignal: null as any,
@@ -49,7 +48,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       fetchTaskStats();
-      fetchLatestPulse();
+      fetchTodayReflection();
       fetchRadarStats();
       fetchWorkspaceStats();
       fetchStreakData();
@@ -85,26 +84,27 @@ const Dashboard = () => {
     }
   };
 
-  const fetchLatestPulse = async () => {
+  const fetchTodayReflection = async () => {
     if (!user) return;
 
-    setLoadingPulse(true);
+    setLoadingReflection(true);
     try {
+      const today = new Date().toISOString().split('T')[0];
+      
       const { data, error } = await supabase
-        .from("pulse_checks")
+        .from("daily_reflections")
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
+        .eq("reflection_date", today)
         .maybeSingle();
 
       if (error) throw error;
 
-      setLatestPulse(data);
+      setTodayReflection(data);
     } catch (error) {
-      console.error("Error fetching latest pulse:", error);
+      console.error("Error fetching today's reflection:", error);
     } finally {
-      setLoadingPulse(false);
+      setLoadingReflection(false);
     }
   };
 
@@ -264,93 +264,98 @@ const Dashboard = () => {
 
       {/* Task Statistics, Daily Pulse, and Recent Feed */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Daily Pulse Card */}
+        {/* Daily Pulse & Check-In Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              Your Daily Pulse
+              {todayReflection ? "Today's Pulse & Check-In" : "Daily Pulse & Check-In"}
             </CardTitle>
-            <CardDescription>Track your energy, stress, and progress</CardDescription>
+            <CardDescription>
+              {todayReflection ? "Reflection complete" : "You haven't checked in yet today."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {loadingPulse ? (
+            {loadingReflection ? (
               <div className="space-y-3">
                 <Skeleton className="h-8 w-full" />
                 <Skeleton className="h-8 w-full" />
                 <Skeleton className="h-10 w-full" />
               </div>
-            ) : latestPulse && isToday(new Date(latestPulse.created_at)) ? (
+            ) : todayReflection ? (
               <div className="space-y-4">
-                {/* Today's Pulse Check */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">Today's Check-In</span>
-                  <Badge variant="secondary" className="gap-1">
-                    <Activity className="h-3 w-3" />
-                    Completed
-                  </Badge>
-                </div>
-
                 {/* Energy & Stress Levels */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 rounded-lg border bg-card">
                     <div className="text-xs font-medium text-muted-foreground mb-1">Energy</div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold">{latestPulse.energy_level}</span>
+                      <span className="text-2xl font-bold">{todayReflection.energy_level || '-'}</span>
                       <span className="text-sm text-muted-foreground">/5</span>
                     </div>
                   </div>
                   <div className="p-3 rounded-lg border bg-card">
                     <div className="text-xs font-medium text-muted-foreground mb-1">Stress</div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-bold">{latestPulse.stress_level}</span>
+                      <span className="text-2xl font-bold">{todayReflection.stress_level || '-'}</span>
                       <span className="text-sm text-muted-foreground">/5</span>
                     </div>
                   </div>
                 </div>
 
-                {/* AI Insight Preview */}
-                <div className="p-3 rounded-lg bg-secondary/50">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Today's Insight</p>
-                  <p className="text-sm line-clamp-2">{latestPulse.ai_insight}</p>
-                </div>
+                {/* Mood Tags */}
+                {todayReflection.mood_tags && todayReflection.mood_tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {todayReflection.mood_tags.slice(0, 3).map((tag: string, i: number) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {todayReflection.mood_tags.length > 3 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{todayReflection.mood_tags.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                )}
 
-                {/* View Full Button */}
-                <Button 
-                  onClick={() => navigate("/pulse")} 
-                  variant="outline"
-                  className="w-full"
-                >
-                  View Full Insight
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* No Pulse Today - CTA */}
-                <div className="text-center py-6">
-                  <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                  <h3 className="font-semibold mb-1">No pulse check today</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Take a moment to check in with yourself and get personalized insights
-                  </p>
-                </div>
-
-                {/* Latest Pulse Info (if exists) */}
-                {latestPulse && (
-                  <div className="p-3 rounded-lg border bg-muted/30 text-center">
-                    <p className="text-xs text-muted-foreground">
-                      Last check-in: {new Date(latestPulse.created_at).toLocaleDateString()}
+                {/* AI Summary Preview */}
+                {todayReflection.ai_summary && (
+                  <div className="p-3 rounded-lg bg-secondary/50">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Today's Insight</p>
+                    <p className="text-sm line-clamp-2">
+                      {todayReflection.ai_summary.length > 140 
+                        ? `${todayReflection.ai_summary.slice(0, 140)}...` 
+                        : todayReflection.ai_summary}
                     </p>
                   </div>
                 )}
 
-                {/* Record Pulse Button */}
+                {/* View / Update Button */}
                 <Button 
-                  onClick={() => navigate("/pulse")} 
+                  onClick={() => navigate("/daily-reflection")} 
+                  variant="outline"
+                  className="w-full"
+                >
+                  View / Update Today
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* No Reflection Today - CTA */}
+                <div className="text-center py-6">
+                  <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Log your day, track your energy, and get AI-powered insights.
+                  </p>
+                </div>
+
+                {/* Start Check-In Button */}
+                <Button 
+                  onClick={() => navigate("/daily-reflection")} 
                   className="w-full"
                   size="lg"
                 >
-                  Record Today's Pulse
+                  Start Today's Check-In
                 </Button>
               </div>
             )}
