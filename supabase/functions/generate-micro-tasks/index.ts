@@ -6,131 +6,133 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Embedded prompt from src/prompts/generateMicroTasks.txt
-const TASK_GENERATION_PROMPT = `You are an elite execution strategist. Your job is to turn the founder's profile, chosen idea, and idea analysis into actionable MICRO TASKS and FOUNDER QUESTS that move them forward.
+// --- Context Builder (embedded for edge function) ----------------
 
-Micro Tasks:
-- 2–10 minutes
-- Simple, actionable, low friction
-
-Founder Quests:
-- 20–60 minutes
-- Higher leverage
-- Strategy, positioning, research, or execution
-
-Input JSON includes:
-{
-  "founder_profile": { ... },
-  "idea": { ... },
-  "analysis": { ... }
+interface UserContext {
+  profile: any | null;
+  extendedIntake: any | null;
+  chosenIdea: any | null;
+  ideaAnalysis: any | null;
+  recentDocs: any[];
+  recentReflections: any[];
 }
 
-Output STRICT JSON ONLY:
+async function buildUserContext(client: any, userId: string): Promise<UserContext> {
+  const [
+    profileRes,
+    extendedIntakeRes,
+    chosenIdeaRes,
+    recentDocsRes,
+    recentReflectionsRes,
+  ] = await Promise.all([
+    client.from('founder_profiles').select('*').eq('user_id', userId).maybeSingle(),
+    client.from('user_intake_extended').select('*').eq('user_id', userId).maybeSingle(),
+    client.from('ideas').select('*').eq('user_id', userId).eq('status', 'chosen').maybeSingle(),
+    client.from('workspace_documents')
+      .select('id, title, content, doc_type, status, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(5),
+    client.from('daily_reflections')
+      .select('reflection_date, ai_summary, ai_theme, energy_level, stress_level, mood_tags, what_did, top_priority')
+      .eq('user_id', userId)
+      .order('reflection_date', { ascending: false })
+      .limit(7),
+  ]);
 
-{
-  "tasks": [
-    {
-      "type": "micro" | "quest",
-      "title": "string",
-      "description": "string",
-      "xp_reward": number,
-      "metadata": { ... }
-    }
-  ]
-}
-
-Rules:
-- No fluff.
-- Keep tasks extremely concrete.
-- Use simple language.
-- Suggest only tasks aligned with the founder's constraints.
-- Always return valid JSON.`;
-
-// Build task input (inlined from tasksEngine)
-async function buildTaskInput(supabaseClient: any, userId: string) {
-  console.log('Building task input for userId:', userId);
-
-  // Fetch founder profile
-  const { data: profile, error: profileError } = await supabaseClient
-    .from("founder_profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (profileError) {
-    console.error("Error fetching founder profile:", profileError);
-    throw new Error("Failed to fetch founder profile");
-  }
-
-  if (!profile) {
-    throw new Error("No founder profile found. Please complete onboarding first.");
-  }
-
-  // Fetch chosen idea
-  const { data: idea, error: ideaError } = await supabaseClient
-    .from("ideas")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("status", "chosen")
-    .maybeSingle();
-
-  if (ideaError) {
-    console.error("Error fetching chosen idea:", ideaError);
-    throw new Error("Failed to fetch chosen idea");
-  }
-
-  if (!idea) {
-    throw new Error("No chosen idea found. Please choose an idea first.");
-  }
-
-  // Fetch latest analysis for the chosen idea
-  const { data: analysis, error: analysisError } = await supabaseClient
-    .from("idea_analysis")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("idea_id", idea.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (analysisError) {
-    console.error("Error fetching idea analysis:", analysisError);
-    throw new Error("Failed to fetch idea analysis");
-  }
-
-  if (!analysis) {
-    throw new Error("No analysis found for chosen idea. Please analyze the idea first.");
+  // If we have a chosen idea, also fetch its analysis
+  let ideaAnalysis = null;
+  if (chosenIdeaRes.data?.id) {
+    const { data: analysis } = await client
+      .from('idea_analysis')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('idea_id', chosenIdeaRes.data.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    ideaAnalysis = analysis;
   }
 
   return {
-    founder_profile: profile,
-    idea: idea,
-    analysis: analysis,
+    profile: profileRes.data ?? null,
+    extendedIntake: extendedIntakeRes.data ?? null,
+    chosenIdea: chosenIdeaRes.data ?? null,
+    ideaAnalysis,
+    recentDocs: recentDocsRes.data ?? [],
+    recentReflections: recentReflectionsRes.data ?? [],
   };
 }
 
-// Format tasks (inlined from tasksEngine)
-function formatTasks(rawTasks: any[], userId: string, ideaId: string) {
+function formatDocsForPrompt(docs: { title: string | null; content: string | null; doc_type?: string | null }[]): string {
+  if (!docs?.length) return 'No recent workspace notes.';
+  return docs
+    .map((doc, idx) => {
+      const title = doc.title || `Document ${idx + 1}`;
+      const docType = doc.doc_type ? ` (${doc.doc_type})` : '';
+      const content = (doc.content || '').slice(0, 400).trim();
+      const truncated = content.length >= 400 ? '...' : '';
+      return `- [${title}${docType}]: ${content}${truncated}`;
+    })
+    .join('\n');
+}
+
+function formatReflectionsForPrompt(reflections: any[]): string {
+  if (!reflections?.length) return 'No recent reflections.';
+  return reflections
+    .slice(0, 5)
+    .map((r) => {
+      const date = r.reflection_date;
+      const theme = r.ai_theme ? `Theme: "${r.ai_theme}"` : '';
+      const energy = r.energy_level ? `Energy: ${r.energy_level}/5` : '';
+      const stress = r.stress_level ? `Stress: ${r.stress_level}/5` : '';
+      const priority = r.top_priority ? `Priority: "${r.top_priority}"` : '';
+      const parts = [theme, energy, stress, priority].filter(Boolean).join(' | ');
+      return `- [${date}] ${parts}`;
+    })
+    .join('\n');
+}
+
+// --- System Prompt ------------------------------------------------
+
+const SYSTEM_PROMPT = `You are an elite execution strategist and co-founder assistant. Your job is to generate HIGHLY PERSONALIZED micro-tasks and quests that:
+
+1. Are directly tied to what they're actively working on (their workspace documents)
+2. Move their specific idea forward based on the analysis
+3. Respect their time constraints, energy levels, and preferences
+4. Reference specific documents when suggesting to continue work
+
+Task Types:
+- **Micro Tasks**: 5-15 minutes, low friction, immediately actionable
+- **Founder Quests**: 20-60 minutes, higher leverage strategic work
+
+Rules:
+- NO generic advice. Every task must be specific to THEIR situation.
+- When they have workspace documents, reference them directly (e.g., "Continue your 'Offer Design Doc' by adding pricing tiers...")
+- Consider their recent energy/stress levels - if stressed, suggest lighter tasks
+- Align with their passions, skills, and constraints
+- Keep tasks concrete and achievable
+- Always return valid JSON only`;
+
+// Format tasks for database insertion
+function formatTasks(rawTasks: any[], userId: string, ideaId: string | null) {
   if (!Array.isArray(rawTasks)) {
     throw new Error("Tasks must be an array");
   }
 
   return rawTasks.map((task: any, index: number) => {
-    // Validate required fields
     if (!task.title || typeof task.title !== "string") {
       throw new Error(`Task at index ${index} is missing a valid title`);
     }
 
-    // Enforce type: must be "micro" or "quest", default to "micro"
     let type: string = "micro";
     if (task.type === "quest" || task.type === "micro") {
       type = task.type;
     }
 
-    // Apply defaults
     const xp_reward = typeof task.xp_reward === "number" && task.xp_reward > 0
       ? task.xp_reward
-      : 10;
+      : type === "quest" ? 20 : 10;
 
     const description = typeof task.description === "string" 
       ? task.description 
@@ -154,13 +156,11 @@ function formatTasks(rawTasks: any[], userId: string, ideaId: string) {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Parse request body
     const body = await req.json();
     let userId = body.userId;
 
@@ -190,18 +190,97 @@ serve(async (req) => {
       );
     }
 
-    console.log('Resolved userId:', userId);
+    console.log('generate-micro-tasks: resolved userId:', userId);
 
-    // Create service role client to bypass RLS
+    // Create service role client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Build task input using tasksEngine logic
-    const taskInput = await buildTaskInput(supabaseClient, userId);
+    // --- Fetch full user context ---
+    console.log('generate-micro-tasks: fetching user context...');
+    const userContext = await buildUserContext(supabaseClient, userId);
+    const docsSnippet = formatDocsForPrompt(userContext.recentDocs);
+    const reflectionsSnippet = formatReflectionsForPrompt(userContext.recentReflections);
 
-    // Call Lovable AI with tool calling for structured output
+    console.log('generate-micro-tasks: context loaded - profile:', !!userContext.profile, 
+      'idea:', !!userContext.chosenIdea, 'analysis:', !!userContext.ideaAnalysis,
+      'docs:', userContext.recentDocs.length, 'reflections:', userContext.recentReflections.length);
+
+    // Require at least a profile
+    if (!userContext.profile) {
+      return new Response(
+        JSON.stringify({ error: 'No founder profile found. Please complete onboarding first.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // --- Build rich user prompt with full context ---
+    const userPrompt = `Generate personalized micro-tasks and quests for this founder based on their complete context.
+
+## Founder Profile
+${JSON.stringify({
+  passions: userContext.profile.passions_text || userContext.profile.passions_tags?.join(', ') || 'Not specified',
+  skills: userContext.profile.skills_text || userContext.profile.skills_tags?.join(', ') || 'Not specified',
+  time_per_week: userContext.profile.time_per_week,
+  capital_available: userContext.profile.capital_available,
+  risk_tolerance: userContext.profile.risk_tolerance,
+  tech_level: userContext.profile.tech_level,
+  success_vision: userContext.profile.success_vision?.slice(0, 300),
+}, null, 2)}
+
+## Extended Intake (Deeper Self-Knowledge)
+${userContext.extendedIntake ? JSON.stringify({
+  deep_desires: userContext.extendedIntake.deep_desires?.slice(0, 200),
+  fears: userContext.extendedIntake.fears?.slice(0, 200),
+  energy_givers: userContext.extendedIntake.energy_givers?.slice(0, 150),
+  energy_drainers: userContext.extendedIntake.energy_drainers?.slice(0, 150),
+  personality_flags: userContext.extendedIntake.personality_flags,
+}, null, 2) : 'No extended intake available'}
+
+## Current Chosen Idea
+${userContext.chosenIdea ? JSON.stringify({
+  title: userContext.chosenIdea.title,
+  description: userContext.chosenIdea.description?.slice(0, 300),
+  business_model_type: userContext.chosenIdea.business_model_type,
+  target_customer: userContext.chosenIdea.target_customer,
+  complexity: userContext.chosenIdea.complexity,
+  time_to_first_dollar: userContext.chosenIdea.time_to_first_dollar,
+}, null, 2) : 'No chosen idea yet - suggest exploratory tasks to help them find direction'}
+
+## Idea Analysis (What We Know About Their Market)
+${userContext.ideaAnalysis ? JSON.stringify({
+  niche_score: userContext.ideaAnalysis.niche_score,
+  market_insight: userContext.ideaAnalysis.market_insight?.slice(0, 200),
+  problem_intensity: userContext.ideaAnalysis.problem_intensity,
+  competition_snapshot: userContext.ideaAnalysis.competition_snapshot?.slice(0, 200),
+  biggest_risks: userContext.ideaAnalysis.biggest_risks,
+  recommendations: userContext.ideaAnalysis.recommendations,
+}, null, 2) : 'No idea analysis available yet'}
+
+## Active Workspace Documents (What They're Working On)
+${docsSnippet}
+
+## Recent Reflection Patterns (Energy & Emotional State)
+${reflectionsSnippet}
+
+---
+
+Based on ALL the context above, generate 4-6 tasks that:
+1. Are directly tied to their active workspace documents when possible
+2. Move their specific idea forward based on the analysis
+3. Consider their current energy/stress levels
+4. Align with their passions, skills, and time constraints
+5. Include specific references to their documents (e.g., "Continue your 'Offer Design Doc' by...")
+6. Mix of quick wins (micro) and meaningful progress (quests)
+
+${!userContext.chosenIdea ? 'Since they have no chosen idea yet, focus on exploration and discovery tasks.' : ''}
+${userContext.recentDocs.length === 0 ? 'Since they have no workspace documents yet, suggest starting a new document as one of the tasks.' : ''}
+
+Return the tasks as a JSON object with a "tasks" array.`;
+
+    // Call Lovable AI
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
@@ -216,15 +295,15 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: TASK_GENERATION_PROMPT },
-          { role: 'user', content: JSON.stringify(taskInput) }
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt }
         ],
         tools: [
           {
             type: "function",
             function: {
               name: "generate_tasks",
-              description: "Generate 3-5 actionable micro-tasks and quests for the founder",
+              description: "Generate 4-6 personalized micro-tasks and quests for the founder",
               parameters: {
                 type: "object",
                 properties: {
@@ -256,7 +335,22 @@ serve(async (req) => {
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI gateway error:', aiResponse.status, errorText);
+      console.error('generate-micro-tasks: AI API error:', aiResponse.status, errorText);
+      
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add funds to continue.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: 'AI gateway error', details: errorText }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -268,7 +362,7 @@ serve(async (req) => {
     // Extract structured output from tool call
     const toolCall = aiData.choices[0]?.message?.tool_calls?.[0];
     if (!toolCall || !toolCall.function?.arguments) {
-      console.error('No tool call found in response:', aiData);
+      console.error('generate-micro-tasks: No tool call found in response:', aiData);
       return new Response(
         JSON.stringify({ error: 'AI did not return structured output' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -277,9 +371,11 @@ serve(async (req) => {
 
     let parsedTasks;
     try {
-      parsedTasks = JSON.parse(toolCall.function.arguments);
+      parsedTasks = typeof toolCall.function.arguments === "string"
+        ? JSON.parse(toolCall.function.arguments)
+        : toolCall.function.arguments;
     } catch (parseError) {
-      console.error('Failed to parse tool call arguments:', parseError);
+      console.error('generate-micro-tasks: Failed to parse tool call arguments:', parseError);
       return new Response(
         JSON.stringify({ error: 'Failed to parse AI response', details: String(parseError) }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -287,17 +383,21 @@ serve(async (req) => {
     }
 
     if (!parsedTasks.tasks || !Array.isArray(parsedTasks.tasks)) {
-      console.error('Invalid tasks structure:', parsedTasks);
+      console.error('generate-micro-tasks: Invalid tasks structure:', parsedTasks);
       return new Response(
         JSON.stringify({ error: 'Invalid tasks structure in AI response' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Number of tasks generated:', parsedTasks.tasks.length);
+    console.log('generate-micro-tasks: tasks generated:', parsedTasks.tasks.length);
 
-    // Format tasks using tasksEngine logic
-    const formattedTasks = formatTasks(parsedTasks.tasks, userId, taskInput.idea.id);
+    // Format tasks for database insertion
+    const formattedTasks = formatTasks(
+      parsedTasks.tasks, 
+      userId, 
+      userContext.chosenIdea?.id || null
+    );
 
     // Insert tasks into database
     const { data: insertedTasks, error: insertError } = await supabaseClient
@@ -306,14 +406,14 @@ serve(async (req) => {
       .select();
 
     if (insertError) {
-      console.error('Task insert error:', insertError);
+      console.error('generate-micro-tasks: insert error:', insertError);
       return new Response(
         JSON.stringify({ error: 'Failed to insert tasks', details: insertError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Successfully created tasks:', insertedTasks?.length);
+    console.log('generate-micro-tasks: successfully created tasks:', insertedTasks?.length);
 
     return new Response(
       JSON.stringify({ tasks: insertedTasks }),
@@ -321,7 +421,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in generate-micro-tasks function:', error);
+    console.error('generate-micro-tasks: error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
