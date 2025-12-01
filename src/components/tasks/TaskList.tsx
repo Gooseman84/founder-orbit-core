@@ -3,6 +3,7 @@ import { Zap, Target, Inbox } from "lucide-react";
 
 interface Task {
   id: string;
+  type?: string | null;
   title: string;
   description: string | null;
   category: string | null;
