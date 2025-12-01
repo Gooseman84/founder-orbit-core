@@ -23,6 +23,7 @@ interface Task {
   status: string;
   completed_at: string | null;
   created_at: string;
+  workspace_document_id?: string | null;
 }
 
 const Tasks = () => {
@@ -47,10 +48,10 @@ const Tasks = () => {
   const fetchChosenIdea = async () => {
     if (!user) return;
     const { data } = await supabase
-      .from('ideas')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('status', 'chosen')
+      .from("ideas")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "chosen")
       .maybeSingle();
     if (data) setChosenIdeaId(data.id);
   };
@@ -60,14 +61,14 @@ const Tasks = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .from("tasks")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       setTasks(data || []);
     } catch (error) {
-      console.error('Error fetching tasks:', error);
+      console.error("Error fetching tasks:", error);
       toast({ title: "Error", description: "Failed to load tasks.", variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -78,14 +79,14 @@ const Tasks = () => {
     if (!user || !chosenIdeaId) return;
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-micro-tasks', {
+      const { data, error } = await supabase.functions.invoke("generate-micro-tasks", {
         body: { userId: user.id },
       });
       if (error) throw error;
       toast({ title: "Tasks Generated!", description: `Created ${data.tasks?.length || 0} new tasks.` });
       await fetchTasks();
     } catch (error) {
-      console.error('Error generating tasks:', error);
+      console.error("Error generating tasks:", error);
       toast({ title: "Error", description: "Failed to generate tasks.", variant: "destructive" });
     } finally {
       setIsGenerating(false);
@@ -94,32 +95,32 @@ const Tasks = () => {
 
   const handleCompleteTask = async (taskId: string) => {
     if (!user) return;
-    const task = tasks.find(t => t.id === taskId);
+    const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
     setCompletingTaskId(taskId);
     try {
       const { error } = await supabase
-        .from('tasks')
-        .update({ status: 'completed', completed_at: new Date().toISOString() })
-        .eq('id', taskId)
-        .eq('user_id', user.id);
+        .from("tasks")
+        .update({ status: "completed", completed_at: new Date().toISOString() })
+        .eq("id", taskId)
+        .eq("user_id", user.id);
       if (error) throw error;
       const xpAmount = task.xp_reward || 10;
-      await recordXpEvent(user.id, 'task_completed', xpAmount, { taskId, task_title: task.title });
+      await recordXpEvent(user.id, "task_completed", xpAmount, { taskId, task_title: task.title });
       queryClient.invalidateQueries({ queryKey: ["xp", user.id] });
       await refreshXp();
       toast({ title: "Task Completed! 🎉", description: `You earned ${xpAmount} XP!` });
       await fetchTasks();
     } catch (error) {
-      console.error('Error completing task:', error);
+      console.error("Error completing task:", error);
       toast({ title: "Error", description: "Failed to complete task.", variant: "destructive" });
     } finally {
       setCompletingTaskId(null);
     }
   };
 
-  const openTasks = tasks.filter(t => t.status !== 'completed');
-  const completedTasks = tasks.filter(t => t.status === 'completed');
+  const openTasks = tasks.filter((t) => t.status !== "completed");
+  const completedTasks = tasks.filter((t) => t.status === "completed");
 
   if (isLoading) {
     return (
@@ -137,14 +138,28 @@ const Tasks = () => {
           <p className="text-muted-foreground mt-1">Complete micro-tasks to build momentum and earn XP</p>
         </div>
         <Button onClick={handleGenerateTasks} disabled={isGenerating || !chosenIdeaId} size="lg">
-          {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Today's Tasks</>}
+          {isGenerating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Generate Today's Tasks
+            </>
+          )}
         </Button>
       </div>
 
       {!chosenIdeaId && (
         <Alert>
           <AlertDescription>
-            You need to choose an idea first. Visit the <a href="/ideas" className="underline font-medium">Ideas page</a> to select one.
+            You need to choose an idea first. Visit the{" "}
+            <a href="/ideas" className="underline font-medium">
+              Ideas page
+            </a>{" "}
+            to select one.
           </AlertDescription>
         </Alert>
       )}
@@ -168,10 +183,12 @@ const Tasks = () => {
       <Tabs defaultValue="open" className="w-full">
         <TabsList>
           <TabsTrigger value="open" className="flex items-center gap-2">
-            <ListTodo className="h-4 w-4" />Open Tasks ({openTasks.length})
+            <ListTodo className="h-4 w-4" />
+            Open Tasks ({openTasks.length})
           </TabsTrigger>
           <TabsTrigger value="completed" className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" />Completed ({completedTasks.length})
+            <CheckCircle2 className="h-4 w-4" />
+            Completed ({completedTasks.length})
           </TabsTrigger>
         </TabsList>
         <TabsContent value="open" className="mt-6">
