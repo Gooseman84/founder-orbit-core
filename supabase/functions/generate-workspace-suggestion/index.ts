@@ -97,6 +97,107 @@ ${JSON.stringify(taskContext, null, 2)}
 No explicit task was provided. Assume this document represents a focused piece of work (strategy, offer, script, or plan) and help move it forward in a practical way.
 `;
 
+    // Document-type–specific guidance
+    let docTypeGuidance = "";
+
+    switch (doc.doc_type) {
+      case "offer":
+        docTypeGuidance = `
+You are helping refine an OFFER document.
+
+Definition of Done:
+- Clear, compelling promise/headline
+- Clear target customer + pain + desired outcome
+- Benefits structured as transformations, not features
+- Optional pricing tiers
+- Strong guarantee / risk reversal
+- Optional FAQ or objections list
+
+Your behavior:
+- Push for clarity, specificity, and differentiation.
+- Avoid fluff. Make the offer feel tangible and valuable.
+- If the content is weak, propose a stronger version.
+- If content is missing sections, propose the missing pieces.`;
+        break;
+
+      case "outline":
+        docTypeGuidance = `
+You are helping refine an OUTLINE document.
+
+Definition of Done:
+- Logical structure with clear sections
+- Headings + subheadings that form a strong skeleton
+- Each section has a purpose and expected content
+- No long paragraphs; outlines should be crisp
+
+Your behavior:
+- Restructure content so it flows.
+- Suggest missing sections.
+- Turn rambly text into crisp bullets.
+- Push for clarity and hierarchy.`;
+        break;
+
+      case "script":
+        docTypeGuidance = `
+You are helping refine a SCRIPT document.
+
+Definition of Done:
+- Strong hook opening
+- Clear narrative arc or instructional flow
+- Conversational, spoken-style writing
+- Smooth transitions between sections
+- Clear CTA or close
+
+Your behavior:
+- Punch up the hook.
+- Maintain a friendly, confident voice.
+- Provide actual lines they can use.
+- Offer transitions or moments to emphasize.`;
+        break;
+
+      case "plan":
+        docTypeGuidance = `
+You are helping refine a PLAN document.
+
+Definition of Done:
+- Clear phases or milestones
+- Specific actions and owners (if relevant)
+- Timeline or priority order
+- Risks, dependencies, and next immediate steps
+
+Your behavior:
+- Break chaos into ordered, digestible steps.
+- Clarify sequencing.
+- Recommend next 3–5 moves.
+- Turn abstract ideas into shippable actions.`;
+        break;
+
+      case "brain_dump":
+        docTypeGuidance = `
+You are helping refine a BRAIN DUMP document.
+
+Definition of Done:
+- Take messy, unstructured text
+- Identify themes, patterns, or priorities
+- Highlight insights the founder isn't seeing
+- Propose a next-step structure (outline or plan)
+
+Your behavior:
+- Extract signal from noise.
+- Summarize the most important ideas.
+- Suggest a structure they can convert into a real doc.`;
+        break;
+
+      default:
+        docTypeGuidance = `
+No specific document type provided. 
+Default Behavior:
+- Improve clarity
+- Propose stronger structure
+- Move the task toward "done"
+- Provide usable content blocks where possible.`;
+    }
+
     const userPrompt = `
 You are helping the founder make progress in this workspace document.
 
@@ -106,22 +207,24 @@ Document metadata:
 
 ${taskSection}
 
+DOCUMENT-TYPE GUIDANCE:
+${docTypeGuidance}
+
 Current document content (may be partially filled, messy, or a brain dump):
 
-""" 
+"""
 ${currentContent.slice(0, 8000)}
 """
 
 Instructions:
-1. First, infer what "done" would look like for this task or document.
-2. Then, propose either:
-   - A tighter structure/outline (if things are messy), OR
-   - Concrete content (copy, bullets, paragraphs, messaging, etc.) that moves them closer to done.
-3. When relevant, include short comments like "You could refine this later by..." but keep the majority of the output as usable content.
-4. If the document is almost empty, help them start it with a strong first version.
+1. First, restate briefly what "done" should look like for this document type.
+2. Then produce high-quality, ready-to-use content OR a stronger structure.
+3. When relevant, propose missing sections.
+4. If content is weak, rewrite it.
+5. If content is empty, create a strong starting draft.
+6. Output plain text only — no JSON, no markdown except headings/bullets.
 
-Remember: your goal is to move THIS task/document forward, not to give generic life advice.
-Output plain text only.
+Your goal: move THIS document and THIS task meaningfully forward.
 `;
 
     // 3) Call Lovable AI Gateway (Gemini 2.5 Flash)
