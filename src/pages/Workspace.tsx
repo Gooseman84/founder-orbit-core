@@ -2,13 +2,17 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useXP } from '@/hooks/useXP';
+import { recordXpEvent } from '@/lib/xpEngine';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText } from 'lucide-react';
+import { FileText, CheckCircle2 } from 'lucide-react';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
 import { WorkspaceAssistantPanel } from '@/components/workspace/WorkspaceAssistantPanel';
@@ -19,6 +23,8 @@ export default function Workspace() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { refresh: refreshXp } = useXP();
   const {
     documents,
     currentDocument,
@@ -34,9 +40,53 @@ export default function Workspace() {
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocType, setNewDocType] = useState<string>('brain_dump');
   const [aiLoading, setAiLoading] = useState(false);
+  const [taskCompleted, setTaskCompleted] = useState(false);
+  const [completingTask, setCompletingTask] = useState(false);
 
   // Extract taskContext from navigation state
   const taskContext = (location.state as { taskContext?: TaskContext } | null)?.taskContext;
+
+  const handleCompleteLinkedTask = async () => {
+    if (!user || !taskContext) return;
+
+    setCompletingTask(true);
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', taskContext.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      const xpAmount = taskContext.xp_reward ?? 10;
+
+      await recordXpEvent(user.id, 'task_completed_from_workspace', xpAmount, {
+        taskId: taskContext.id,
+        task_title: taskContext.title,
+      });
+
+      await refreshXp();
+      setTaskCompleted(true);
+
+      toast({
+        title: 'Task completed! 🎉',
+        description: `You earned ${xpAmount} XP for finishing "${taskContext.title}".`,
+      });
+    } catch (err) {
+      console.error('Error completing linked task from workspace:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to complete this task. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCompletingTask(false);
+    }
+  };
 
   // Load documents list on mount
   useEffect(() => {
@@ -172,7 +222,42 @@ export default function Workspace() {
 
       {/* Right Panel - AI Assistant */}
       {currentDocument && (
-        <aside className="w-80">
+        <aside className="w-80 flex flex-col gap-4">
+          {/* Linked Task Card */}
+          {taskContext && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className={`w-5 h-5 mt-0.5 ${taskCompleted ? 'text-green-500' : 'text-primary'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{taskContext.title}</p>
+                    {taskContext.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                        {taskContext.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                      {taskContext.estimated_minutes && (
+                        <span>{taskContext.estimated_minutes} min</span>
+                      )}
+                      {taskContext.xp_reward && (
+                        <span className="text-primary">+{taskContext.xp_reward} XP</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full mt-3"
+                  onClick={handleCompleteLinkedTask}
+                  disabled={taskCompleted || completingTask}
+                >
+                  {taskCompleted ? 'Completed ✓' : completingTask ? 'Completing...' : 'Mark Task Complete'}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          
           <WorkspaceAssistantPanel
             document={currentDocument}
             loading={aiLoading}
