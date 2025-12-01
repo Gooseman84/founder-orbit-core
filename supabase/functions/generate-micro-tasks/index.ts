@@ -114,6 +114,23 @@ Rules:
 - Keep tasks concrete and achievable
 - Always return valid JSON only`;
 
+// Determine workspace metadata based on task content
+function determineWorkspaceMetadata(title: string, description: string): { doc_type: string; workspace_enabled: boolean } {
+  const combined = `${title} ${description}`.toLowerCase();
+  
+  if (combined.includes('my offer') || combined.includes('offer')) {
+    return { doc_type: 'offer', workspace_enabled: true };
+  }
+  if (combined.includes('brain dump') || combined.includes('braindump')) {
+    return { doc_type: 'brain_dump', workspace_enabled: true };
+  }
+  if (combined.includes('outline') || combined.includes('marketing outline')) {
+    return { doc_type: 'outline', workspace_enabled: true };
+  }
+  
+  return { doc_type: 'plan', workspace_enabled: true };
+}
+
 // Format tasks for database insertion
 function formatTasks(rawTasks: any[], userId: string, ideaId: string | null) {
   if (!Array.isArray(rawTasks)) {
@@ -138,9 +155,20 @@ function formatTasks(rawTasks: any[], userId: string, ideaId: string | null) {
       ? task.description 
       : "";
 
-    const metadata = typeof task.metadata === "object" && task.metadata !== null
+    // Existing metadata from AI
+    const existingMetadata = typeof task.metadata === "object" && task.metadata !== null
       ? task.metadata
       : {};
+
+    // Determine workspace metadata based on content
+    const workspaceMetadata = determineWorkspaceMetadata(task.title, description);
+
+    // Merge metadata
+    const metadata = {
+      ...existingMetadata,
+      doc_type: workspaceMetadata.doc_type,
+      workspace_enabled: workspaceMetadata.workspace_enabled,
+    };
 
     return {
       user_id: userId,
