@@ -33,6 +33,7 @@ export default function Workspace() {
     loadDocument,
     createDocument,
     updateContent,
+    renameDocument,
     requestAISuggestion,
     refreshList,
   } = useWorkspace();
@@ -201,6 +202,7 @@ export default function Workspace() {
           loading={loading}
           onSelect={(id) => navigate(`/workspace/${id}`)}
           onNewDocument={() => setIsNewDocDialogOpen(true)}
+          onRename={renameDocument}
         />
       </aside>
 

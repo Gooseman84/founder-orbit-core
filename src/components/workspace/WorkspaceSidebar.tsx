@@ -1,8 +1,10 @@
-import { FileText } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { FileText, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 
@@ -12,6 +14,7 @@ interface WorkspaceSidebarProps {
   loading?: boolean;
   onSelect: (id: string) => void;
   onNewDocument: () => void;
+  onRename?: (id: string, newTitle: string) => void;
 }
 
 export function WorkspaceSidebar({
@@ -20,7 +23,48 @@ export function WorkspaceSidebar({
   loading = false,
   onSelect,
   onNewDocument,
+  onRename,
 }: WorkspaceSidebarProps) {
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (renamingId && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [renamingId]);
+
+  const startRenaming = (doc: WorkspaceDocument, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenamingId(doc.id);
+    setNewTitle(doc.title);
+  };
+
+  const saveRename = () => {
+    if (renamingId && newTitle.trim() && onRename) {
+      onRename(renamingId, newTitle.trim());
+    }
+    setRenamingId(null);
+    setNewTitle('');
+  };
+
+  const cancelRename = () => {
+    setRenamingId(null);
+    setNewTitle('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveRename();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelRename();
+    }
+  };
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-2 pt-3 px-3">
@@ -45,25 +89,53 @@ export function WorkspaceSidebar({
             </div>
           ) : (
             <div className="space-y-1 p-2">
-              {documents.map((doc) => (
-                <button
-                  key={doc.id}
-                  onClick={() => onSelect(doc.id)}
-                  className={`w-full py-1.5 px-2 text-left rounded-md hover:bg-accent transition-colors ${
-                    currentId === doc.id ? 'bg-accent border-l-2 border-primary' : ''
-                  }`}
-                >
-                  <div className="flex items-start gap-1.5">
-                    <FileText className="w-3.5 h-3.5 mt-0.5 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{doc.title}</p>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {doc.doc_type?.replace('_', ' ')} · {format(new Date(doc.updated_at), 'MMM d')}
-                      </p>
+              {documents.map((doc) => {
+                const isSelected = currentId === doc.id;
+                const isRenaming = renamingId === doc.id;
+
+                return (
+                  <button
+                    key={doc.id}
+                    onClick={() => !isRenaming && onSelect(doc.id)}
+                    className={`w-full py-1.5 px-2 text-left rounded-md hover:bg-accent transition-colors group ${
+                      isSelected ? 'bg-accent border-l-2 border-primary' : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-1.5">
+                      <FileText className="w-3.5 h-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        {isRenaming ? (
+                          <Input
+                            ref={inputRef}
+                            value={newTitle}
+                            onChange={(e) => setNewTitle(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            onBlur={saveRename}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-6 text-sm py-0 px-1"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <p className="font-medium text-sm truncate flex-1">{doc.title}</p>
+                            {isSelected && onRename && (
+                              <button
+                                onClick={(e) => startRenaming(doc, e)}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-muted rounded transition-opacity"
+                                title="Rename"
+                              >
+                                <Pencil className="w-3 h-3 text-muted-foreground" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {doc.doc_type?.replace('_', ' ')} · {format(new Date(doc.updated_at), 'MMM d')}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           )}
         </ScrollArea>
