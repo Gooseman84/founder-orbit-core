@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { recordXpEvent } from '@/lib/xpEngine';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
+import type { TaskContext } from '@/types/tasks';
 
 interface CreateDocumentParams {
   doc_type: string;
@@ -188,7 +189,7 @@ export function useWorkspace() {
   /**
    * Request AI suggestion for a document
    */
-  const requestAISuggestion = useCallback(async (id: string) => {
+  const requestAISuggestion = useCallback(async (id: string, taskContext?: TaskContext) => {
     if (!user) {
       setError('User not authenticated');
       return null;
@@ -204,6 +205,7 @@ export function useWorkspace() {
           body: {
             userId: user.id,
             documentId: id,
+            taskContext: taskContext || null,
           },
         }
       );

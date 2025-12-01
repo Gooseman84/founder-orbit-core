@@ -1,14 +1,16 @@
-import { Sparkles, ArrowDownToLine, RefreshCw } from 'lucide-react';
+import { Sparkles, ArrowDownToLine, RefreshCw, Clock, Star, Tag } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
+import type { TaskContext } from '@/types/tasks';
 
 interface WorkspaceAssistantPanelProps {
   document: WorkspaceDocument;
   loading?: boolean;
-  onRequestSuggestion: () => void;
+  onRequestSuggestion: (taskContext?: TaskContext) => void;
   onApplySuggestion: (mode: 'insert' | 'replace') => void;
+  taskContext?: TaskContext;
 }
 
 export function WorkspaceAssistantPanel({
@@ -16,6 +18,7 @@ export function WorkspaceAssistantPanel({
   loading = false,
   onRequestSuggestion,
   onApplySuggestion,
+  taskContext,
 }: WorkspaceAssistantPanelProps) {
   const hasSuggestions = document.ai_suggestions && document.ai_suggestions.trim().length > 0;
 
@@ -29,7 +32,42 @@ export function WorkspaceAssistantPanel({
         <CardDescription>Get AI-powered suggestions for your content</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 flex-1 flex flex-col">
-        <Button onClick={onRequestSuggestion} disabled={loading} className="w-full">
+        {/* Task context header if present */}
+        {taskContext && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+            <div className="font-semibold text-primary uppercase tracking-wide text-xs mb-1">
+              Task Focus
+            </div>
+            <div className="text-sm font-medium">{taskContext.title}</div>
+            {taskContext.description && (
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
+                {taskContext.description}
+              </p>
+            )}
+            <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+              {taskContext.estimated_minutes && (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {taskContext.estimated_minutes} min
+                </span>
+              )}
+              {taskContext.xp_reward && (
+                <span className="flex items-center gap-1">
+                  <Star className="w-3 h-3" />
+                  {taskContext.xp_reward} XP
+                </span>
+              )}
+              {taskContext.category && (
+                <span className="flex items-center gap-1">
+                  <Tag className="w-3 h-3" />
+                  {taskContext.category}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        <Button onClick={() => onRequestSuggestion(taskContext)} disabled={loading} className="w-full">
           {loading ? (
             <>
               <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -38,7 +76,7 @@ export function WorkspaceAssistantPanel({
           ) : (
             <>
               <Sparkles className="w-4 h-4 mr-2" />
-              Ask AI to help expand this
+              {taskContext ? 'Ask AI to help with this task' : 'Ask AI to help expand this'}
             </>
           )}
         </Button>
@@ -82,7 +120,9 @@ export function WorkspaceAssistantPanel({
             <div>
               <Sparkles className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                Click the button above to generate AI suggestions
+                {taskContext
+                  ? 'Click above to get AI help completing this task'
+                  : 'Click the button above to generate AI suggestions'}
               </p>
             </div>
           </div>

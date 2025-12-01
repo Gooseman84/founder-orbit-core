@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,12 @@ import { FileText } from 'lucide-react';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
 import { WorkspaceAssistantPanel } from '@/components/workspace/WorkspaceAssistantPanel';
+import type { TaskContext } from '@/types/tasks';
 
 export default function Workspace() {
   const { id: documentId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const {
     documents,
@@ -32,6 +34,9 @@ export default function Workspace() {
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocType, setNewDocType] = useState<string>('brain_dump');
   const [aiLoading, setAiLoading] = useState(false);
+
+  // Extract taskContext from navigation state
+  const taskContext = (location.state as { taskContext?: TaskContext } | null)?.taskContext;
 
   // Load documents list on mount
   useEffect(() => {
@@ -93,17 +98,19 @@ export default function Workspace() {
     }
   };
 
-  const handleRequestAI = async () => {
+  const handleRequestAI = async (ctx?: TaskContext) => {
     if (!currentDocument) return;
 
     setAiLoading(true);
-    const result = await requestAISuggestion(currentDocument.id);
+    const result = await requestAISuggestion(currentDocument.id, ctx);
     setAiLoading(false);
 
     if (result) {
       toast({
         title: 'AI suggestions ready',
-        description: 'Check the AI Assistant panel',
+        description: ctx
+          ? 'Your cofounder drafted ideas to move this task forward.'
+          : 'Check the AI Assistant panel',
       });
     }
   };
@@ -171,6 +178,7 @@ export default function Workspace() {
             loading={aiLoading}
             onRequestSuggestion={handleRequestAI}
             onApplySuggestion={handleApplySuggestion}
+            taskContext={taskContext}
           />
         </aside>
       )}
