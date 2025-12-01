@@ -103,7 +103,18 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
         });
         refreshXp();
         toast.success("Opening your workspace document! (+10 XP)");
-        navigate(`/workspace/${existingDoc.id}`);
+        navigate(`/workspace/${existingDoc.id}`, {
+          state: {
+            taskContext: {
+              id: task.id,
+              title: task.title,
+              description: task.description,
+              estimated_minutes: task.estimated_minutes,
+              xp_reward: task.xp_reward,
+              category: task.category,
+            },
+          },
+        });
         setIsWorkspaceProcessing(false);
         return;
       }
@@ -139,7 +150,18 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
       refreshXp();
 
       toast.success("Workspace document created! (+10 XP)");
-      navigate(`/workspace/${newDoc.id}`);
+      navigate(`/workspace/${newDoc.id}`, {
+        state: {
+          taskContext: {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            estimated_minutes: task.estimated_minutes,
+            xp_reward: task.xp_reward,
+            category: task.category,
+          },
+        },
+      });
     } catch (error) {
       console.error("Error opening workspace:", error);
       toast.error("Failed to open workspace. Please try again.");
