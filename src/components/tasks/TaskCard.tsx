@@ -2,15 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Zap, 
-  Target, 
-  Clock, 
-  CheckCircle2, 
-  Circle,
-  PlayCircle,
-  FileText
-} from "lucide-react";
+import { Zap, Target, Clock, CheckCircle2, Circle, PlayCircle, FileText } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -59,9 +51,7 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
   const isCompleted = task.status === "completed";
 
   // Check if task needs workspace integration
-  const needsWorkspace = 
-    task.metadata?.doc_type || 
-    task.metadata?.workspace_enabled === true;
+  const needsWorkspace = task.type === "micro" || task.type === "quest";
 
   const handleCheckboxChange = (checked: boolean) => {
     if (checked && !isCompleted) {
@@ -121,7 +111,7 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
 
       // 3. Create new workspace document
       const docType = task.metadata?.doc_type || "plan";
-      
+
       const { data: newDoc, error: insertError } = await supabase
         .from("workspace_documents")
         .insert({
@@ -228,20 +218,16 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
           </div>
 
           {/* Title */}
-          <h3 
+          <h3
             className={`font-bold text-base mb-1 ${
-              isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'
+              isCompleted ? "line-through text-muted-foreground" : "text-foreground"
             }`}
           >
             {task.title}
           </h3>
 
           {/* Description */}
-          {task.description && (
-            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-              {task.description}
-            </p>
-          )}
+          {task.description && <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{task.description}</p>}
 
           {/* Footer: Timestamp and Actions */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -262,27 +248,17 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
                   className="h-8 text-xs gap-1"
                 >
                   <FileText className="h-3 w-3" />
-                  {isWorkspaceProcessing ? 'Opening...' : 'Open in Workspace'}
+                  {isWorkspaceProcessing ? "Opening..." : "Open in Workspace"}
                 </Button>
               )}
               {isPending && onStart && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleStartClick}
-                  className="h-8 text-xs"
-                >
+                <Button size="sm" variant="outline" onClick={handleStartClick} className="h-8 text-xs">
                   Start
                 </Button>
               )}
               {!isCompleted && (
-                <Button
-                  size="sm"
-                  onClick={() => onComplete(task.id)}
-                  disabled={isCompleting}
-                  className="h-8 text-xs"
-                >
-                  {isCompleting ? 'Completing...' : 'Mark Complete'}
+                <Button size="sm" onClick={() => onComplete(task.id)} disabled={isCompleting} className="h-8 text-xs">
+                  {isCompleting ? "Completing..." : "Mark Complete"}
                 </Button>
               )}
             </div>
