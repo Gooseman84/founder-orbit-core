@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, CheckCircle2 } from 'lucide-react';
+import { FileText, CheckCircle2, Download } from 'lucide-react';
+import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
 import { WorkspaceAssistantPanel } from '@/components/workspace/WorkspaceAssistantPanel';
@@ -204,7 +205,24 @@ export default function Workspace() {
       </aside>
 
       {/* Main Editor Area */}
-      <div className="flex-1">
+      <div className="flex-1 flex flex-col">
+        {currentDocument && (
+          <div className="flex justify-end mb-2 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                exportWorkspaceDocToPdf({
+                  title: currentDocument.title || 'Workspace Document',
+                  content: currentDocument.content || '',
+                })
+              }
+            >
+              <Download className="w-4 h-4 mr-1" />
+              Export as PDF
+            </Button>
+          </div>
+        )}
         {!currentDocument ? (
           <Card className="h-full flex items-center justify-center">
             <CardContent className="text-center">
