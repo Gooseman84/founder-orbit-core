@@ -6,6 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 
 interface WorkspaceSidebarProps {
@@ -25,6 +27,7 @@ export function WorkspaceSidebar({
   onNewDocument,
   onRename,
 }: WorkspaceSidebarProps) {
+  const { toast } = useToast();
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,12 +45,35 @@ export function WorkspaceSidebar({
     setNewTitle(doc.title);
   };
 
-  const saveRename = () => {
-    if (renamingId && newTitle.trim() && onRename) {
-      onRename(renamingId, newTitle.trim());
+  const saveRename = async () => {
+    if (!renamingId || !newTitle.trim()) {
+      setRenamingId(null);
+      setNewTitle('');
+      return;
     }
-    setRenamingId(null);
-    setNewTitle('');
+
+    try {
+      const { error } = await supabase
+        .from('workspace_documents')
+        .update({ title: newTitle.trim() })
+        .eq('id', renamingId);
+
+      if (error) throw error;
+
+      // Update parent state on success
+      if (onRename) {
+        onRename(renamingId, newTitle.trim());
+      }
+      setRenamingId(null);
+      setNewTitle('');
+    } catch (err) {
+      console.error('Error renaming document:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to rename document',
+        variant: 'destructive',
+      });
+    }
   };
 
   const cancelRename = () => {
