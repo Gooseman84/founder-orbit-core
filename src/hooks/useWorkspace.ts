@@ -200,7 +200,7 @@ export function useWorkspace() {
 
     try {
       const { data, error: functionError } = await supabase.functions.invoke(
-        'generate-workspace-doc',
+        'generate-workspace-suggestion',
         {
           body: {
             userId: user.id,
