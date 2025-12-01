@@ -254,6 +254,36 @@ export function useWorkspace() {
   }, [user]);
 
   /**
+   * Rename a document
+   */
+  const renameDocument = useCallback(async (id: string, newTitle: string) => {
+    if (!user) {
+      setError('User not authenticated');
+      return;
+    }
+
+    try {
+      const { error: updateError } = await supabase
+        .from('workspace_documents')
+        .update({ title: newTitle, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setDocuments(prev =>
+        prev.map(doc => (doc.id === id ? { ...doc, title: newTitle } : doc))
+      );
+      if (currentDocument?.id === id) {
+        setCurrentDocument(prev => prev ? { ...prev, title: newTitle } : prev);
+      }
+    } catch (err) {
+      console.error('Error renaming document:', err);
+      setError(err instanceof Error ? err.message : 'Failed to rename document');
+    }
+  }, [user, currentDocument?.id]);
+
+  /**
    * Refresh the list of documents
    */
   const refreshList = useCallback(async () => {
@@ -292,6 +322,7 @@ export function useWorkspace() {
     loadDocument,
     createDocument,
     updateContent,
+    renameDocument,
     requestAISuggestion,
     refreshList,
   };
