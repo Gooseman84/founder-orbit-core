@@ -189,7 +189,7 @@ export function useWorkspace() {
   /**
    * Request AI suggestion for a document
    */
-  const requestAISuggestion = useCallback(async (id: string, taskContext?: TaskContext) => {
+  const requestAISuggestion = useCallback(async (documentId: string, taskContext?: TaskContext) => {
     if (!user) {
       setError('User not authenticated');
       return null;
@@ -204,18 +204,46 @@ export function useWorkspace() {
         {
           body: {
             userId: user.id,
-            documentId: id,
-            taskContext: taskContext || null,
+            documentId,
+            taskContext: taskContext ?? null,
           },
         }
       );
 
       if (functionError) throw functionError;
 
-      // Refresh the document to get updated title and ai_suggestions
-      await loadDocument(id);
+      // If we got a suggestion, update ai_suggestions directly
+      if (data?.suggestion) {
+        await supabase
+          .from('workspace_documents')
+          .update({ ai_suggestions: data.suggestion })
+          .eq('id', documentId);
+      }
 
-      return data;
+      // Refresh documents list
+      const { data: docs } = await supabase
+        .from('workspace_documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+      
+      if (docs) {
+        setDocuments(docs as WorkspaceDocument[]);
+      }
+
+      // Reload the current document to update state
+      const { data: updatedDoc } = await supabase
+        .from('workspace_documents')
+        .select('*')
+        .eq('id', documentId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (updatedDoc) {
+        setCurrentDocument(updatedDoc as WorkspaceDocument);
+      }
+
+      return data?.suggestion as string | null;
     } catch (err) {
       console.error('Error requesting AI suggestion:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate AI suggestion');
@@ -223,7 +251,7 @@ export function useWorkspace() {
     } finally {
       setLoading(false);
     }
-  }, [user, loadDocument]);
+  }, [user]);
 
   /**
    * Refresh the list of documents
