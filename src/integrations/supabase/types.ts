@@ -878,7 +878,7 @@ export type Database = {
           metadata: Json | null
           source_id: string | null
           source_type: string | null
-          status: string | null
+          status: string
           title: string
           updated_at: string
           user_id: string
@@ -894,7 +894,7 @@ export type Database = {
           metadata?: Json | null
           source_id?: string | null
           source_type?: string | null
-          status?: string | null
+          status?: string
           title: string
           updated_at?: string
           user_id: string
@@ -910,7 +910,7 @@ export type Database = {
           metadata?: Json | null
           source_id?: string | null
           source_type?: string | null
-          status?: string | null
+          status?: string
           title?: string
           updated_at?: string
           user_id?: string
