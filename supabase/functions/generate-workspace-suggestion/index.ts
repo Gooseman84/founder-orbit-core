@@ -198,6 +198,168 @@ Default Behavior:
 - Provide usable content blocks where possible.`;
     }
 
+    // Task-category–specific guidance
+    let categoryGuidance = "";
+
+    const taskCategory = taskContext?.category?.toLowerCase?.() || null;
+
+    if (!taskCategory) {
+      categoryGuidance = `
+No specific task category provided.
+Default behavior:
+- Focus on clarity and forward motion.
+- Remove fluff.
+- Propose the next concrete step for this piece of work.`;
+    } else {
+      switch (taskCategory) {
+        case "offer":
+        case "pricing":
+        case "positioning":
+          categoryGuidance = `
+This task is about OFFER / POSITIONING.
+
+Focus on:
+- Clarifying the promise and who it's for.
+- Making the value feel tangible and differentiated.
+- Tightening any copy that describes the offer.
+- Removing vague language and replacing it with specifics.
+
+Your behavior:
+- Suggest stronger positioning statements.
+- Challenge weak promises or generic claims.
+- Propose alternative angles if the current one feels flat.`;
+          break;
+
+        case "marketing":
+        case "growth":
+        case "top_of_funnel":
+          categoryGuidance = `
+This task is about MARKETING / GROWTH.
+
+Focus on:
+- Generating clear, actionable ways to get attention and interest.
+- Turning vague ideas into specific campaigns or experiments.
+- Emphasizing channels that fit the founder's constraints.
+
+Your behavior:
+- Propose concrete campaign ideas or hooks.
+- Turn generic "post more" into specific content ideas.
+- Include example headlines, hooks, or CTAs when helpful.`;
+          break;
+
+        case "content":
+        case "social":
+        case "email":
+          categoryGuidance = `
+This task is about CONTENT CREATION.
+
+Focus on:
+- Producing outlines, drafts, or polished pieces of content.
+- Matching the tone to an ambitious but human founder.
+- Making content clear, scannable, and engaging.
+
+Your behavior:
+- Give actual paragraphs, bullet lists, or scripts they can paste.
+- When refining, show "before vs after" style improvements implicitly.
+- Default to plain, conversational language over jargon.`;
+          break;
+
+        case "sales":
+        case "conversion":
+        case "closing":
+          categoryGuidance = `
+This task is about SALES / CONVERSION.
+
+Focus on:
+- Clarifying the buyer's pain and desired outcome.
+- Strengthening the pitch, objection handling, and CTAs.
+- Making next steps obvious for the prospect.
+
+Your behavior:
+- Propose talk tracks, email scripts, or message templates.
+- Highlight urgency and risk reversal without being sleazy.
+- Suggest one clear CTA, not five competing ones.`;
+          break;
+
+        case "product":
+        case "offer_build":
+        case "delivery":
+          categoryGuidance = `
+This task is about PRODUCT / DELIVERY.
+
+Focus on:
+- Clarifying what is being delivered and how.
+- Breaking fuzzy product ideas into concrete components.
+- Improving user experience and perceived value.
+
+Your behavior:
+- Suggest clearer feature sets or module breakdowns.
+- Call out where scope is too big and should be simplified.
+- Turn abstract ideas into concrete deliverables.`;
+          break;
+
+        case "systems":
+        case "ops":
+        case "operations":
+          categoryGuidance = `
+This task is about SYSTEMS / OPERATIONS.
+
+Focus on:
+- Turning chaos into repeatable processes.
+- Clarifying steps, owners, and tools.
+- Simplifying how work flows from A to B.
+
+Your behavior:
+- Propose SOP-style steps.
+- Identify bottlenecks or single points of failure.
+- Suggest ways to track whether the system is working.`;
+          break;
+
+        case "research":
+        case "validation":
+        case "customer_research":
+          categoryGuidance = `
+This task is about RESEARCH / VALIDATION.
+
+Focus on:
+- Clarifying what needs to be learned or tested.
+- Proposing lean experiments.
+- Generating customer interview questions or survey prompts.
+
+Your behavior:
+- Turn vague "understand the market" into concrete questions.
+- Suggest scrappy ways to gather data quickly.
+- Help the founder avoid overbuilding before validation.`;
+          break;
+
+        case "mindset":
+        case "clarity":
+        case "reflection":
+          categoryGuidance = `
+This task is about CLARITY / REFLECTION.
+
+Focus on:
+- Helping the founder think clearly about decisions.
+- Surfacing tradeoffs and priorities.
+- Reducing mental noise and overwhelm.
+
+Your behavior:
+- Reflect their situation back succinctly.
+- Propose simple frameworks or lenses.
+- Help them decide on a single next move, not ten.`;
+          break;
+
+        default:
+          categoryGuidance = `
+Task category: ${taskCategory}.
+
+Behavior:
+- Infer what success looks like for this category.
+- Improve clarity and structure.
+- Propose the next concrete step and/or content they can paste.`;
+      }
+    }
+
     const userPrompt = `
 You are helping the founder make progress in this workspace document.
 
@@ -210,6 +372,9 @@ ${taskSection}
 DOCUMENT-TYPE GUIDANCE:
 ${docTypeGuidance}
 
+TASK-CATEGORY GUIDANCE:
+${categoryGuidance}
+
 Current document content (may be partially filled, messy, or a brain dump):
 
 """
@@ -217,7 +382,7 @@ ${currentContent.slice(0, 8000)}
 """
 
 Instructions:
-1. First, restate briefly what "done" should look like for this document type.
+1. First, restate briefly what "done" should look like for this document type and task category.
 2. Then produce high-quality, ready-to-use content OR a stronger structure.
 3. When relevant, propose missing sections.
 4. If content is weak, rewrite it.
