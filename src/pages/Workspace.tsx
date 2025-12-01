@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, CheckCircle2, Download } from 'lucide-react';
+import { FileText, CheckCircle2, Download, Copy } from 'lucide-react';
 import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
@@ -192,6 +192,43 @@ export default function Workspace() {
     }
   };
 
+  const handleDuplicateDocument = async () => {
+    if (!currentDocument || !user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('workspace_documents')
+        .insert({
+          user_id: user.id,
+          idea_id: currentDocument.idea_id,
+          source_type: currentDocument.source_type,
+          source_id: currentDocument.source_id,
+          doc_type: currentDocument.doc_type,
+          title: `${currentDocument.title || 'Untitled'} (Copy)`,
+          content: currentDocument.content || '',
+          status: currentDocument.status || 'draft',
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      await refreshList();
+      navigate(`/workspace/${data.id}`);
+      toast({
+        title: 'Document duplicated',
+        description: 'A copy of the document has been created.',
+      });
+    } catch (err) {
+      console.error('Error duplicating document:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to duplicate document',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="flex h-[calc(100vh-4rem)] gap-4">
       {/* Left Sidebar - Documents List */}
@@ -210,6 +247,14 @@ export default function Workspace() {
       <div className="flex-1 flex flex-col">
         {currentDocument && (
           <div className="flex justify-end mb-2 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDuplicateDocument}
+            >
+              <Copy className="w-4 h-4 mr-1" />
+              Duplicate
+            </Button>
             <Button
               variant="outline"
               size="sm"
