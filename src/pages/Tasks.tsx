@@ -119,6 +119,87 @@ const Tasks = () => {
     }
   };
 
+  const handleOpenTaskInWorkspace = async (task: Task) => {
+    if (!user) return;
+
+    try {
+      let docId = task.workspace_document_id;
+
+      // 1) If no linked doc yet, create one from this task
+      if (!docId) {
+        const initialContent = [
+          `# Task: ${task.title}`,
+          "",
+          task.description ? `**Description:** ${task.description}` : "",
+          task.estimated_minutes ? `**Estimated Time:** ${task.estimated_minutes} minutes` : "",
+          task.category ? `**Category:** ${task.category}` : "",
+          "",
+          "---",
+          "",
+          "Use this space to think through this task:",
+          "- What does “done” look like for this?",
+          "- What decisions do I need to make?",
+          "- What drafts or experiments should I create?",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        const { data: docInsert, error: docError } = await supabase
+          .from("workspace_documents")
+          .insert({
+            user_id: user.id,
+            title: task.title,
+            doc_type: task.category || "task",
+            source_type: "task",
+            content: initialContent,
+            linked_task_id: task.id, // if you added this column
+          })
+          .select("id")
+          .single();
+
+        if (docError) throw docError;
+        docId = docInsert.id;
+
+        // 2) Update task to reference this doc
+        const { error: taskUpdateError } = await supabase
+          .from("tasks")
+          .update({ workspace_document_id: docId })
+          .eq("id", task.id)
+          .eq("user_id", user.id);
+
+        if (taskUpdateError) throw taskUpdateError;
+
+        // Update local state so UI is in sync
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, workspace_document_id: docId } : t)));
+      }
+
+      if (!docId) {
+        throw new Error("Failed to determine workspace document id");
+      }
+
+      // 3) Navigate to workspace with taskContext in state
+      navigate(`/workspace/${docId}`, {
+        state: {
+          taskContext: {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            estimated_minutes: task.estimated_minutes,
+            xp_reward: task.xp_reward,
+            category: task.category,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error opening task in workspace:", error);
+      toast({
+        title: "Error",
+        description: "Failed to open this task in the workspace.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const openTasks = tasks.filter((t) => t.status !== "completed");
   const completedTasks = tasks.filter((t) => t.status === "completed");
 
