@@ -246,28 +246,64 @@ export default function Workspace() {
       {/* Main Editor Area */}
       <div className="flex-1 flex flex-col">
         {currentDocument && (
-          <div className="flex justify-end mb-2 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDuplicateDocument}
-            >
-              <Copy className="w-4 h-4 mr-1" />
-              Duplicate
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                exportWorkspaceDocToPdf({
-                  title: currentDocument.title || 'Workspace Document',
-                  content: currentDocument.content || '',
-                })
-              }
-            >
-              <Download className="w-4 h-4 mr-1" />
-              Export as PDF
-            </Button>
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm text-muted-foreground">Status:</Label>
+              <Select
+                value={currentDocument.status || 'draft'}
+                onValueChange={async (value) => {
+                  try {
+                    const { error } = await supabase
+                      .from('workspace_documents')
+                      .update({ status: value })
+                      .eq('id', currentDocument.id);
+                    if (error) throw error;
+                    await loadDocument(currentDocument.id);
+                    await refreshList();
+                    toast({ title: 'Status updated' });
+                  } catch (err) {
+                    console.error('Error updating status:', err);
+                    toast({
+                      title: 'Error',
+                      description: 'Failed to update status',
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+              >
+                <SelectTrigger className="w-[120px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="final">Final</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDuplicateDocument}
+              >
+                <Copy className="w-4 h-4 mr-1" />
+                Duplicate
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  exportWorkspaceDocToPdf({
+                    title: currentDocument.title || 'Workspace Document',
+                    content: currentDocument.content || '',
+                  })
+                }
+              >
+                <Download className="w-4 h-4 mr-1" />
+                Export as PDF
+              </Button>
+            </div>
           </div>
         )}
         {!currentDocument ? (

@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { FileText, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +31,7 @@ export function WorkspaceSidebar({
   const { toast } = useToast();
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -38,6 +40,11 @@ export function WorkspaceSidebar({
       inputRef.current.select();
     }
   }, [renamingId]);
+
+  const filteredDocuments = useMemo(() => {
+    if (statusFilter === 'all') return documents;
+    return documents.filter((doc) => doc.status === statusFilter);
+  }, [documents, statusFilter]);
 
   const startRenaming = (doc: WorkspaceDocument, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -60,7 +67,6 @@ export function WorkspaceSidebar({
 
       if (error) throw error;
 
-      // Update parent state on success
       if (onRename) {
         onRename(renamingId, newTitle.trim());
       }
@@ -100,6 +106,17 @@ export function WorkspaceSidebar({
             <FileText className="w-4 h-4" />
           </Button>
         </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-7 text-xs mt-2">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="final">Final</SelectItem>
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent className="p-0 flex-1">
         <ScrollArea className="h-full">
@@ -109,13 +126,15 @@ export function WorkspaceSidebar({
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : documents.length === 0 ? (
+          ) : filteredDocuments.length === 0 ? (
             <div className="p-3 text-center text-sm text-muted-foreground">
-              No documents yet. Create one to get started.
+              {statusFilter === 'all'
+                ? 'No documents yet. Create one to get started.'
+                : `No ${statusFilter.replace('_', ' ')} documents.`}
             </div>
           ) : (
             <div className="space-y-1 p-2">
-              {documents.map((doc) => {
+              {filteredDocuments.map((doc) => {
                 const isSelected = currentId === doc.id;
                 const isRenaming = renamingId === doc.id;
 
