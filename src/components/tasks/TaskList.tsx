@@ -3,13 +3,15 @@ import { Zap, Target, Inbox } from "lucide-react";
 
 interface Task {
   id: string;
-  type?: string;
   title: string;
-  description?: string;
-  xp_reward?: number;
-  status?: string;
+  description: string | null;
+  category: string | null;
+  estimated_minutes: number | null;
+  xp_reward: number | null;
+  status: string;
+  completed_at: string | null;
   created_at: string;
-  completed_at?: string | null;
+  workspace_document_id?: string | null;
 }
 
 interface TaskListProps {
@@ -19,9 +21,9 @@ interface TaskListProps {
 }
 
 export function TaskList({ tasks, onTaskCompleted, onTaskStart }: TaskListProps) {
-  const microTasks = tasks.filter(task => task.type === "micro");
-  const questTasks = tasks.filter(task => task.type === "quest");
-  const otherTasks = tasks.filter(task => task.type !== "micro" && task.type !== "quest");
+  const microTasks = tasks.filter((task) => task.type === "micro");
+  const questTasks = tasks.filter((task) => task.type === "quest");
+  const otherTasks = tasks.filter((task) => task.type !== "micro" && task.type !== "quest");
 
   // If no tasks at all, show global empty state
   if (tasks.length === 0) {
@@ -44,18 +46,11 @@ export function TaskList({ tasks, onTaskCompleted, onTaskStart }: TaskListProps)
           <div className="flex items-center gap-2 mb-4">
             <Zap className="h-5 w-5 text-primary" />
             <h2 className="text-xl font-bold">Micro Tasks</h2>
-            <span className="text-sm text-muted-foreground">
-              ({microTasks.length})
-            </span>
+            <span className="text-sm text-muted-foreground">({microTasks.length})</span>
           </div>
           <div className="space-y-3">
-            {microTasks.map(task => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onComplete={onTaskCompleted}
-                onStart={onTaskStart}
-              />
+            {microTasks.map((task) => (
+              <TaskCard key={task.id} task={task} onComplete={onTaskCompleted} onStart={onTaskStart} />
             ))}
           </div>
         </div>
@@ -67,18 +62,11 @@ export function TaskList({ tasks, onTaskCompleted, onTaskStart }: TaskListProps)
           <div className="flex items-center gap-2 mb-4">
             <Target className="h-5 w-5 text-primary" />
             <h2 className="text-xl font-bold">Founder Quests</h2>
-            <span className="text-sm text-muted-foreground">
-              ({questTasks.length})
-            </span>
+            <span className="text-sm text-muted-foreground">({questTasks.length})</span>
           </div>
           <div className="space-y-3">
-            {questTasks.map(task => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onComplete={onTaskCompleted}
-                onStart={onTaskStart}
-              />
+            {questTasks.map((task) => (
+              <TaskCard key={task.id} task={task} onComplete={onTaskCompleted} onStart={onTaskStart} />
             ))}
           </div>
         </div>
@@ -90,18 +78,11 @@ export function TaskList({ tasks, onTaskCompleted, onTaskStart }: TaskListProps)
           <div className="flex items-center gap-2 mb-4">
             <Inbox className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-xl font-bold">Other Tasks</h2>
-            <span className="text-sm text-muted-foreground">
-              ({otherTasks.length})
-            </span>
+            <span className="text-sm text-muted-foreground">({otherTasks.length})</span>
           </div>
           <div className="space-y-3">
-            {otherTasks.map(task => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onComplete={onTaskCompleted}
-                onStart={onTaskStart}
-              />
+            {otherTasks.map((task) => (
+              <TaskCard key={task.id} task={task} onComplete={onTaskCompleted} onStart={onTaskStart} />
             ))}
           </div>
         </div>
