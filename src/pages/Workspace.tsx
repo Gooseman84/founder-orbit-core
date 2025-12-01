@@ -193,7 +193,7 @@ export default function Workspace() {
   return (
     <div className="flex h-[calc(100vh-4rem)] gap-4">
       {/* Left Sidebar - Documents List */}
-      <aside className="w-72">
+      <aside className="w-56">
         <WorkspaceSidebar
           documents={documents}
           currentId={currentDocument?.id}
