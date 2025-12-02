@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUserContext } from "@/hooks/useUserContext";
+import { useUserContext, type ContextEvent } from "@/hooks/useUserContext";
 import { useAuth } from "@/hooks/useAuth";
 import { FounderProfileCard } from "@/components/context-inspector/FounderProfileCard";
 import { ExtendedIntakeCard } from "@/components/context-inspector/ExtendedIntakeCard";
@@ -74,6 +74,12 @@ export default function ContextInspector() {
       toast.error(message);
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleContextEventClick = (event: ContextEvent) => {
+    if (event.targetRoute) {
+      navigate(event.targetRoute);
     }
   };
 
@@ -197,7 +203,8 @@ export default function ContextInspector() {
       {/* Context History Timeline */}
       <ContextHistoryCard 
         events={context?.contextHistory || []} 
-        loading={loading} 
+        loading={loading}
+        onEventClick={handleContextEventClick}
       />
     </div>
   );
