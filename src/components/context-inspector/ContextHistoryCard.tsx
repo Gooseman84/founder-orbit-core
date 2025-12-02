@@ -8,6 +8,7 @@ import { format } from "date-fns";
 interface ContextHistoryCardProps {
   events: ContextEvent[];
   loading: boolean;
+  onEventClick?: (event: ContextEvent) => void;
 }
 
 const eventConfig: Record<ContextEventType, { label: string; icon: React.ElementType; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -19,7 +20,7 @@ const eventConfig: Record<ContextEventType, { label: string; icon: React.Element
   weekly_pattern: { label: "Weekly Pattern", icon: Calendar, variant: "outline" },
 };
 
-export function ContextHistoryCard({ events, loading }: ContextHistoryCardProps) {
+export function ContextHistoryCard({ events, loading, onEventClick }: ContextHistoryCardProps) {
   if (loading) {
     return (
       <Card>
@@ -82,9 +83,25 @@ export function ContextHistoryCard({ events, loading }: ContextHistoryCardProps)
             {events.map((event, idx) => {
               const config = eventConfig[event.type];
               const Icon = config.icon;
+              const isClickable = onEventClick && event.targetRoute;
               
               return (
-                <div key={idx} className="flex gap-4 relative">
+                <div 
+                  key={idx} 
+                  className={`flex gap-4 relative px-2 -mx-2 rounded-md transition-colors ${
+                    isClickable ? "cursor-pointer hover:bg-muted/60 group" : ""
+                  }`}
+                  onClick={() => isClickable && onEventClick(event)}
+                  role={isClickable ? "button" : undefined}
+                  tabIndex={isClickable ? 0 : undefined}
+                  onKeyDown={(e) => {
+                    if (!isClickable) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onEventClick(event);
+                    }
+                  }}
+                >
                   {/* Date */}
                   <div className="w-16 text-xs text-muted-foreground pt-0.5 text-right shrink-0">
                     {format(new Date(event.date), "MMM d")}

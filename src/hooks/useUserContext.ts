@@ -16,6 +16,8 @@ export interface ContextEvent {
   type: ContextEventType;
   title: string;
   description: string;
+  targetRoute?: string | null;
+  resourceId?: string | null;
 }
 
 export interface UserContextData {
@@ -79,6 +81,8 @@ function buildContextHistory(
         type: "idea_chosen",
         title: idea.title,
         description: `"${idea.title}" selected as North Star idea.`,
+        targetRoute: `/ideas/${idea.id}`,
+        resourceId: idea.id,
       });
     } else {
       events.push({
@@ -86,6 +90,8 @@ function buildContextHistory(
         type: "idea_created",
         title: idea.title,
         description: `New idea "${idea.title}" created.`,
+        targetRoute: `/ideas/${idea.id}`,
+        resourceId: idea.id,
       });
     }
   });
@@ -98,6 +104,8 @@ function buildContextHistory(
       type: "idea_analysis",
       title: `${ideaTitle} Analyzed`,
       description: `Deep analysis completed for "${ideaTitle}".`,
+      targetRoute: `/ideas/${analysis.idea_id}`,
+      resourceId: analysis.idea_id,
     });
   });
 
@@ -114,6 +122,8 @@ function buildContextHistory(
       description: isNew
         ? `New ${doc.doc_type || "document"} "${doc.title}" created.`
         : `${doc.doc_type || "Document"} "${doc.title}" updated.`,
+      targetRoute: `/workspace?doc=${doc.id}`,
+      resourceId: doc.id,
     });
   });
 
@@ -149,6 +159,8 @@ function buildContextHistory(
         type: "weekly_pattern",
         title: `Week of ${format(weekStart, "MMM d")}`,
         description: `Energy ${energyTrend}, stress ${stressTrend}${themeText ? `. ${themeText}` : ""}. ${weekReflections.length} check-ins.`,
+        targetRoute: "/daily-reflection",
+        resourceId: null,
       });
     }
   }
