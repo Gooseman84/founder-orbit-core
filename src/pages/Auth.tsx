@@ -220,6 +220,44 @@ const Auth = () => {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
+
+                <div className="text-center">
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="text-sm text-muted-foreground hover:text-primary"
+                    onClick={async () => {
+                      const email = form.getValues("email");
+                      if (!email) {
+                        toast({
+                          title: "Email required",
+                          description: "Please enter your email address first.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
+                      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                        redirectTo: `${window.location.origin}/reset-password`,
+                      });
+
+                      if (error) {
+                        toast({
+                          title: "Error",
+                          description: error.message,
+                          variant: "destructive",
+                        });
+                      } else {
+                        toast({
+                          title: "Check your email",
+                          description: "We've sent you a password reset link.",
+                        });
+                      }
+                    }}
+                  >
+                    Forgot password?
+                  </Button>
+                </div>
               </form>
             </TabsContent>
 
@@ -265,7 +303,12 @@ const Auth = () => {
         </CardContent>
 
         <CardFooter className="flex flex-col space-y-2 text-center text-sm text-muted-foreground">
-          <p>By continuing, you agree to our Terms of Service and Privacy Policy.</p>
+          <p>
+            By continuing, you agree to our{" "}
+            <a href="/terms" className="text-primary hover:underline">Terms of Service</a>
+            {" "}and{" "}
+            <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>.
+          </p>
         </CardFooter>
       </Card>
     </div>

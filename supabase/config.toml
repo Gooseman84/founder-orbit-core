@@ -1,5 +1,8 @@
 project_id = "empldatnfyczyiatmnfa"
 
+[functions.create-customer-portal]
+verify_jwt = true
+
 [functions.generate-ideas]
 verify_jwt = true
 

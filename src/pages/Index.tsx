@@ -312,15 +312,23 @@ const PricingSection = ({ onNavigate }: { onNavigate: () => void }) => {
             style={{ transitionDelay: "200ms" }}
           >
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Free</p>
-            <h3 className="text-2xl font-bold mb-6">Discover Yourself</h3>
+            <h3 className="text-2xl font-bold mb-4">Discover Yourself</h3>
+            <p className="text-3xl font-bold mb-6">$0<span className="text-lg font-normal text-muted-foreground">/month</span></p>
             <ul className="space-y-3">
-              {["Discover yourself", "Reveal aligned directions", "Identify early opportunities"].map((item, index) => (
+              {["Unlimited idea generation", "AI-powered idea vetting", "Basic task management", "Daily pulse checks", "Workspace documents"].map((item, index) => (
                 <li key={index} className="flex items-center gap-3 text-muted-foreground">
                   <Check className="w-5 h-5 text-primary flex-shrink-0" />
                   {item}
                 </li>
               ))}
             </ul>
+            <Button 
+              variant="outline" 
+              className="w-full mt-6" 
+              onClick={onNavigate}
+            >
+              Get Started Free
+            </Button>
           </div>
           
           <div 
@@ -328,13 +336,29 @@ const PricingSection = ({ onNavigate }: { onNavigate: () => void }) => {
             style={{ transitionDelay: "400ms" }}
           >
             <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-semibold animate-pulse">
-              Founding Member
+              Most Popular
             </div>
             <p className="text-sm font-semibold text-primary uppercase tracking-wide mb-2">Pro</p>
-            <h3 className="text-2xl font-bold mb-6">Go Deeper</h3>
-            <p className="text-muted-foreground">
-              When you're ready to go deeper, TrueBlazer grows with you.
-            </p>
+            <h3 className="text-2xl font-bold mb-4">Go Deeper</h3>
+            <div className="flex items-baseline gap-2 mb-6">
+              <p className="text-3xl font-bold">$29<span className="text-lg font-normal text-muted-foreground">/month</span></p>
+              <p className="text-sm text-muted-foreground">or $199/year</p>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">Everything in Free, plus:</p>
+            <ul className="space-y-3">
+              {["Opportunity scoring", "Side-by-side idea comparison", "Market radar signals", "Unlimited workspace", "Priority support"].map((item, index) => (
+                <li key={index} className="flex items-center gap-3 text-muted-foreground">
+                  <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <Button 
+              className="w-full mt-6" 
+              onClick={onNavigate}
+            >
+              Upgrade to Pro
+            </Button>
           </div>
         </div>
         

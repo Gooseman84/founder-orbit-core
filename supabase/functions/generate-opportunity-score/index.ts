@@ -64,6 +64,31 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Server-side subscription validation
+    console.log('[generate-opportunity-score] Checking subscription...');
+    const { data: subscription, error: subError } = await supabase
+      .from('user_subscriptions')
+      .select('plan, status')
+      .eq('user_id', userId)
+      .single();
+
+    if (subError || !subscription) {
+      return new Response(
+        JSON.stringify({ error: 'upgrade_required', message: 'Pro subscription required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const isPro = subscription.plan === 'pro' || subscription.plan === 'founder';
+    const isActive = subscription.status === 'active' || subscription.status === 'trialing';
+
+    if (!isPro || !isActive) {
+      return new Response(
+        JSON.stringify({ error: 'upgrade_required', message: 'Active Pro subscription required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Build input using data from database
     console.log('[generate-opportunity-score] Building input data...');
     const input = await buildOpportunityInput(supabase, userId, ideaId);
