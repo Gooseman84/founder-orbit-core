@@ -161,7 +161,7 @@ export function WorkspaceSidebar({
                           />
                         ) : (
                           <div className="flex items-center gap-1">
-                            <p className="font-medium text-sm truncate flex-1">{doc.title}</p>
+                            <p className="font-medium text-sm break-words flex-1">{doc.title}</p>
                             {isSelected && onRename && (
                               <button
                                 onClick={(e) => startRenaming(doc, e)}
