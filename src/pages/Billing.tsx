@@ -7,10 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CreditCard, Calendar, CheckCircle, ArrowUpRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Billing = () => {
   const { plan, status, loading } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
+  const { toast } = useToast();
 
   if (loading) {
     return (
@@ -167,18 +170,38 @@ const Billing = () => {
 
               <Separator />
 
-              <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-                <div className="flex items-start gap-2">
-                  <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">Subscription Management</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      You can manage your subscription, update payment methods, or cancel anytime through the Stripe customer portal link sent to your email.
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground italic">
-                  A dedicated billing portal will be available soon for easier management.
+              <div className="space-y-3">
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="w-full gap-2"
+                  onClick={async () => {
+                    try {
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user) return;
+
+                      const response = await supabase.functions.invoke("create-customer-portal", {
+                        body: { userId: user.id },
+                      });
+
+                      if (response.error) throw response.error;
+                      if (response.data?.url) {
+                        window.location.href = response.data.url;
+                      }
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to open billing portal. Please try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  Manage Subscription
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Update payment methods, view invoices, or cancel your subscription
                 </p>
               </div>
             </div>

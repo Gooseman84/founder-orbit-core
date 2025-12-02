@@ -8,6 +8,9 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { MainLayout } from "./components/layout/MainLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import Onboarding from "./pages/Onboarding";
 import ExtendedOnboarding from "./pages/ExtendedOnboarding";
 import Ideas from "./pages/Ideas";
@@ -43,6 +46,9 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/onboarding" element={<ProtectedRoute><MainLayout><Onboarding /></MainLayout></ProtectedRoute>} />
             <Route path="/onboarding/extended" element={<ProtectedRoute><ExtendedOnboarding /></ProtectedRoute>} />
             <Route path="/ideas" element={<ProtectedRoute><MainLayout><Ideas /></MainLayout></ProtectedRoute>} />
