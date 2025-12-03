@@ -11,6 +11,15 @@ import { Sparkles, Heart, Target, Briefcase, RefreshCw } from "lucide-react";
 const Blueprint = () => {
   const { user } = useAuth();
   const { blueprint, loading, error, saveUpdates, refresh } = useBlueprint();
+  // A blueprint row may exist but contain no real data.
+  // In that case, we should show the "Generate from my profile" CTA again.
+  const isEmptyBlueprint =
+    blueprint &&
+    !blueprint.life_vision &&
+    !blueprint.north_star_one_liner &&
+    !blueprint.offer_model &&
+    !blueprint.distribution_channels &&
+    !blueprint.ai_summary;
   const [refreshing, setRefreshing] = useState(false);
 
   const [generating, setGenerating] = useState(false);
@@ -98,7 +107,7 @@ const Blueprint = () => {
     );
   }
 
-  if (!blueprint) {
+  if (!blueprint || isEmptyBlueprint) {
     return (
       <div className="container mx-auto py-8 px-4 flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md w-full text-center">
