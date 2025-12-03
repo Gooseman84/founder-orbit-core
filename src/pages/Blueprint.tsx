@@ -13,9 +13,10 @@ const Blueprint = () => {
   const { blueprint, loading, error, saveUpdates, refresh } = useBlueprint();
   const [refreshing, setRefreshing] = useState(false);
 
+  const [generating, setGenerating] = useState(false);
   const handleRefreshWithAI = async () => {
     if (!user) return;
-    
+
     setRefreshing(true);
     try {
       const { error: fnError } = await supabase.functions.invoke("refresh-blueprint", {
@@ -35,13 +36,39 @@ const Blueprint = () => {
   };
 
   const handleGenerateBlueprint = async () => {
+    if (!user) {
+      toast({
+        title: "Sign-in required",
+        description: "Please log in to generate your Founder Blueprint.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGenerating(true);
     try {
-      await saveUpdates({
-        status: "draft",
-        version: 1,
+      const { data, error: fnError } = await supabase.functions.invoke("generate-blueprint", {
+        body: { userId: user.id },
+      });
+
+      if (fnError) {
+        throw fnError;
+      }
+
+      await refresh();
+      toast({
+        title: "Blueprint generated",
+        description: "We used your profile and chosen idea to build your life + business blueprint.",
       });
     } catch (err) {
-      console.error("Failed to create blueprint:", err);
+      console.error("Failed to generate blueprint:", err);
+      toast({
+        title: "Error",
+        description: "Failed to generate blueprint from your profile.",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -85,9 +112,18 @@ const Blueprint = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button size="lg" onClick={handleGenerateBlueprint} className="w-full">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Generate from my profile
+            <Button size="lg" onClick={handleGenerateBlueprint} className="w-full" disabled={generating}>
+              {generating ? (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate from my profile
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -100,9 +136,7 @@ const Blueprint = () => {
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold">Founder Blueprint</h1>
-          <p className="text-muted-foreground mt-1">
-            Your unified life + business strategy
-          </p>
+          <p className="text-muted-foreground mt-1">Your unified life + business strategy</p>
         </div>
         <Button onClick={handleRefreshWithAI} disabled={refreshing} variant="outline">
           <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
@@ -124,7 +158,11 @@ const Blueprint = () => {
             <BlueprintField label="Life Vision" value={blueprint.life_vision} />
             <BlueprintField label="Time Horizon" value={blueprint.life_time_horizon} />
             <BlueprintField label="Income Target" value={blueprint.income_target?.toString()} prefix="$" />
-            <BlueprintField label="Hours/Week Available" value={blueprint.time_available_hours_per_week?.toString()} suffix="hrs" />
+            <BlueprintField
+              label="Hours/Week Available"
+              value={blueprint.time_available_hours_per_week?.toString()}
+              suffix="hrs"
+            />
             <BlueprintField label="Capital Available" value={blueprint.capital_available?.toString()} prefix="$" />
             <BlueprintField label="Risk Profile" value={blueprint.risk_profile} />
             <BlueprintField label="Non-Negotiables" value={blueprint.non_negotiables} />
@@ -152,7 +190,7 @@ const Blueprint = () => {
             <BlueprintField label="Promise Statement" value={blueprint.promise_statement} />
             <BlueprintField label="Traction Definition" value={blueprint.traction_definition} />
             <BlueprintField label="Validation Stage" value={blueprint.validation_stage} />
-            
+
             {blueprint.ai_summary && (
               <div className="pt-4 border-t">
                 <p className="text-xs font-medium text-muted-foreground mb-1">AI Summary</p>
@@ -177,7 +215,7 @@ const Blueprint = () => {
             <BlueprintField label="Distribution Channels" value={blueprint.distribution_channels} />
             <BlueprintField label="Unfair Advantage" value={blueprint.unfair_advantage} />
             <BlueprintField label="Runway Notes" value={blueprint.runway_notes} />
-            
+
             {blueprint.success_metrics && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1">Success Metrics</p>
@@ -186,7 +224,7 @@ const Blueprint = () => {
                 </pre>
               </div>
             )}
-            
+
             {blueprint.focus_quarters && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1">Focus Quarters</p>
@@ -224,7 +262,9 @@ const BlueprintField = ({ label, value, prefix, suffix, highlight }: BlueprintFi
     <div>
       <p className="text-xs font-medium text-muted-foreground mb-0.5">{label}</p>
       <p className={`text-sm ${highlight ? "font-semibold text-primary" : ""}`}>
-        {prefix}{value}{suffix}
+        {prefix}
+        {value}
+        {suffix}
       </p>
     </div>
   );
