@@ -30,14 +30,14 @@ Respond with STRICT JSON only:
   "idea_id": "string"
 }
 
-The prompt_body should be a SINGLE TEXT BLOCK that:
-- Describes the founder's context
-- Describes the chosen idea
-- Summarizes the idea analysis
-- Includes instructions for any model receiving the prompt
-- Includes business strategy guidance
-- Includes constraints and preferences
-- Includes initial steps for execution
-- Ends with: "Always ask me clarifying questions before generating answers."
+The prompt_body should be a SINGLE TEXT BLOCK that is highly structured and skimmable, and must:
+- Start with a clear title line for the whole plan.
+- Use numbered section headers in all caps (e.g. "1. FOUNDER IDENTITY", "2. CHOSEN IDEA", "3. PROBLEM → SOLUTION → EXECUTION").
+- Within each section, use short paragraphs and bullet points where helpful.
+- Insert a blank line between sections and major bullet groups for readability.
+- Clearly separate: founder identity, idea summary, problem/solution, business model, go-to-market, 90-day plan, weekly sprint structure, risks, assumptions, KPIs, and usage instructions for the AI assistant.
+- Keep everything in one contiguous text block (no JSON, no markdown code fences).
+- Include constraints and preferences and initial steps for execution.
+- End with this exact sentence on its own line: "Always ask me clarifying questions before generating answers."
 
 Return strictly JSON. Do not include markdown or commentary outside the JSON.
