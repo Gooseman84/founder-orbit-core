@@ -305,26 +305,33 @@ Return the items as a JSON object with an "items" array.`;
     });
 
     if (!response.ok) {
+      const status = response.status;
       const errorText = await response.text();
-      console.error("generate-feed-items: AI API error", response.status, errorText);
+      console.error("generate-feed-items: AI gateway error", status, errorText);
       
-      if (response.status === 429) {
+      if (status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: "AI rate limit exceeded, please wait and try again.",
+            code: "rate_limited",
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
       
-      if (response.status === 402) {
+      if (status === 402) {
         return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add funds to continue." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: "AI credits exhausted, please add funds to your Lovable AI workspace.",
+            code: "payment_required",
+          }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
       
       return new Response(
-        JSON.stringify({ error: "AI API error", details: errorText }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "AI generation failed" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 

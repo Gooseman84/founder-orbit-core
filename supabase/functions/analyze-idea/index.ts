@@ -210,24 +210,34 @@ Rules:
     });
 
     if (!aiResponse.ok) {
+      const status = aiResponse.status;
       const errorText = await aiResponse.text();
-      console.error("analyze-idea: AI gateway error", aiResponse.status, errorText);
+      console.error("analyze-idea: AI gateway error", status, errorText);
       
-      if (aiResponse.status === 429) {
+      if (status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: "AI rate limit exceeded, please wait and try again.",
+            code: "rate_limited",
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
       
-      if (aiResponse.status === 402) {
+      if (status === 402) {
         return new Response(
-          JSON.stringify({ error: "AI service requires payment. Please contact support." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: "AI credits exhausted, please add funds to your Lovable AI workspace.",
+            code: "payment_required",
+          }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      throw new Error(`AI gateway error: ${aiResponse.status}`);
+      return new Response(
+        JSON.stringify({ error: "AI generation failed" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const aiData = await aiResponse.json();
