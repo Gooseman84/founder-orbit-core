@@ -21,7 +21,6 @@ const Blueprint = () => {
     !blueprint.distribution_channels &&
     !blueprint.ai_summary;
   const [refreshing, setRefreshing] = useState(false);
-
   const [generating, setGenerating] = useState(false);
   const handleRefreshWithAI = async () => {
     if (!user) return;
@@ -145,12 +144,29 @@ const Blueprint = () => {
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold">Founder Blueprint</h1>
-          <p className="text-muted-foreground mt-1">Your unified life + business strategy</p>
+          <p className="text-muted-foreground mt-1">
+            Your unified life + business strategy
+          </p>
         </div>
-        <Button onClick={handleRefreshWithAI} disabled={refreshing} variant="outline">
-          <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-          {refreshing ? "Refreshing..." : "Refresh with AI"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleGenerateBlueprint}
+            disabled={generating}
+            className="flex items-center"
+          >
+            <Sparkles className={`mr-2 h-4 w-4 ${generating ? "animate-spin" : ""}`} />
+            {generating ? "Generating..." : "Generate from my profile"}
+          </Button>
+          <Button
+            onClick={handleRefreshWithAI}
+            disabled={refreshing}
+            variant="outline"
+            className="flex items-center"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Refreshing..." : "Refresh with AI"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
