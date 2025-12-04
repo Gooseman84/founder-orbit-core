@@ -40,8 +40,8 @@ export function PromptViewer({ prompt, filename = "north-star-prompt" }: PromptV
   };
 
   return (
-    <div className="relative">
-      <div className="absolute top-3 right-3 z-10 flex gap-2">
+    <div className="space-y-3">
+      <div className="flex justify-end gap-2">
         <Button
           variant="outline"
           size="sm"
