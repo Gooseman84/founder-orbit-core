@@ -25,6 +25,10 @@ export default function NorthStar() {
   const [ideaTitle, setIdeaTitle] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    document.title = "North Star Master Prompt | TrueBlazer.AI";
+  }, []);
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -246,15 +250,21 @@ export default function NorthStar() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
       {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-primary" />
-          <h1 className="text-3xl font-bold">North Star</h1>
+      <div className="space-y-3">
+        <p className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
+          Master Prompt
+        </p>
+        <div className="flex flex-wrap items-baseline gap-3">
+          <Sparkles className="h-7 w-7 text-primary" />
+          <h1 className="text-3xl md:text-4xl font-display font-semibold tracking-tight">
+            North Star for {ideaTitle}
+          </h1>
         </div>
-        <p className="text-muted-foreground">
-          Your personalized AI guidance system for building {ideaTitle}
+        <p className="text-sm md:text-base text-muted-foreground max-w-2xl">
+          A reusable, high-context brief you can paste into any AI assistant to keep your strategy,
+          constraints, and execution plan aligned.
         </p>
       </div>
 
@@ -292,17 +302,22 @@ export default function NorthStar() {
 
       {/* Prompt Viewer */}
       {masterPrompt && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-muted-foreground">
-              Based on your chosen idea: <strong>{ideaTitle}</strong>
+        <section className="space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Prompt context
+              </p>
+              <p className="text-sm md:text-base text-foreground">
+                Based on your chosen idea: <span className="font-semibold">{ideaTitle}</span>
+              </p>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleRegenerate}
               disabled={generating}
-              className="gap-2"
+              className="gap-2 self-start md:self-auto"
             >
               {generating ? (
                 <>
@@ -318,11 +333,16 @@ export default function NorthStar() {
             </Button>
           </div>
 
-          <PromptViewer 
-            prompt={masterPrompt.prompt_body} 
-            filename={`trueblazer-${ideaTitle.toLowerCase().replace(/\s+/g, "-")}`}
-          />
-        </div>
+          <Card className="p-4 md:p-5 shadow-sm border-dashed">
+            <h2 className="text-sm font-semibold text-muted-foreground mb-2">
+              Your master prompt
+            </h2>
+            <PromptViewer
+              prompt={masterPrompt.prompt_body}
+              filename={`trueblazer-${ideaTitle.toLowerCase().replace(/\s+/g, "-")}`}
+            />
+          </Card>
+        </section>
       )}
 
       {/* Additional Actions */}
