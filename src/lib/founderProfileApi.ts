@@ -70,3 +70,20 @@ export async function upsertFounderProfile(
     throw insertError;
   }
 }
+
+export async function normalizeFounderProfile(raw: any): Promise<FounderProfile> {
+  const { data, error } = await supabase.functions.invoke("normalize-founder-profile", {
+    body: raw,
+  });
+
+  if (error) {
+    console.error("Error normalizing founder profile:", error);
+    throw new Error(error.message || "Failed to normalize founder profile");
+  }
+
+  if (!data || !data.profile) {
+    throw new Error("Invalid response from normalize-founder-profile function");
+  }
+
+  return data.profile as FounderProfile;
+}

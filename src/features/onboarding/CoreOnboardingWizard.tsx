@@ -11,8 +11,8 @@ import { Slider } from "@/components/ui/slider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { upsertFounderProfile } from "@/lib/founderProfileApi";
-import type { FounderProfile, RiskTolerance, Runway } from "@/types/founderProfile";
+import { upsertFounderProfile, normalizeFounderProfile } from "@/lib/founderProfileApi";
+import type { RiskTolerance, Runway } from "@/types/founderProfile";
 
 const TOTAL_STEPS = 5;
 
@@ -189,9 +189,7 @@ export function CoreOnboardingWizard() {
     setError(null);
 
     try {
-      const now = new Date().toISOString();
-
-      const profile: FounderProfile = {
+      const raw = {
         userId: user.id,
         passionsText: form.passionsText,
         passionDomains: form.passionDomains,
@@ -207,23 +205,9 @@ export function CoreOnboardingWizard() {
         lifestyleGoalsText: form.lifestyleGoalsText,
         visionOfSuccessText: form.visionOfSuccessText,
         lifestyleNonNegotiables: form.lifestyleNonNegotiables,
-        // Extended fields start empty – filled in by ExtendedProfileWizard later
-        primaryDesires: [],
-        energyGiversText: "",
-        energyDrainersText: "",
-        antiVisionText: "",
-        legacyStatementText: "",
-        fearStatementText: "",
-        businessArchetypes: [],
-        founderRoles: [],
-        workStylePreferences: [],
-        commitmentLevel: 0,
-        marketSegmentsUnderstood: [],
-        existingNetworkChannels: [],
-        hellNoFilters: [],
-        createdAt: now,
-        updatedAt: now,
       };
+
+      const profile = await normalizeFounderProfile(raw);
 
       await upsertFounderProfile(user.id, profile);
 
