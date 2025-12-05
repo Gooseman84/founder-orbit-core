@@ -3,6 +3,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { FounderProfile } from "@/types/founderProfile";
+import type { FounderInterview, InterviewTurn } from "@/types/founderInterview";
 
 const TABLE = "founder_profiles";
 
@@ -86,4 +87,68 @@ export async function normalizeFounderProfile(raw: any): Promise<FounderProfile>
   }
 
   return data.profile as FounderProfile;
+}
+
+export async function getOrCreateInterview(userId: string): Promise<FounderInterview> {
+  const { data, error } = await supabase
+    .from("founder_interviews")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "in_progress")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching interview:", error);
+    throw error;
+  }
+
+  if (data) {
+    return mapDbInterview(data);
+  }
+
+  const { data: created, error: insertError } = await supabase
+    .from("founder_interviews")
+    .insert({ user_id: userId, transcript: [] })
+    .select("*")
+    .single();
+
+  if (insertError) {
+    console.error("Error creating interview:", insertError);
+    throw insertError;
+  }
+
+  return mapDbInterview(created);
+}
+
+export async function updateInterviewTranscript(
+  interviewId: string,
+  transcript: InterviewTurn[],
+  status: "in_progress" | "completed" = "in_progress",
+  contextSummary?: any
+): Promise<void> {
+  const { error } = await supabase
+    .from("founder_interviews")
+    .update({
+      transcript: transcript as any,
+      status,
+      context_summary: contextSummary ?? null,
+    })
+    .eq("id", interviewId);
+
+  if (error) {
+    console.error("Error updating interview:", error);
+    throw error;
+  }
+}
+
+function mapDbInterview(row: any): FounderInterview {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    status: row.status,
+    transcript: (row.transcript ?? []) as InterviewTurn[],
+    contextSummary: row.context_summary ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }

@@ -216,7 +216,7 @@ export function CoreOnboardingWizard() {
         description: "Your founder profile has been created.",
       });
 
-      setShowExtendedPrompt(true);
+      navigate("/onboarding/interview");
     } catch (e) {
       console.error("Error saving founder profile:", e);
       toast({
