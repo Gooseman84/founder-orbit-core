@@ -74,3 +74,6 @@ verify_jwt = true
 
 [functions.generate-context-doc]
 verify_jwt = true
+
+[functions.generate-founder-ideas]
+verify_jwt = true
