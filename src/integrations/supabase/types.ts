@@ -320,47 +320,59 @@ export type Database = {
       founder_profiles: {
         Row: {
           capital_available: number | null
+          commitment_level: number | null
           created_at: string
+          hours_per_week: number | null
           id: string
           lifestyle_goals: string | null
           passions_tags: string[] | null
           passions_text: string | null
+          profile: Json
           risk_tolerance: string | null
           skills_tags: string[] | null
           skills_text: string | null
           success_vision: string | null
           tech_level: string | null
           time_per_week: number | null
+          updated_at: string
           user_id: string
         }
         Insert: {
           capital_available?: number | null
+          commitment_level?: number | null
           created_at?: string
+          hours_per_week?: number | null
           id?: string
           lifestyle_goals?: string | null
           passions_tags?: string[] | null
           passions_text?: string | null
+          profile?: Json
           risk_tolerance?: string | null
           skills_tags?: string[] | null
           skills_text?: string | null
           success_vision?: string | null
           tech_level?: string | null
           time_per_week?: number | null
+          updated_at?: string
           user_id: string
         }
         Update: {
           capital_available?: number | null
+          commitment_level?: number | null
           created_at?: string
+          hours_per_week?: number | null
           id?: string
           lifestyle_goals?: string | null
           passions_tags?: string[] | null
           passions_text?: string | null
+          profile?: Json
           risk_tolerance?: string | null
           skills_tags?: string[] | null
           skills_text?: string | null
           success_vision?: string | null
           tech_level?: string | null
           time_per_week?: number | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
