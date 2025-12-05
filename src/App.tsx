@@ -13,6 +13,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Onboarding from "./pages/Onboarding";
 import ExtendedOnboarding from "./pages/ExtendedOnboarding";
+import OnboardingInterview from "./pages/OnboardingInterview";
 import Ideas from "./pages/Ideas";
 import IdeaDetail from "./pages/IdeaDetail";
 import CompareIdeas from "./pages/CompareIdeas";
@@ -49,28 +50,232 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
-            <Route path="/onboarding" element={<ProtectedRoute><MainLayout><Onboarding /></MainLayout></ProtectedRoute>} />
-            <Route path="/onboarding/extended" element={<ProtectedRoute><ExtendedOnboarding /></ProtectedRoute>} />
-            <Route path="/ideas" element={<ProtectedRoute><MainLayout><Ideas /></MainLayout></ProtectedRoute>} />
-            <Route path="/ideas/:id" element={<ProtectedRoute><MainLayout><IdeaDetail /></MainLayout></ProtectedRoute>} />
-            <Route path="/ideas/compare" element={<ProtectedRoute><MainLayout><CompareIdeas /></MainLayout></ProtectedRoute>} />
-            <Route path="/north-star" element={<ProtectedRoute><MainLayout><NorthStar /></MainLayout></ProtectedRoute>} />
-            <Route path="/feed" element={<ProtectedRoute><MainLayout><Feed /></MainLayout></ProtectedRoute>} />
-            <Route path="/tasks" element={<ProtectedRoute><MainLayout><Tasks /></MainLayout></ProtectedRoute>} />
-            <Route path="/pulse" element={<ProtectedRoute><MainLayout><Pulse /></MainLayout></ProtectedRoute>} />
-            <Route path="/pulse/history" element={<ProtectedRoute><MainLayout><PulseHistory /></MainLayout></ProtectedRoute>} />
-            <Route path="/daily-reflection" element={<ProtectedRoute><MainLayout><DailyReflection /></MainLayout></ProtectedRoute>} />
-            <Route path="/weekly-review" element={<ProtectedRoute><MainLayout><WeeklyReview /></MainLayout></ProtectedRoute>} />
-            <Route path="/reflection/history" element={<ProtectedRoute><MainLayout><ReflectionHistory /></MainLayout></ProtectedRoute>} />
-            <Route path="/radar" element={<ProtectedRoute><MainLayout><Radar /></MainLayout></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><MainLayout><Profile /></MainLayout></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
-            <Route path="/workspace" element={<ProtectedRoute><MainLayout><Workspace /></MainLayout></ProtectedRoute>} />
-            <Route path="/workspace/:id" element={<ProtectedRoute><MainLayout><Workspace /></MainLayout></ProtectedRoute>} />
-            <Route path="/streak" element={<ProtectedRoute><MainLayout><DailyStreak /></MainLayout></ProtectedRoute>} />
-            <Route path="/billing" element={<ProtectedRoute><MainLayout><Billing /></MainLayout></ProtectedRoute>} />
-            <Route path="/blueprint" element={<ProtectedRoute><MainLayout><Blueprint /></MainLayout></ProtectedRoute>} />
-            <Route path="/context-inspector" element={<ProtectedRoute><MainLayout><ContextInspector /></MainLayout></ProtectedRoute>} />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Onboarding />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/onboarding/extended"
+              element={
+                <ProtectedRoute>
+                  <ExtendedOnboarding />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/onboarding/interview"
+              element={
+                <ProtectedRoute>
+                  <OnboardingInterview />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ideas"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Ideas />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ideas/:id"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <IdeaDetail />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ideas/compare"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <CompareIdeas />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/north-star"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <NorthStar />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/feed"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Feed />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tasks"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Tasks />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pulse"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Pulse />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pulse/history"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <PulseHistory />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/daily-reflection"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <DailyReflection />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/weekly-review"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <WeeklyReview />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reflection/history"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <ReflectionHistory />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/radar"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Radar />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Profile />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Dashboard />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workspace"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Workspace />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workspace/:id"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Workspace />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/streak"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <DailyStreak />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/billing"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Billing />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/blueprint"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Blueprint />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/context-inspector"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <ContextInspector />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

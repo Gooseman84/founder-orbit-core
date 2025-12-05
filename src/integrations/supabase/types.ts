@@ -317,6 +317,36 @@ export type Database = {
         }
         Relationships: []
       }
+      founder_interviews: {
+        Row: {
+          context_summary: Json | null
+          created_at: string | null
+          id: string
+          status: string
+          transcript: Json
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          context_summary?: Json | null
+          created_at?: string | null
+          id?: string
+          status?: string
+          transcript?: Json
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          context_summary?: Json | null
+          created_at?: string | null
+          id?: string
+          status?: string
+          transcript?: Json
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       founder_profiles: {
         Row: {
           capital_available: number | null
