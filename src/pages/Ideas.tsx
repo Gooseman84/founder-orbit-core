@@ -1,12 +1,15 @@
 // src/pages/Ideas.tsx
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useIdeas } from "@/hooks/useIdeas";
 import { useFounderIdeas } from "@/hooks/useFounderIdeas";
+import { useSaveFounderIdea } from "@/hooks/useSaveFounderIdea";
 import { IdeaCard } from "@/components/ideas/IdeaCard";
 import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
-import { RefreshCw, Scale, Sparkles } from "lucide-react";
+import { RefreshCw, Scale, Sparkles, Save, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import type { BusinessIdea } from "@/types/businessIdea";
 
 const Ideas = () => {
   const { ideas, isLoading, generateIdeas } = useIdeas();
@@ -15,8 +18,13 @@ const Ideas = () => {
     isPending: isGeneratingFounderIdeas,
     generate: generateFounderIdeas,
   } = useFounderIdeas();
+  const { saveIdea, isSaving } = useSaveFounderIdea();
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // Track which ideas have been saved
+  const [savedIdeaIds, setSavedIdeaIds] = useState<Set<string>>(new Set());
+  const [savingIdeaId, setSavingIdeaId] = useState<string | null>(null);
 
   const handleGenerateIdeas = async () => {
     try {
@@ -53,10 +61,32 @@ const Ideas = () => {
   const handleGenerateFounderIdeas = async () => {
     try {
       await generateFounderIdeas();
+      // Reset saved tracking when generating new ideas
+      setSavedIdeaIds(new Set());
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message ?? "Failed to generate founder-aligned ideas.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveIdea = async (idea: BusinessIdea) => {
+    setSavingIdeaId(idea.id);
+    const success = await saveIdea(idea);
+    setSavingIdeaId(null);
+    
+    if (success) {
+      setSavedIdeaIds((prev) => new Set(prev).add(idea.id));
+      toast({
+        title: "Saved!",
+        description: "This idea is now in your library.",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to save idea. Please try again.",
         variant: "destructive",
       });
     }
@@ -124,85 +154,115 @@ const Ideas = () => {
           <div>
             <h2 className="text-2xl font-semibold">Founder-aligned ideas (this session)</h2>
             <p className="text-sm text-muted-foreground max-w-2xl">
-              These ideas are generated from your full founder profile and dynamic interview context. They are not yet
-              saved to your library.
+              These ideas are generated from your full founder profile and dynamic interview context. Save the ones you
+              like to your library.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {founderIdeas.map((idea) => (
-              <div
-                key={idea.id}
-                className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between gap-3"
-              >
-                <div className="space-y-2">
-                  <div>
-                    <h2 className="text-lg font-semibold leading-tight">{idea.title}</h2>
-                    <p className="text-sm text-muted-foreground mt-1">{idea.oneLiner}</p>
-                  </div>
-                  <p className="text-sm">
-                    <span className="font-medium">Problem:</span> {idea.problemStatement}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">Target customer:</span> {idea.targetCustomer}
-                  </p>
-                  <div className="flex flex-wrap gap-1 mt-2 text-xs">
-                    <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                      Archetype: {idea.businessArchetype}
-                    </span>
-                    {idea.markets.slice(0, 3).map((market) => (
-                      <span key={market} className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                        {market}
+            {founderIdeas.map((idea) => {
+              const isSaved = savedIdeaIds.has(idea.id);
+              const isCurrentlySaving = savingIdeaId === idea.id;
+              
+              return (
+                <div
+                  key={idea.id}
+                  className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between gap-3"
+                >
+                  <div className="space-y-2">
+                    <div>
+                      <h2 className="text-lg font-semibold leading-tight">{idea.title}</h2>
+                      <p className="text-sm text-muted-foreground mt-1">{idea.oneLiner}</p>
+                    </div>
+                    <p className="text-sm">
+                      <span className="font-medium">Problem:</span> {idea.problemStatement}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Target customer:</span> {idea.targetCustomer}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mt-2 text-xs">
+                      <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                        Archetype: {idea.businessArchetype}
                       </span>
-                    ))}
-                    <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                      {idea.hoursPerWeekMin}-{idea.hoursPerWeekMax} hrs/week
-                    </span>
-                    <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                      ${""}
-                      {idea.capitalRequired.toLocaleString()} starting capital
-                    </span>
-                    <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                      Risk: {idea.riskLevel}
-                    </span>
-                  </div>
-                  <p className="text-sm mt-2">
-                    <span className="font-medium">Why it fits you:</span> {idea.whyItFitsFounder}
-                  </p>
-                  <div className="mt-3">
-                    <p className="text-sm font-medium mb-1">First steps</p>
-                    <ul className="text-sm space-y-1 list-disc list-inside">
-                      {idea.firstSteps.map((step, index) => (
-                        <li key={index}>{step}</li>
+                      {idea.markets.slice(0, 3).map((market) => (
+                        <span key={market} className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                          {market}
+                        </span>
                       ))}
-                    </ul>
+                      <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                        {idea.hoursPerWeekMin}-{idea.hoursPerWeekMax} hrs/week
+                      </span>
+                      <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                        ${""}
+                        {idea.capitalRequired.toLocaleString()} starting capital
+                      </span>
+                      <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                        Risk: {idea.riskLevel}
+                      </span>
+                    </div>
+                    <p className="text-sm mt-2">
+                      <span className="font-medium">Why it fits you:</span> {idea.whyItFitsFounder}
+                    </p>
+                    <div className="mt-3">
+                      <p className="text-sm font-medium mb-1">First steps</p>
+                      <ul className="text-sm space-y-1 list-disc list-inside">
+                        {idea.firstSteps.map((step, index) => (
+                          <li key={index}>{step}</li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
+                  <details className="mt-2 text-sm text-muted-foreground">
+                    <summary className="cursor-pointer select-none font-medium text-foreground">
+                      View execution details
+                    </summary>
+                    <div className="mt-2 space-y-1">
+                      <p>
+                        <span className="font-medium text-foreground">MVP approach:</span> {idea.mvpApproach}
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">Go-to-market:</span> {idea.goToMarket}
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">Revenue model:</span> {idea.revenueModel}
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">Financial trajectory (3/6/12 months):</span>{" "}
+                        {idea.financialTrajectory.month3} / {idea.financialTrajectory.month6} /{" "}
+                        {idea.financialTrajectory.month12}
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">Risks & mitigation:</span> {idea.risksMitigation}
+                      </p>
+                    </div>
+                  </details>
+                  
+                  <Button
+                    onClick={() => handleSaveIdea(idea)}
+                    disabled={isSaved || isCurrentlySaving || isSaving}
+                    variant={isSaved ? "secondary" : "default"}
+                    size="sm"
+                    className="mt-2 gap-2"
+                  >
+                    {isSaved ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Saved to Library
+                      </>
+                    ) : isCurrentlySaving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Save to My Library
+                      </>
+                    )}
+                  </Button>
                 </div>
-                <details className="mt-2 text-sm text-muted-foreground">
-                  <summary className="cursor-pointer select-none font-medium text-foreground">
-                    View execution details
-                  </summary>
-                  <div className="mt-2 space-y-1">
-                    <p>
-                      <span className="font-medium text-foreground">MVP approach:</span> {idea.mvpApproach}
-                    </p>
-                    <p>
-                      <span className="font-medium text-foreground">Go-to-market:</span> {idea.goToMarket}
-                    </p>
-                    <p>
-                      <span className="font-medium text-foreground">Revenue model:</span> {idea.revenueModel}
-                    </p>
-                    <p>
-                      <span className="font-medium text-foreground">Financial trajectory (3/6/12 months):</span>{" "}
-                      {idea.financialTrajectory.month3} / {idea.financialTrajectory.month6} / {" "}
-                      {idea.financialTrajectory.month12}
-                    </p>
-                    <p>
-                      <span className="font-medium text-foreground">Risks & mitigation:</span> {idea.risksMitigation}
-                    </p>
-                  </div>
-                </details>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
