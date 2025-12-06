@@ -1,5 +1,5 @@
 // src/pages/Ideas.tsx
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useIdeas } from "@/hooks/useIdeas";
@@ -7,6 +7,12 @@ import { useFounderIdeas } from "@/hooks/useFounderIdeas";
 import { useSaveFounderIdea } from "@/hooks/useSaveFounderIdea";
 import { IdeaCard } from "@/components/ideas/IdeaCard";
 import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
+import {
+  IdeaFilters,
+  IdeaFiltersState,
+  filterByTime,
+  filterByCapital,
+} from "@/components/ideas/IdeaFilters";
 import { RefreshCw, Scale, Sparkles, Save, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea } from "@/types/businessIdea";
@@ -21,10 +27,109 @@ const Ideas = () => {
   const { saveIdea, isSaving } = useSaveFounderIdea();
   const { toast } = useToast();
   const navigate = useNavigate();
-  
+
   // Track which ideas have been saved
   const [savedIdeaIds, setSavedIdeaIds] = useState<Set<string>>(new Set());
   const [savingIdeaId, setSavingIdeaId] = useState<string | null>(null);
+
+  // Filter state
+  const [filters, setFilters] = useState<IdeaFiltersState>({
+    archetypes: [],
+    markets: [],
+    riskLevels: [],
+    timeCommitment: null,
+    capitalRequired: null,
+  });
+
+  // Derive available filter options from all ideas
+  const { availableArchetypes, availableMarkets } = useMemo(() => {
+    const archetypeSet = new Set<string>();
+    const marketSet = new Set<string>();
+
+    // From founder ideas
+    founderIdeas.forEach((idea) => {
+      if (idea.businessArchetype) archetypeSet.add(idea.businessArchetype);
+      idea.markets?.forEach((m) => marketSet.add(m));
+    });
+
+    // From saved ideas (they have different structure)
+    ideas.forEach((idea) => {
+      if (idea.business_model_type) archetypeSet.add(idea.business_model_type);
+    });
+
+    return {
+      availableArchetypes: Array.from(archetypeSet).sort(),
+      availableMarkets: Array.from(marketSet).sort(),
+    };
+  }, [founderIdeas, ideas]);
+
+  // Filter founder ideas
+  const filteredFounderIdeas = useMemo(() => {
+    return founderIdeas.filter((idea) => {
+      // Archetype filter
+      if (
+        filters.archetypes.length > 0 &&
+        !filters.archetypes.includes(idea.businessArchetype)
+      ) {
+        return false;
+      }
+
+      // Market filter
+      if (
+        filters.markets.length > 0 &&
+        !idea.markets?.some((m) => filters.markets.includes(m))
+      ) {
+        return false;
+      }
+
+      // Risk filter
+      if (
+        filters.riskLevels.length > 0 &&
+        !filters.riskLevels.includes(idea.riskLevel)
+      ) {
+        return false;
+      }
+
+      // Time filter
+      if (
+        !filterByTime(
+          idea.hoursPerWeekMin,
+          idea.hoursPerWeekMax,
+          filters.timeCommitment
+        )
+      ) {
+        return false;
+      }
+
+      // Capital filter
+      if (!filterByCapital(idea.capitalRequired, filters.capitalRequired)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [founderIdeas, filters]);
+
+  // Filter saved ideas
+  const filteredSavedIdeas = useMemo(() => {
+    return ideas.filter((idea) => {
+      // Archetype filter (saved ideas use business_model_type)
+      if (
+        filters.archetypes.length > 0 &&
+        idea.business_model_type &&
+        !filters.archetypes.includes(idea.business_model_type)
+      ) {
+        return false;
+      }
+
+      // Risk filter - saved ideas don't have riskLevel, skip
+      // Time filter - saved ideas use time_to_first_dollar string, skip
+      // Capital filter - saved ideas don't have capitalRequired, skip
+      // Market filter - saved ideas don't have markets array, skip
+
+      return true;
+    });
+  }, [ideas, filters]);
 
   const handleGenerateIdeas = async () => {
     try {
@@ -34,7 +139,10 @@ const Ideas = () => {
         description: "Your personalized business ideas are ready.",
       });
     } catch (error: any) {
-      if (error.message?.includes("profile not found") || error.message?.includes("complete onboarding")) {
+      if (
+        error.message?.includes("profile not found") ||
+        error.message?.includes("complete onboarding")
+      ) {
         toast({
           title: "Onboarding Required",
           description: "Please complete your onboarding profile first.",
@@ -66,7 +174,8 @@ const Ideas = () => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message ?? "Failed to generate founder-aligned ideas.",
+        description:
+          error.message ?? "Failed to generate founder-aligned ideas.",
         variant: "destructive",
       });
     }
@@ -76,7 +185,7 @@ const Ideas = () => {
     setSavingIdeaId(idea.id);
     const success = await saveIdea(idea);
     setSavingIdeaId(null);
-    
+
     if (success) {
       setSavedIdeaIds((prev) => new Set(prev).add(idea.id));
       toast({
@@ -103,18 +212,25 @@ const Ideas = () => {
     );
   }
 
+  const showFilters = founderIdeas.length > 0 || ideas.length > 0;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold mb-2">Your Business Ideas</h1>
           <p className="text-muted-foreground">
-            {ideas.length} {ideas.length === 1 ? "idea" : "ideas"} generated based on your profile
+            {ideas.length} {ideas.length === 1 ? "idea" : "ideas"} generated
+            based on your profile
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2 justify-end">
-          <Button onClick={handleGenerateFounderIdeas} disabled={isGeneratingFounderIdeas} className="gap-2">
+          <Button
+            onClick={handleGenerateFounderIdeas}
+            disabled={isGeneratingFounderIdeas}
+            className="gap-2"
+          >
             {isGeneratingFounderIdeas ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -128,12 +244,20 @@ const Ideas = () => {
             )}
           </Button>
           {ideas.length >= 2 && (
-            <Button onClick={() => navigate("/ideas/compare")} variant="outline" className="gap-2">
+            <Button
+              onClick={() => navigate("/ideas/compare")}
+              variant="outline"
+              className="gap-2"
+            >
               <Scale className="w-4 h-4" />
               Compare Ideas
             </Button>
           )}
-          <Button onClick={handleGenerateIdeas} disabled={generateIdeas.isPending} className="gap-2">
+          <Button
+            onClick={handleGenerateIdeas}
+            disabled={generateIdeas.isPending}
+            className="gap-2"
+          >
             {generateIdeas.isPending ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -149,20 +273,37 @@ const Ideas = () => {
         </div>
       </div>
 
-      {founderIdeas.length > 0 && (
+      {/* Filter Bar */}
+      {showFilters && (
+        <IdeaFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+          availableArchetypes={availableArchetypes}
+          availableMarkets={availableMarkets}
+        />
+      )}
+
+      {filteredFounderIdeas.length > 0 && (
         <section className="space-y-3">
           <div>
-            <h2 className="text-2xl font-semibold">Founder-aligned ideas (this session)</h2>
+            <h2 className="text-2xl font-semibold">
+              Founder-aligned ideas (this session)
+              {filteredFounderIdeas.length !== founderIdeas.length && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  ({filteredFounderIdeas.length} of {founderIdeas.length} shown)
+                </span>
+              )}
+            </h2>
             <p className="text-sm text-muted-foreground max-w-2xl">
-              These ideas are generated from your full founder profile and dynamic interview context. Save the ones you
-              like to your library.
+              These ideas are generated from your full founder profile and
+              dynamic interview context. Save the ones you like to your library.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {founderIdeas.map((idea) => {
+            {filteredFounderIdeas.map((idea) => {
               const isSaved = savedIdeaIds.has(idea.id);
               const isCurrentlySaving = savingIdeaId === idea.id;
-              
+
               return (
                 <div
                   key={idea.id}
@@ -170,21 +311,30 @@ const Ideas = () => {
                 >
                   <div className="space-y-2">
                     <div>
-                      <h2 className="text-lg font-semibold leading-tight">{idea.title}</h2>
-                      <p className="text-sm text-muted-foreground mt-1">{idea.oneLiner}</p>
+                      <h2 className="text-lg font-semibold leading-tight">
+                        {idea.title}
+                      </h2>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {idea.oneLiner}
+                      </p>
                     </div>
                     <p className="text-sm">
-                      <span className="font-medium">Problem:</span> {idea.problemStatement}
+                      <span className="font-medium">Problem:</span>{" "}
+                      {idea.problemStatement}
                     </p>
                     <p className="text-sm">
-                      <span className="font-medium">Target customer:</span> {idea.targetCustomer}
+                      <span className="font-medium">Target customer:</span>{" "}
+                      {idea.targetCustomer}
                     </p>
                     <div className="flex flex-wrap gap-1 mt-2 text-xs">
                       <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
                         Archetype: {idea.businessArchetype}
                       </span>
                       {idea.markets.slice(0, 3).map((market) => (
-                        <span key={market} className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                        <span
+                          key={market}
+                          className="px-2 py-1 rounded-full bg-muted text-muted-foreground"
+                        >
                           {market}
                         </span>
                       ))}
@@ -200,7 +350,8 @@ const Ideas = () => {
                       </span>
                     </div>
                     <p className="text-sm mt-2">
-                      <span className="font-medium">Why it fits you:</span> {idea.whyItFitsFounder}
+                      <span className="font-medium">Why it fits you:</span>{" "}
+                      {idea.whyItFitsFounder}
                     </p>
                     <div className="mt-3">
                       <p className="text-sm font-medium mb-1">First steps</p>
@@ -217,25 +368,40 @@ const Ideas = () => {
                     </summary>
                     <div className="mt-2 space-y-1">
                       <p>
-                        <span className="font-medium text-foreground">MVP approach:</span> {idea.mvpApproach}
+                        <span className="font-medium text-foreground">
+                          MVP approach:
+                        </span>{" "}
+                        {idea.mvpApproach}
                       </p>
                       <p>
-                        <span className="font-medium text-foreground">Go-to-market:</span> {idea.goToMarket}
+                        <span className="font-medium text-foreground">
+                          Go-to-market:
+                        </span>{" "}
+                        {idea.goToMarket}
                       </p>
                       <p>
-                        <span className="font-medium text-foreground">Revenue model:</span> {idea.revenueModel}
+                        <span className="font-medium text-foreground">
+                          Revenue model:
+                        </span>{" "}
+                        {idea.revenueModel}
                       </p>
                       <p>
-                        <span className="font-medium text-foreground">Financial trajectory (3/6/12 months):</span>{" "}
-                        {idea.financialTrajectory.month3} / {idea.financialTrajectory.month6} /{" "}
+                        <span className="font-medium text-foreground">
+                          Financial trajectory (3/6/12 months):
+                        </span>{" "}
+                        {idea.financialTrajectory.month3} /{" "}
+                        {idea.financialTrajectory.month6} /{" "}
                         {idea.financialTrajectory.month12}
                       </p>
                       <p>
-                        <span className="font-medium text-foreground">Risks & mitigation:</span> {idea.risksMitigation}
+                        <span className="font-medium text-foreground">
+                          Risks & mitigation:
+                        </span>{" "}
+                        {idea.risksMitigation}
                       </p>
                     </div>
                   </details>
-                  
+
                   <Button
                     onClick={() => handleSaveIdea(idea)}
                     disabled={isSaved || isCurrentlySaving || isSaving}
@@ -267,11 +433,18 @@ const Ideas = () => {
         </section>
       )}
 
-      {ideas.length === 0 ? (
-        <EmptyIdeasState onGenerateIdeas={handleGenerateIdeas} isGenerating={generateIdeas.isPending} />
+      {filteredSavedIdeas.length === 0 && ideas.length === 0 ? (
+        <EmptyIdeasState
+          onGenerateIdeas={handleGenerateIdeas}
+          isGenerating={generateIdeas.isPending}
+        />
+      ) : filteredSavedIdeas.length === 0 && ideas.length > 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No saved ideas match your current filters.
+        </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {ideas.map((idea) => (
+          {filteredSavedIdeas.map((idea) => (
             <IdeaCard key={idea.id} idea={idea} />
           ))}
         </div>
