@@ -317,6 +317,33 @@ export type Database = {
         }
         Relationships: []
       }
+      founder_generated_ideas: {
+        Row: {
+          created_at: string | null
+          id: string
+          idea: Json
+          idea_id: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          idea: Json
+          idea_id: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          idea?: Json
+          idea_id?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       founder_interviews: {
         Row: {
           context_summary: Json | null
