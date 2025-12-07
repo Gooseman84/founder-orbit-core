@@ -36,26 +36,23 @@ interface OpportunityScore {
   recommendations: any;
 }
 
-// Combined score weights
-const COMBINED_SCORE_WEIGHTS = {
-  opportunity: 0.5, // 50% weight
-  fit: 0.5,         // 50% weight
-};
+// Weight mode type for combined score calculation
+type WeightMode = "balanced" | "opportunity_heavy" | "fit_heavy";
 
 function computeCombinedScore(
   opportunityScore: number | null | undefined,
-  fitScore: number | null | undefined
+  fitScore: number | null | undefined,
+  opportunityWeight: number,
+  fitWeight: number
 ): number | null {
   if (opportunityScore == null && fitScore == null) return null;
 
   const opp = opportunityScore ?? 0;
   const fit = fitScore ?? 0;
 
-  const wOpp = COMBINED_SCORE_WEIGHTS.opportunity;
-  const wFit = COMBINED_SCORE_WEIGHTS.fit;
-  const totalWeight = wOpp + wFit || 1;
+  const totalWeight = opportunityWeight + fitWeight || 1;
 
-  const combined = (opp * wOpp + fit * wFit) / totalWeight;
+  const combined = (opp * opportunityWeight + fit * fitWeight) / totalWeight;
   return combined;
 }
 
@@ -132,6 +129,22 @@ const CompareIdeas = () => {
   const [fitScoreA, setFitScoreA] = useState<IdeaScoreBreakdown | null>(null);
   const [fitScoreB, setFitScoreB] = useState<IdeaScoreBreakdown | null>(null);
   const [fitLoadingA, setFitLoadingA] = useState(false);
+
+  // Weight mode state for combined score
+  const [weightMode, setWeightMode] = useState<WeightMode>("balanced");
+
+  // Derive numeric weights from weight mode
+  const { opportunityWeight, fitWeight } = useMemo(() => {
+    switch (weightMode) {
+      case "opportunity_heavy":
+        return { opportunityWeight: 0.7, fitWeight: 0.3 };
+      case "fit_heavy":
+        return { opportunityWeight: 0.3, fitWeight: 0.7 };
+      case "balanced":
+      default:
+        return { opportunityWeight: 0.5, fitWeight: 0.5 };
+    }
+  }, [weightMode]);
   const [fitLoadingB, setFitLoadingB] = useState(false);
 
   // Load founder profile
@@ -318,18 +331,22 @@ const CompareIdeas = () => {
     () =>
       computeCombinedScore(
         scoreA?.total_score ?? null,
-        fitScoreA?.overall ?? null
+        fitScoreA?.overall ?? null,
+        opportunityWeight,
+        fitWeight
       ),
-    [scoreA?.total_score, fitScoreA?.overall]
+    [scoreA?.total_score, fitScoreA?.overall, opportunityWeight, fitWeight]
   );
 
   const combinedScoreB = useMemo(
     () =>
       computeCombinedScore(
         scoreB?.total_score ?? null,
-        fitScoreB?.overall ?? null
+        fitScoreB?.overall ?? null,
+        opportunityWeight,
+        fitWeight
       ),
-    [scoreB?.total_score, fitScoreB?.overall]
+    [scoreB?.total_score, fitScoreB?.overall, opportunityWeight, fitWeight]
   );
 
   // Winner based on combined score (falls back to opportunity score)
@@ -512,6 +529,35 @@ const CompareIdeas = () => {
       <div>
         <h1 className="text-4xl font-bold mb-2">Compare Ideas</h1>
         <p className="text-muted-foreground">Select two ideas to compare their opportunity and founder fit scores side-by-side.</p>
+        
+        {/* Weight Mode Control */}
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Tune how much weight to give market opportunity vs your personal fit.
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Decision weight:</span>
+            <Select
+              value={weightMode}
+              onValueChange={(v) => setWeightMode(v as WeightMode)}
+            >
+              <SelectTrigger className="w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="balanced">
+                  Balanced (50% opp / 50% fit)
+                </SelectItem>
+                <SelectItem value="opportunity_heavy">
+                  Opportunity-heavy (70% / 30%)
+                </SelectItem>
+                <SelectItem value="fit_heavy">
+                  Fit-heavy (30% / 70%)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       {/* Selection Controls */}
@@ -630,7 +676,7 @@ const CompareIdeas = () => {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         This blends the market opportunity score and your personal founder fit score 
-                        ({Math.round(COMBINED_SCORE_WEIGHTS.opportunity * 100)}% opportunity, {Math.round(COMBINED_SCORE_WEIGHTS.fit * 100)}% fit).
+                        ({Math.round(opportunityWeight * 100)}% opportunity, {Math.round(fitWeight * 100)}% fit).
                       </p>
                     </div>
                   )}
@@ -725,7 +771,7 @@ const CompareIdeas = () => {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         This blends the market opportunity score and your personal founder fit score 
-                        ({Math.round(COMBINED_SCORE_WEIGHTS.opportunity * 100)}% opportunity, {Math.round(COMBINED_SCORE_WEIGHTS.fit * 100)}% fit).
+                        ({Math.round(opportunityWeight * 100)}% opportunity, {Math.round(fitWeight * 100)}% fit).
                       </p>
                     </div>
                   )}
