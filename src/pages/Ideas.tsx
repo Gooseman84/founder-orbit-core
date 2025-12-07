@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useIdeas } from "@/hooks/useIdeas";
-import { useFounderIdeas } from "@/hooks/useFounderIdeas";
+import { useScoredFounderIdeas, type ScoredIdea } from "@/hooks/useScoredFounderIdeas";
 import { useSaveFounderIdea } from "@/hooks/useSaveFounderIdea";
 import { usePromoteIdeaToWorkspace } from "@/hooks/usePromoteIdeaToWorkspace";
 import { IdeaCard } from "@/components/ideas/IdeaCard";
@@ -17,14 +17,15 @@ import {
 import { RefreshCw, Scale, Sparkles, Save, Check, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea } from "@/types/businessIdea";
+import { Progress } from "@/components/ui/progress";
 
 const Ideas = () => {
   const { ideas, isLoading, generateIdeas } = useIdeas();
   const {
-    ideas: founderIdeas,
-    isPending: isGeneratingFounderIdeas,
+    scoredIdeas: founderScoredIdeas,
+    isLoading: isGeneratingFounderIdeas,
     generate: generateFounderIdeas,
-  } = useFounderIdeas();
+  } = useScoredFounderIdeas();
   const { saveIdea, isSaving } = useSaveFounderIdea();
   const { promote, isPromoting } = usePromoteIdeaToWorkspace();
   const { toast } = useToast();
@@ -49,8 +50,8 @@ const Ideas = () => {
     const archetypeSet = new Set<string>();
     const marketSet = new Set<string>();
 
-    // From founder ideas
-    founderIdeas.forEach((idea) => {
+    // From founder ideas (now wrapped in ScoredIdea)
+    founderScoredIdeas.forEach(({ idea }) => {
       if (idea.businessArchetype) archetypeSet.add(idea.businessArchetype);
       idea.markets?.forEach((m) => marketSet.add(m));
     });
@@ -64,11 +65,11 @@ const Ideas = () => {
       availableArchetypes: Array.from(archetypeSet).sort(),
       availableMarkets: Array.from(marketSet).sort(),
     };
-  }, [founderIdeas, ideas]);
+  }, [founderScoredIdeas, ideas]);
 
-  // Filter founder ideas
+  // Filter founder ideas (now ScoredIdea[])
   const filteredFounderIdeas = useMemo(() => {
-    return founderIdeas.filter((idea) => {
+    return founderScoredIdeas.filter(({ idea }) => {
       // Archetype filter
       if (
         filters.archetypes.length > 0 &&
@@ -111,7 +112,7 @@ const Ideas = () => {
 
       return true;
     });
-  }, [founderIdeas, filters]);
+  }, [founderScoredIdeas, filters]);
 
   // Filter saved ideas
   const filteredSavedIdeas = useMemo(() => {
@@ -235,7 +236,7 @@ const Ideas = () => {
     );
   }
 
-  const showFilters = founderIdeas.length > 0 || ideas.length > 0;
+  const showFilters = founderScoredIdeas.length > 0 || ideas.length > 0;
 
   return (
     <div className="space-y-6">
@@ -311,9 +312,9 @@ const Ideas = () => {
           <div>
             <h2 className="text-2xl font-semibold">
               Founder-aligned ideas (this session)
-              {filteredFounderIdeas.length !== founderIdeas.length && (
+              {filteredFounderIdeas.length !== founderScoredIdeas.length && (
                 <span className="text-sm font-normal text-muted-foreground ml-2">
-                  ({filteredFounderIdeas.length} of {founderIdeas.length} shown)
+                  ({filteredFounderIdeas.length} of {founderScoredIdeas.length} shown)
                 </span>
               )}
             </h2>
@@ -323,7 +324,7 @@ const Ideas = () => {
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredFounderIdeas.map((idea) => {
+            {filteredFounderIdeas.map(({ idea, scores }) => {
               const isSaved = savedIdeaIds.has(idea.id);
               const isCurrentlySaving = savingIdeaId === idea.id;
 
@@ -333,14 +334,24 @@ const Ideas = () => {
                   className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between gap-3"
                 >
                   <div className="space-y-2">
-                    <div>
+                    {/* Fit Score Badge */}
+                    <div className="flex items-center justify-between">
                       <h2 className="text-lg font-semibold leading-tight">
                         {idea.title}
                       </h2>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {idea.oneLiner}
-                      </p>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        scores.overall >= 70 
+                          ? "bg-green-500/10 text-green-600" 
+                          : scores.overall >= 50 
+                            ? "bg-yellow-500/10 text-yellow-600" 
+                            : "bg-red-500/10 text-red-600"
+                      }`}>
+                        Fit: {Math.round(scores.overall)}%
+                      </span>
                     </div>
+                    <p className="text-sm text-muted-foreground">
+                      {idea.oneLiner}
+                    </p>
                     <p className="text-sm">
                       <span className="font-medium">Problem:</span>{" "}
                       {idea.problemStatement}
@@ -422,6 +433,32 @@ const Ideas = () => {
                         </span>{" "}
                         {idea.risksMitigation}
                       </p>
+                    </div>
+                    {/* Score Breakdown */}
+                    <div className="mt-4 pt-3 border-t border-border">
+                      <p className="font-medium text-foreground mb-2">Fit Score Breakdown</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span>Founder fit</span>
+                          <span className="font-medium">{Math.round(scores.founderFit)}%</span>
+                        </div>
+                        <Progress value={scores.founderFit} className="h-1.5" />
+                        <div className="flex items-center justify-between text-xs">
+                          <span>Constraints fit</span>
+                          <span className="font-medium">{Math.round(scores.constraintsFit)}%</span>
+                        </div>
+                        <Progress value={scores.constraintsFit} className="h-1.5" />
+                        <div className="flex items-center justify-between text-xs">
+                          <span>Market fit</span>
+                          <span className="font-medium">{Math.round(scores.marketFit)}%</span>
+                        </div>
+                        <Progress value={scores.marketFit} className="h-1.5" />
+                        <div className="flex items-center justify-between text-xs">
+                          <span>Economics</span>
+                          <span className="font-medium">{Math.round(scores.economics)}%</span>
+                        </div>
+                        <Progress value={scores.economics} className="h-1.5" />
+                      </div>
                     </div>
                   </details>
 
