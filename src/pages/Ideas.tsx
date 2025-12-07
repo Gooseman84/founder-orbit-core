@@ -7,6 +7,7 @@ import { useScoredFounderIdeas, type ScoredIdea } from "@/hooks/useScoredFounder
 import { useSaveFounderIdea } from "@/hooks/useSaveFounderIdea";
 import { usePromoteIdeaToWorkspace } from "@/hooks/usePromoteIdeaToWorkspace";
 import { IdeaCard } from "@/components/ideas/IdeaCard";
+import { IdeaScoredCard } from "@/components/ideas/IdeaScoredCard";
 import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
 import {
   IdeaFilters,
@@ -14,10 +15,25 @@ import {
   filterByTime,
   filterByCapital,
 } from "@/components/ideas/IdeaFilters";
-import { RefreshCw, Scale, Sparkles, Save, Check, FileText } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RefreshCw, Scale, Sparkles, ArrowUpDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea } from "@/types/businessIdea";
-import { Progress } from "@/components/ui/progress";
+
+type SortMode = "fit_desc" | "fit_asc" | "title_asc" | "capital_asc";
+
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: "fit_desc", label: "Highest Fit First" },
+  { value: "fit_asc", label: "Lowest Fit First" },
+  { value: "title_asc", label: "Alphabetical (Title)" },
+  { value: "capital_asc", label: "Capital Required (Low → High)" },
+];
 
 const Ideas = () => {
   const { ideas, isLoading, generateIdeas } = useIdeas();
@@ -35,6 +51,9 @@ const Ideas = () => {
   const [savedIdeaIds, setSavedIdeaIds] = useState<Set<string>>(new Set());
   const [savingIdeaId, setSavingIdeaId] = useState<string | null>(null);
   const [promotingIdeaId, setPromotingIdeaId] = useState<string | null>(null);
+
+  // Sort mode state
+  const [sortMode, setSortMode] = useState<SortMode>("fit_desc");
 
   // Filter state
   const [filters, setFilters] = useState<IdeaFiltersState>({
@@ -69,7 +88,7 @@ const Ideas = () => {
 
   // Filter founder ideas (now ScoredIdea[])
   const filteredFounderIdeas = useMemo(() => {
-    return founderScoredIdeas.filter(({ idea }) => {
+    const filtered = founderScoredIdeas.filter(({ idea }) => {
       // Archetype filter
       if (
         filters.archetypes.length > 0 &&
@@ -112,7 +131,23 @@ const Ideas = () => {
 
       return true;
     });
-  }, [founderScoredIdeas, filters]);
+
+    // Apply sorting
+    return [...filtered].sort((a, b) => {
+      switch (sortMode) {
+        case "fit_desc":
+          return b.scores.overall - a.scores.overall;
+        case "fit_asc":
+          return a.scores.overall - b.scores.overall;
+        case "title_asc":
+          return a.idea.title.localeCompare(b.idea.title, undefined, { sensitivity: "base" });
+        case "capital_asc":
+          return a.idea.capitalRequired - b.idea.capitalRequired;
+        default:
+          return 0;
+      }
+    });
+  }, [founderScoredIdeas, filters, sortMode]);
 
   // Filter saved ideas
   const filteredSavedIdeas = useMemo(() => {
@@ -309,205 +344,57 @@ const Ideas = () => {
 
       {filteredFounderIdeas.length > 0 && (
         <section className="space-y-3">
-          <div>
-            <h2 className="text-2xl font-semibold">
-              Founder-aligned ideas (this session)
-              {filteredFounderIdeas.length !== founderScoredIdeas.length && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  ({filteredFounderIdeas.length} of {founderScoredIdeas.length} shown)
-                </span>
-              )}
-            </h2>
-            <p className="text-sm text-muted-foreground max-w-2xl">
-              These ideas are generated from your full founder profile and
-              dynamic interview context. Save the ones you like to your library.
-            </p>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-2xl font-semibold">
+                Founder-aligned ideas (this session)
+                {filteredFounderIdeas.length !== founderScoredIdeas.length && (
+                  <span className="text-sm font-normal text-muted-foreground ml-2">
+                    ({filteredFounderIdeas.length} of {founderScoredIdeas.length} shown)
+                  </span>
+                )}
+              </h2>
+              <p className="text-sm text-muted-foreground max-w-2xl">
+                These ideas are generated from your full founder profile and
+                dynamic interview context. Save the ones you like to your library.
+              </p>
+            </div>
+            
+            {/* Sorting Control */}
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+              <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Sort by..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {SORT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredFounderIdeas.map(({ idea, scores }) => {
               const isSaved = savedIdeaIds.has(idea.id);
               const isCurrentlySaving = savingIdeaId === idea.id;
+              const isCurrentlyPromoting = promotingIdeaId === idea.id;
 
               return (
-                <div
+                <IdeaScoredCard
                   key={idea.id}
-                  className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between gap-3"
-                >
-                  <div className="space-y-2">
-                    {/* Fit Score Badge */}
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold leading-tight">
-                        {idea.title}
-                      </h2>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        scores.overall >= 70 
-                          ? "bg-green-500/10 text-green-600" 
-                          : scores.overall >= 50 
-                            ? "bg-yellow-500/10 text-yellow-600" 
-                            : "bg-red-500/10 text-red-600"
-                      }`}>
-                        Fit: {Math.round(scores.overall)}%
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {idea.oneLiner}
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium">Problem:</span>{" "}
-                      {idea.problemStatement}
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium">Target customer:</span>{" "}
-                      {idea.targetCustomer}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mt-2 text-xs">
-                      <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                        Archetype: {idea.businessArchetype}
-                      </span>
-                      {idea.markets.slice(0, 3).map((market) => (
-                        <span
-                          key={market}
-                          className="px-2 py-1 rounded-full bg-muted text-muted-foreground"
-                        >
-                          {market}
-                        </span>
-                      ))}
-                      <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                        {idea.hoursPerWeekMin}-{idea.hoursPerWeekMax} hrs/week
-                      </span>
-                      <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                        ${""}
-                        {idea.capitalRequired.toLocaleString()} starting capital
-                      </span>
-                      <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                        Risk: {idea.riskLevel}
-                      </span>
-                    </div>
-                    <p className="text-sm mt-2">
-                      <span className="font-medium">Why it fits you:</span>{" "}
-                      {idea.whyItFitsFounder}
-                    </p>
-                    <div className="mt-3">
-                      <p className="text-sm font-medium mb-1">First steps</p>
-                      <ul className="text-sm space-y-1 list-disc list-inside">
-                        {idea.firstSteps.map((step, index) => (
-                          <li key={index}>{step}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                  <details className="mt-2 text-sm text-muted-foreground">
-                    <summary className="cursor-pointer select-none font-medium text-foreground">
-                      View execution details
-                    </summary>
-                    <div className="mt-2 space-y-1">
-                      <p>
-                        <span className="font-medium text-foreground">
-                          MVP approach:
-                        </span>{" "}
-                        {idea.mvpApproach}
-                      </p>
-                      <p>
-                        <span className="font-medium text-foreground">
-                          Go-to-market:
-                        </span>{" "}
-                        {idea.goToMarket}
-                      </p>
-                      <p>
-                        <span className="font-medium text-foreground">
-                          Revenue model:
-                        </span>{" "}
-                        {idea.revenueModel}
-                      </p>
-                      <p>
-                        <span className="font-medium text-foreground">
-                          Financial trajectory (3/6/12 months):
-                        </span>{" "}
-                        {idea.financialTrajectory.month3} /{" "}
-                        {idea.financialTrajectory.month6} /{" "}
-                        {idea.financialTrajectory.month12}
-                      </p>
-                      <p>
-                        <span className="font-medium text-foreground">
-                          Risks & mitigation:
-                        </span>{" "}
-                        {idea.risksMitigation}
-                      </p>
-                    </div>
-                    {/* Score Breakdown */}
-                    <div className="mt-4 pt-3 border-t border-border">
-                      <p className="font-medium text-foreground mb-2">Fit Score Breakdown</p>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span>Founder fit</span>
-                          <span className="font-medium">{Math.round(scores.founderFit)}%</span>
-                        </div>
-                        <Progress value={scores.founderFit} className="h-1.5" />
-                        <div className="flex items-center justify-between text-xs">
-                          <span>Constraints fit</span>
-                          <span className="font-medium">{Math.round(scores.constraintsFit)}%</span>
-                        </div>
-                        <Progress value={scores.constraintsFit} className="h-1.5" />
-                        <div className="flex items-center justify-between text-xs">
-                          <span>Market fit</span>
-                          <span className="font-medium">{Math.round(scores.marketFit)}%</span>
-                        </div>
-                        <Progress value={scores.marketFit} className="h-1.5" />
-                        <div className="flex items-center justify-between text-xs">
-                          <span>Economics</span>
-                          <span className="font-medium">{Math.round(scores.economics)}%</span>
-                        </div>
-                        <Progress value={scores.economics} className="h-1.5" />
-                      </div>
-                    </div>
-                  </details>
-
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      onClick={() => handleSaveIdea(idea)}
-                      disabled={isSaved || isCurrentlySaving || isSaving}
-                      variant={isSaved ? "secondary" : "default"}
-                      size="sm"
-                      className="flex-1 gap-2"
-                    >
-                      {isSaved ? (
-                        <>
-                          <Check className="w-4 h-4" />
-                          Saved
-                        </>
-                      ) : isCurrentlySaving ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4" />
-                          Save
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      onClick={() => handlePromoteIdea(idea)}
-                      disabled={promotingIdeaId === idea.id || isPromoting}
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 gap-2"
-                    >
-                      {promotingIdeaId === idea.id ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                          Creating...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="w-4 h-4" />
-                          Open in Workspace
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
+                  idea={idea}
+                  scores={scores}
+                  isSaved={isSaved}
+                  isSaving={isSaving || isCurrentlySaving}
+                  isPromoting={isPromoting || isCurrentlyPromoting}
+                  onSave={() => handleSaveIdea(idea)}
+                  onPromote={() => handlePromoteIdea(idea)}
+                />
               );
             })}
           </div>
