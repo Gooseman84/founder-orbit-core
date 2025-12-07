@@ -89,3 +89,6 @@ verify_jwt = true
 
 [functions.normalize-founder-profile]
 verify_jwt = true
+
+[functions.promote-idea-to-workspace]
+verify_jwt = true

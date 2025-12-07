@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIdeas } from "@/hooks/useIdeas";
 import { useFounderIdeas } from "@/hooks/useFounderIdeas";
 import { useSaveFounderIdea } from "@/hooks/useSaveFounderIdea";
+import { usePromoteIdeaToWorkspace } from "@/hooks/usePromoteIdeaToWorkspace";
 import { IdeaCard } from "@/components/ideas/IdeaCard";
 import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
 import {
@@ -13,7 +14,7 @@ import {
   filterByTime,
   filterByCapital,
 } from "@/components/ideas/IdeaFilters";
-import { RefreshCw, Scale, Sparkles, Save, Check } from "lucide-react";
+import { RefreshCw, Scale, Sparkles, Save, Check, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea } from "@/types/businessIdea";
 
@@ -25,12 +26,14 @@ const Ideas = () => {
     generate: generateFounderIdeas,
   } = useFounderIdeas();
   const { saveIdea, isSaving } = useSaveFounderIdea();
+  const { promote, isPromoting } = usePromoteIdeaToWorkspace();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   // Track which ideas have been saved
   const [savedIdeaIds, setSavedIdeaIds] = useState<Set<string>>(new Set());
   const [savingIdeaId, setSavingIdeaId] = useState<string | null>(null);
+  const [promotingIdeaId, setPromotingIdeaId] = useState<string | null>(null);
 
   // Filter state
   const [filters, setFilters] = useState<IdeaFiltersState>({
@@ -196,6 +199,26 @@ const Ideas = () => {
       toast({
         title: "Error",
         description: "Failed to save idea. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePromoteIdea = async (idea: BusinessIdea) => {
+    setPromotingIdeaId(idea.id);
+    const result = await promote(idea);
+    setPromotingIdeaId(null);
+
+    if (result) {
+      toast({
+        title: "Blueprint created!",
+        description: `Workspace document + ${result.taskIds.length} starter tasks created.`,
+      });
+      navigate(`/workspace/${result.documentId}`);
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to create blueprint. Please try again.",
         variant: "destructive",
       });
     }
@@ -402,30 +425,51 @@ const Ideas = () => {
                     </div>
                   </details>
 
-                  <Button
-                    onClick={() => handleSaveIdea(idea)}
-                    disabled={isSaved || isCurrentlySaving || isSaving}
-                    variant={isSaved ? "secondary" : "default"}
-                    size="sm"
-                    className="mt-2 gap-2"
-                  >
-                    {isSaved ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        Saved to Library
-                      </>
-                    ) : isCurrentlySaving ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        Save to My Library
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      onClick={() => handleSaveIdea(idea)}
+                      disabled={isSaved || isCurrentlySaving || isSaving}
+                      variant={isSaved ? "secondary" : "default"}
+                      size="sm"
+                      className="flex-1 gap-2"
+                    >
+                      {isSaved ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Saved
+                        </>
+                      ) : isCurrentlySaving ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Save
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => handlePromoteIdea(idea)}
+                      disabled={promotingIdeaId === idea.id || isPromoting}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-2"
+                    >
+                      {promotingIdeaId === idea.id ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-4 h-4" />
+                          Open in Workspace
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               );
             })}
