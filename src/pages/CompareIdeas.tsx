@@ -6,12 +6,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { ScoreGauge } from "@/components/opportunity/ScoreGauge";
 import { PaywallModal } from "@/components/paywall/PaywallModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useIdeas } from "@/hooks/useIdeas";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, ArrowRight, Lock } from "lucide-react";
+import { Trophy, ArrowRight, Lock, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BusinessIdea } from "@/types/businessIdea";
 import type { FounderProfile } from "@/types/founderProfile";
@@ -104,6 +111,183 @@ function adaptIdeaToBusinessIdea(raw: any): BusinessIdea | null {
   };
 }
 
+// Helper to build winner explanation
+function buildWinnerExplanation(params: {
+  winner: "A" | "B";
+  ideaAId: string;
+  ideaBId: string;
+  combinedScoreA: number | null;
+  combinedScoreB: number | null;
+  scoreA: any | null;
+  scoreB: any | null;
+  fitScoreA: IdeaScoreBreakdown | null;
+  fitScoreB: IdeaScoreBreakdown | null;
+  opportunityWeight: number;
+  fitWeight: number;
+  getIdeaTitle: (id: string) => string;
+}) {
+  const {
+    winner,
+    ideaAId,
+    ideaBId,
+    combinedScoreA,
+    combinedScoreB,
+    scoreA,
+    scoreB,
+    fitScoreA,
+    fitScoreB,
+    opportunityWeight,
+    fitWeight,
+    getIdeaTitle,
+  } = params;
+
+  const winnerId = winner === "A" ? ideaAId : ideaBId;
+  const loserId = winner === "A" ? ideaBId : ideaAId;
+
+  const winnerTitle = getIdeaTitle(winnerId);
+  const loserTitle = getIdeaTitle(loserId);
+
+  const winnerCombined = winner === "A" ? combinedScoreA : combinedScoreB;
+  const loserCombined = winner === "A" ? combinedScoreB : combinedScoreA;
+
+  const winnerOpp = winner === "A" ? scoreA?.total_score ?? 0 : scoreB?.total_score ?? 0;
+  const loserOpp = winner === "A" ? scoreB?.total_score ?? 0 : scoreA?.total_score ?? 0;
+
+  const winnerFit = winner === "A" ? fitScoreA : fitScoreB;
+  const loserFit = winner === "A" ? fitScoreB : fitScoreA;
+
+  const winnerFitOverall = winnerFit?.overall ?? 0;
+  const loserFitOverall = loserFit?.overall ?? 0;
+
+  const diffCombined =
+    winnerCombined != null && loserCombined != null
+      ? Math.round(winnerCombined - loserCombined)
+      : null;
+
+  const oppDiff = Math.round(winnerOpp - loserOpp);
+  const fitDiff = Math.round(winnerFitOverall - loserFitOverall);
+
+  const oppWeightPct = Math.round(opportunityWeight * 100);
+  const fitWeightPct = Math.round(fitWeight * 100);
+
+  const headline = `Why "${winnerTitle}" wins right now`;
+
+  const summaryLines: string[] = [];
+
+  if (diffCombined != null) {
+    if (diffCombined >= 5) {
+      summaryLines.push(
+        `"${winnerTitle}" has a higher overall Decision Score (${Math.round(
+          winnerCombined!
+        )} vs ${Math.round(loserCombined!)}), given your current weighting of ${oppWeightPct}% opportunity and ${fitWeightPct}% founder fit.`
+      );
+    } else if (diffCombined > 0) {
+      summaryLines.push(
+        `"${winnerTitle}" slightly edges out "${loserTitle}" in overall Decision Score (${Math.round(
+          winnerCombined!
+        )} vs ${Math.round(
+          loserCombined!
+        )}), based on your mix of opportunity and founder fit.`
+      );
+    } else {
+      summaryLines.push(
+        `Both ideas are very close in overall Decision Score. "${winnerTitle}" is currently ahead by a very small margin.`
+      );
+    }
+  }
+
+  const bullets: string[] = [];
+
+  // Opportunity comparison
+  if (Math.abs(oppDiff) >= 5) {
+    if (oppDiff > 0) {
+      bullets.push(
+        `"${winnerTitle}" has stronger market opportunity (${Math.round(
+          winnerOpp
+        )} vs ${Math.round(
+          loserOpp
+        )}) — bigger or clearer upside if executed well.`
+      );
+    } else {
+      bullets.push(
+        `"${loserTitle}" actually has a slightly stronger opportunity score, but your overall weighting and fit tilt the decision toward "${winnerTitle}".`
+      );
+    }
+  }
+
+  // Fit overall comparison
+  if (Math.abs(fitDiff) >= 5) {
+    if (fitDiff > 0) {
+      bullets.push(
+        `"${winnerTitle}" is more aligned with your founder profile (${Math.round(
+          winnerFitOverall
+        )}% vs ${Math.round(
+          loserFitOverall
+        )}%) — it fits your passions, skills, and constraints better.`
+      );
+    } else {
+      bullets.push(
+        `"${loserTitle}" has a slightly better fit score, but the market opportunity advantage of "${winnerTitle}" is currently winning.`
+      );
+    }
+  }
+
+  // Sub-score comparisons
+  if (winnerFit && loserFit) {
+    const founderDiff = Math.round(winnerFit.founderFit - loserFit.founderFit);
+    const constraintsDiff = Math.round(
+      winnerFit.constraintsFit - loserFit.constraintsFit
+    );
+    const marketFitDiff = Math.round(
+      winnerFit.marketFit - loserFit.marketFit
+    );
+    const economicsDiff = Math.round(
+      winnerFit.economics - loserFit.economics
+    );
+
+    if (Math.abs(founderDiff) >= 7 && founderDiff > 0) {
+      bullets.push(
+        `"${winnerTitle}" better matches what energizes you (Founder fit is higher), meaning you're more likely to enjoy the day-to-day work.`
+      );
+    }
+
+    if (Math.abs(constraintsDiff) >= 7 && constraintsDiff > 0) {
+      bullets.push(
+        `"${winnerTitle}" fits your time, capital, and risk constraints better, making it more realistic to execute with your current situation.`
+      );
+    }
+
+    if (Math.abs(marketFitDiff) >= 7 && marketFitDiff > 0) {
+      bullets.push(
+        `"${winnerTitle}" aligns more with markets you already understand or have network in (higher Market fit).`
+      );
+    }
+
+    if (Math.abs(economicsDiff) >= 7 && economicsDiff > 0) {
+      bullets.push(
+        `"${winnerTitle}" has more favorable economics for you (capital required vs time to meaningful revenue).`
+      );
+    }
+  }
+
+  // Fallback bullet
+  if (bullets.length === 0) {
+    bullets.push(
+      `"${winnerTitle}" is currently the better overall balance of market upside and personal fit based on your inputs.`
+    );
+  }
+
+  const closing =
+    "Remember: the scores are a decision aid, not a guarantee. Use this as a lens, then check in with your intuition and energy before you commit.";
+
+  return {
+    headline,
+    summaryLines,
+    bullets,
+    closing,
+  };
+}
+
 const CompareIdeas = () => {
   const { ideas } = useIdeas();
   const { user } = useAuth();
@@ -119,6 +303,7 @@ const CompareIdeas = () => {
   const [loadingB, setLoadingB] = useState(false);
   const [pickingWinner, setPickingWinner] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
   // Founder profile state
   const [founderProfile, setFounderProfile] = useState<FounderProfile | null>(null);
@@ -402,6 +587,39 @@ const CompareIdeas = () => {
       },
     ];
   }, [scoreA, scoreB, fitScoreA, fitScoreB]);
+
+  // Winner explanation memo
+  const winnerExplanation = useMemo(() => {
+    if (!winner || !ideaA || !ideaB) return null;
+
+    return buildWinnerExplanation({
+      winner,
+      ideaAId: ideaA,
+      ideaBId: ideaB,
+      combinedScoreA,
+      combinedScoreB,
+      scoreA,
+      scoreB,
+      fitScoreA,
+      fitScoreB,
+      opportunityWeight,
+      fitWeight,
+      getIdeaTitle,
+    });
+  }, [
+    winner,
+    ideaA,
+    ideaB,
+    combinedScoreA,
+    combinedScoreB,
+    scoreA,
+    scoreB,
+    fitScoreA,
+    fitScoreB,
+    opportunityWeight,
+    fitWeight,
+    getIdeaTitle,
+  ]);
 
   // Fit Score breakdown component
   const FitScoreSection = ({ 
@@ -854,6 +1072,54 @@ const CompareIdeas = () => {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Why This Idea Wins Button + Dialog */}
+        {winner && winnerExplanation && (
+          <div className="mt-6 flex justify-center">
+            <Dialog open={isExplanationOpen} onOpenChange={setIsExplanationOpen}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+                onClick={() => setIsExplanationOpen(true)}
+              >
+                <Lightbulb className="w-4 h-4" />
+                Why this idea wins
+              </Button>
+              <DialogContent className="max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>{winnerExplanation.headline}</DialogTitle>
+                  <DialogDescription>
+                    Based on your current weighting of opportunity vs founder fit.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 text-sm">
+                  {winnerExplanation.summaryLines.map((line, idx) => (
+                    <p key={idx} className="text-muted-foreground">
+                      {line}
+                    </p>
+                  ))}
+
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">
+                      Key reasons this idea stands out:
+                    </h4>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {winnerExplanation.bullets.map((b, idx) => (
+                        <li key={idx}>{b}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    {winnerExplanation.closing}
+                  </p>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
         </>
       )}
