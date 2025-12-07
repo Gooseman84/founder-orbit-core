@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,16 @@ import { cn } from "@/lib/utils";
 import type { BusinessIdea } from "@/types/businessIdea";
 import type { FounderProfile } from "@/types/founderProfile";
 import { scoreIdeaForFounder, type IdeaScoreBreakdown } from "@/lib/ideaScoring";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+} from "recharts";
 
 interface OpportunityScore {
   id: string;
@@ -24,6 +34,29 @@ interface OpportunityScore {
   sub_scores: any;
   explanation: string;
   recommendations: any;
+}
+
+// Combined score weights
+const COMBINED_SCORE_WEIGHTS = {
+  opportunity: 0.5, // 50% weight
+  fit: 0.5,         // 50% weight
+};
+
+function computeCombinedScore(
+  opportunityScore: number | null | undefined,
+  fitScore: number | null | undefined
+): number | null {
+  if (opportunityScore == null && fitScore == null) return null;
+
+  const opp = opportunityScore ?? 0;
+  const fit = fitScore ?? 0;
+
+  const wOpp = COMBINED_SCORE_WEIGHTS.opportunity;
+  const wFit = COMBINED_SCORE_WEIGHTS.fit;
+  const totalWeight = wOpp + wFit || 1;
+
+  const combined = (opp * wOpp + fit * wFit) / totalWeight;
+  return combined;
 }
 
 // Adapter: convert saved idea to BusinessIdea shape for scoring
@@ -280,7 +313,78 @@ const CompareIdeas = () => {
     return ideas.find((i) => i.id === ideaId)?.title || "Unknown Idea";
   };
 
-  const winner = scoreA && scoreB ? (scoreA.total_score > scoreB.total_score ? "A" : scoreB.total_score > scoreA.total_score ? "B" : null) : null;
+  // Compute combined scores for A and B
+  const combinedScoreA = useMemo(
+    () =>
+      computeCombinedScore(
+        scoreA?.total_score ?? null,
+        fitScoreA?.overall ?? null
+      ),
+    [scoreA?.total_score, fitScoreA?.overall]
+  );
+
+  const combinedScoreB = useMemo(
+    () =>
+      computeCombinedScore(
+        scoreB?.total_score ?? null,
+        fitScoreB?.overall ?? null
+      ),
+    [scoreB?.total_score, fitScoreB?.overall]
+  );
+
+  // Winner based on combined score (falls back to opportunity score)
+  const winner =
+    combinedScoreA != null && combinedScoreB != null
+      ? combinedScoreA > combinedScoreB
+        ? "A"
+        : combinedScoreB > combinedScoreA
+          ? "B"
+          : null
+      : scoreA && scoreB
+        ? scoreA.total_score > scoreB.total_score
+          ? "A"
+          : scoreB.total_score > scoreA.total_score
+            ? "B"
+            : null
+        : null;
+
+  // Comparison chart data
+  const comparisonChartData = useMemo(() => {
+    if (!scoreA || !scoreB || !fitScoreA || !fitScoreB) return [];
+
+    return [
+      {
+        metric: "Opportunity",
+        ideaA: scoreA.total_score ?? 0,
+        ideaB: scoreB.total_score ?? 0,
+      },
+      {
+        metric: "Fit (Overall)",
+        ideaA: fitScoreA.overall ?? 0,
+        ideaB: fitScoreB.overall ?? 0,
+      },
+      {
+        metric: "Founder fit",
+        ideaA: fitScoreA.founderFit ?? 0,
+        ideaB: fitScoreB.founderFit ?? 0,
+      },
+      {
+        metric: "Constraints",
+        ideaA: fitScoreA.constraintsFit ?? 0,
+        ideaB: fitScoreB.constraintsFit ?? 0,
+      },
+      {
+        metric: "Market fit",
+        ideaA: fitScoreA.marketFit ?? 0,
+        ideaB: fitScoreB.marketFit ?? 0,
+      },
+      {
+        metric: "Economics",
+        ideaA: fitScoreA.economics ?? 0,
+        ideaB: fitScoreB.economics ?? 0,
+      },
+    ];
+  }, [scoreA, scoreB, fitScoreA, fitScoreB]);
 
   // Fit Score breakdown component
   const FitScoreSection = ({ 
@@ -407,7 +511,7 @@ const CompareIdeas = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-4xl font-bold mb-2">Compare Ideas</h1>
-        <p className="text-muted-foreground">Select two ideas to compare their opportunity scores side-by-side</p>
+        <p className="text-muted-foreground">Select two ideas to compare their opportunity and founder fit scores side-by-side.</p>
       </div>
 
       {/* Selection Controls */}
@@ -459,6 +563,7 @@ const CompareIdeas = () => {
 
       {/* Comparison Display */}
       {ideaA && ideaB && (
+        <>
         <div className="grid md:grid-cols-2 gap-6">
           {/* Idea A Score */}
           <Card className={cn("relative", winner === "A" && "ring-2 ring-primary shadow-lg")}>
@@ -514,6 +619,21 @@ const CompareIdeas = () => {
                     showProfilePrompt={!founderProfile && !founderProfileLoading}
                   />
 
+                  {/* Combined Decision Score */}
+                  {combinedScoreA != null && (
+                    <div className="mt-4 space-y-1 text-sm pt-4 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">Combined Decision Score</span>
+                        <span className="font-bold text-lg">
+                          {Math.round(combinedScoreA)} / 100
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        This blends the market opportunity score and your personal founder fit score 
+                        ({Math.round(COMBINED_SCORE_WEIGHTS.opportunity * 100)}% opportunity, {Math.round(COMBINED_SCORE_WEIGHTS.fit * 100)}% fit).
+                      </p>
+                    </div>
+                  )}
                   <Button
                     onClick={() => handlePickWinner(ideaA)}
                     disabled={pickingWinner}
@@ -594,6 +714,21 @@ const CompareIdeas = () => {
                     showProfilePrompt={!founderProfile && !founderProfileLoading}
                   />
 
+                  {/* Combined Decision Score */}
+                  {combinedScoreB != null && (
+                    <div className="mt-4 space-y-1 text-sm pt-4 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">Combined Decision Score</span>
+                        <span className="font-bold text-lg">
+                          {Math.round(combinedScoreB)} / 100
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        This blends the market opportunity score and your personal founder fit score 
+                        ({Math.round(COMBINED_SCORE_WEIGHTS.opportunity * 100)}% opportunity, {Math.round(COMBINED_SCORE_WEIGHTS.fit * 100)}% fit).
+                      </p>
+                    </div>
+                  )}
                   <Button
                     onClick={() => handlePickWinner(ideaB)}
                     disabled={pickingWinner}
@@ -620,6 +755,61 @@ const CompareIdeas = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Visual Comparison Chart */}
+        {comparisonChartData.length > 0 && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle className="text-lg">Visual Comparison</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Compare overall opportunity and founder fit across both ideas.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="w-full h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={comparisonChartData}
+                    margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis 
+                      dataKey="metric" 
+                      tick={{ fontSize: 12 }}
+                      className="fill-muted-foreground"
+                    />
+                    <YAxis 
+                      domain={[0, 100]} 
+                      tick={{ fontSize: 12 }}
+                      className="fill-muted-foreground"
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="ideaA" 
+                      name={getIdeaTitle(ideaA)} 
+                      fill="hsl(var(--primary))"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      dataKey="ideaB" 
+                      name={getIdeaTitle(ideaB)} 
+                      fill="hsl(var(--muted-foreground))"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        </>
       )}
 
       {(!ideaA || !ideaB) && (
