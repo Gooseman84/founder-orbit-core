@@ -13,6 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Trophy, ArrowRight, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { BusinessIdea } from "@/types/businessIdea";
+import type { FounderProfile } from "@/types/founderProfile";
+import { scoreIdeaForFounder, type IdeaScoreBreakdown } from "@/lib/ideaScoring";
 
 interface OpportunityScore {
   id: string;
@@ -21,6 +24,54 @@ interface OpportunityScore {
   sub_scores: any;
   explanation: string;
   recommendations: any;
+}
+
+// Adapter: convert saved idea to BusinessIdea shape for scoring
+function adaptIdeaToBusinessIdea(raw: any): BusinessIdea | null {
+  if (!raw) return null;
+
+  return {
+    id: raw.id,
+    title: raw.title ?? "Untitled idea",
+    oneLiner: raw.one_liner ?? raw.subtitle ?? raw.summary ?? "",
+    description: raw.description ?? raw.full_description ?? "",
+    problemStatement: raw.problem_statement ?? raw.problem ?? "",
+    targetCustomer: raw.target_customer ?? raw.icp ?? "",
+    revenueModel: raw.revenue_model ?? raw.monetization ?? "",
+    mvpApproach: raw.mvp_approach ?? "",
+    goToMarket: raw.go_to_market ?? "",
+    competitiveAdvantage: raw.competitive_advantage ?? "",
+
+    financialTrajectory: {
+      month3: raw.financial_month3 ?? "",
+      month6: raw.financial_month6 ?? "",
+      month12: raw.financial_month12 ?? "",
+      mrrCeiling: raw.mrr_ceiling ?? "",
+    },
+
+    requiredToolsSkills: raw.required_tools_skills ?? "",
+    risksMitigation: raw.risks_mitigation ?? "",
+    whyItFitsFounder: raw.why_it_fits_founder ?? raw.why_this_idea ?? "",
+
+    primaryPassionDomains: raw.primary_passion_domains ?? [],
+    primarySkillNeeds: raw.primary_skill_needs ?? [],
+    markets: raw.markets ?? raw.tags ?? [],
+    businessArchetype: raw.businessArchetype ?? raw.business_model_type ?? "unspecified",
+
+    hoursPerWeekMin: raw.hours_per_week_min ?? 5,
+    hoursPerWeekMax: raw.hours_per_week_max ?? 20,
+    capitalRequired: raw.capital_required ?? 0,
+    riskLevel: (raw.risk_level as any) ?? "medium",
+    timeToFirstRevenueMonths: raw.time_to_first_revenue_months ?? 3,
+
+    requiresPublicPersonalBrand: raw.requires_public_personal_brand ?? false,
+    requiresTeamSoon: raw.requires_team_soon ?? false,
+    requiresCoding: raw.requires_coding ?? false,
+    salesIntensity: (raw.sales_intensity as any) ?? 3,
+    asyncDepthWork: (raw.async_depth_work as any) ?? 3,
+
+    firstSteps: raw.first_steps ?? [],
+  };
 }
 
 const CompareIdeas = () => {
@@ -39,7 +90,43 @@ const CompareIdeas = () => {
   const [pickingWinner, setPickingWinner] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
-  // Fetch score for idea A
+  // Founder profile state
+  const [founderProfile, setFounderProfile] = useState<FounderProfile | null>(null);
+  const [founderProfileLoading, setFounderProfileLoading] = useState(false);
+  const [founderProfileError, setFounderProfileError] = useState<Error | null>(null);
+
+  // Fit score state
+  const [fitScoreA, setFitScoreA] = useState<IdeaScoreBreakdown | null>(null);
+  const [fitScoreB, setFitScoreB] = useState<IdeaScoreBreakdown | null>(null);
+  const [fitLoadingA, setFitLoadingA] = useState(false);
+  const [fitLoadingB, setFitLoadingB] = useState(false);
+
+  // Load founder profile
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user?.id) return;
+      setFounderProfileLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("founder_profiles")
+          .select("profile")
+          .eq("user_id", user.id)
+          .single();
+
+        if (error) throw error;
+        setFounderProfile(data?.profile as unknown as FounderProfile);
+      } catch (e: any) {
+        console.error("Error loading founder profile for compare", e);
+        setFounderProfileError(e instanceof Error ? e : new Error("Failed to load founder profile"));
+      } finally {
+        setFounderProfileLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [user?.id]);
+
+  // Fetch opportunity score for idea A
   useEffect(() => {
     if (!ideaA || !user?.id) return;
 
@@ -68,7 +155,7 @@ const CompareIdeas = () => {
     fetchScoreA();
   }, [ideaA, user?.id]);
 
-  // Fetch score for idea B
+  // Fetch opportunity score for idea B
   useEffect(() => {
     if (!ideaB || !user?.id) return;
 
@@ -96,6 +183,58 @@ const CompareIdeas = () => {
 
     fetchScoreB();
   }, [ideaB, user?.id]);
+
+  // Compute Fit Score for idea A
+  useEffect(() => {
+    if (!ideaA || !founderProfile || ideas.length === 0) {
+      setFitScoreA(null);
+      return;
+    }
+
+    const rawIdea = ideas.find((i) => i.id === ideaA);
+    const adapted = adaptIdeaToBusinessIdea(rawIdea);
+    if (!adapted) {
+      setFitScoreA(null);
+      return;
+    }
+
+    setFitLoadingA(true);
+    try {
+      const scores = scoreIdeaForFounder(adapted, founderProfile);
+      setFitScoreA(scores);
+    } catch (e) {
+      console.error("Error scoring idea A for founder fit", e);
+      setFitScoreA(null);
+    } finally {
+      setFitLoadingA(false);
+    }
+  }, [ideaA, founderProfile, ideas]);
+
+  // Compute Fit Score for idea B
+  useEffect(() => {
+    if (!ideaB || !founderProfile || ideas.length === 0) {
+      setFitScoreB(null);
+      return;
+    }
+
+    const rawIdea = ideas.find((i) => i.id === ideaB);
+    const adapted = adaptIdeaToBusinessIdea(rawIdea);
+    if (!adapted) {
+      setFitScoreB(null);
+      return;
+    }
+
+    setFitLoadingB(true);
+    try {
+      const scores = scoreIdeaForFounder(adapted, founderProfile);
+      setFitScoreB(scores);
+    } catch (e) {
+      console.error("Error scoring idea B for founder fit", e);
+      setFitScoreB(null);
+    } finally {
+      setFitLoadingB(false);
+    }
+  }, [ideaB, founderProfile, ideas]);
 
   const handlePickWinner = async (winnerId: string) => {
     if (!user?.id) return;
@@ -143,7 +282,71 @@ const CompareIdeas = () => {
 
   const winner = scoreA && scoreB ? (scoreA.total_score > scoreB.total_score ? "A" : scoreB.total_score > scoreA.total_score ? "B" : null) : null;
 
-  const availableIdeas = ideas.filter((idea) => idea.id !== ideaA && idea.id !== ideaB);
+  // Fit Score breakdown component
+  const FitScoreSection = ({ 
+    fitScore, 
+    fitLoading, 
+    showProfilePrompt 
+  }: { 
+    fitScore: IdeaScoreBreakdown | null; 
+    fitLoading: boolean;
+    showProfilePrompt: boolean;
+  }) => (
+    <div className="space-y-3 pt-4 border-t border-border">
+      <h4 className="font-semibold text-sm flex items-center justify-between">
+        <span>Founder Fit Score</span>
+        {fitLoading && <span className="text-xs text-muted-foreground">Calculating...</span>}
+      </h4>
+
+      {fitScore ? (
+        <>
+          <div className="flex justify-center">
+            <ScoreGauge value={fitScore.overall} size={140} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mt-2">
+            <div>
+              <div className="flex justify-between mb-1">
+                <span>Founder fit</span>
+                <span className="font-medium">{Math.round(fitScore.founderFit)}%</span>
+              </div>
+              <Progress value={fitScore.founderFit} className="h-1.5" />
+            </div>
+            <div>
+              <div className="flex justify-between mb-1">
+                <span>Constraints</span>
+                <span className="font-medium">{Math.round(fitScore.constraintsFit)}%</span>
+              </div>
+              <Progress value={fitScore.constraintsFit} className="h-1.5" />
+            </div>
+            <div>
+              <div className="flex justify-between mb-1">
+                <span>Market fit</span>
+                <span className="font-medium">{Math.round(fitScore.marketFit)}%</span>
+              </div>
+              <Progress value={fitScore.marketFit} className="h-1.5" />
+            </div>
+            <div>
+              <div className="flex justify-between mb-1">
+                <span>Economics</span>
+                <span className="font-medium">{Math.round(fitScore.economics)}%</span>
+              </div>
+              <Progress value={fitScore.economics} className="h-1.5" />
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-2">
+            Fit Score is based on your passions & skills, time and capital constraints, markets you know,
+            and how quickly this idea can realistically make money for you.
+          </p>
+        </>
+      ) : showProfilePrompt ? (
+        <p className="text-xs text-muted-foreground">
+          Complete your founder profile to see a personalized Fit Score for this idea.
+        </p>
+      ) : null}
+    </div>
+  );
 
   // Feature gating - show promotional view if user doesn't have access
   if (!gate("compare_engine")) {
@@ -275,8 +478,11 @@ const CompareIdeas = () => {
                 </div>
               ) : scoreA ? (
                 <>
-                  <div className="flex justify-center">
-                    <ScoreGauge value={scoreA.total_score} size={180} />
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3">Opportunity Score</h4>
+                    <div className="flex justify-center">
+                      <ScoreGauge value={scoreA.total_score} size={180} />
+                    </div>
                   </div>
 
                   <div className="space-y-3">
@@ -301,6 +507,13 @@ const CompareIdeas = () => {
                     </ul>
                   </div>
 
+                  {/* Founder Fit Score Section */}
+                  <FitScoreSection 
+                    fitScore={fitScoreA} 
+                    fitLoading={fitLoadingA}
+                    showProfilePrompt={!founderProfile && !founderProfileLoading}
+                  />
+
                   <Button
                     onClick={() => handlePickWinner(ideaA)}
                     disabled={pickingWinner}
@@ -315,6 +528,13 @@ const CompareIdeas = () => {
                 <div className="text-center py-12 text-muted-foreground">
                   <p>No opportunity score found for this idea.</p>
                   <p className="text-sm mt-2">Generate a score from the idea detail page first.</p>
+                  
+                  {/* Still show Fit Score even without Opportunity Score */}
+                  <FitScoreSection 
+                    fitScore={fitScoreA} 
+                    fitLoading={fitLoadingA}
+                    showProfilePrompt={!founderProfile && !founderProfileLoading}
+                  />
                 </div>
               )}
             </CardContent>
@@ -338,8 +558,11 @@ const CompareIdeas = () => {
                 </div>
               ) : scoreB ? (
                 <>
-                  <div className="flex justify-center">
-                    <ScoreGauge value={scoreB.total_score} size={180} />
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3">Opportunity Score</h4>
+                    <div className="flex justify-center">
+                      <ScoreGauge value={scoreB.total_score} size={180} />
+                    </div>
                   </div>
 
                   <div className="space-y-3">
@@ -364,6 +587,13 @@ const CompareIdeas = () => {
                     </ul>
                   </div>
 
+                  {/* Founder Fit Score Section */}
+                  <FitScoreSection 
+                    fitScore={fitScoreB} 
+                    fitLoading={fitLoadingB}
+                    showProfilePrompt={!founderProfile && !founderProfileLoading}
+                  />
+
                   <Button
                     onClick={() => handlePickWinner(ideaB)}
                     disabled={pickingWinner}
@@ -378,6 +608,13 @@ const CompareIdeas = () => {
                 <div className="text-center py-12 text-muted-foreground">
                   <p>No opportunity score found for this idea.</p>
                   <p className="text-sm mt-2">Generate a score from the idea detail page first.</p>
+                  
+                  {/* Still show Fit Score even without Opportunity Score */}
+                  <FitScoreSection 
+                    fitScore={fitScoreB} 
+                    fitLoading={fitLoadingB}
+                    showProfilePrompt={!founderProfile && !founderProfileLoading}
+                  />
                 </div>
               )}
             </CardContent>
