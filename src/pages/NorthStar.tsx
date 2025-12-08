@@ -6,8 +6,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PromptViewer } from "@/components/shared/PromptViewer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveVenture } from "@/hooks/useActiveVenture";
+import { useGenerateVenturePlan } from "@/hooks/useGenerateVenturePlan";
+import { useVenturePlans } from "@/hooks/useVenturePlans";
+import { useVentureTasks } from "@/hooks/useVentureTasks";
+import { ThirtyDayPlanCard } from "@/components/venture/ThirtyDayPlanCard";
+import { EmptyPlanState } from "@/components/venture/EmptyPlanState";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Sparkles, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, Sparkles, RefreshCw, Calendar } from "lucide-react";
 
 interface MasterPromptData {
   idea_id: string;
@@ -24,6 +30,12 @@ export default function NorthStar() {
   const [chosenIdeaId, setChosenIdeaId] = useState<string | null>(null);
   const [ideaTitle, setIdeaTitle] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+
+  // Venture hooks
+  const { venture, ensureVentureForIdea } = useActiveVenture();
+  const { generate: generatePlan, isPending: isGeneratingPlan } = useGenerateVenturePlan();
+  const { latestPlan, refetch: refetchPlans } = useVenturePlans(venture?.id ?? null);
+  const { tasksByWeek, refetch: refetchTasks } = useVentureTasks(venture?.id ?? null);
 
   useEffect(() => {
     document.title = "North Star Master Prompt | TrueBlazer.AI";
@@ -151,12 +163,41 @@ export default function NorthStar() {
     fetchData();
   }, [user]);
 
+  // Ensure venture exists when we have a chosen idea
+  useEffect(() => {
+    if (chosenIdeaId && ideaTitle && user) {
+      ensureVentureForIdea(chosenIdeaId, ideaTitle).catch(console.error);
+    }
+  }, [chosenIdeaId, ideaTitle, user, ensureVentureForIdea]);
+
+  // Refetch plans and tasks when venture changes
+  useEffect(() => {
+    if (venture?.id) {
+      refetchPlans();
+      refetchTasks();
+    }
+  }, [venture?.id, refetchPlans, refetchTasks]);
+
   const handleRegenerate = async () => {
     if (!user || !chosenIdeaId) {
       toast.error("Cannot regenerate: missing user or idea information");
       return;
     }
     await generateMasterPrompt(user.id, chosenIdeaId);
+  };
+
+  const handleGeneratePlan = async () => {
+    if (!venture?.id) {
+      toast.error("No venture found. Please try refreshing the page.");
+      return;
+    }
+
+    const result = await generatePlan(venture.id);
+    if (result) {
+      toast.success(`30-Day Plan created! We've added ${result.tasksCreated.length} tasks.`);
+      refetchPlans();
+      refetchTasks();
+    }
   };
 
   if (loading) {
@@ -267,6 +308,28 @@ export default function NorthStar() {
           constraints, and execution plan aligned.
         </p>
       </div>
+
+      {/* 30-Day Plan Section */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold">30-Day Execution Plan</h2>
+        </div>
+        
+        {latestPlan && venture?.id ? (
+          <ThirtyDayPlanCard
+            plan={latestPlan}
+            tasksByWeek={tasksByWeek}
+            ventureId={venture.id}
+          />
+        ) : (
+          <EmptyPlanState
+            onGenerate={handleGeneratePlan}
+            isGenerating={isGeneratingPlan}
+            disabled={!venture?.id}
+          />
+        )}
+      </section>
 
       {/* Usage Instructions */}
       <Card className="p-6 bg-primary/5 border-primary/20">

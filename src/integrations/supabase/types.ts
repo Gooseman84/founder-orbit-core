@@ -735,10 +735,13 @@ export type Database = {
           id: string
           idea_id: string | null
           metadata: Json | null
+          source: string | null
           status: string | null
           title: string
           type: string | null
           user_id: string
+          venture_id: string | null
+          week_number: number | null
           workspace_document_id: string | null
           xp_reward: number | null
         }
@@ -752,10 +755,13 @@ export type Database = {
           id?: string
           idea_id?: string | null
           metadata?: Json | null
+          source?: string | null
           status?: string | null
           title: string
           type?: string | null
           user_id: string
+          venture_id?: string | null
+          week_number?: number | null
           workspace_document_id?: string | null
           xp_reward?: number | null
         }
@@ -769,10 +775,13 @@ export type Database = {
           id?: string
           idea_id?: string | null
           metadata?: Json | null
+          source?: string | null
           status?: string | null
           title?: string
           type?: string | null
           user_id?: string
+          venture_id?: string | null
+          week_number?: number | null
           workspace_document_id?: string | null
           xp_reward?: number | null
         }
@@ -782,6 +791,13 @@ export type Database = {
             columns: ["idea_id"]
             isOneToOne: false
             referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
             referencedColumns: ["id"]
           },
           {
@@ -935,6 +951,91 @@ export type Database = {
         }
         Relationships: []
       }
+      venture_plans: {
+        Row: {
+          ai_raw: Json | null
+          created_at: string
+          end_date: string
+          id: string
+          plan_type: string
+          start_date: string
+          summary: string | null
+          updated_at: string
+          user_id: string
+          venture_id: string
+        }
+        Insert: {
+          ai_raw?: Json | null
+          created_at?: string
+          end_date: string
+          id?: string
+          plan_type?: string
+          start_date: string
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+          venture_id: string
+        }
+        Update: {
+          ai_raw?: Json | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          plan_type?: string
+          start_date?: string
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+          venture_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venture_plans_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ventures: {
+        Row: {
+          created_at: string
+          id: string
+          idea_id: string | null
+          name: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idea_id?: string | null
+          name: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idea_id?: string | null
+          name?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ventures_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_documents: {
         Row: {
           ai_suggestions: string | null
@@ -951,6 +1052,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          venture_id: string | null
         }
         Insert: {
           ai_suggestions?: string | null
@@ -967,6 +1069,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          venture_id?: string | null
         }
         Update: {
           ai_suggestions?: string | null
@@ -983,6 +1086,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          venture_id?: string | null
         }
         Relationships: [
           {
@@ -990,6 +1094,13 @@ export type Database = {
             columns: ["linked_task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_documents_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
             referencedColumns: ["id"]
           },
         ]

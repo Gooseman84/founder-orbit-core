@@ -176,6 +176,71 @@ This document defines the expected input/output formats for AI-powered features 
 }
 ```
 
+## Generate Venture Plan (30-Day Plan)
+
+**Endpoint/Function:** `generate-venture-plan`
+
+**Input:**
+```json
+{
+  "ventureId": "uuid",
+  "planType": "30_day",
+  "startDate": "YYYY-MM-DD (optional, defaults to today)"
+}
+```
+
+**Output:**
+```json
+{
+  "plan": {
+    "id": "uuid",
+    "user_id": "uuid",
+    "venture_id": "uuid",
+    "plan_type": "30_day",
+    "start_date": "YYYY-MM-DD",
+    "end_date": "YYYY-MM-DD",
+    "summary": "string (2-3 sentence overview)",
+    "ai_raw": {
+      "summary": "string",
+      "startDate": "YYYY-MM-DD",
+      "endDate": "YYYY-MM-DD",
+      "weeks": [
+        {
+          "weekNumber": 1,
+          "theme": "Foundation & Validation",
+          "summary": "Focus for this week",
+          "tasks": [
+            {
+              "title": "string",
+              "description": "string",
+              "weekNumber": 1,
+              "suggestedDueOffsetDays": 3,
+              "estimatedMinutes": 30,
+              "category": "validation | build | marketing | systems | ops | other"
+            }
+          ]
+        }
+      ]
+    },
+    "created_at": "timestamp",
+    "updated_at": "timestamp"
+  },
+  "tasksCreated": ["task-id-1", "task-id-2", ...]
+}
+```
+
+**Plan Design Principles:**
+- Week 1: Foundation & Validation - Clarify offer, quick validation signals
+- Week 2: Build & Test - Create MVP, get feedback
+- Week 3: Launch & Learn - Soft launch, gather testimonials
+- Week 4: Scale & Systematize - Double down on what works
+
+**Task Constraints:**
+- 5-10 tasks per week
+- 15-60 minutes per task
+- Respects founder's hoursPerWeek, riskTolerance, and energy patterns
+- Categories: validation, build, marketing, systems, ops, other
+
 ---
 
 ## Implementation Notes
