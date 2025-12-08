@@ -1,5 +1,8 @@
 project_id = "empldatnfyczyiatmnfa"
 
+[functions.generate-venture-plan]
+verify_jwt = true
+
 [functions.create-customer-portal]
 verify_jwt = true
 
