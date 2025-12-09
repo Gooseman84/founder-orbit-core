@@ -343,7 +343,17 @@ serve(async (req) => {
     }
 
     const summaryData = await summaryResponse.json();
-    const rawContent: string = summaryData.choices?.[0]?.message?.content ?? "{}";
+    let rawContent: string = summaryData.choices?.[0]?.message?.content ?? "{}";
+    
+    // Strip markdown code fences if present (AI sometimes wraps JSON in ```json ... ```)
+    rawContent = rawContent.trim();
+    if (rawContent.startsWith("```")) {
+      const firstNewline = rawContent.indexOf("\n");
+      const lastFence = rawContent.lastIndexOf("```");
+      if (firstNewline !== -1 && lastFence > firstNewline) {
+        rawContent = rawContent.slice(firstNewline + 1, lastFence).trim();
+      }
+    }
 
     let contextSummary: any;
     try {
