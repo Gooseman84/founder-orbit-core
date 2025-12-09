@@ -22,22 +22,11 @@ export const useFeatureAccess = (): UseFeatureAccessReturn => {
   const hasPro = plan === "pro" || plan === "founder";
   const hasFounder = plan === "founder";
 
-  const gate = (featureName: string): boolean => {
-    const required = FEATURE_MATRIX[featureName];
-
-    if (!required || required === "free") {
-      return true;
-    }
-
-    if (required === "pro" && hasPro) {
-      return true;
-    }
-
-    if (required === "founder" && hasFounder) {
-      return true;
-    }
-
-    return false;
+  // TODO: Re-enable paywall gating when ready for production
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const gate = (_featureName: string): boolean => {
+    // Temporarily bypassing all feature gates for development
+    return true;
   };
 
   return {
