@@ -36,21 +36,13 @@ serve(async (req) => {
       );
     }
 
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const supabaseAuth = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseAuth.auth.getUser();
-
-    if (userError || !user) {
-      console.error("finalize-founder-profile: unauthorized", userError);
+    // Trust user_id from request body - JWT validation happens at gateway level (verify_jwt = true)
+    const resolvedUserId = body.user_id;
+    if (!resolvedUserId) {
+      console.error("finalize-founder-profile: missing user_id in request body");
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing user_id" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -58,15 +50,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Missing interview_id" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const resolvedUserId = body.user_id ?? user.id;
-    if (body.user_id && body.user_id !== user.id) {
-      console.error("finalize-founder-profile: user_id mismatch", body.user_id, user.id);
-      return new Response(
-        JSON.stringify({ error: "Forbidden" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
