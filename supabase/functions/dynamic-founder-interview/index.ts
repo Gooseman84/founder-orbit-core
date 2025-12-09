@@ -111,10 +111,9 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+    if (!supabaseUrl || !serviceRoleKey) {
       console.error("Missing Supabase environment configuration");
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
@@ -122,31 +121,15 @@ serve(async (req) => {
       );
     }
 
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const supabaseAuth = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseAuth.auth.getUser();
-
-    if (userError || !user) {
-      console.error("dynamic-founder-interview: unauthorized", userError);
+    // Since verify_jwt = true in config.toml, the JWT is already validated at the gateway
+    // We trust user_id from the request body (required)
+    const resolvedUserId = body.user_id;
+    
+    if (!resolvedUserId) {
+      console.error("dynamic-founder-interview: missing user_id in body");
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const resolvedUserId = body.user_id ?? user.id;
-
-    if (body.user_id && body.user_id !== user.id) {
-      console.error("dynamic-founder-interview: user_id mismatch", body.user_id, user.id);
-      return new Response(
-        JSON.stringify({ error: "Forbidden" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing user_id parameter" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
