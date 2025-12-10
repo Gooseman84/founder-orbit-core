@@ -379,9 +379,13 @@ export type Database = {
           capital_available: number | null
           commitment_level: number | null
           created_at: string
+          creator_platforms: string[] | null
+          edgy_mode: string | null
           hours_per_week: number | null
           id: string
           lifestyle_goals: string | null
+          open_to_memetic_ideas: boolean | null
+          open_to_personas: boolean | null
           passions_tags: string[] | null
           passions_text: string | null
           profile: Json
@@ -393,14 +397,20 @@ export type Database = {
           time_per_week: number | null
           updated_at: string
           user_id: string
+          wants_money_systems: boolean | null
+          work_personality: string[] | null
         }
         Insert: {
           capital_available?: number | null
           commitment_level?: number | null
           created_at?: string
+          creator_platforms?: string[] | null
+          edgy_mode?: string | null
           hours_per_week?: number | null
           id?: string
           lifestyle_goals?: string | null
+          open_to_memetic_ideas?: boolean | null
+          open_to_personas?: boolean | null
           passions_tags?: string[] | null
           passions_text?: string | null
           profile?: Json
@@ -412,14 +422,20 @@ export type Database = {
           time_per_week?: number | null
           updated_at?: string
           user_id: string
+          wants_money_systems?: boolean | null
+          work_personality?: string[] | null
         }
         Update: {
           capital_available?: number | null
           commitment_level?: number | null
           created_at?: string
+          creator_platforms?: string[] | null
+          edgy_mode?: string | null
           hours_per_week?: number | null
           id?: string
           lifestyle_goals?: string | null
+          open_to_memetic_ideas?: boolean | null
+          open_to_personas?: boolean | null
           passions_tags?: string[] | null
           passions_text?: string | null
           profile?: Json
@@ -431,6 +447,8 @@ export type Database = {
           time_per_week?: number | null
           updated_at?: string
           user_id?: string
+          wants_money_systems?: boolean | null
+          work_personality?: string[] | null
         }
         Relationships: []
       }
@@ -501,55 +519,88 @@ export type Database = {
       }
       ideas: {
         Row: {
+          automation_density: number | null
+          autonomy_level: number | null
           business_model_type: string | null
+          category: string | null
+          chaos_factor: number | null
           complexity: string | null
           constraint_fit_score: number | null
           created_at: string
+          culture_tailwind: number | null
           description: string | null
+          engine_version: string | null
           id: string
+          leverage_score: number | null
           lifestyle_fit_score: number | null
+          mode: string | null
           overall_fit_score: number | null
           passion_fit_score: number | null
+          platform: string | null
+          shock_factor: number | null
           skill_fit_score: number | null
           status: string | null
           target_customer: string | null
           time_to_first_dollar: string | null
           title: string
           user_id: string
+          virality_potential: number | null
         }
         Insert: {
+          automation_density?: number | null
+          autonomy_level?: number | null
           business_model_type?: string | null
+          category?: string | null
+          chaos_factor?: number | null
           complexity?: string | null
           constraint_fit_score?: number | null
           created_at?: string
+          culture_tailwind?: number | null
           description?: string | null
+          engine_version?: string | null
           id?: string
+          leverage_score?: number | null
           lifestyle_fit_score?: number | null
+          mode?: string | null
           overall_fit_score?: number | null
           passion_fit_score?: number | null
+          platform?: string | null
+          shock_factor?: number | null
           skill_fit_score?: number | null
           status?: string | null
           target_customer?: string | null
           time_to_first_dollar?: string | null
           title: string
           user_id: string
+          virality_potential?: number | null
         }
         Update: {
+          automation_density?: number | null
+          autonomy_level?: number | null
           business_model_type?: string | null
+          category?: string | null
+          chaos_factor?: number | null
           complexity?: string | null
           constraint_fit_score?: number | null
           created_at?: string
+          culture_tailwind?: number | null
           description?: string | null
+          engine_version?: string | null
           id?: string
+          leverage_score?: number | null
           lifestyle_fit_score?: number | null
+          mode?: string | null
           overall_fit_score?: number | null
           passion_fit_score?: number | null
+          platform?: string | null
+          shock_factor?: number | null
           skill_fit_score?: number | null
           status?: string | null
           target_customer?: string | null
           time_to_first_dollar?: string | null
           title?: string
           user_id?: string
+          virality_potential?: number | null
         }
         Relationships: []
       }
