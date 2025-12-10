@@ -46,6 +46,13 @@ export async function upsertFounderProfile(
     capital_available: profile.availableCapital,
     lifestyle_goals: profile.lifestyleGoalsText,
     success_vision: profile.visionOfSuccessText,
+    // EPIC v6 new fields
+    work_personality: profile.workPersonality ?? [],
+    creator_platforms: profile.creatorPlatforms ?? [],
+    edgy_mode: profile.edgyMode ?? null,
+    wants_money_systems: profile.wantsMoneySystems ?? false,
+    open_to_personas: profile.openToPersonas ?? false,
+    open_to_memetic_ideas: profile.openToMemeticIdeas ?? false,
   } as const;
 
   // Try update first to avoid needing a unique constraint on user_id

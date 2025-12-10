@@ -1,4 +1,5 @@
 // src/features/onboarding/CoreOnboardingWizard.tsx
+// EPIC v6 Onboarding — Wildness & Modes
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,112 +9,134 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { upsertFounderProfile, normalizeFounderProfile } from "@/lib/founderProfileApi";
-import type { RiskTolerance, Runway } from "@/types/founderProfile";
+import type { RiskTolerance, Runway, WorkPersonality, CreatorPlatform, EdgyMode } from "@/types/founderProfile";
 
 const TOTAL_STEPS = 5;
 
-const PASSION_DOMAIN_OPTIONS = [
+// v6 Industry / Domain options
+const INDUSTRY_OPTIONS = [
   "Health & fitness",
   "Money & investing",
-  "Parenting & family",
-  "Relationships",
-  "Career & performance",
-  "Spirituality / meaning",
-  "DIY / home / real estate",
-  "Tech & AI",
-  "Sports & outdoors",
-  "Travel & experiences",
-  "Creativity & art",
+  "E-commerce & retail",
+  "SaaS & software",
+  "Real estate",
+  "Education & coaching",
+  "Content & media",
+  "AI & automation",
+  "Local services",
+  "B2B services",
+  "Consumer apps",
   "Other",
 ];
 
-const SKILL_TAG_OPTIONS = [
-  "Strategy & planning",
-  "Sales & persuasion",
-  "Marketing & content",
-  "Product / design",
-  "Tech / data / coding",
-  "Operations & systems",
-  "People leadership / coaching",
-  "Finance / deals / numbers",
-  "Creative / storytelling",
-  "Other",
+// v6 Business model options
+const BUSINESS_MODEL_OPTIONS = [
+  "SaaS",
+  "Agency",
+  "Automation studio",
+  "Content empire",
+  "Creator brand",
+  "Productized service",
+  "Marketplace",
+  "E-commerce",
+  "Consulting",
+  "Hybrid",
 ];
 
-const LIFESTYLE_NON_NEGOTIABLES = [
-  "Location freedom",
-  "Flexible hours",
-  "In-person work is fine",
-  "No employees",
-  "Happy to build a team",
-  "No social media / content",
-  "Happy to be the face of the brand",
-  "Must strongly align with my values / faith",
-  "Okay with intense 2–3 year push",
+// v6 Work personality options
+const WORK_PERSONALITY_OPTIONS: { value: WorkPersonality; label: string; description: string }[] = [
+  { value: "builder", label: "Builder / Operator", description: "You love building systems and shipping products" },
+  { value: "creator", label: "Creator / Face of Brand", description: "You're comfortable being visible and creating content" },
+  { value: "faceless", label: "Faceless Architect", description: "You prefer systems & automation, staying behind the scenes" },
+  { value: "dealmaker", label: "Deal Maker / Sales", description: "You thrive on relationships and closing deals" },
+  { value: "quiet_assassin", label: "Quiet Assassin", description: "High leverage, low visibility — you get results silently" },
+  { value: "automation", label: "Automation Obsessed", description: "You want machines doing the work while you sleep" },
 ];
 
-type CoreFormState = {
-  passionsText: string;
-  passionDomains: string[];
-  passionDomainsOther: string;
-  skillsText: string;
-  skillTags: string[];
-  skillSpikes: {
-    salesPersuasion: number;
-    contentTeaching: number;
-    opsSystems: number;
-    productCreativity: number;
-    numbersAnalysis: number;
-  };
+// v6 Creator platform options
+const CREATOR_PLATFORM_OPTIONS: { value: CreatorPlatform; label: string }[] = [
+  { value: "tiktok", label: "TikTok" },
+  { value: "instagram", label: "Instagram" },
+  { value: "youtube", label: "YouTube" },
+  { value: "x", label: "X (Twitter)" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "email", label: "Email / Newsletter" },
+  { value: "none", label: "None — I prefer faceless" },
+];
+
+// v6 Edgy mode options
+const EDGY_MODE_OPTIONS: { value: EdgyMode; label: string; description: string }[] = [
+  { value: "safe", label: "Safe", description: "Keep it professional and conventional" },
+  { value: "bold", label: "Bold", description: "Willing to push boundaries and stand out" },
+  { value: "unhinged", label: "Unhinged", description: "Give me the wildest, most unconventional ideas" },
+];
+
+type V6FormState = {
+  // Step 1: Industries & Business Models
+  industries: string[];
+  industriesOther: string;
+  businessModels: string[];
+  
+  // Step 2: Work Personality & Platforms  
+  workPersonality: WorkPersonality[];
+  creatorPlatforms: CreatorPlatform[];
+  
+  // Step 3: Wildness Preferences
+  openToPersonas: boolean;
+  edgyMode: EdgyMode;
+  wantsMoneySystems: "businesses" | "money_systems" | "both";
+  
+  // Step 4: Constraints (existing fields)
   hoursPerWeek: number | undefined;
   availableCapital: number | undefined;
   riskTolerance: RiskTolerance | "";
   runway: Runway | "";
-  urgencyVsUpside: number;
-  lifestyleGoalsText: string;
+  
+  // Step 5: Vision (simplified)
   visionOfSuccessText: string;
-  lifestyleNonNegotiables: string[];
+  
+  // Legacy fields we still capture for compatibility
+  passionsText: string;
+  skillsText: string;
 };
 
-const initialForm: CoreFormState = {
-  passionsText: "",
-  passionDomains: [],
-  passionDomainsOther: "",
-  skillsText: "",
-  skillTags: [],
-  skillSpikes: {
-    salesPersuasion: 3,
-    contentTeaching: 3,
-    opsSystems: 3,
-    productCreativity: 3,
-    numbersAnalysis: 3,
-  },
+const initialForm: V6FormState = {
+  industries: [],
+  industriesOther: "",
+  businessModels: [],
+  workPersonality: [],
+  creatorPlatforms: [],
+  openToPersonas: false,
+  edgyMode: "bold",
+  wantsMoneySystems: "both",
   hoursPerWeek: undefined,
   availableCapital: undefined,
   riskTolerance: "",
   runway: "",
-  urgencyVsUpside: 3,
-  lifestyleGoalsText: "",
   visionOfSuccessText: "",
-  lifestyleNonNegotiables: [],
+  passionsText: "",
+  skillsText: "",
 };
 
-function ChipMultiSelect({
+function ChipMultiSelect<T extends string>({
   options,
   value,
   onChange,
   max,
+  renderLabel,
 }: {
-  options: string[];
-  value: string[];
-  onChange: (next: string[]) => void;
+  options: T[];
+  value: T[];
+  onChange: (next: T[]) => void;
   max?: number;
+  renderLabel?: (option: T) => string;
 }) {
-  const toggleValue = (option: string) => {
+  const toggleValue = (option: T) => {
     const exists = value.includes(option);
     if (exists) {
       onChange(value.filter((v) => v !== option));
@@ -136,7 +159,7 @@ function ChipMultiSelect({
             className="rounded-full"
             onClick={() => toggleValue(option)}
           >
-            {option}
+            {renderLabel ? renderLabel(option) : option}
           </Button>
         );
       })}
@@ -144,11 +167,35 @@ function ChipMultiSelect({
   );
 }
 
+function PersonalityCard({
+  personality,
+  selected,
+  onToggle,
+}: {
+  personality: { value: WorkPersonality; label: string; description: string };
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`p-4 rounded-lg border text-left transition-all ${
+        selected
+          ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+          : "border-border hover:border-primary/50"
+      }`}
+    >
+      <div className="font-medium">{personality.label}</div>
+      <div className="text-sm text-muted-foreground mt-1">{personality.description}</div>
+    </button>
+  );
+}
+
 export function CoreOnboardingWizard() {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState<CoreFormState>(initialForm);
+  const [form, setForm] = useState<V6FormState>(initialForm);
   const [saving, setSaving] = useState(false);
-  const [showExtendedPrompt, setShowExtendedPrompt] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
@@ -157,8 +204,31 @@ export function CoreOnboardingWizard() {
 
   const progress = (step / TOTAL_STEPS) * 100;
 
-  const updateForm = <K extends keyof CoreFormState>(key: K, value: CoreFormState[K]) => {
+  const updateForm = <K extends keyof V6FormState>(key: K, value: V6FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const togglePersonality = (personality: WorkPersonality) => {
+    const current = form.workPersonality;
+    if (current.includes(personality)) {
+      updateForm("workPersonality", current.filter((p) => p !== personality));
+    } else {
+      updateForm("workPersonality", [...current, personality]);
+    }
+  };
+
+  const togglePlatform = (platform: CreatorPlatform) => {
+    const current = form.creatorPlatforms;
+    if (current.includes(platform)) {
+      updateForm("creatorPlatforms", current.filter((p) => p !== platform));
+    } else {
+      // If selecting "none", clear others. If selecting others, clear "none"
+      if (platform === "none") {
+        updateForm("creatorPlatforms", ["none"]);
+      } else {
+        updateForm("creatorPlatforms", [...current.filter(p => p !== "none"), platform]);
+      }
+    }
   };
 
   const handleNext = () => {
@@ -181,7 +251,7 @@ export function CoreOnboardingWizard() {
 
     if (!form.riskTolerance || !form.runway) {
       setError("Please complete your constraints before saving.");
-      setStep(3);
+      setStep(4);
       return;
     }
 
@@ -189,22 +259,38 @@ export function CoreOnboardingWizard() {
     setError(null);
 
     try {
+      // Build the raw profile data for normalization
       const raw = {
         userId: user.id,
-        passionsText: form.passionsText,
-        passionDomains: form.passionDomains,
-        passionDomainsOther: form.passionDomainsOther || null,
-        skillsText: form.skillsText,
-        skillTags: form.skillTags,
-        skillSpikes: { ...form.skillSpikes },
+        // Legacy compatibility fields
+        passionsText: form.passionsText || form.industries.join(", "),
+        passionDomains: form.industries,
+        passionDomainsOther: form.industriesOther || null,
+        skillsText: form.skillsText || form.workPersonality.join(", "),
+        skillTags: form.businessModels,
+        skillSpikes: {
+          salesPersuasion: form.workPersonality.includes("dealmaker") ? 5 : 3,
+          contentTeaching: form.workPersonality.includes("creator") ? 5 : 3,
+          opsSystems: form.workPersonality.includes("builder") || form.workPersonality.includes("automation") ? 5 : 3,
+          productCreativity: form.workPersonality.includes("builder") ? 5 : 3,
+          numbersAnalysis: 3,
+        },
         hoursPerWeek: form.hoursPerWeek ?? 0,
         availableCapital: form.availableCapital ?? 0,
         riskTolerance: form.riskTolerance,
         runway: form.runway,
-        urgencyVsUpside: form.urgencyVsUpside,
-        lifestyleGoalsText: form.lifestyleGoalsText,
+        urgencyVsUpside: 3,
+        lifestyleGoalsText: "",
         visionOfSuccessText: form.visionOfSuccessText,
-        lifestyleNonNegotiables: form.lifestyleNonNegotiables,
+        lifestyleNonNegotiables: [],
+        
+        // EPIC v6 new fields
+        workPersonality: form.workPersonality,
+        creatorPlatforms: form.creatorPlatforms,
+        edgyMode: form.edgyMode,
+        wantsMoneySystems: form.wantsMoneySystems === "money_systems" || form.wantsMoneySystems === "both",
+        openToPersonas: form.openToPersonas,
+        openToMemeticIdeas: form.edgyMode === "bold" || form.edgyMode === "unhinged",
       };
 
       const profile = await normalizeFounderProfile(raw);
@@ -229,156 +315,180 @@ export function CoreOnboardingWizard() {
     }
   };
 
-  if (showExtendedPrompt) {
-    return (
-      <div className="max-w-2xl mx-auto py-12">
-        <Card className="text-center p-8 space-y-6">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-            <span className="text-3xl">✨</span>
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-semibold">Profile created!</h2>
-            <p className="text-muted-foreground">
-              Want sharper, more personalized ideas? Complete your extended profile so we can factor in
-              your deeper motivations, energy patterns, and work style.
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button size="lg" onClick={() => navigate("/onboarding/extended")}> 
-              Complete Extended Profile
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/ideas")}>
-              Skip for now
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            You can always finish this later from your Profile page.
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
   const renderStep = () => {
     switch (step) {
       case 1:
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold mb-2">Passions</h2>
+              <h2 className="text-2xl font-semibold mb-2">What worlds do you understand?</h2>
               <p className="text-muted-foreground">
-                Tell us what you care about so we can steer you toward ideas you&apos;ll actually love.
+                Pick industries where you have insight, experience, or genuine interest.
               </p>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="passionsText">What are you passionate about?</Label>
-                <Textarea
-                  id="passionsText"
-                  rows={5}
-                  value={form.passionsText}
-                  onChange={(e) => updateForm("passionsText", e.target.value)}
-                  placeholder="Examples: Helping people get unstuck in their careers, fitness and performance, simplifying money decisions..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Which domains light you up the most? (max 5)</Label>
+                <Label>Industries you know (pick up to 5)</Label>
                 <ChipMultiSelect
-                  options={PASSION_DOMAIN_OPTIONS}
-                  value={form.passionDomains}
-                  onChange={(next) => updateForm("passionDomains", next)}
+                  options={INDUSTRY_OPTIONS}
+                  value={form.industries}
+                  onChange={(next) => updateForm("industries", next)}
                   max={5}
                 />
-                {form.passionDomains.includes("Other") && (
+                {form.industries.includes("Other") && (
                   <Input
                     className="mt-2"
                     placeholder="What else?"
-                    value={form.passionDomainsOther}
-                    onChange={(e) => updateForm("passionDomainsOther", e.target.value)}
+                    value={form.industriesOther}
+                    onChange={(e) => updateForm("industriesOther", e.target.value)}
                   />
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>What types of businesses sound fun to you?</Label>
+                <p className="text-sm text-muted-foreground mb-2">Pick all that excite you</p>
+                <ChipMultiSelect
+                  options={BUSINESS_MODEL_OPTIONS}
+                  value={form.businessModels}
+                  onChange={(next) => updateForm("businessModels", next)}
+                />
               </div>
             </div>
           </div>
         );
+
       case 2:
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold mb-2">Skills & Experience</h2>
+              <h2 className="text-2xl font-semibold mb-2">How do you work best?</h2>
               <p className="text-muted-foreground">
-                What have you actually done, and where do you have unfair advantage?
+                Pick the work personalities that fit you. This shapes what kind of businesses we suggest.
               </p>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="skillsText">What have you been paid to do or are naturally good at?</Label>
-                <Textarea
-                  id="skillsText"
-                  rows={5}
-                  value={form.skillsText}
-                  onChange={(e) => updateForm("skillsText", e.target.value)}
-                  placeholder="Examples: 5 years in B2B sales, ran ads for local businesses, strong writer, good at simplifying complex topics..."
-                />
+                <Label>Your work personality (pick 1-3)</Label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {WORK_PERSONALITY_OPTIONS.map((p) => (
+                    <PersonalityCard
+                      key={p.value}
+                      personality={p}
+                      selected={form.workPersonality.includes(p.value)}
+                      onToggle={() => togglePersonality(p.value)}
+                    />
+                  ))}
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Skill tags</Label>
-                <ChipMultiSelect
-                  options={SKILL_TAG_OPTIONS}
-                  value={form.skillTags}
-                  onChange={(next) => updateForm("skillTags", next)}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <Label>Where are your strongest spikes? (1 = weak, 5 = very strong)</Label>
-                {([
-                  "salesPersuasion",
-                  "contentTeaching",
-                  "opsSystems",
-                  "productCreativity",
-                  "numbersAnalysis",
-                ] as const).map((key) => {
-                  const labelMap: Record<typeof key, string> = {
-                    salesPersuasion: "Sales & persuasion",
-                    contentTeaching: "Content & teaching",
-                    opsSystems: "Ops & systems",
-                    productCreativity: "Product & creativity",
-                    numbersAnalysis: "Numbers & analysis",
-                  } as const;
-                  return (
-                    <div key={key} className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>{labelMap[key]}</span>
-                        <span className="text-muted-foreground">{form.skillSpikes[key]}</span>
-                      </div>
-                      <Slider
-                        min={1}
-                        max={5}
-                        step={1}
-                        value={[form.skillSpikes[key]]}
-                        onValueChange={([val]) =>
-                          updateForm("skillSpikes", { ...form.skillSpikes, [key]: val })
-                        }
-                      />
-                    </div>
-                  );
-                })}
+              <div className="space-y-2 pt-4">
+                <Label>Which platforms are you open to building on?</Label>
+                <p className="text-sm text-muted-foreground mb-2">Where might you show up or create content?</p>
+                <div className="flex flex-wrap gap-2">
+                  {CREATOR_PLATFORM_OPTIONS.map((p) => {
+                    const selected = form.creatorPlatforms.includes(p.value);
+                    return (
+                      <Button
+                        key={p.value}
+                        type="button"
+                        size="sm"
+                        variant={selected ? "default" : "outline"}
+                        className="rounded-full"
+                        onClick={() => togglePlatform(p.value)}
+                      >
+                        {p.label}
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
         );
+
       case 3:
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold mb-2">Constraints</h2>
+              <h2 className="text-2xl font-semibold mb-2">How wild do you want to go?</h2>
               <p className="text-muted-foreground">
-                Be honest about your real constraints so we don&apos;t recommend ideas that break your life.
+                This unlocks different idea modes — from conventional to completely unhinged.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <Label className="text-base">Open to AI personas / characters?</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Would you build something with an AI avatar or character as the "face"?
+                  </p>
+                </div>
+                <Switch
+                  checked={form.openToPersonas}
+                  onCheckedChange={(checked) => updateForm("openToPersonas", checked)}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label>How edgy can we get with ideas?</Label>
+                <div className="grid gap-3">
+                  {EDGY_MODE_OPTIONS.map((mode) => (
+                    <button
+                      key={mode.value}
+                      type="button"
+                      onClick={() => updateForm("edgyMode", mode.value)}
+                      className={`p-4 rounded-lg border text-left transition-all ${
+                        form.edgyMode === mode.value
+                          ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <div className="font-medium">{mode.label}</div>
+                      <div className="text-sm text-muted-foreground mt-1">{mode.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label>What do you want me to prioritize?</Label>
+                <div className="grid gap-3">
+                  {[
+                    { value: "businesses" as const, label: "Full Businesses", description: "Traditional startups with products/services" },
+                    { value: "money_systems" as const, label: "Money-Making Systems", description: "Automated income engines, cash machines" },
+                    { value: "both" as const, label: "Both", description: "Show me everything — I'll decide" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => updateForm("wantsMoneySystems", opt.value)}
+                      className={`p-4 rounded-lg border text-left transition-all ${
+                        form.wantsMoneySystems === opt.value
+                          ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <div className="font-medium">{opt.label}</div>
+                      <div className="text-sm text-muted-foreground mt-1">{opt.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold mb-2">Your Constraints</h2>
+              <p className="text-muted-foreground">
+                Be honest — this helps us filter out ideas that would break your life.
               </p>
             </div>
 
@@ -389,7 +499,7 @@ export function CoreOnboardingWizard() {
                   id="hoursPerWeek"
                   type="number"
                   min={0}
-                  max={168}
+                  max={80}
                   value={form.hoursPerWeek ?? ""}
                   onChange={(e) => updateForm("hoursPerWeek", e.target.value ? Number(e.target.value) : undefined)}
                   placeholder="e.g., 10, 20, 40"
@@ -404,10 +514,7 @@ export function CoreOnboardingWizard() {
                   min={0}
                   value={form.availableCapital ?? ""}
                   onChange={(e) =>
-                    updateForm(
-                      "availableCapital",
-                      e.target.value ? Number(e.target.value) : undefined
-                    )
+                    updateForm("availableCapital", e.target.value ? Number(e.target.value) : undefined)
                   }
                   placeholder="Roughly how much could you invest?"
                 />
@@ -416,19 +523,15 @@ export function CoreOnboardingWizard() {
               <div className="space-y-2">
                 <Label>Risk tolerance</Label>
                 <div className="flex flex-wrap gap-2">
-                  {["low", "medium", "high"].map((level) => {
-                    const labelMap: Record<string, string> = {
-                      low: "Low",
-                      medium: "Medium",
-                      high: "High",
-                    };
+                  {(["low", "medium", "high"] as const).map((level) => {
+                    const labelMap = { low: "Low — Play it safe", medium: "Medium — Balanced", high: "High — Swing big" };
                     return (
                       <Button
                         key={level}
                         type="button"
                         size="sm"
                         variant={form.riskTolerance === level ? "default" : "outline"}
-                        onClick={() => updateForm("riskTolerance", level as RiskTolerance)}
+                        onClick={() => updateForm("riskTolerance", level)}
                       >
                         {labelMap[level]}
                       </Button>
@@ -438,182 +541,110 @@ export function CoreOnboardingWizard() {
               </div>
 
               <div className="space-y-2">
-                <Label>Runway</Label>
+                <Label>How long can you go before needing income?</Label>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { value: "0_3_months", label: "0–3 months" },
-                    { value: "3_12_months", label: "3–12 months" },
-                    { value: "12_plus_months", label: "12+ months" },
+                    { value: "0_3_months" as const, label: "0–3 months" },
+                    { value: "3_12_months" as const, label: "3–12 months" },
+                    { value: "12_plus_months" as const, label: "12+ months" },
                   ].map((opt) => (
                     <Button
                       key={opt.value}
                       type="button"
                       size="sm"
                       variant={form.runway === opt.value ? "default" : "outline"}
-                      onClick={() => updateForm("runway", opt.value as Runway)}
+                      onClick={() => updateForm("runway", opt.value)}
                     >
                       {opt.label}
                     </Button>
                   ))}
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label>Urgency vs upside</Label>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>1 = Cash ASAP</span>
-                  <span>5 = Max upside, okay if slower</span>
-                </div>
-                <Slider
-                  min={1}
-                  max={5}
-                  step={1}
-                  value={[form.urgencyVsUpside]}
-                  onValueChange={([val]) => updateForm("urgencyVsUpside", val)}
-                />
-              </div>
             </div>
           </div>
         );
-      case 4:
+
+      case 5:
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold mb-2">Lifestyle & Vision</h2>
+              <h2 className="text-2xl font-semibold mb-2">One Last Thing</h2>
               <p className="text-muted-foreground">
-                Describe the life you want this business to support.
+                What does "winning" look like for you in 2-3 years?
               </p>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="lifestyleGoalsText">Lifestyle goals</Label>
-                <Textarea
-                  id="lifestyleGoalsText"
-                  rows={4}
-                  value={form.lifestyleGoalsText}
-                  onChange={(e) => updateForm("lifestyleGoalsText", e.target.value)}
-                  placeholder="How do you want your days and weeks to feel?"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="visionOfSuccessText">Vision of success</Label>
+                <Label htmlFor="visionOfSuccessText">Your vision of success</Label>
                 <Textarea
                   id="visionOfSuccessText"
-                  rows={4}
+                  rows={5}
                   value={form.visionOfSuccessText}
                   onChange={(e) => updateForm("visionOfSuccessText", e.target.value)}
-                  placeholder="In 3–5 years, what does &quot;this worked&quot; look like for you?"
+                  placeholder="Example: Making $30k/mo from automated systems, working 20 hrs/week, traveling whenever I want, building things I'm proud of..."
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Non‑negotiables (max 3)</Label>
-                <ChipMultiSelect
-                  options={LIFESTYLE_NON_NEGOTIABLES}
-                  value={form.lifestyleNonNegotiables}
-                  onChange={(next) => updateForm("lifestyleNonNegotiables", next)}
-                  max={3}
-                />
-              </div>
-            </div>
-          </div>
-        );
-      case 5:
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-semibold mb-2">Review</h2>
-              <p className="text-muted-foreground">
-                Quick snapshot of what you&apos;ve told us. You can tweak any section before saving.
-              </p>
-            </div>
-
-            <div className="space-y-4 text-sm">
-              <div>
-                <h3 className="font-semibold mb-1">Passions</h3>
-                <p className="text-muted-foreground mb-1">{form.passionsText || "Not provided"}</p>
-                {form.passionDomains.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {form.passionDomains.map((d) => (
-                      <span
-                        key={d}
-                        className="px-2 py-1 rounded-full bg-muted text-xs text-muted-foreground"
-                      >
-                        {d}
-                      </span>
-                    ))}
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <h3 className="font-semibold">Quick Summary</h3>
+                <div className="text-sm space-y-2">
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-muted-foreground">Industries:</span>
+                    {form.industries.length > 0 ? form.industries.join(", ") : "None selected"}
                   </div>
-                )}
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-1">Skills</h3>
-                <p className="text-muted-foreground mb-1">{form.skillsText || "Not provided"}</p>
-                {form.skillTags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {form.skillTags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 rounded-full bg-muted text-xs text-muted-foreground"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-muted-foreground">Business types:</span>
+                    {form.businessModels.length > 0 ? form.businessModels.join(", ") : "None selected"}
                   </div>
-                )}
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-1">Constraints</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <span className="text-muted-foreground">Hours/week:</span>
-                  <span>{form.hoursPerWeek ?? "—"}</span>
-                  <span className="text-muted-foreground">Available capital:</span>
-                  <span>{form.availableCapital != null ? `$${form.availableCapital}` : "—"}</span>
-                  <span className="text-muted-foreground">Risk tolerance:</span>
-                  <span className="capitalize">{form.riskTolerance || "—"}</span>
-                  <span className="text-muted-foreground">Runway:</span>
-                  <span>{form.runway || "—"}</span>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-muted-foreground">Work style:</span>
+                    {form.workPersonality.length > 0 
+                      ? form.workPersonality.map(p => WORK_PERSONALITY_OPTIONS.find(o => o.value === p)?.label).join(", ")
+                      : "None selected"}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-muted-foreground">Platforms:</span>
+                    {form.creatorPlatforms.length > 0 
+                      ? form.creatorPlatforms.map(p => CREATOR_PLATFORM_OPTIONS.find(o => o.value === p)?.label).join(", ")
+                      : "None selected"}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-muted-foreground">Wildness level:</span>
+                    {EDGY_MODE_OPTIONS.find(o => o.value === form.edgyMode)?.label}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-muted-foreground">Hours/week:</span>
+                    {form.hoursPerWeek ?? "Not set"} | 
+                    <span className="text-muted-foreground ml-2">Capital:</span>
+                    {form.availableCapital ? `$${form.availableCapital}` : "Not set"}
+                  </div>
                 </div>
               </div>
-
-              <div>
-                <h3 className="font-semibold mb-1">Lifestyle & vision</h3>
-                <p className="text-muted-foreground mb-1">
-                  {form.lifestyleGoalsText || "No lifestyle goals added"}
-                </p>
-                <p className="text-muted-foreground">
-                  {form.visionOfSuccessText || "No success vision added"}
-                </p>
-              </div>
             </div>
           </div>
         );
+
       default:
         return null;
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
+    <div className="max-w-3xl mx-auto py-8 px-4">
       <div className="mb-8 space-y-2">
         <p className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
-          Founder Onboarding
+          Founder Setup
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight">Let&apos;s understand how you&apos;re wired</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Let's build your idea engine</h1>
         <p className="text-muted-foreground text-sm max-w-xl">
-          We&apos;ll use this to filter out bad-fit ideas and surface opportunities that match your
-          passions, skills, and real-world constraints.
+          5 quick steps to unlock personalized business ideas tailored to how you work and how wild you want to go.
         </p>
       </div>
 
       <div className="mb-6">
         <div className="flex justify-between text-xs text-muted-foreground mb-1">
-          <span>
-            Step {step} of {TOTAL_STEPS}
-          </span>
+          <span>Step {step} of {TOTAL_STEPS}</span>
           <span>{Math.round(progress)}%</span>
         </div>
         <Progress value={progress} />
