@@ -13,6 +13,11 @@ const corsHeaders = {
 type RiskTolerance = "low" | "medium" | "high";
 type Runway = "0_3_months" | "3_12_months" | "12_plus_months";
 
+// EPIC v6 types
+type WorkPersonality = "builder" | "creator" | "automation" | "faceless" | "dealmaker" | "quiet_assassin";
+type CreatorPlatform = "tiktok" | "instagram" | "youtube" | "x" | "linkedin" | "email" | "none";
+type EdgyMode = "safe" | "bold" | "unhinged";
+
 type FounderProfile = {
   userId: string;
   passionsText: string;
@@ -48,6 +53,13 @@ type FounderProfile = {
   marketSegmentsUnderstood: string[];
   existingNetworkChannels: string[];
   hellNoFilters: string[];
+  // EPIC v6 fields
+  workPersonality: WorkPersonality[];
+  creatorPlatforms: CreatorPlatform[];
+  edgyMode: EdgyMode;
+  wantsMoneySystems: boolean;
+  openToPersonas: boolean;
+  openToMemeticIdeas: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -98,6 +110,14 @@ const rawSchema = z.object({
   marketSegmentsUnderstood: z.array(z.string().trim()).max(50).optional(),
   existingNetworkChannels: z.array(z.string().trim()).max(50).optional(),
   hellNoFilters: z.array(z.string().trim()).max(50).optional(),
+
+  // EPIC v6 fields
+  workPersonality: z.array(z.enum(["builder", "creator", "automation", "faceless", "dealmaker", "quiet_assassin"])).max(6).optional(),
+  creatorPlatforms: z.array(z.enum(["tiktok", "instagram", "youtube", "x", "linkedin", "email", "none"])).max(7).optional(),
+  edgyMode: z.enum(["safe", "bold", "unhinged"]).optional(),
+  wantsMoneySystems: z.boolean().optional(),
+  openToPersonas: z.boolean().optional(),
+  openToMemeticIdeas: z.boolean().optional(),
 
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),
@@ -151,6 +171,13 @@ function buildProfile(raw: z.infer<typeof rawSchema>): FounderProfile {
     marketSegmentsUnderstood: raw.marketSegmentsUnderstood ?? [],
     existingNetworkChannels: raw.existingNetworkChannels ?? [],
     hellNoFilters: raw.hellNoFilters ?? [],
+    // EPIC v6 fields
+    workPersonality: (raw.workPersonality ?? []) as WorkPersonality[],
+    creatorPlatforms: (raw.creatorPlatforms ?? []) as CreatorPlatform[],
+    edgyMode: (raw.edgyMode ?? "bold") as EdgyMode,
+    wantsMoneySystems: raw.wantsMoneySystems ?? false,
+    openToPersonas: raw.openToPersonas ?? false,
+    openToMemeticIdeas: raw.openToMemeticIdeas ?? false,
     createdAt: raw.createdAt ?? now,
     updatedAt: raw.updatedAt ?? now,
   };
