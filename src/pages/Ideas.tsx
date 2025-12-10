@@ -1,15 +1,18 @@
 // src/pages/Ideas.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useIdeas } from "@/hooks/useIdeas";
 import { useScoredFounderIdeas } from "@/hooks/useScoredFounderIdeas";
 import { useSaveFounderIdea } from "@/hooks/useSaveFounderIdea";
 import { usePromoteIdeaToWorkspace } from "@/hooks/usePromoteIdeaToWorkspace";
+import { useAuth } from "@/hooks/useAuth";
 import { IdeaCard } from "@/components/ideas/IdeaCard";
 import { IdeaScoredCard } from "@/components/ideas/IdeaScoredCard";
 import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
 import { IdeaFilters, IdeaFiltersState } from "@/components/ideas/IdeaFilters";
+import { ModeSelector, type IdeaMode } from "@/components/ideas/ModeSelector";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
   SelectContent,
@@ -45,11 +48,14 @@ const Ideas = () => {
   const { promote, isPromoting } = usePromoteIdeaToWorkspace();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [savedIdeaIds, setSavedIdeaIds] = useState<Set<string>>(new Set());
   const [savingIdeaId, setSavingIdeaId] = useState<string | null>(null);
   const [promotingIdeaId, setPromotingIdeaId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("fit_desc");
+  const [selectedMode, setSelectedMode] = useState<IdeaMode>("breadth");
+  const [edgyMode, setEdgyMode] = useState<string | null>(null);
   const [filters, setFilters] = useState<IdeaFiltersState>({
     archetypes: [],
     markets: [],
@@ -57,6 +63,24 @@ const Ideas = () => {
     timeCommitment: null,
     capitalRequired: null,
   });
+
+  // Fetch edgy_mode from founder_profiles
+  useEffect(() => {
+    const fetchEdgyMode = async () => {
+      if (!user?.id) return;
+      try {
+        const { data } = await supabase
+          .from("founder_profiles")
+          .select("edgy_mode")
+          .eq("user_id", user.id)
+          .single();
+        setEdgyMode(data?.edgy_mode ?? null);
+      } catch (e) {
+        console.error("Error fetching edgy_mode:", e);
+      }
+    };
+    fetchEdgyMode();
+  }, [user?.id]);
 
   // Derive available filter options
   const { availableArchetypes, availableMarkets } = useMemo(() => {
@@ -138,8 +162,12 @@ const Ideas = () => {
 
   const handleGenerateFounderIdeas = async () => {
     try {
-      await generateFounderIdeas();
+      await generateFounderIdeas({ mode: selectedMode });
       setSavedIdeaIds(new Set());
+      toast({ 
+        title: "Ideas Generated!", 
+        description: `${selectedMode === "breadth" ? "Standard" : selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1).replace("_", " ")} mode ideas are ready.` 
+      });
     } catch (error: any) {
       toast({ title: "Error", description: error.message ?? "Failed to generate ideas.", variant: "destructive" });
     }
@@ -189,13 +217,6 @@ const Ideas = () => {
           <p className="text-muted-foreground">{ideas.length} ideas in library</p>
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
-          <Button onClick={handleGenerateFounderIdeas} disabled={isGeneratingFounderIdeas} className="gap-2">
-            {isGeneratingFounderIdeas ? (
-              <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />Generating...</>
-            ) : (
-              <><Sparkles className="w-4 h-4" />Generate v6 Ideas</>
-            )}
-          </Button>
           {ideas.length >= 2 && (
             <Button onClick={() => navigate("/ideas/compare")} variant="outline" className="gap-2">
               <Scale className="w-4 h-4" />Compare Ideas
@@ -203,6 +224,28 @@ const Ideas = () => {
           )}
           <Button onClick={handleGenerateIdeas} disabled={generateIdeas.isPending} variant="outline" className="gap-2">
             <RefreshCw className="w-4 h-4" />More Ideas
+          </Button>
+        </div>
+      </div>
+
+      {/* Mode Selector */}
+      <div className="bg-card border border-border rounded-lg p-4">
+        <ModeSelector 
+          selectedMode={selectedMode} 
+          onModeChange={setSelectedMode}
+          edgyMode={edgyMode}
+        />
+        <div className="mt-4 flex justify-end">
+          <Button 
+            onClick={handleGenerateFounderIdeas} 
+            disabled={isGeneratingFounderIdeas} 
+            className="gap-2"
+          >
+            {isGeneratingFounderIdeas ? (
+              <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />Generating...</>
+            ) : (
+              <><Sparkles className="w-4 h-4" />Generate {selectedMode === "breadth" ? "" : selectedMode.replace("_", " ").charAt(0).toUpperCase() + selectedMode.replace("_", " ").slice(1)} Ideas</>
+            )}
           </Button>
         </div>
       </div>
