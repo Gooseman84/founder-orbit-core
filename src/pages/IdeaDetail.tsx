@@ -11,11 +11,12 @@ import { useIdeaDetail } from "@/hooks/useIdeaDetail";
 import { IdeaVettingCard } from "@/components/ideas/IdeaVettingCard";
 import { OpportunityScoreCard } from "@/components/opportunity/OpportunityScoreCard";
 import { PaywallModal } from "@/components/paywall/PaywallModal";
+import { IdeaVariantGenerator } from "@/components/ideas/IdeaVariantGenerator";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { recordXpEvent } from "@/lib/xpEngine";
-import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp } from "lucide-react";
+import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp, Zap, Flame, Bot, DollarSign } from "lucide-react";
 
 const getComplexityVariant = (complexity: string | null) => {
   switch (complexity?.toLowerCase()) {
@@ -42,6 +43,8 @@ const IdeaDetail = () => {
   const [loadingScore, setLoadingScore] = useState(true);
   const [generatingScore, setGeneratingScore] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [founderProfile, setFounderProfile] = useState<any>(null);
+  const [generatedVariants, setGeneratedVariants] = useState<any[]>([]);
 
   const handleVetIdea = async () => {
     try {
@@ -82,35 +85,46 @@ const IdeaDetail = () => {
     }
   };
 
-  // Fetch existing opportunity score on mount
+  // Fetch existing opportunity score and founder profile on mount
   useEffect(() => {
-    const fetchOpportunityScore = async () => {
+    const fetchData = async () => {
       if (!user || !id) return;
 
       setLoadingScore(true);
       try {
-        const { data, error } = await supabase
-          .from("opportunity_scores")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("idea_id", id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const [scoreRes, profileRes] = await Promise.all([
+          supabase
+            .from("opportunity_scores")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("idea_id", id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("founder_profiles")
+            .select("*")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+        ]);
 
-        if (error) {
-          console.error("Error fetching opportunity score:", error);
+        if (scoreRes.error) {
+          console.error("Error fetching opportunity score:", scoreRes.error);
         } else {
-          setOpportunityScore(data);
+          setOpportunityScore(scoreRes.data);
+        }
+
+        if (profileRes.data) {
+          setFounderProfile(profileRes.data);
         }
       } catch (error) {
-        console.error("Error fetching opportunity score:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoadingScore(false);
       }
     };
 
-    fetchOpportunityScore();
+    fetchData();
   }, [user, id]);
 
   const handleGenerateScore = async () => {
@@ -331,6 +345,82 @@ const IdeaDetail = () => {
               </div>
             </div>
           </div>
+
+          {/* V6 Metrics Section */}
+          {(idea.virality_potential || idea.leverage_score || idea.automation_density) && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-orange-500" />
+                  V6 Metrics
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {idea.virality_potential != null && (
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Flame className="w-4 h-4 text-red-500" />
+                        <span className="text-xs text-muted-foreground">Virality</span>
+                      </div>
+                      <span className="text-lg font-bold">{idea.virality_potential}</span>
+                    </div>
+                  )}
+                  {idea.leverage_score != null && (
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <TrendingUp className="w-4 h-4 text-green-500" />
+                        <span className="text-xs text-muted-foreground">Leverage</span>
+                      </div>
+                      <span className="text-lg font-bold">{idea.leverage_score}</span>
+                    </div>
+                  )}
+                  {idea.automation_density != null && (
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Bot className="w-4 h-4 text-blue-500" />
+                        <span className="text-xs text-muted-foreground">Automation</span>
+                      </div>
+                      <span className="text-lg font-bold">{idea.automation_density}</span>
+                    </div>
+                  )}
+                  {idea.autonomy_level != null && (
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Star className="w-4 h-4 text-yellow-500" />
+                        <span className="text-xs text-muted-foreground">Autonomy</span>
+                      </div>
+                      <span className="text-lg font-bold">{idea.autonomy_level}</span>
+                    </div>
+                  )}
+                  {idea.culture_tailwind != null && (
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Users className="w-4 h-4 text-purple-500" />
+                        <span className="text-xs text-muted-foreground">Culture Tailwind</span>
+                      </div>
+                      <span className="text-lg font-bold">{idea.culture_tailwind}</span>
+                    </div>
+                  )}
+                  {idea.chaos_factor != null && (
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Zap className="w-4 h-4 text-orange-500" />
+                        <span className="text-xs text-muted-foreground">Chaos Factor</span>
+                      </div>
+                      <span className="text-lg font-bold">{idea.chaos_factor}</span>
+                    </div>
+                  )}
+                </div>
+                {(idea.platform || idea.category || idea.mode) && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {idea.platform && <Badge variant="outline">{idea.platform}</Badge>}
+                    {idea.category && <Badge variant="secondary">{idea.category}</Badge>}
+                    {idea.mode && <Badge>{idea.mode} mode</Badge>}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -432,6 +522,16 @@ const IdeaDetail = () => {
           </CardContent>
         </Card>
       ) : null}
+
+      {/* Variant Generator Section */}
+      {user && founderProfile && (
+        <IdeaVariantGenerator
+          idea={idea}
+          userId={user.id}
+          founderProfile={founderProfile}
+          onVariantsGenerated={(variants) => setGeneratedVariants((prev) => [...prev, ...variants])}
+        />
+      )}
 
       <PaywallModal 
         featureName="opportunity_score" 

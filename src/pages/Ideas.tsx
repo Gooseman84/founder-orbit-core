@@ -12,6 +12,7 @@ import { IdeaScoredCard } from "@/components/ideas/IdeaScoredCard";
 import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
 import { IdeaFilters, IdeaFiltersState } from "@/components/ideas/IdeaFilters";
 import { ModeSelector, type IdeaMode } from "@/components/ideas/ModeSelector";
+import { IdeaFusionPanel } from "@/components/ideas/IdeaFusionPanel";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -286,6 +287,19 @@ const Ideas = () => {
             ))}
           </div>
         </section>
+      )}
+
+      {/* Idea Fusion Panel */}
+      {ideas.length >= 2 && (
+        <IdeaFusionPanel 
+          ideas={ideas} 
+          onFusionComplete={(fusedIdea) => {
+            toast({ 
+              title: "New Fused Idea!", 
+              description: `"${fusedIdea.title}" has been added to your library.` 
+            });
+          }} 
+        />
       )}
 
       {filteredSavedIdeas.length === 0 && ideas.length === 0 ? (

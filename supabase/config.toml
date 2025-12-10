@@ -95,3 +95,6 @@ verify_jwt = true
 
 [functions.promote-idea-to-workspace]
 verify_jwt = true
+
+[functions.fuse-ideas]
+verify_jwt = true
