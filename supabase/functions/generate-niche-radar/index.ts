@@ -50,6 +50,20 @@ async function buildRadarInput(supabaseClient: any, userId: string) {
   }
 }
 
+// Extended signal types for v6
+const VALID_SIGNAL_TYPES = [
+  "trend", 
+  "problem", 
+  "market_shift", 
+  "consumer_behavior", 
+  "tech_tailwind",
+  // New v6 signal types
+  "platform_trend",      // Platform-specific trends (TikTok algorithm changes, IG features, etc.)
+  "meme_format",         // Emerging meme formats, viral templates, cultural moments
+  "creator_monetization_shift", // New ways creators are making money
+  "automation_tailwind"  // AI/automation tools making new things possible
+];
+
 function formatRadarSignals(rawSignals: any[]) {
   if (!Array.isArray(rawSignals)) return [];
 
@@ -58,8 +72,7 @@ function formatRadarSignals(rawSignals: any[]) {
       if (!signal.signal_type || !signal.title || !signal.description || !signal.recommended_action) {
         return false;
       }
-      const validTypes = ["trend", "problem", "market_shift", "consumer_behavior", "tech_tailwind"];
-      return validTypes.includes(signal.signal_type);
+      return VALID_SIGNAL_TYPES.includes(signal.signal_type);
     })
     .map((signal) => ({
       signal_type: signal.signal_type,
@@ -71,7 +84,36 @@ function formatRadarSignals(rawSignals: any[]) {
     }));
 }
 
-const SYSTEM_PROMPT = `You are an elite market researcher and opportunity scout. Identify EMERGING NICHES matching the founder's profile and chosen idea. Output STRICT JSON ONLY with signals array.`;
+const SYSTEM_PROMPT = `You are TrueBlazer.AI — an elite market researcher, category theorist, and opportunity scout.
+
+Your job is to identify EMERGING NICHES and MARKET SIGNALS that match the founder's profile, chosen idea, and v6 attributes.
+
+Signal Types:
+- "trend": Macro trends in the industry or market
+- "problem": Emerging pain points or unmet needs
+- "market_shift": Changes in market dynamics or buyer behavior
+- "consumer_behavior": Shifts in how people buy, consume, or interact
+- "tech_tailwind": New technologies enabling new opportunities
+- "platform_trend": Platform-specific changes (TikTok algorithm, IG features, YouTube shorts, X algorithm, etc.)
+- "meme_format": Emerging meme formats, viral templates, or cultural moments to ride
+- "creator_monetization_shift": New ways creators are making money (tips, memberships, products, etc.)
+- "automation_tailwind": AI/automation tools making previously hard things easy
+
+When the idea has:
+- Platform specified: Prioritize platform_trend signals for that platform
+- High virality_potential or category is "memetic": Include meme_format signals
+- Category is "creator"/"content": Include creator_monetization_shift signals
+- High automation_density or category is "automation"/"system": Include automation_tailwind signals
+- High chaos_factor or category is "locker_room": Include edgy but ethical cultural signals
+
+Rules:
+- Use plain English, no jargon
+- Signals should be actionable — not vague
+- Tailor everything to the chosen idea
+- Use real patterns, not random noise
+- For platform signals, be specific about what's changing and why it matters
+
+Output STRICT JSON ONLY with signals array.`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -124,6 +166,26 @@ serve(async (req) => {
       );
     }
 
+    // Build enriched input with v6 fields
+    const enrichedInput = {
+      founder_profile: inputData.founder_profile,
+      idea: {
+        ...inputData.idea,
+        // Ensure v6 fields are explicitly included
+        category: inputData.idea.category,
+        platform: inputData.idea.platform,
+        mode: inputData.idea.mode,
+        virality_potential: inputData.idea.virality_potential,
+        leverage_score: inputData.idea.leverage_score,
+        automation_density: inputData.idea.automation_density,
+        autonomy_level: inputData.idea.autonomy_level,
+        culture_tailwind: inputData.idea.culture_tailwind,
+        chaos_factor: inputData.idea.chaos_factor,
+        shock_factor: inputData.idea.shock_factor,
+      },
+      analysis: inputData.analysis,
+    };
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')!;
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -132,7 +194,7 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: JSON.stringify(inputData) }
+          { role: 'user', content: JSON.stringify(enrichedInput) }
         ],
         tools: [{
           type: "function",
@@ -141,7 +203,21 @@ serve(async (req) => {
             parameters: {
               type: "object",
               properties: {
-                signals: { type: "array", items: { type: "object" } }
+                signals: { 
+                  type: "array", 
+                  items: { 
+                    type: "object",
+                    properties: {
+                      signal_type: { type: "string", enum: VALID_SIGNAL_TYPES },
+                      title: { type: "string" },
+                      description: { type: "string" },
+                      priority_score: { type: "number" },
+                      recommended_action: { type: "string" },
+                      metadata: { type: "object" }
+                    },
+                    required: ["signal_type", "title", "description", "recommended_action"]
+                  } 
+                }
               },
               required: ["signals"]
             }

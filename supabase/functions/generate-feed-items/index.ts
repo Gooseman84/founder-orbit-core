@@ -95,11 +95,11 @@ function formatReflectionsForPrompt(reflections: any[]): string {
 
 // --- System Prompt ------------------------------------------------
 
-const SYSTEM_PROMPT = `You are an expert startup advisor, idea refinement coach, competitor analyst, and micro-task creator.
+const SYSTEM_PROMPT = `You are TrueBlazer.AI — an expert startup advisor, idea refinement coach, and micro-task creator.
 
 Your job is to produce DAILY FEED ITEMS that are HIGHLY PERSONALIZED to:
 1. The founder's profile, passions, skills, and constraints
-2. Their current chosen idea and its analysis
+2. Their current chosen idea (including v6 fields like category, platform, virality_potential, leverage_score, chaos_factor)
 3. What they've been working on (workspace notes)
 4. Their recent emotional/energy state (reflections)
 
@@ -110,6 +110,16 @@ Feed item types:
 - "idea_tweak": Concrete modifications to improve their specific idea
 - "competitor_snapshot": Analysis of competitor types in their specific market
 - "micro_task": Small tasks (<10 min) that move their specific project forward
+- "viral_experiment": Quick tests to validate hooks, content angles, or viral formats (especially for creator/content/memetic ideas)
+- "money_system_upgrade": Ways to make the system more automated, leveraged, or hands-off (especially for automation/system ideas)
+- "memetic_play": Ways to tap into humor, culture, or shareability (especially for memetic/locker_room ideas)
+- "chaos_variant": Push-the-boundaries tweak of the current idea — novel, unexpected angles
+
+When the idea has:
+- High virality_potential or category is "content"/"creator"/"memetic": emphasize viral_experiment and memetic_play items
+- High automation_density or category is "automation"/"system": emphasize money_system_upgrade items
+- High chaos_factor or category is "locker_room": include chaos_variant items
+- Platform specified (tiktok, instagram, youtube, etc.): tailor tasks to that platform's format
 
 Rules:
 - Use simple, direct language
@@ -118,11 +128,12 @@ Rules:
 - Consider their energy/stress levels when suggesting tasks
 - Align with their passions and skills
 - Respect their time and capital constraints
+- For platform-specific ideas, suggest platform-native actions (e.g., "Record a 7-second TikTok hook...")
 - NO generic advice - everything must be specific to their context
 - Always output valid JSON only`;
 
-// Valid feed item types
-const FEED_TYPES = ["insight", "idea_tweak", "competitor_snapshot", "micro_task"];
+// Valid feed item types - extended for v6
+const FEED_TYPES = ["insight", "idea_tweak", "competitor_snapshot", "micro_task", "viral_experiment", "money_system_upgrade", "memetic_play", "chaos_variant"];
 
 // Format and validate raw feed items from AI
 function formatFeedItems(rawItems: any[]): any[] {
@@ -219,6 +230,17 @@ ${userContext.chosenIdea ? JSON.stringify({
   complexity: userContext.chosenIdea.complexity,
   time_to_first_dollar: userContext.chosenIdea.time_to_first_dollar,
   overall_fit_score: userContext.chosenIdea.overall_fit_score,
+  // v6 fields
+  category: userContext.chosenIdea.category,
+  platform: userContext.chosenIdea.platform,
+  mode: userContext.chosenIdea.mode,
+  virality_potential: userContext.chosenIdea.virality_potential,
+  leverage_score: userContext.chosenIdea.leverage_score,
+  automation_density: userContext.chosenIdea.automation_density,
+  autonomy_level: userContext.chosenIdea.autonomy_level,
+  culture_tailwind: userContext.chosenIdea.culture_tailwind,
+  chaos_factor: userContext.chosenIdea.chaos_factor,
+  shock_factor: userContext.chosenIdea.shock_factor,
 }, null, 2) : 'No chosen idea yet - generate exploratory content'}
 
 ## Idea Analysis
