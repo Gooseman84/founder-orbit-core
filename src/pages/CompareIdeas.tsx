@@ -550,11 +550,19 @@ const CompareIdeas = () => {
             : null
         : null;
 
+  // Check if v6 scores are present
+  const hasV6Scores = useMemo(() => {
+    if (!scoreA?.sub_scores && !scoreB?.sub_scores) return false;
+    const subsA = scoreA?.sub_scores as any;
+    const subsB = scoreB?.sub_scores as any;
+    return (subsA?.virality !== undefined) || (subsB?.virality !== undefined);
+  }, [scoreA, scoreB]);
+
   // Comparison chart data
   const comparisonChartData = useMemo(() => {
     if (!scoreA || !scoreB || !fitScoreA || !fitScoreB) return [];
 
-    return [
+    const coreData = [
       {
         metric: "Opportunity",
         ideaA: scoreA.total_score ?? 0,
@@ -586,7 +594,45 @@ const CompareIdeas = () => {
         ideaB: fitScoreB.economics ?? 0,
       },
     ];
+
+    return coreData;
   }, [scoreA, scoreB, fitScoreA, fitScoreB]);
+
+  // V6 comparison chart data (leverage & virality)
+  const v6ComparisonChartData = useMemo(() => {
+    if (!scoreA || !scoreB || !hasV6Scores) return [];
+
+    const subsA = scoreA.sub_scores as any;
+    const subsB = scoreB.sub_scores as any;
+
+    return [
+      {
+        metric: "Virality",
+        ideaA: subsA?.virality ?? 0,
+        ideaB: subsB?.virality ?? 0,
+      },
+      {
+        metric: "Leverage",
+        ideaA: subsA?.leverage ?? 0,
+        ideaB: subsB?.leverage ?? 0,
+      },
+      {
+        metric: "Automation",
+        ideaA: subsA?.automation_density ?? 0,
+        ideaB: subsB?.automation_density ?? 0,
+      },
+      {
+        metric: "Autonomy",
+        ideaA: subsA?.autonomy_level ?? 0,
+        ideaB: subsB?.autonomy_level ?? 0,
+      },
+      {
+        metric: "Culture",
+        ideaA: subsA?.culture_tailwinds ?? 0,
+        ideaB: subsB?.culture_tailwinds ?? 0,
+      },
+    ];
+  }, [scoreA, scoreB, hasV6Scores]);
 
   // Winner explanation memo
   const winnerExplanation = useMemo(() => {
@@ -1034,6 +1080,63 @@ const CompareIdeas = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={comparisonChartData}
+                    margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis 
+                      dataKey="metric" 
+                      tick={{ fontSize: 12 }}
+                      className="fill-muted-foreground"
+                    />
+                    <YAxis 
+                      domain={[0, 100]} 
+                      tick={{ fontSize: 12 }}
+                      className="fill-muted-foreground"
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="ideaA" 
+                      name={getIdeaTitle(ideaA)} 
+                      fill="hsl(var(--primary))"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar 
+                      dataKey="ideaB" 
+                      name={getIdeaTitle(ideaB)} 
+                      fill="hsl(var(--muted-foreground))"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* V6 Leverage & Virality Comparison Chart */}
+        {v6ComparisonChartData.length > 0 && (
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <span className="text-primary">⚡</span>
+                V6 Leverage & Virality
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Compare automation, virality, and hands-off potential.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="w-full h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={v6ComparisonChartData}
                     margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
