@@ -1,23 +1,32 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { FileText, TrendingUp, Users, Zap, Shield, Target, Wind, Download } from "lucide-react";
+import { FileText, TrendingUp, Users, Zap, Shield, Target, Wind, Download, Sparkles, Cpu, BrainCircuit, Rocket, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
+interface OpportunitySubScores {
+  // Core scores
+  founder_fit: number;
+  market_size: number;
+  pain_intensity: number;
+  competition: number;
+  difficulty: number;
+  tailwinds: number;
+  // V6 scores (optional for backwards compatibility)
+  virality?: number;
+  leverage?: number;
+  automation_density?: number;
+  autonomy_level?: number;
+  culture_tailwinds?: number;
+}
+
 interface OpportunityScore {
   id: string;
   total_score: number;
-  sub_scores: {
-    founder_fit: number;
-    market_size: number;
-    pain_intensity: number;
-    competition: number;
-    difficulty: number;
-    tailwinds: number;
-  };
+  sub_scores: OpportunitySubScores;
   explanation: string;
   recommendations: string[];
   created_at: string;
@@ -96,7 +105,8 @@ export function OpportunityScoreCard({ score, ideaId }: OpportunityScoreCardProp
     return "bg-red-600";
   };
 
-  const subScoreItems = [
+  // Core sub-scores (always present)
+  const coreSubScoreItems = [
     {
       label: "Founder Fit",
       value: score.sub_scores.founder_fit,
@@ -132,6 +142,43 @@ export function OpportunityScoreCard({ score, ideaId }: OpportunityScoreCardProp
       value: score.sub_scores.tailwinds,
       icon: Wind,
       description: "Favorable industry and tech trends",
+    },
+  ];
+
+  // V6 sub-scores (optional, only show if present)
+  const hasV6Scores = score.sub_scores.virality !== undefined || 
+                       score.sub_scores.leverage !== undefined;
+
+  const v6SubScoreItems = [
+    {
+      label: "Virality",
+      value: score.sub_scores.virality ?? 0,
+      icon: Sparkles,
+      description: "Shareability and organic spread potential",
+    },
+    {
+      label: "Leverage",
+      value: score.sub_scores.leverage ?? 0,
+      icon: Rocket,
+      description: "Automation + margins + scale potential",
+    },
+    {
+      label: "Automation Density",
+      value: score.sub_scores.automation_density ?? 0,
+      icon: Cpu,
+      description: "How much runs without human touch",
+    },
+    {
+      label: "Autonomy Level",
+      value: score.sub_scores.autonomy_level ?? 0,
+      icon: BrainCircuit,
+      description: "How hands-off you can become",
+    },
+    {
+      label: "Culture Tailwinds",
+      value: score.sub_scores.culture_tailwinds ?? 0,
+      icon: Flame,
+      description: "Alignment with current cultural moments",
     },
   ];
 
@@ -186,10 +233,10 @@ export function OpportunityScoreCard({ score, ideaId }: OpportunityScoreCardProp
           </p>
         </div>
 
-        {/* Sub-scores */}
+        {/* Core Sub-scores */}
         <div className="space-y-4">
-          <h3 className="font-semibold text-lg">Score Breakdown</h3>
-          {subScoreItems.map((item) => {
+          <h3 className="font-semibold text-lg">Core Scores</h3>
+          {coreSubScoreItems.map((item) => {
             const Icon = item.icon;
             return (
               <div key={item.label} className="space-y-2">
@@ -215,6 +262,41 @@ export function OpportunityScoreCard({ score, ideaId }: OpportunityScoreCardProp
             );
           })}
         </div>
+
+        {/* V6 Sub-scores (only show if present) */}
+        {hasV6Scores && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              V6 Leverage & Virality
+            </h3>
+            {v6SubScoreItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">{item.label}</span>
+                    </div>
+                    <span className={`text-sm font-bold ${getScoreColor(item.value)}`}>
+                      {item.value}/100
+                    </span>
+                  </div>
+                  <div className="relative h-2 bg-secondary rounded-full overflow-hidden">
+                    <div
+                      className={`absolute left-0 top-0 h-full transition-all ${getScoreBackground(
+                        item.value
+                      )}`}
+                      style={{ width: `${item.value}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">{item.description}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Explanation */}
         <div className="space-y-2">

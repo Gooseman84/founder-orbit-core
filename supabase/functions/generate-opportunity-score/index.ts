@@ -5,40 +5,60 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const OPPORTUNITY_SCORE_PROMPT = `You are an elite startup evaluator, combining frameworks from YC, Sequoia, Christensen, and modern AI entrepreneurship.
+const OPPORTUNITY_SCORE_PROMPT = `You are TrueBlazer.AI v6 — an elite startup evaluator combining YC, Sequoia, Christensen, and modern AI entrepreneurship frameworks.
 
-Your job: Score a business idea on core opportunity dimensions.
+Your job: Score a business idea on core opportunity dimensions PLUS v6 leverage/virality dimensions.
 
-Input JSON example:
+Input JSON:
 {
   "founder_profile": { ... },
   "idea": { ... },
   "analysis": { ... }
 }
 
-You MUST respond with STRICT JSON ONLY:
+SCORING PHILOSOPHY:
+- For content/creator/memetic ideas → virality + culture_tailwinds matter MORE
+- For automation/system ideas → leverage + automation_density + autonomy_level matter MORE
+- For traditional SaaS/service → founder_fit + market_size + pain_intensity matter MORE
+
+You MUST respond with STRICT JSON containing:
 
 {
-  "total_score": number,       // 0–100
+  "total_score": number,       // 0–100 (weighted composite)
   "sub_scores": {
-    "founder_fit": number,     // 0–100
-    "market_size": number,     // 0–100
-    "pain_intensity": number,  // 0–100
-    "competition": number,     // 0–100  (lower competition = higher score)
-    "difficulty": number,      // 0–100  (lower difficulty = higher score)
-    "tailwinds": number        // 0–100
+    "founder_fit": number,     // 0–100 (passions, skills, constraints alignment)
+    "market_size": number,     // 0–100 (TAM implied)
+    "pain_intensity": number,  // 0–100 (urgency + willingness to pay)
+    "competition": number,     // 0–100 (lower competition = higher score)
+    "difficulty": number,      // 0–100 (lower difficulty = higher score for THIS founder)
+    "tailwinds": number,       // 0–100 (industry/tech/regulatory forces)
+    "virality": number,        // 0–100 (shareability, network effects, organic spread potential)
+    "leverage": number,        // 0–100 (automation + margins + scale potential)
+    "automation_density": number, // 0–100 (how much can run without human touch)
+    "autonomy_level": number,  // 0–100 (how hands-off the founder can become)
+    "culture_tailwinds": number // 0–100 (aligned with current cultural moments, memes, behaviors)
   },
   "explanation": "string",
   "recommendations": ["string"]
 }
 
 Scoring rules:
-- founder_fit uses passions, skills, constraints
-- market_size uses implied TAM
-- pain_intensity = urgency + willingness to pay
-- competition = intensity of existing solutions (lower = higher score)
-- difficulty = how hard it is for THIS founder
-- tailwinds = industry, tech, or cultural forces accelerating success
+- founder_fit: passions, skills, constraints match
+- market_size: implied TAM from idea + analysis
+- pain_intensity: urgency + willingness to pay
+- competition: intensity of existing solutions (lower = higher score)
+- difficulty: how hard it is for THIS founder (lower = higher score)
+- tailwinds: industry, tech, or cultural forces accelerating success
+- virality: shareability, network effects, organic growth potential (high for memetic/creator ideas)
+- leverage: automation + margins + scale (high for system/automation ideas)
+- automation_density: how much runs without human touch
+- autonomy_level: how hands-off the founder can become over time
+- culture_tailwinds: alignment with current cultural moments, memes, platform behaviors
+
+For total_score weighting:
+- Base: 50% from (founder_fit + market_size + pain_intensity + competition + difficulty + tailwinds)/6
+- V6 bonus: 50% from (virality + leverage + automation_density + autonomy_level + culture_tailwinds)/5
+- Blend based on idea category (creator/memetic weight v6 higher, traditional weight base higher)
 
 DO NOT return commentary. JSON only.`;
 
@@ -113,7 +133,7 @@ Deno.serve(async (req) => {
             type: "function",
             function: {
               name: "score_opportunity",
-              description: "Return opportunity score with breakdown",
+              description: "Return opportunity score with v6 breakdown including virality and leverage dimensions",
               parameters: {
                 type: "object",
                 properties: {
@@ -126,9 +146,14 @@ Deno.serve(async (req) => {
                       pain_intensity: { type: "number" },
                       competition: { type: "number" },
                       difficulty: { type: "number" },
-                      tailwinds: { type: "number" }
+                      tailwinds: { type: "number" },
+                      virality: { type: "number" },
+                      leverage: { type: "number" },
+                      automation_density: { type: "number" },
+                      autonomy_level: { type: "number" },
+                      culture_tailwinds: { type: "number" }
                     },
-                    required: ["founder_fit", "market_size", "pain_intensity", "competition", "difficulty", "tailwinds"],
+                    required: ["founder_fit", "market_size", "pain_intensity", "competition", "difficulty", "tailwinds", "virality", "leverage", "automation_density", "autonomy_level", "culture_tailwinds"],
                     additionalProperties: false
                   },
                   explanation: { type: "string" },
@@ -264,6 +289,13 @@ async function buildOpportunityInput(supabase: any, userId: string, ideaId: stri
       risk_tolerance: founderProfile.risk_tolerance,
       lifestyle_goals: founderProfile.lifestyle_goals,
       success_vision: founderProfile.success_vision,
+      // v6 fields
+      work_personality: founderProfile.work_personality,
+      creator_platforms: founderProfile.creator_platforms,
+      edgy_mode: founderProfile.edgy_mode,
+      wants_money_systems: founderProfile.wants_money_systems,
+      open_to_personas: founderProfile.open_to_personas,
+      open_to_memetic_ideas: founderProfile.open_to_memetic_ideas,
     },
     idea: {
       title: idea.title,
@@ -272,6 +304,18 @@ async function buildOpportunityInput(supabase: any, userId: string, ideaId: stri
       target_customer: idea.target_customer,
       time_to_first_dollar: idea.time_to_first_dollar,
       complexity: idea.complexity,
+      // v6 fields
+      category: idea.category,
+      mode: idea.mode,
+      platform: idea.platform,
+      shock_factor: idea.shock_factor,
+      virality_potential: idea.virality_potential,
+      leverage_score: idea.leverage_score,
+      automation_density: idea.automation_density,
+      autonomy_level: idea.autonomy_level,
+      culture_tailwind: idea.culture_tailwind,
+      chaos_factor: idea.chaos_factor,
+      engine_version: idea.engine_version,
     },
     analysis: {
       niche_score: analysis.niche_score,
@@ -301,12 +345,19 @@ function validateScoreResponse(rawJson: any) {
 
   const subScores = rawJson.sub_scores || {};
   const validatedSubScores = {
+    // Core scores
     founder_fit: validateSubScore(subScores.founder_fit),
     market_size: validateSubScore(subScores.market_size),
     pain_intensity: validateSubScore(subScores.pain_intensity),
     competition: validateSubScore(subScores.competition),
     difficulty: validateSubScore(subScores.difficulty),
     tailwinds: validateSubScore(subScores.tailwinds),
+    // V6 scores
+    virality: validateSubScore(subScores.virality),
+    leverage: validateSubScore(subScores.leverage),
+    automation_density: validateSubScore(subScores.automation_density),
+    autonomy_level: validateSubScore(subScores.autonomy_level),
+    culture_tailwinds: validateSubScore(subScores.culture_tailwinds),
   };
 
   let explanation = rawJson.explanation;
