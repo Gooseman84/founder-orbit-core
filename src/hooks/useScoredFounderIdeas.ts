@@ -1,21 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import type { BusinessIdea } from "@/types/businessIdea";
+import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 import type { FounderProfile } from "@/types/founderProfile";
-import { scoreIdeaForFounder, type IdeaScoreBreakdown } from "@/lib/ideaScoring";
+import { scoreIdeaForFounder, scoreV6IdeaForFounder, type IdeaScoreBreakdown } from "@/lib/ideaScoring";
 import { useFounderIdeas } from "@/hooks/useFounderIdeas";
 
+// Support both legacy and v6 ideas
 export interface ScoredIdea {
-  idea: BusinessIdea;
+  idea: BusinessIdea | BusinessIdeaV6;
   scores: IdeaScoreBreakdown;
+  isV6: boolean;
 }
 
 interface UseScoredFounderIdeasResult {
   scoredIdeas: ScoredIdea[];
   isLoading: boolean;
   error: Error | null;
-  generate: () => Promise<void>;
+  generate: (params?: { mode?: string; focus_area?: string }) => Promise<void>;
 }
 
 export const useScoredFounderIdeas = (): UseScoredFounderIdeasResult => {
@@ -55,10 +57,18 @@ export const useScoredFounderIdeas = (): UseScoredFounderIdeasResult => {
   const scoredIdeas: ScoredIdea[] = useMemo(() => {
     if (!profile || ideas.length === 0) return [];
 
-    const scored = ideas.map((idea) => ({
-      idea,
-      scores: scoreIdeaForFounder(idea, profile),
-    }));
+    const scored = ideas.map((idea) => {
+      // Check if this is a v6 idea
+      const isV6 = idea.engineVersion === "v6" || "aiPattern" in idea;
+      
+      return {
+        idea,
+        scores: isV6 
+          ? scoreV6IdeaForFounder(idea as BusinessIdeaV6, profile)
+          : scoreIdeaForFounder(idea as BusinessIdea, profile),
+        isV6,
+      };
+    });
 
     // Sort by overall score descending
     scored.sort((a, b) => b.scores.overall - a.scores.overall);
