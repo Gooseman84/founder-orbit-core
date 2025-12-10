@@ -4,6 +4,26 @@
 export type RiskTolerance = "low" | "medium" | "high";
 export type Runway = "0_3_months" | "3_12_months" | "12_plus_months";
 
+// EPIC v6 types
+export type WorkPersonality = 
+  | "builder" 
+  | "creator" 
+  | "automation" 
+  | "faceless" 
+  | "dealmaker" 
+  | "quiet_assassin";
+
+export type CreatorPlatform = 
+  | "tiktok" 
+  | "instagram" 
+  | "youtube" 
+  | "x" 
+  | "linkedin" 
+  | "email" 
+  | "none";
+
+export type EdgyMode = "safe" | "bold" | "unhinged";
+
 export interface FounderProfile {
   userId: string;
 
@@ -61,6 +81,14 @@ export interface FounderProfile {
 
   // Extended – hell no
   hellNoFilters: string[];
+
+  // EPIC v6 fields
+  workPersonality: WorkPersonality[];
+  creatorPlatforms: CreatorPlatform[];
+  edgyMode: EdgyMode;
+  wantsMoneySystems: boolean;
+  openToPersonas: boolean;
+  openToMemeticIdeas: boolean;
 
   createdAt: string;
   updatedAt: string;

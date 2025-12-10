@@ -1,5 +1,18 @@
 // Type definitions for ideas and idea-related data structures
 
+// Generation modes for EPIC v6 idea engine
+export type IdeaGenerationMode = 
+  | "breadth" 
+  | "focus" 
+  | "creator" 
+  | "automation" 
+  | "persona" 
+  | "boundless" 
+  | "locker_room" 
+  | "chaos" 
+  | "money_printer" 
+  | "memetic";
+
 export interface Idea {
   id: string;
   user_id: string;
@@ -16,6 +29,19 @@ export interface Idea {
   overall_fit_score: number | null;
   status: string | null;
   created_at: string;
+  
+  // EPIC v6 fields
+  category: string | null;
+  mode: IdeaGenerationMode | null;
+  platform: string | null;
+  shock_factor: number | null;
+  virality_potential: number | null;
+  leverage_score: number | null;
+  automation_density: number | null;
+  autonomy_level: number | null;
+  culture_tailwind: number | null;
+  chaos_factor: number | null;
+  engine_version: string | null;
 }
 
 export interface IdeaAnalysis {
