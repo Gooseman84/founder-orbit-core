@@ -3,7 +3,7 @@
  * Computes fit scores between a BusinessIdea and FounderProfile.
  */
 
-import type { BusinessIdea } from "@/types/businessIdea";
+import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 import type { FounderProfile } from "@/types/founderProfile";
 import { clampScore, weightedAverage } from "./scoring";
 
@@ -197,6 +197,51 @@ export function scoreIdeaForFounder(
     constraintsFit * 0.25 +
     marketFit * 0.2 +
     economics * 0.15
+  );
+
+  return {
+    founderFit,
+    constraintsFit,
+    marketFit,
+    economics,
+    overall,
+  };
+}
+
+/**
+ * EPIC v6: Score a v6 idea using new scoring dimensions.
+ */
+export function scoreV6IdeaForFounder(
+  idea: BusinessIdeaV6,
+  founder: FounderProfile
+): IdeaScoreBreakdown {
+  // For v6, use the built-in scores with some founder adjustments
+  
+  // Leverage score adjusted by founder's automation preference
+  const hasAutomationPersonality = founder.workPersonality?.includes("automation") || 
+                                   founder.workPersonality?.includes("faceless");
+  const leverageBonus = hasAutomationPersonality ? 10 : 0;
+  const founderFit = clampScore((idea.leverageScore + idea.autonomyLevel) / 2 + leverageBonus);
+  
+  // Constraints fit based on difficulty and solo fit
+  const difficultyMap: Record<string, number> = { easy: 100, medium: 70, hard: 40 };
+  const difficultyScore = difficultyMap[idea.difficulty] || 70;
+  const soloBonus = idea.soloFit ? 20 : 0;
+  const constraintsFit = clampScore(difficultyScore + soloBonus - 10);
+  
+  // Market fit based on platform alignment and culture tailwind
+  const platformMatch = founder.creatorPlatforms?.includes(idea.platform as any) ? 30 : 0;
+  const marketFit = clampScore((idea.cultureTailwind + platformMatch + idea.viralityPotential) / 2);
+  
+  // Economics based on automation density and autonomy
+  const economics = clampScore((idea.automationDensity + idea.autonomyLevel + idea.leverageScore) / 3);
+  
+  // Overall weighted score
+  const overall = clampScore(
+    founderFit * 0.3 +
+    constraintsFit * 0.2 +
+    marketFit * 0.25 +
+    economics * 0.25
   );
 
   return {

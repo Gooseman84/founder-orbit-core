@@ -6,12 +6,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Save, Check, FileText, HelpCircle } from "lucide-react";
-import type { BusinessIdea } from "@/types/businessIdea";
+import { Save, Check, FileText, HelpCircle, Zap } from "lucide-react";
+import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 import type { IdeaScoreBreakdown } from "@/lib/ideaScoring";
 
 interface IdeaScoredCardProps {
-  idea: BusinessIdea;
+  idea: BusinessIdea | BusinessIdeaV6;
   scores: IdeaScoreBreakdown;
   isSaved: boolean;
   isSaving: boolean;
@@ -20,12 +20,10 @@ interface IdeaScoredCardProps {
   onPromote: () => void;
 }
 
-const SCORE_EXPLANATIONS = {
-  founderFit: "How well this idea matches your passions, skills, and preferred business archetypes.",
-  constraintsFit: "How realistic this is given your time, capital, risk tolerance, and urgency.",
-  marketFit: "How much it aligns with markets you already understand and your existing networks.",
-  economics: "How reasonable the capital requirements and time-to-revenue profile is.",
-};
+// Type guard for v6 ideas
+function isV6Idea(idea: BusinessIdea | BusinessIdeaV6): idea is BusinessIdeaV6 {
+  return "engineVersion" in idea && idea.engineVersion === "v6";
+}
 
 export function IdeaScoredCard({
   idea,
@@ -43,12 +41,22 @@ export function IdeaScoredCard({
         ? "bg-yellow-500/10 text-yellow-600"
         : "bg-red-500/10 text-red-600";
 
+  const isV6 = isV6Idea(idea);
+
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between gap-3">
       <div className="space-y-2">
         {/* Header: Title + Fit Badge */}
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold leading-tight">{idea.title}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold leading-tight">{idea.title}</h2>
+            {isV6 && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary flex items-center gap-1">
+                <Zap className="w-3 h-3" />
+                v6
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${fitBadgeClass}`}>
               Fit: {Math.round(scores.overall)}%
@@ -63,10 +71,9 @@ export function IdeaScoredCard({
                 <TooltipContent side="bottom" className="max-w-xs text-sm">
                   <p className="font-medium mb-1">What does this score mean?</p>
                   <p>
-                    Fit Score is a 0–100 score based on: founder fit (passions & skills),
-                    constraints (time, capital, risk), market fit (markets you know), and
-                    economics (capital & time to revenue). It's not perfect, but it helps
-                    you compare which ideas are more aligned with your reality.
+                    {isV6 
+                      ? "v6 Fit Score combines leverage, automation, virality, and founder alignment."
+                      : "Fit Score is based on founder fit, constraints, market fit, and economics."}
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -85,104 +92,82 @@ export function IdeaScoredCard({
           <span className="font-medium">Target customer:</span> {idea.targetCustomer}
         </p>
 
-        {/* Tags: Archetype, Markets, Time, Capital, Risk */}
+        {/* Tags - adapt based on v6 or legacy */}
         <div className="flex flex-wrap gap-1 mt-2 text-xs">
-          <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-            Archetype: {idea.businessArchetype}
-          </span>
-          {idea.markets.slice(0, 3).map((market) => (
-            <span
-              key={market}
-              className="px-2 py-1 rounded-full bg-muted text-muted-foreground"
-            >
-              {market}
-            </span>
-          ))}
-          <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-            {idea.hoursPerWeekMin}-{idea.hoursPerWeekMax} hrs/week
-          </span>
-          <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-            ${idea.capitalRequired.toLocaleString()} starting capital
-          </span>
-          <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
-            Risk: {idea.riskLevel}
-          </span>
+          {isV6 ? (
+            <>
+              <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                {idea.category}
+              </span>
+              <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                {idea.industry}
+              </span>
+              {idea.platform && (
+                <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                  {idea.platform}
+                </span>
+              )}
+              <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                {idea.difficulty}
+              </span>
+              <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                {idea.timeToRevenue}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                {idea.businessArchetype}
+              </span>
+              {idea.markets?.slice(0, 3).map((market) => (
+                <span key={market} className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                  {market}
+                </span>
+              ))}
+              <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                {idea.hoursPerWeekMin}-{idea.hoursPerWeekMax} hrs/week
+              </span>
+              <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                ${idea.capitalRequired?.toLocaleString() || 0} capital
+              </span>
+              <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                Risk: {idea.riskLevel}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Why it fits */}
         <p className="text-sm mt-2">
-          <span className="font-medium">Why it fits you:</span> {idea.whyItFitsFounder}
+          <span className="font-medium">Why it fits you:</span>{" "}
+          {isV6 ? idea.whyItFitsFounder : idea.whyItFitsFounder}
         </p>
+
+        {/* v6 specific scores */}
+        {isV6 && (
+          <div className="flex flex-wrap gap-2 mt-2 text-xs">
+            <span className="px-2 py-1 rounded bg-primary/10 text-primary">
+              Leverage: {idea.leverageScore}%
+            </span>
+            <span className="px-2 py-1 rounded bg-primary/10 text-primary">
+              Automation: {idea.automationDensity}%
+            </span>
+            <span className="px-2 py-1 rounded bg-primary/10 text-primary">
+              Virality: {idea.viralityPotential}%
+            </span>
+          </div>
+        )}
 
         {/* First steps */}
         <div className="mt-3">
           <p className="text-sm font-medium mb-1">First steps</p>
           <ul className="text-sm space-y-1 list-disc list-inside">
-            {idea.firstSteps.map((step, index) => (
+            {idea.firstSteps?.slice(0, 5).map((step, index) => (
               <li key={index}>{step}</li>
             ))}
           </ul>
         </div>
       </div>
-
-      {/* Execution details */}
-      <details className="mt-2 text-sm text-muted-foreground">
-        <summary className="cursor-pointer select-none font-medium text-foreground">
-          View execution details
-        </summary>
-        <div className="mt-2 space-y-1">
-          <p>
-            <span className="font-medium text-foreground">MVP approach:</span>{" "}
-            {idea.mvpApproach}
-          </p>
-          <p>
-            <span className="font-medium text-foreground">Go-to-market:</span>{" "}
-            {idea.goToMarket}
-          </p>
-          <p>
-            <span className="font-medium text-foreground">Revenue model:</span>{" "}
-            {idea.revenueModel}
-          </p>
-          <p>
-            <span className="font-medium text-foreground">
-              Financial trajectory (3/6/12 months):
-            </span>{" "}
-            {idea.financialTrajectory.month3} / {idea.financialTrajectory.month6} /{" "}
-            {idea.financialTrajectory.month12}
-          </p>
-          <p>
-            <span className="font-medium text-foreground">Risks & mitigation:</span>{" "}
-            {idea.risksMitigation}
-          </p>
-        </div>
-
-        {/* Score Breakdown */}
-        <div className="mt-4 pt-3 border-t border-border">
-          <p className="font-medium text-foreground mb-2">Fit Score Breakdown</p>
-          <div className="space-y-3">
-            <ScoreRow
-              label="Founder fit"
-              value={scores.founderFit}
-              explanation={SCORE_EXPLANATIONS.founderFit}
-            />
-            <ScoreRow
-              label="Constraints fit"
-              value={scores.constraintsFit}
-              explanation={SCORE_EXPLANATIONS.constraintsFit}
-            />
-            <ScoreRow
-              label="Market fit"
-              value={scores.marketFit}
-              explanation={SCORE_EXPLANATIONS.marketFit}
-            />
-            <ScoreRow
-              label="Economics"
-              value={scores.economics}
-              explanation={SCORE_EXPLANATIONS.economics}
-            />
-          </div>
-        </div>
-      </details>
 
       {/* Action Buttons */}
       <div className="flex gap-2 mt-2">
@@ -194,20 +179,11 @@ export function IdeaScoredCard({
           className="flex-1 gap-2"
         >
           {isSaved ? (
-            <>
-              <Check className="w-4 h-4" />
-              Saved
-            </>
+            <><Check className="w-4 h-4" />Saved</>
           ) : isSaving ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-              Saving...
-            </>
+            <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />Saving...</>
           ) : (
-            <>
-              <Save className="w-4 h-4" />
-              Save
-            </>
+            <><Save className="w-4 h-4" />Save</>
           )}
         </Button>
         <Button
@@ -218,49 +194,12 @@ export function IdeaScoredCard({
           className="flex-1 gap-2"
         >
           {isPromoting ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-              Creating...
-            </>
+            <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />Creating...</>
           ) : (
-            <>
-              <FileText className="w-4 h-4" />
-              Open in Workspace
-            </>
+            <><FileText className="w-4 h-4" />Open in Workspace</>
           )}
         </Button>
       </div>
-    </div>
-  );
-}
-
-function ScoreRow({
-  label,
-  value,
-  explanation,
-}: {
-  label: string;
-  value: number;
-  explanation: string;
-}) {
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help underline decoration-dotted underline-offset-2">
-                {label}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="max-w-xs text-sm">
-              {explanation}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <span className="font-medium">{Math.round(value)}%</span>
-      </div>
-      <Progress value={value} className="h-1.5" />
     </div>
   );
 }
