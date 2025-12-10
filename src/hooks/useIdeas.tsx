@@ -20,6 +20,18 @@ export interface Idea {
   overall_fit_score: number | null;
   status: string | null;
   created_at: string;
+  // V6 fields
+  category: string | null;
+  platform: string | null;
+  mode: string | null;
+  engine_version: string | null;
+  shock_factor: number | null;
+  virality_potential: number | null;
+  leverage_score: number | null;
+  automation_density: number | null;
+  autonomy_level: number | null;
+  culture_tailwind: number | null;
+  chaos_factor: number | null;
 }
 
 const fetchIdeas = async (userId: string): Promise<Idea[]> => {
