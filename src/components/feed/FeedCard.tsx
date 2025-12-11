@@ -1,8 +1,9 @@
 import { formatDistanceToNow } from "date-fns";
-import { Lightbulb, Wrench, Radar, CheckSquare } from "lucide-react";
+import { Lightbulb, Wrench, Radar, CheckSquare, Zap, TrendingUp, Sparkles, Flame, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
 import { recordXpEvent } from "@/lib/xpEngine";
@@ -21,11 +22,16 @@ interface FeedCardProps {
     cta_action?: string | null;
     xp_reward?: number | null;
     created_at?: string;
+    metadata?: {
+      strategy_reasoning?: string | null;
+      v6_triggers?: string[] | null;
+      [key: string]: any;
+    } | null;
   };
   onClick?: (item: FeedCardProps["item"]) => void;
 }
 
-// Type-specific configurations
+// Type-specific configurations - extended for v6
 const TYPE_CONFIG = {
   insight: {
     label: "INSIGHT",
@@ -51,6 +57,30 @@ const TYPE_CONFIG = {
     badgeClass: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
     iconClass: "text-green-600 dark:text-green-400",
   },
+  viral_experiment: {
+    label: "VIRAL TEST",
+    icon: TrendingUp,
+    badgeClass: "bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-500/20",
+    iconClass: "text-pink-600 dark:text-pink-400",
+  },
+  money_system_upgrade: {
+    label: "SYSTEM",
+    icon: Zap,
+    badgeClass: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+    iconClass: "text-amber-600 dark:text-amber-400",
+  },
+  memetic_play: {
+    label: "MEME",
+    icon: Sparkles,
+    badgeClass: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
+    iconClass: "text-cyan-600 dark:text-cyan-400",
+  },
+  chaos_variant: {
+    label: "CHAOS",
+    icon: Flame,
+    badgeClass: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+    iconClass: "text-red-600 dark:text-red-400",
+  },
 } as const;
 
 export function FeedCard({ item, onClick }: FeedCardProps) {
@@ -58,165 +88,60 @@ export function FeedCard({ item, onClick }: FeedCardProps) {
   const { refresh: refreshXp } = useXP();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isReasoningOpen, setIsReasoningOpen] = useState(false);
   const config = TYPE_CONFIG[item.type as keyof typeof TYPE_CONFIG] || TYPE_CONFIG.insight;
   const Icon = config.icon;
 
+  const strategyReasoning = item.metadata?.strategy_reasoning;
+  const v6Triggers = item.metadata?.v6_triggers;
+
   const handleCtaClick = async () => {
     if (!user || isProcessing) return;
-
     setIsProcessing(true);
 
     try {
-      // Special handling for micro_task type
       if (item.type === "micro_task") {
-        // Check if this is an outlining action
-        const isOutliningAction = 
-          item.cta_action === "start_outlining" || 
-          (item.cta_label && item.cta_label.toLowerCase().includes("start outlining"));
-
-        if (isOutliningAction) {
-          // Handle workspace document creation/navigation
-          // 1. Check if workspace document already exists
-          const { data: existingDoc, error: checkError } = await supabase
-            .from("workspace_documents")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("source_type", "feed")
-            .eq("source_id", item.id)
-            .maybeSingle();
-
-          if (checkError) {
-            console.error("Error checking for existing workspace document:", checkError);
-            throw new Error("Failed to check for existing document");
-          }
-
-          if (existingDoc) {
-            // Document already exists, navigate to it
-            await recordXpEvent(user.id, "workspace_opened", 10, {
-              source: "feed",
-              feedItemId: item.id,
-            });
-            refreshXp();
-            toast.success("Opening your workspace document! (+10 XP)");
-            navigate(`/workspace/${existingDoc.id}`);
-            setIsProcessing(false);
-            return;
-          }
-
-          // 2. Fetch chosen idea if available
-          const { data: chosenIdea } = await supabase
-            .from("ideas")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("status", "chosen")
-            .maybeSingle();
-
-          // 3. Create new workspace document
-          const { data: newDoc, error: insertError } = await supabase
-            .from("workspace_documents")
-            .insert({
-              user_id: user.id,
-              idea_id: chosenIdea?.id || null,
-              source_type: "feed",
-              source_id: item.id,
-              doc_type: "outline",
-              title: item.title,
-              content: item.body, // Include feed item body as starter content
-              status: "draft",
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error("Error creating workspace document:", insertError);
-            throw new Error("Failed to create workspace document");
-          }
-
-          // 4. Award XP for opening workspace
-          await recordXpEvent(user.id, "workspace_opened", 10, {
-            source: "feed",
-            feedItemId: item.id,
-          });
-          refreshXp();
-
-          toast.success("Workspace document created! (+10 XP)");
-          navigate(`/workspace/${newDoc.id}`);
-          setIsProcessing(false);
-          return;
-        }
-
-        // Default micro_task handling (create task)
-        // Check if task already exists for this feed_item_id
-        const { data: existingTask, error: checkError } = await supabase
+        const { data: existingTask } = await supabase
           .from("tasks")
           .select("id")
           .eq("feed_item_id", item.id)
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (checkError) {
-          console.error("Error checking for existing task:", checkError);
-          throw new Error("Failed to check for existing task");
-        }
-
         if (existingTask) {
-          toast.info("This task already exists in your task list!");
+          toast.info("This task already exists!");
           navigate("/tasks");
           setIsProcessing(false);
           return;
         }
 
-        // Insert new task
-        const { error: insertError } = await supabase
-          .from("tasks")
-          .insert({
-            user_id: user.id,
-            feed_item_id: item.id,
-            type: "micro",
-            title: item.title,
-            description: item.body,
-            xp_reward: item.xp_reward || 10,
-            status: "pending",
-          });
-
-        if (insertError) {
-          console.error("Error inserting task:", insertError);
-          throw new Error("Failed to create task");
-        }
-
-        // Award XP for adding task to list
-        const xpAmount = 5; // Small XP reward for accepting a task
-        await recordXpEvent(user.id, "task_added", xpAmount, {
-          feedItemId: item.id,
-          taskTitle: item.title,
+        await supabase.from("tasks").insert({
+          user_id: user.id,
+          feed_item_id: item.id,
+          type: "micro",
+          title: item.title,
+          description: item.body,
+          xp_reward: item.xp_reward || 10,
+          status: "pending",
         });
 
-        // Refresh XP display
+        await recordXpEvent(user.id, "task_added", 5, { feedItemId: item.id });
         refreshXp();
-
-        toast.success(`Task added to your list! (+${xpAmount} XP)`);
+        toast.success("Task added! (+5 XP)");
         navigate("/tasks");
       } else {
-        // Default handling for other feed item types
         const xpAmount = item.xp_reward ?? 2;
         await recordXpEvent(user.id, "feed_interaction", xpAmount, {
           feedItemId: item.id,
           feedItemType: item.type,
         });
-
-        // Refresh XP display
         refreshXp();
-        
         toast.success(`+${xpAmount} XP earned!`);
-
-        // Call parent onClick handler
-        if (onClick) {
-          onClick(item);
-        }
+        if (onClick) onClick(item);
       }
     } catch (error) {
-      console.error("Error handling CTA click:", error);
-      toast.error("Something went wrong. Please try again.");
+      console.error("Error handling CTA:", error);
+      toast.error("Something went wrong.");
     } finally {
       setIsProcessing(false);
     }
@@ -251,26 +176,41 @@ export function FeedCard({ item, onClick }: FeedCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="pb-3">
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {item.body}
-        </p>
+      <CardContent className="pb-3 space-y-3">
+        <p className="text-sm text-muted-foreground leading-relaxed">{item.body}</p>
+        
+        {/* V6 Strategy Reasoning */}
+        {strategyReasoning && (
+          <Collapsible open={isReasoningOpen} onOpenChange={setIsReasoningOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between text-xs text-muted-foreground hover:text-foreground">
+                <span className="flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Why this suggestion?
+                </span>
+                {isReasoningOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2">
+              <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+                <p>{strategyReasoning}</p>
+                {v6Triggers && v6Triggers.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {v6Triggers.map((trigger, i) => (
+                      <Badge key={i} variant="outline" className="text-[10px]">{trigger}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
       </CardContent>
 
       <CardFooter className="flex items-center justify-between pt-3 border-t">
-        {formattedTime && (
-          <span className="text-xs text-muted-foreground">
-            {formattedTime}
-          </span>
-        )}
+        {formattedTime && <span className="text-xs text-muted-foreground">{formattedTime}</span>}
         {item.cta_label && (
-          <Button
-            onClick={handleCtaClick}
-            size="sm"
-            variant="outline"
-            className="ml-auto"
-            disabled={isProcessing}
-          >
+          <Button onClick={handleCtaClick} size="sm" variant="outline" className="ml-auto" disabled={isProcessing}>
             {isProcessing ? "Processing..." : item.cta_label}
           </Button>
         )}

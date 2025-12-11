@@ -18,7 +18,13 @@ interface RadarSignal {
   description: string;
   priority_score: number;
   recommended_action: string;
-  metadata?: any;
+  metadata?: {
+    why_now?: string | null;
+    relevance_to_idea?: string | null;
+    risk_level?: "low" | "medium" | "high" | null;
+    v6_triggers?: string[] | null;
+    [key: string]: any;
+  } | null;
 }
 
 interface RadarCardProps {
@@ -56,6 +62,38 @@ const signalTypeConfig = {
     bgClass: "bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/20",
     badgeClass: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300",
   },
+  platform_trend: {
+    icon: TrendingUp,
+    label: "Platform Trend",
+    bgClass: "bg-pink-500/10 hover:bg-pink-500/20 border-pink-500/20",
+    badgeClass: "bg-pink-500/10 text-pink-700 dark:text-pink-300",
+  },
+  meme_format: {
+    icon: Zap,
+    label: "Meme Format",
+    bgClass: "bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/20",
+    badgeClass: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
+  },
+  creator_monetization_shift: {
+    icon: ArrowUpRight,
+    label: "Creator Monetization",
+    bgClass: "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20",
+    badgeClass: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  },
+  automation_tailwind: {
+    icon: Zap,
+    label: "Automation Tailwind",
+    bgClass: "bg-indigo-500/10 hover:bg-indigo-500/20 border-indigo-500/20",
+    badgeClass: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
+  },
+};
+
+const getRiskBadgeClass = (risk: string | null | undefined) => {
+  switch (risk) {
+    case "low": return "bg-green-500/10 text-green-700 dark:text-green-300";
+    case "high": return "bg-red-500/10 text-red-700 dark:text-red-300";
+    default: return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300";
+  }
 };
 
 const getPriorityColor = (score: number) => {
@@ -176,6 +214,32 @@ export function RadarCard({ signal }: RadarCardProps) {
         <CardDescription className="text-sm leading-relaxed">
           {signal.description}
         </CardDescription>
+
+        {/* V6: Why Now */}
+        {signal.metadata?.why_now && (
+          <div className="rounded-md bg-muted/50 p-3 border border-border/50">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Why Now?</p>
+            <p className="text-sm">{signal.metadata.why_now}</p>
+          </div>
+        )}
+
+        {/* V6: Relevance to Idea */}
+        {signal.metadata?.relevance_to_idea && (
+          <div className="rounded-md bg-primary/5 p-3 border border-primary/20">
+            <p className="text-xs font-medium text-primary mb-1">Relevance to Your Idea</p>
+            <p className="text-sm">{signal.metadata.relevance_to_idea}</p>
+          </div>
+        )}
+
+        {/* V6: Risk Level Badge */}
+        {signal.metadata?.risk_level && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Risk:</span>
+            <Badge variant="outline" className={getRiskBadgeClass(signal.metadata.risk_level)}>
+              {signal.metadata.risk_level.charAt(0).toUpperCase() + signal.metadata.risk_level.slice(1)}
+            </Badge>
+          </div>
+        )}
 
         <div className="rounded-md bg-muted/50 p-3 border border-border/50">
           <p className="text-xs font-medium text-muted-foreground mb-1">Recommended Action:</p>
