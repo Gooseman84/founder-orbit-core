@@ -93,49 +93,86 @@ function formatReflectionsForPrompt(reflections: any[]): string {
     .join('\n');
 }
 
-// --- System Prompt ------------------------------------------------
+// --- V6-AWARE System Prompt ------------------------------------------------
 
 const SYSTEM_PROMPT = `You are TrueBlazer.AI — an elite execution strategist and co-founder assistant.
 
-Your job is to generate HIGHLY PERSONALIZED micro-tasks and quests that:
-1. Are directly tied to what they're actively working on (their workspace documents)
-2. Move their specific idea forward based on the analysis
-3. Respect their time constraints, energy levels, and preferences
-4. Are aligned with the idea's category, platform, and v6 attributes
+Your job is to generate HYPER-PERSONALIZED micro-tasks and quests that REACT to v6 metrics.
 
-Task Types:
-- **Micro Tasks**: 5-15 minutes, low friction, immediately actionable
-- **Founder Quests**: 20-60 minutes, higher leverage strategic work
+## V6 METRIC TRIGGERS (Generate specific task types based on these):
 
-Platform-Specific Task Examples (when idea has a platform):
-- TikTok: "Record a 7-second hook with your main promise", "Draft 5 outrageous scroll-stopping hooks"
-- Instagram: "Create a carousel outline for your main offer", "Write 3 polarizing captions"
-- YouTube: "Script a 60-second explainer intro", "List 10 thumbnail concepts"
-- X/Twitter: "Draft 5 spicy one-liner threads", "Write a viral quote tweet for your niche"
-- Email: "Write 3 subject line variations", "Draft a 5-email welcome sequence outline"
+**virality_potential (0-100):**
+- ≥70: Generate 2 viral experiment tasks (hook tests, content challenges)
+- ≥50: Include 1 content-focused task
 
-Category-Specific Task Examples (based on idea category):
-- Creator/Content: Content creation, audience building, monetization setup
-- Automation/System: Workflow design, agent prompts, integration mapping
-- SaaS: Feature validation, landing page copy, onboarding flow
-- Memetic: Meme concepts, shareability experiments, culture hooks
-- Avatar/Persona: Character design, voice samples, personality scripts
+**leverage_score (0-100):**
+- ≥70: Generate 1 scaling/delegation task
+- ≥50: Include efficiency suggestions
 
-For ideas with high automation_density or leverage_score:
-- Include tasks like "Describe your dream money system in 3 sentences"
-- Suggest automation mapping, agent design, or "set it and forget it" setup tasks
+**automation_density (0-100):**
+- ≥60: Generate 2 automation tasks (workflows, bots, agents, systems)
+- ≥40: Include 1 workflow optimization task
 
-For ideas with high virality_potential or chaos_factor:
-- Include wild experiments, hook testing, culture-surfing content ideas
-- Push creative boundaries while staying practical
+**chaos_factor (0-100):**
+- ≥60: Generate 1 bold/controversial experiment
+- ≥50: Include 1 unconventional approach
 
-Rules:
+**culture_tailwind (0-100):**
+- ≥50: Reference current cultural trends in tasks
+
+**mode triggers:**
+- chaos: Wild experiments, boundary-pushing actions
+- creator: Content creation, audience building
+- persona: Character development, avatar scripts, AI companion content
+- memetic: Meme concepts, humor, shareability experiments
+- automation: Workflow design, agent prompts, integration setup
+- money_printer: Revenue systems, monetization shortcuts
+- locker_room: Edgy content, culture-first experiments
+
+**platform triggers (when specified):**
+- TikTok: "Record a 7-second hook", "Draft scroll-stopping hooks"
+- Instagram: "Create carousel outline", "Write polarizing captions"
+- YouTube: "Script 60-second intro", "List thumbnail concepts"
+- X/Twitter: "Draft spicy one-liner threads", "Write viral quote tweets"
+- Email: "Write subject line variations", "Draft welcome sequence"
+
+## Task Categories:
+- "growth": Audience building, marketing, distribution
+- "product": Feature validation, MVP development, offering refinement
+- "content": Content creation, scriptwriting, hook development
+- "automation": Workflow design, agent setup, system building
+- "chaos": Bold experiments, unconventional approaches
+- "persona": Character development, voice design, avatar content
+- "systems": Revenue systems, backend setup, operational efficiency
+
+## Task Effort Levels:
+- "low": 5-15 minutes, minimal friction
+- "medium": 15-30 minutes, some focus required
+- "high": 30-60+ minutes, strategic work
+
+## CRITICAL: reason Field
+For EVERY task, include a "reason" field explaining:
+- Which v6 metric(s) triggered this task
+- Why this specific action matters for THIS idea
+- Expected outcome
+
+Example: "Generated because automation_density is 75/100 — this idea has high system potential, so mapping the automation flow early will compound leverage."
+
+## Task Types:
+- **micro**: 5-15 minutes, low friction, immediately actionable
+- **quest**: 20-60 minutes, higher leverage strategic work
+
+## Rules:
 - NO generic advice. Every task must be specific to THEIR situation.
-- When they have workspace documents, reference them directly
-- Consider their recent energy/stress levels - if stressed, suggest lighter tasks
-- Align with their passions, skills, and constraints
-- Keep tasks concrete and achievable
+- Reference workspace documents directly when possible
+- Consider energy/stress levels - suggest lighter tasks if stressed
+- Align with passions, skills, and constraints
+- Include category, effort, and reason for EVERY task
 - Always return valid JSON only`;
+
+// Task categories
+const TASK_CATEGORIES = ["growth", "product", "content", "automation", "chaos", "persona", "systems"];
+const EFFORT_LEVELS = ["low", "medium", "high"];
 
 // Determine workspace metadata based on task content
 function determineWorkspaceMetadata(title: string, description: string): { doc_type: string; workspace_enabled: boolean } {
@@ -178,6 +215,16 @@ function formatTasks(rawTasks: any[], userId: string, ideaId: string | null) {
       ? task.description 
       : "";
 
+    // Validate category
+    const category = TASK_CATEGORIES.includes(task.category) 
+      ? task.category 
+      : "growth";
+
+    // Validate effort
+    const effort = EFFORT_LEVELS.includes(task.effort) 
+      ? task.effort 
+      : "low";
+
     // Existing metadata from AI
     const existingMetadata = typeof task.metadata === "object" && task.metadata !== null
       ? task.metadata
@@ -186,11 +233,15 @@ function formatTasks(rawTasks: any[], userId: string, ideaId: string | null) {
     // Determine workspace metadata based on content
     const workspaceMetadata = determineWorkspaceMetadata(task.title, description);
 
-    // Merge metadata
+    // Merge metadata with v6 fields
     const metadata = {
       ...existingMetadata,
       doc_type: workspaceMetadata.doc_type,
       workspace_enabled: workspaceMetadata.workspace_enabled,
+      category,
+      effort,
+      reason: task.reason || null,
+      v6_triggers: task.v6_triggers || null,
     };
 
     return {
@@ -199,6 +250,7 @@ function formatTasks(rawTasks: any[], userId: string, ideaId: string | null) {
       type,
       title: task.title.trim(),
       description: description.trim(),
+      category,
       xp_reward,
       metadata,
       status: 'pending',
@@ -267,6 +319,20 @@ serve(async (req) => {
       );
     }
 
+    // Extract v6 metrics
+    const v6Metrics = userContext.chosenIdea ? {
+      virality_potential: userContext.chosenIdea.virality_potential ?? 'N/A',
+      leverage_score: userContext.chosenIdea.leverage_score ?? 'N/A',
+      automation_density: userContext.chosenIdea.automation_density ?? 'N/A',
+      autonomy_level: userContext.chosenIdea.autonomy_level ?? 'N/A',
+      culture_tailwind: userContext.chosenIdea.culture_tailwind ?? 'N/A',
+      chaos_factor: userContext.chosenIdea.chaos_factor ?? 'N/A',
+      shock_factor: userContext.chosenIdea.shock_factor ?? 'N/A',
+      mode: userContext.chosenIdea.mode ?? 'N/A',
+      category: userContext.chosenIdea.category ?? 'N/A',
+      platform: userContext.chosenIdea.platform ?? 'N/A',
+    } : null;
+
     // --- Build rich user prompt with full context ---
     const userPrompt = `Generate personalized micro-tasks and quests for this founder based on their complete context.
 
@@ -279,6 +345,8 @@ ${JSON.stringify({
   risk_tolerance: userContext.profile.risk_tolerance,
   tech_level: userContext.profile.tech_level,
   success_vision: userContext.profile.success_vision?.slice(0, 300),
+  edgy_mode: userContext.profile.edgy_mode ?? 'safe',
+  wants_money_systems: userContext.profile.wants_money_systems ?? false,
 }, null, 2)}
 
 ## Extended Intake (Deeper Self-Knowledge)
@@ -298,18 +366,10 @@ ${userContext.chosenIdea ? JSON.stringify({
   target_customer: userContext.chosenIdea.target_customer,
   complexity: userContext.chosenIdea.complexity,
   time_to_first_dollar: userContext.chosenIdea.time_to_first_dollar,
-  // v6 fields
-  category: userContext.chosenIdea.category,
-  platform: userContext.chosenIdea.platform,
-  mode: userContext.chosenIdea.mode,
-  virality_potential: userContext.chosenIdea.virality_potential,
-  leverage_score: userContext.chosenIdea.leverage_score,
-  automation_density: userContext.chosenIdea.automation_density,
-  autonomy_level: userContext.chosenIdea.autonomy_level,
-  culture_tailwind: userContext.chosenIdea.culture_tailwind,
-  chaos_factor: userContext.chosenIdea.chaos_factor,
-  shock_factor: userContext.chosenIdea.shock_factor,
 }, null, 2) : 'No chosen idea yet - suggest exploratory tasks to help them find direction'}
+
+## ⚡ V6 METRICS (REACT TO THESE!) ⚡
+${v6Metrics ? JSON.stringify(v6Metrics, null, 2) : 'No v6 metrics available'}
 
 ## Idea Analysis (What We Know About Their Market)
 ${userContext.ideaAnalysis ? JSON.stringify({
@@ -330,11 +390,11 @@ ${reflectionsSnippet}
 ---
 
 Based on ALL the context above, generate 4-6 tasks that:
-1. Are directly tied to their active workspace documents when possible
-2. Move their specific idea forward based on the analysis
+1. DIRECTLY REACT to v6 metrics (generate viral tasks if virality is high, automation tasks if automation_density is high, etc.)
+2. Are tied to their active workspace documents when possible
 3. Consider their current energy/stress levels
 4. Align with their passions, skills, and time constraints
-5. Include specific references to their documents (e.g., "Continue your 'Offer Design Doc' by...")
+5. Include category, effort, and reason for EVERY task
 6. Mix of quick wins (micro) and meaningful progress (quests)
 
 ${!userContext.chosenIdea ? 'Since they have no chosen idea yet, focus on exploration and discovery tasks.' : ''}
@@ -365,7 +425,7 @@ Return the tasks as a JSON object with a "tasks" array.`;
             type: "function",
             function: {
               name: "generate_tasks",
-              description: "Generate 4-6 personalized micro-tasks and quests for the founder",
+              description: "Generate 4-6 personalized micro-tasks and quests based on v6 metrics",
               parameters: {
                 type: "object",
                 properties: {
@@ -377,10 +437,14 @@ Return the tasks as a JSON object with a "tasks" array.`;
                         type: { type: "string", enum: ["micro", "quest"] },
                         title: { type: "string" },
                         description: { type: "string" },
+                        category: { type: "string", enum: TASK_CATEGORIES },
+                        effort: { type: "string", enum: EFFORT_LEVELS },
+                        reason: { type: "string", description: "Explain which v6 metrics triggered this task and why" },
+                        v6_triggers: { type: "array", items: { type: "string" }, description: "List of v6 metrics that triggered this task" },
                         xp_reward: { type: "number" },
                         metadata: { type: "object" }
                       },
-                      required: ["type", "title", "description", "xp_reward"],
+                      required: ["type", "title", "description", "category", "effort", "reason", "xp_reward"],
                       additionalProperties: false
                     }
                   }
@@ -445,16 +509,16 @@ Return the tasks as a JSON object with a "tasks" array.`;
     }
 
     if (!parsedTasks.tasks || !Array.isArray(parsedTasks.tasks)) {
-      console.error('generate-micro-tasks: Invalid tasks structure:', parsedTasks);
+      console.error('generate-micro-tasks: Invalid tasks structure');
       return new Response(
-        JSON.stringify({ error: 'Invalid tasks structure in AI response' }),
+        JSON.stringify({ error: 'AI returned invalid task structure' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('generate-micro-tasks: tasks generated:', parsedTasks.tasks.length);
+    console.log('generate-micro-tasks: AI returned', parsedTasks.tasks.length, 'tasks');
 
-    // Format tasks for database insertion
+    // Format tasks for database
     const formattedTasks = formatTasks(
       parsedTasks.tasks, 
       userId, 
@@ -468,24 +532,24 @@ Return the tasks as a JSON object with a "tasks" array.`;
       .select();
 
     if (insertError) {
-      console.error('generate-micro-tasks: insert error:', insertError);
+      console.error('generate-micro-tasks: Failed to insert tasks:', insertError);
       return new Response(
-        JSON.stringify({ error: 'Failed to insert tasks', details: insertError.message }),
+        JSON.stringify({ error: 'Failed to save tasks', details: insertError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('generate-micro-tasks: successfully created tasks:', insertedTasks?.length);
+    console.log('generate-micro-tasks: Inserted', insertedTasks?.length, 'tasks');
 
     return new Response(
       JSON.stringify({ tasks: insertedTasks }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
-    console.error('generate-micro-tasks: error:', error);
+    console.error('generate-micro-tasks: error', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

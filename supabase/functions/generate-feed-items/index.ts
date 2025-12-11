@@ -93,43 +93,85 @@ function formatReflectionsForPrompt(reflections: any[]): string {
     .join('\n');
 }
 
-// --- System Prompt ------------------------------------------------
+// --- V6-AWARE System Prompt ------------------------------------------------
 
 const SYSTEM_PROMPT = `You are TrueBlazer.AI — an expert startup advisor, idea refinement coach, and micro-task creator.
 
-Your job is to produce DAILY FEED ITEMS that are HIGHLY PERSONALIZED to:
-1. The founder's profile, passions, skills, and constraints
-2. Their current chosen idea (including v6 fields like category, platform, virality_potential, leverage_score, chaos_factor)
-3. What they've been working on (workspace notes)
-4. Their recent emotional/energy state (reflections)
+Your job is to produce DAILY FEED ITEMS that are HIGHLY PERSONALIZED and DEEPLY REACTIVE to the founder's v6 idea metrics.
 
-Each feed item should be short, punchy, and immediately actionable. Items should feel like they were written by a co-founder who deeply understands their situation.
+## V6 Metric Triggers (REACT TO THESE):
 
-Feed item types:
+When analyzing the idea, look at these v6 attributes and react accordingly:
+
+**virality_potential (0-100):**
+- ≥70: Generate viral_experiment items. Suggest hook tests, content challenges, shareability hacks.
+- ≥50: Include at least one content-focused item.
+
+**leverage_score (0-100):**
+- ≥70: Generate money_system_upgrade items. Suggest scaling tactics, delegation, automation leverage.
+- ≥50: Include efficiency/delegation suggestions.
+
+**automation_density (0-100):**
+- ≥60: Generate money_system_upgrade items. Suggest workflow automation, agent design, systems thinking.
+- ≥40: Include one automation or workflow suggestion.
+
+**chaos_factor (0-100):**
+- ≥65: Generate chaos_variant items. Push boundaries, suggest bold experiments, unconventional angles.
+- ≥50: Include one "wild card" suggestion.
+
+**culture_tailwind (0-100):**
+- ≥60: Reference current cultural trends, memes, or zeitgeist in suggestions.
+- ≥40: Mention cultural relevance where applicable.
+
+**autonomy_level (0-100):**
+- ≥70: Emphasize hands-off, passive income angles in suggestions.
+- ≥50: Include one independence-focused suggestion.
+
+**mode (chaos/creator/persona/memetic/automation/money_printer/boundless/locker_room):**
+- chaos: Bold, unconventional, boundary-pushing experiments
+- creator: Content creation, audience building, platform growth
+- persona: Avatar development, character scripts, AI companion angles
+- memetic: Meme-able concepts, humor, shareable formats
+- automation: Workflow design, agent prompts, system architecture
+- money_printer: Revenue systems, passive income, leverage plays
+- locker_room: Edgy, culture-first, "shouldn't exist but could" experiments
+
+**platform (tiktok/instagram/youtube/x/linkedin/email):**
+- Generate platform-native actions and content formats.
+
+**edgy_mode (safe/bold/unhinged):**
+- safe: Conservative, mainstream suggestions
+- bold: Moderately provocative, stands out
+- unhinged: Maximum creativity, push all boundaries
+
+## Feed Item Types:
 - "insight": Strategic truths relevant to their specific idea and stage
 - "idea_tweak": Concrete modifications to improve their specific idea
 - "competitor_snapshot": Analysis of competitor types in their specific market
 - "micro_task": Small tasks (<10 min) that move their specific project forward
-- "viral_experiment": Quick tests to validate hooks, content angles, or viral formats (especially for creator/content/memetic ideas)
-- "money_system_upgrade": Ways to make the system more automated, leveraged, or hands-off (especially for automation/system ideas)
-- "memetic_play": Ways to tap into humor, culture, or shareability (especially for memetic/locker_room ideas)
+- "viral_experiment": Quick tests to validate hooks, content angles, or viral formats
+- "money_system_upgrade": Ways to make the system more automated, leveraged, or hands-off
+- "memetic_play": Ways to tap into humor, culture, or shareability
 - "chaos_variant": Push-the-boundaries tweak of the current idea — novel, unexpected angles
 
-When the idea has:
-- High virality_potential or category is "content"/"creator"/"memetic": emphasize viral_experiment and memetic_play items
-- High automation_density or category is "automation"/"system": emphasize money_system_upgrade items
-- High chaos_factor or category is "locker_room": include chaos_variant items
-- Platform specified (tiktok, instagram, youtube, etc.): tailor tasks to that platform's format
+## CRITICAL: strategy_reasoning Field
+For EVERY feed item, you MUST include a "strategy_reasoning" field that explains:
+- Which v6 metric(s) triggered this suggestion
+- Why this item matters for THIS specific idea
+- What outcome you expect from this action
 
-Rules:
+Example: "Generated because virality_potential is 82/100 — high shareability potential means hook testing will compound quickly."
+
+## Rules:
 - Use simple, direct language
 - Every item must be immediately useful and relevant to THEIR situation
-- Reference their workspace notes when relevant (e.g., "Building on your outline about X...")
+- Reference their workspace notes when relevant
 - Consider their energy/stress levels when suggesting tasks
 - Align with their passions and skills
 - Respect their time and capital constraints
-- For platform-specific ideas, suggest platform-native actions (e.g., "Record a 7-second TikTok hook...")
+- For platform-specific ideas, suggest platform-native actions
 - NO generic advice - everything must be specific to their context
+- Always include strategy_reasoning for every item
 - Always output valid JSON only`;
 
 // Valid feed item types - extended for v6
@@ -161,7 +203,11 @@ function formatFeedItems(rawItems: any[]): any[] {
       cta_label: item.cta_label || null,
       cta_action: item.cta_action || null,
       xp_reward: typeof item.xp_reward === "number" ? item.xp_reward : 2,
-      metadata: item.metadata || {},
+      metadata: {
+        ...(item.metadata || {}),
+        strategy_reasoning: item.strategy_reasoning || null,
+        v6_triggers: item.v6_triggers || null,
+      },
     }));
 }
 
@@ -198,6 +244,29 @@ serve(async (req) => {
       "idea:", !!userContext.chosenIdea, "docs:", userContext.recentDocs.length,
       "reflections:", userContext.recentReflections.length);
 
+    // Extract v6 metrics for explicit prompt injection
+    const v6Metrics = userContext.chosenIdea ? {
+      virality_potential: userContext.chosenIdea.virality_potential ?? 'N/A',
+      leverage_score: userContext.chosenIdea.leverage_score ?? 'N/A',
+      automation_density: userContext.chosenIdea.automation_density ?? 'N/A',
+      autonomy_level: userContext.chosenIdea.autonomy_level ?? 'N/A',
+      culture_tailwind: userContext.chosenIdea.culture_tailwind ?? 'N/A',
+      chaos_factor: userContext.chosenIdea.chaos_factor ?? 'N/A',
+      shock_factor: userContext.chosenIdea.shock_factor ?? 'N/A',
+      mode: userContext.chosenIdea.mode ?? 'N/A',
+      category: userContext.chosenIdea.category ?? 'N/A',
+      platform: userContext.chosenIdea.platform ?? 'N/A',
+    } : null;
+
+    // Extract founder preferences
+    const founderPrefs = userContext.profile ? {
+      edgy_mode: userContext.profile.edgy_mode ?? 'safe',
+      wants_money_systems: userContext.profile.wants_money_systems ?? false,
+      open_to_memetic_ideas: userContext.profile.open_to_memetic_ideas ?? false,
+      open_to_personas: userContext.profile.open_to_personas ?? false,
+      creator_platforms: userContext.profile.creator_platforms ?? [],
+    } : null;
+
     // --- Build rich user prompt with full context ---
     const userPrompt = `Generate personalized feed items for this founder based on their complete context.
 
@@ -211,6 +280,9 @@ ${userContext.profile ? JSON.stringify({
   tech_level: userContext.profile.tech_level,
   success_vision: userContext.profile.success_vision?.slice(0, 300),
 }, null, 2) : 'No profile available yet'}
+
+## Founder Preferences (V6)
+${founderPrefs ? JSON.stringify(founderPrefs, null, 2) : 'No preferences available'}
 
 ## Extended Intake (Deeper Self-Knowledge)
 ${userContext.extendedIntake ? JSON.stringify({
@@ -230,18 +302,10 @@ ${userContext.chosenIdea ? JSON.stringify({
   complexity: userContext.chosenIdea.complexity,
   time_to_first_dollar: userContext.chosenIdea.time_to_first_dollar,
   overall_fit_score: userContext.chosenIdea.overall_fit_score,
-  // v6 fields
-  category: userContext.chosenIdea.category,
-  platform: userContext.chosenIdea.platform,
-  mode: userContext.chosenIdea.mode,
-  virality_potential: userContext.chosenIdea.virality_potential,
-  leverage_score: userContext.chosenIdea.leverage_score,
-  automation_density: userContext.chosenIdea.automation_density,
-  autonomy_level: userContext.chosenIdea.autonomy_level,
-  culture_tailwind: userContext.chosenIdea.culture_tailwind,
-  chaos_factor: userContext.chosenIdea.chaos_factor,
-  shock_factor: userContext.chosenIdea.shock_factor,
 }, null, 2) : 'No chosen idea yet - generate exploratory content'}
+
+## ⚡ V6 METRICS (REACT TO THESE!) ⚡
+${v6Metrics ? JSON.stringify(v6Metrics, null, 2) : 'No v6 metrics available'}
 
 ## Idea Analysis
 ${userContext.ideaAnalysis ? JSON.stringify({
@@ -262,12 +326,12 @@ ${reflectionsSnippet}
 ---
 
 Based on ALL the context above, generate 4-6 feed items that:
-1. Are directly relevant to their chosen idea (if they have one) or help them find direction (if not)
-2. Reference their workspace notes when helpful (e.g., "Building on your offer outline...")
+1. DIRECTLY REACT to the v6 metrics (virality, leverage, automation, chaos, etc.)
+2. Reference their workspace notes when helpful
 3. Consider their energy/stress patterns when suggesting tasks
 4. Align with their passions, skills, and constraints
 5. Address any risks or opportunities from their idea analysis
-6. Feel like advice from a co-founder who truly knows their situation
+6. Include strategy_reasoning for EVERY item explaining which metrics triggered it
 
 Return the items as a JSON object with an "items" array.`;
 
@@ -294,7 +358,7 @@ Return the items as a JSON object with an "items" array.`;
             type: "function",
             function: {
               name: "generate_feed_items",
-              description: "Generate personalized feed items for a founder",
+              description: "Generate personalized feed items for a founder based on v6 metrics",
               parameters: {
                 type: "object",
                 properties: {
@@ -309,9 +373,11 @@ Return the items as a JSON object with an "items" array.`;
                         cta_label: { type: "string" },
                         cta_action: { type: "string" },
                         xp_reward: { type: "number" },
+                        strategy_reasoning: { type: "string", description: "Explain which v6 metrics triggered this item and why" },
+                        v6_triggers: { type: "array", items: { type: "string" }, description: "List of v6 metrics that triggered this item" },
                         metadata: { type: "object" },
                       },
-                      required: ["type", "title", "body"],
+                      required: ["type", "title", "body", "strategy_reasoning"],
                       additionalProperties: false,
                     },
                   },

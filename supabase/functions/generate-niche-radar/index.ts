@@ -57,12 +57,14 @@ const VALID_SIGNAL_TYPES = [
   "market_shift", 
   "consumer_behavior", 
   "tech_tailwind",
-  // New v6 signal types
-  "platform_trend",      // Platform-specific trends (TikTok algorithm changes, IG features, etc.)
-  "meme_format",         // Emerging meme formats, viral templates, cultural moments
-  "creator_monetization_shift", // New ways creators are making money
-  "automation_tailwind"  // AI/automation tools making new things possible
+  // V6 signal types
+  "platform_trend",
+  "meme_format",
+  "creator_monetization_shift",
+  "automation_tailwind"
 ];
+
+const RISK_LEVELS = ["low", "medium", "high"];
 
 function formatRadarSignals(rawSignals: any[]) {
   if (!Array.isArray(rawSignals)) return [];
@@ -80,38 +82,76 @@ function formatRadarSignals(rawSignals: any[]) {
       description: signal.description.trim(),
       priority_score: Math.round(Number(signal.priority_score ?? 50)),
       recommended_action: signal.recommended_action.trim(),
-      metadata: signal.metadata ?? {},
+      metadata: {
+        ...(signal.metadata ?? {}),
+        why_now: signal.why_now || null,
+        relevance_to_idea: signal.relevance_to_idea || null,
+        risk_level: RISK_LEVELS.includes(signal.risk_level) ? signal.risk_level : "medium",
+        v6_triggers: signal.v6_triggers || null,
+      },
     }));
 }
 
 const SYSTEM_PROMPT = `You are TrueBlazer.AI — an elite market researcher, category theorist, and opportunity scout.
 
-Your job is to identify EMERGING NICHES and MARKET SIGNALS that match the founder's profile, chosen idea, and v6 attributes.
+Your job is to identify EMERGING NICHES and MARKET SIGNALS that REACT to v6 metrics.
 
-Signal Types:
+## V6 METRIC TRIGGERS (Generate specific signal types based on these):
+
+**culture_tailwind (0-100):**
+- ≥70: Prioritize cultural momentum waves, zeitgeist shifts
+- ≥50: Include cultural relevance signals
+
+**virality_potential (0-100):**
+- ≥60: Identify trends that reward shareable content
+- Include platform-specific viral patterns
+
+**chaos_factor (0-100):**
+- ≥50: Show unstable markets ripe for disruption
+- Include contrarian opportunities
+
+**leverage_score (0-100):**
+- ≥65: Show scalable channels and leverage plays
+- Include delegation/multiplication opportunities
+
+**automation_density (0-100):**
+- ≥60: Include automation_tailwind signals
+- Highlight AI/automation tools enabling new plays
+
+**platform (when specified):**
+- Prioritize platform_trend signals for that specific platform
+- Include platform algorithm changes, feature updates
+
+**mode triggers:**
+- memetic: Include meme_format signals
+- creator/content: Include creator_monetization_shift signals
+- automation/system: Include automation_tailwind signals
+- chaos/locker_room: Include edgy but ethical cultural signals
+
+## Signal Types:
 - "trend": Macro trends in the industry or market
 - "problem": Emerging pain points or unmet needs
 - "market_shift": Changes in market dynamics or buyer behavior
 - "consumer_behavior": Shifts in how people buy, consume, or interact
 - "tech_tailwind": New technologies enabling new opportunities
-- "platform_trend": Platform-specific changes (TikTok algorithm, IG features, YouTube shorts, X algorithm, etc.)
-- "meme_format": Emerging meme formats, viral templates, or cultural moments to ride
-- "creator_monetization_shift": New ways creators are making money (tips, memberships, products, etc.)
+- "platform_trend": Platform-specific changes (TikTok algorithm, IG features, YouTube shorts, etc.)
+- "meme_format": Emerging meme formats, viral templates, cultural moments to ride
+- "creator_monetization_shift": New ways creators are making money
 - "automation_tailwind": AI/automation tools making previously hard things easy
 
-When the idea has:
-- Platform specified: Prioritize platform_trend signals for that platform
-- High virality_potential or category is "memetic": Include meme_format signals
-- Category is "creator"/"content": Include creator_monetization_shift signals
-- High automation_density or category is "automation"/"system": Include automation_tailwind signals
-- High chaos_factor or category is "locker_room": Include edgy but ethical cultural signals
+## CRITICAL: Additional Fields for Each Signal
+For EVERY signal, include:
+- "why_now": Why is this opportunity emerging RIGHT NOW?
+- "relevance_to_idea": How does this SPECIFICALLY connect to THIS founder's idea?
+- "risk_level": "low" | "medium" | "high" — risk of pursuing this opportunity
 
-Rules:
+## Rules:
 - Use plain English, no jargon
 - Signals should be actionable — not vague
 - Tailor everything to the chosen idea
 - Use real patterns, not random noise
 - For platform signals, be specific about what's changing and why it matters
+- Always include why_now, relevance_to_idea, and risk_level
 
 Output STRICT JSON ONLY with signals array.`;
 
@@ -166,25 +206,57 @@ serve(async (req) => {
       );
     }
 
-    // Build enriched input with v6 fields
-    const enrichedInput = {
-      founder_profile: inputData.founder_profile,
-      idea: {
-        ...inputData.idea,
-        // Ensure v6 fields are explicitly included
-        category: inputData.idea.category,
-        platform: inputData.idea.platform,
-        mode: inputData.idea.mode,
-        virality_potential: inputData.idea.virality_potential,
-        leverage_score: inputData.idea.leverage_score,
-        automation_density: inputData.idea.automation_density,
-        autonomy_level: inputData.idea.autonomy_level,
-        culture_tailwind: inputData.idea.culture_tailwind,
-        chaos_factor: inputData.idea.chaos_factor,
-        shock_factor: inputData.idea.shock_factor,
-      },
-      analysis: inputData.analysis,
+    // Extract v6 metrics for explicit prompt injection
+    const v6Metrics = {
+      virality_potential: inputData.idea.virality_potential ?? 'N/A',
+      leverage_score: inputData.idea.leverage_score ?? 'N/A',
+      automation_density: inputData.idea.automation_density ?? 'N/A',
+      autonomy_level: inputData.idea.autonomy_level ?? 'N/A',
+      culture_tailwind: inputData.idea.culture_tailwind ?? 'N/A',
+      chaos_factor: inputData.idea.chaos_factor ?? 'N/A',
+      shock_factor: inputData.idea.shock_factor ?? 'N/A',
+      mode: inputData.idea.mode ?? 'N/A',
+      category: inputData.idea.category ?? 'N/A',
+      platform: inputData.idea.platform ?? 'N/A',
     };
+
+    // Build enriched input with v6 fields explicitly highlighted
+    const userPrompt = `Analyze this founder's context and generate market signals.
+
+## Founder Profile
+${JSON.stringify({
+  passions: inputData.founder_profile.passions_text || inputData.founder_profile.passions_tags?.join(', '),
+  skills: inputData.founder_profile.skills_text || inputData.founder_profile.skills_tags?.join(', '),
+  risk_tolerance: inputData.founder_profile.risk_tolerance,
+  edgy_mode: inputData.founder_profile.edgy_mode ?? 'safe',
+}, null, 2)}
+
+## Current Idea
+${JSON.stringify({
+  title: inputData.idea.title,
+  description: inputData.idea.description?.slice(0, 400),
+  business_model_type: inputData.idea.business_model_type,
+  target_customer: inputData.idea.target_customer,
+}, null, 2)}
+
+## ⚡ V6 METRICS (REACT TO THESE!) ⚡
+${JSON.stringify(v6Metrics, null, 2)}
+
+## Idea Analysis
+${JSON.stringify({
+  niche_score: inputData.analysis.niche_score,
+  market_insight: inputData.analysis.market_insight?.slice(0, 300),
+  competition_snapshot: inputData.analysis.competition_snapshot?.slice(0, 200),
+  biggest_risks: inputData.analysis.biggest_risks,
+}, null, 2)}
+
+---
+
+Generate 5-8 market signals that:
+1. REACT to v6 metrics (platform trends if platform specified, meme formats if memetic mode, etc.)
+2. Include why_now, relevance_to_idea, and risk_level for EVERY signal
+3. Are specific and actionable
+4. Connect directly to this founder's idea`;
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')!;
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -194,12 +266,13 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: JSON.stringify(enrichedInput) }
+          { role: 'user', content: userPrompt }
         ],
         tools: [{
           type: "function",
           function: {
             name: "generate_radar_signals",
+            description: "Generate market signals based on v6 metrics",
             parameters: {
               type: "object",
               properties: {
@@ -213,9 +286,13 @@ serve(async (req) => {
                       description: { type: "string" },
                       priority_score: { type: "number" },
                       recommended_action: { type: "string" },
+                      why_now: { type: "string", description: "Why is this opportunity emerging right now?" },
+                      relevance_to_idea: { type: "string", description: "How does this connect to this founder's idea?" },
+                      risk_level: { type: "string", enum: RISK_LEVELS },
+                      v6_triggers: { type: "array", items: { type: "string" }, description: "Which v6 metrics triggered this signal" },
                       metadata: { type: "object" }
                     },
-                    required: ["signal_type", "title", "description", "recommended_action"]
+                    required: ["signal_type", "title", "description", "recommended_action", "why_now", "relevance_to_idea", "risk_level"]
                   } 
                 }
               },
@@ -227,13 +304,25 @@ serve(async (req) => {
       }),
     });
 
-    if (!aiResponse.ok) throw new Error("AI generation failed");
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error("generate-niche-radar: AI error", aiResponse.status, errorText);
+      throw new Error("AI generation failed");
+    }
 
     const aiData = await aiResponse.json();
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    
+    if (!toolCall?.function?.arguments) {
+      throw new Error("No tool call in AI response");
+    }
+    
     const parsed = JSON.parse(toolCall.function.arguments);
     const formattedSignals = formatRadarSignals(parsed.signals || []);
 
+    console.log("generate-niche-radar: formatted", formattedSignals.length, "signals");
+
+    // Delete old signals and insert new ones
     await supabase.from("niche_radar").delete().eq("user_id", userId);
     
     const signalsToInsert = formattedSignals.map(s => ({
@@ -250,7 +339,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    console.error(error);
+    console.error("generate-niche-radar: error", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
