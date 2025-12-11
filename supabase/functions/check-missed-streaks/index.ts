@@ -11,6 +11,17 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Validate cron secret for scheduled function security
+  const cronSecret = req.headers.get('x-cron-secret');
+  const expectedSecret = Deno.env.get('CRON_SECRET');
+  if (expectedSecret && cronSecret !== expectedSecret) {
+    console.error('[check-missed-streaks] Unauthorized: Invalid cron secret');
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+      status: 401, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
