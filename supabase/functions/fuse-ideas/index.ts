@@ -264,6 +264,15 @@ Return only the JSON object.`;
     // Generate a proper UUID if not provided
     const ideaId = fusedIdea.id || crypto.randomUUID();
 
+    // Build fusion_metadata for lineage tracking
+    const fusionMetadata = {
+      source_idea_ids: ideas.map((i: any) => i.id),
+      source_titles: ideas.map((i: any) => i.title),
+      fusion_mode: "standard",
+      blended_modes: fusedIdea.blended_modes || inputModes,
+      fusion_notes: fusedIdea.fusion_notes,
+    };
+
     // Insert the fused idea into the ideas table
     const { data: insertedIdea, error: insertError } = await supabase
       .from("ideas")
@@ -288,6 +297,7 @@ Return only the JSON object.`;
         culture_tailwind: fusedIdea.culture_tailwind,
         chaos_factor: fusedIdea.chaos_factor,
         status: "candidate",
+        fusion_metadata: fusionMetadata,
       })
       .select()
       .single();

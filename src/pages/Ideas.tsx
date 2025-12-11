@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2 } from "lucide-react";
+import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2, Target, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 
@@ -337,6 +337,23 @@ const Ideas = () => {
               onFocusAreaChange={setFocusArea}
               edgyMode={edgyMode}
             />
+            
+            {/* Active Focus Pill */}
+            {focusArea && (
+              <div className="mt-3 flex items-center gap-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
+                  <Target className="w-3.5 h-3.5" />
+                  <span>Focused on: "{focusArea.length > 30 ? focusArea.slice(0, 30) + "..." : focusArea}"</span>
+                  <button 
+                    onClick={() => setFocusArea("")}
+                    className="ml-1 hover:bg-primary/20 rounded-full p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+            
             <div className="mt-4 flex justify-between items-center gap-2">
               {sessionIdeas.length > 0 && (
                 <Button 
