@@ -2,7 +2,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Zap, Target, Clock, CheckCircle2, Circle, PlayCircle, FileText } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Zap, Target, Clock, CheckCircle2, Circle, PlayCircle, FileText, ChevronDown, Lightbulb } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +12,7 @@ import { useXP } from "@/hooks/useXP";
 import { supabase } from "@/integrations/supabase/client";
 import { recordXpEvent } from "@/lib/xpEngine";
 import { toast } from "sonner";
+import { EffortBadge, CategoryBadge } from "@/components/shared/CategoryBadge";
 
 interface Task {
   id: string;
@@ -27,6 +29,9 @@ interface Task {
   metadata?: {
     doc_type?: string;
     workspace_enabled?: boolean;
+    reason?: string;
+    effort?: string;
+    v6_triggers?: string[];
     [key: string]: any;
   } | null;
 }
@@ -43,6 +48,7 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
   const { refresh: refreshXp } = useXP();
   const navigate = useNavigate();
   const [isWorkspaceProcessing, setIsWorkspaceProcessing] = useState(false);
+  const [isReasonOpen, setIsReasonOpen] = useState(false);
 
   const isMicro = task.type === "micro";
   const isQuest = task.type === "quest";
@@ -52,6 +58,11 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
 
   // Check if task needs workspace integration
   const needsWorkspace = task.type === "micro" || task.type === "quest";
+  
+  // Extract v6 metadata
+  const taskReason = task.metadata?.reason;
+  const taskEffort = task.metadata?.effort;
+  const taskCategory = task.category || task.metadata?.category;
 
   const handleCheckboxChange = (checked: boolean) => {
     if (checked && !isCompleted) {
@@ -161,7 +172,7 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
   };
 
   return (
-    <Card className="p-4 hover:shadow-md transition-shadow">
+    <Card className="p-4 hover:shadow-md transition-all duration-200 hover:border-primary/30">
       <div className="flex items-start gap-3">
         {/* Checkbox for completion */}
         <div className="pt-1">
@@ -175,7 +186,7 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Header: Type badge and status */}
+          {/* Header: Type badge, category, effort, and status */}
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             {/* Type Badge */}
             {isMicro && (
@@ -191,6 +202,14 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
               </Badge>
             )}
 
+            {/* Category Badge */}
+            {taskCategory && (
+              <CategoryBadge type="category" value={taskCategory} size="sm" />
+            )}
+
+            {/* Effort Badge */}
+            <EffortBadge effort={taskEffort} size="sm" />
+
             {/* Status Indicator */}
             {isPending && (
               <Badge variant="outline" className="gap-1 text-xs">
@@ -205,7 +224,7 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
               </Badge>
             )}
             {isCompleted && (
-              <Badge variant="outline" className="gap-1 text-xs text-green-600">
+              <Badge variant="outline" className="gap-1 text-xs text-green-600 dark:text-green-400">
                 <CheckCircle2 className="h-3 w-3" />
                 Completed
               </Badge>
@@ -227,7 +246,23 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
           </h3>
 
           {/* Description */}
-          {task.description && <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{task.description}</p>}
+          {task.description && <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{task.description}</p>}
+
+          {/* Reason/Why (collapsible) */}
+          {taskReason && (
+            <Collapsible open={isReasonOpen} onOpenChange={setIsReasonOpen} className="mb-3">
+              <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                <Lightbulb className="h-3 w-3" />
+                <span>Why this task?</span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${isReasonOpen ? "rotate-180" : ""}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <div className="p-2.5 bg-muted/50 rounded-md text-xs text-muted-foreground">
+                  {taskReason}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           {/* Footer: Timestamp and Actions */}
           <div className="flex items-center justify-between gap-2 flex-wrap">

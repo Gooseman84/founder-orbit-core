@@ -2,10 +2,12 @@
 // Enhanced card for Library view that shows v6 metrics when available
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Zap, Eye, FileText, Trash2 } from "lucide-react";
+import { V6MetricsInline } from "@/components/shared/V6MetricBadge";
+import { ModeBadge } from "@/components/shared/ModeBadge";
+import { CategoryBadge } from "@/components/shared/CategoryBadge";
 import type { Idea } from "@/hooks/useIdeas";
 
 interface LibraryIdeaCardProps {
@@ -16,39 +18,9 @@ interface LibraryIdeaCardProps {
 
 const getScoreColor = (score: number | null) => {
   if (!score) return "text-muted-foreground";
-  if (score >= 80) return "text-green-600";
-  if (score >= 60) return "text-yellow-600";
-  return "text-orange-600";
-};
-
-const getModeLabel = (mode: string | null): string => {
-  if (!mode) return "";
-  const labels: Record<string, string> = {
-    breadth: "Breadth",
-    focus: "Focus",
-    creator: "Creator",
-    automation: "Automation",
-    persona: "Persona",
-    boundless: "Boundless",
-    locker_room: "Locker Room",
-    chaos: "Chaos",
-    money_printer: "Money Printer",
-    memetic: "Memetic",
-    fusion: "Fusion",
-    variant_chaos: "Variant (Chaos)",
-    variant_creator: "Variant (Creator)",
-    variant_automation: "Variant (Automation)",
-    variant_memetic: "Variant (Memetic)",
-  };
-  return labels[mode] || mode.charAt(0).toUpperCase() + mode.slice(1).replace("_", " ");
-};
-
-const getModeVariant = (mode: string | null): "default" | "secondary" | "outline" | "destructive" => {
-  if (!mode) return "outline";
-  if (mode.includes("chaos") || mode === "locker_room") return "destructive";
-  if (mode === "fusion") return "default";
-  if (mode.includes("variant")) return "secondary";
-  return "outline";
+  if (score >= 80) return "text-green-600 dark:text-green-400";
+  if (score >= 60) return "text-yellow-600 dark:text-yellow-400";
+  return "text-orange-600 dark:text-orange-400";
 };
 
 export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardProps) {
@@ -56,22 +28,20 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
   const isV6 = idea.engine_version === "v6";
 
   return (
-    <Card className="hover:shadow-lg transition-shadow flex flex-col">
+    <Card className="hover:shadow-lg transition-all duration-200 flex flex-col group hover:border-primary/30">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <CardTitle className="text-lg leading-tight">{idea.title}</CardTitle>
+            <CardTitle className="text-lg leading-tight group-hover:text-primary transition-colors">
+              {idea.title}
+            </CardTitle>
             {isV6 && (
               <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary flex items-center gap-1">
                 <Zap className="w-3 h-3" />v6
               </span>
             )}
           </div>
-          {idea.mode && (
-            <Badge variant={getModeVariant(idea.mode)} className="text-xs shrink-0">
-              {getModeLabel(idea.mode)}
-            </Badge>
-          )}
+          <ModeBadge mode={idea.mode} size="sm" />
         </div>
         {(idea.category || idea.business_model_type) && (
           <CardDescription className="text-sm font-medium">
@@ -86,46 +56,26 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
         </p>
 
         {/* Tags row */}
-        <div className="flex flex-wrap gap-1 text-xs">
-          {idea.platform && (
-            <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-              {idea.platform}
-            </span>
-          )}
+        <div className="flex flex-wrap gap-1">
+          <CategoryBadge type="platform" value={idea.platform} size="sm" />
           {idea.target_customer && (
-            <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground line-clamp-1">
-              {idea.target_customer.length > 30 
-                ? idea.target_customer.slice(0, 30) + "..." 
-                : idea.target_customer}
-            </span>
+            <CategoryBadge 
+              value={idea.target_customer.length > 25 ? idea.target_customer.slice(0, 25) + "..." : idea.target_customer} 
+              size="sm" 
+            />
           )}
           {idea.time_to_first_dollar && (
-            <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-              {idea.time_to_first_dollar}
-            </span>
+            <CategoryBadge value={idea.time_to_first_dollar} size="sm" />
           )}
         </div>
 
         {/* v6 Metrics */}
-        {isV6 && (idea.leverage_score || idea.automation_density || idea.virality_potential) && (
-          <div className="flex flex-wrap gap-1.5 text-xs">
-            {idea.leverage_score != null && (
-              <span className="px-2 py-0.5 rounded bg-primary/10 text-primary">
-                Leverage: {idea.leverage_score}%
-              </span>
-            )}
-            {idea.automation_density != null && (
-              <span className="px-2 py-0.5 rounded bg-primary/10 text-primary">
-                Automation: {idea.automation_density}%
-              </span>
-            )}
-            {idea.virality_potential != null && (
-              <span className="px-2 py-0.5 rounded bg-primary/10 text-primary">
-                Virality: {idea.virality_potential}%
-              </span>
-            )}
-          </div>
-        )}
+        <V6MetricsInline
+          virality={idea.virality_potential}
+          leverage={idea.leverage_score}
+          automation={idea.automation_density}
+          size="sm"
+        />
 
         {/* Overall Fit Score */}
         {idea.overall_fit_score != null && idea.overall_fit_score > 0 && (
