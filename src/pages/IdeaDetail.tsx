@@ -12,11 +12,15 @@ import { IdeaVettingCard } from "@/components/ideas/IdeaVettingCard";
 import { OpportunityScoreCard } from "@/components/opportunity/OpportunityScoreCard";
 import { PaywallModal } from "@/components/paywall/PaywallModal";
 import { IdeaVariantGenerator } from "@/components/ideas/IdeaVariantGenerator";
+import { IdeaOptimizerBar } from "@/components/shared/IdeaOptimizerBar";
+import { V6MetricsGrid } from "@/components/shared/V6MetricBadge";
+import { ModeBadge } from "@/components/shared/ModeBadge";
+import { CategoryBadge } from "@/components/shared/CategoryBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { recordXpEvent } from "@/lib/xpEngine";
-import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp, Zap, Flame, Bot, DollarSign } from "lucide-react";
+import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp, GitMerge } from "lucide-react";
 
 const getComplexityVariant = (complexity: string | null) => {
   switch (complexity?.toLowerCase()) {
@@ -197,14 +201,14 @@ const IdeaDetail = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <Button variant="ghost" onClick={() => navigate("/ideas")} className="mb-4">
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <Button variant="ghost" onClick={() => navigate("/ideas")} className="-ml-2">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Ideas
         </Button>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {!analysis && (
             <Button onClick={handleVetIdea} disabled={analyzeIdea.isPending} className="gap-2">
               {analyzeIdea.isPending ? (
@@ -243,6 +247,14 @@ const IdeaDetail = () => {
           )}
         </div>
       </div>
+
+      {/* Idea Optimizer Bar */}
+      <IdeaOptimizerBar
+        ideaId={id!}
+        hasAnalysis={!!analysis}
+        onRefreshScore={handleGenerateScore}
+        isRefreshingScore={generatingScore}
+      />
 
       <Card>
         <CardHeader>
@@ -347,77 +359,48 @@ const IdeaDetail = () => {
           </div>
 
           {/* V6 Metrics Section */}
-          {(idea.virality_potential || idea.leverage_score || idea.automation_density) && (
+          {(idea.virality_potential || idea.leverage_score || idea.automation_density || 
+            idea.autonomy_level || idea.culture_tailwind || idea.chaos_factor) && (
             <>
               <Separator />
               <div>
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-orange-500" />
-                  V6 Metrics
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  v6 Engine Metrics
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {idea.virality_potential != null && (
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Flame className="w-4 h-4 text-red-500" />
-                        <span className="text-xs text-muted-foreground">Virality</span>
-                      </div>
-                      <span className="text-lg font-bold">{idea.virality_potential}</span>
-                    </div>
-                  )}
-                  {idea.leverage_score != null && (
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-2 mb-1">
-                        <TrendingUp className="w-4 h-4 text-green-500" />
-                        <span className="text-xs text-muted-foreground">Leverage</span>
-                      </div>
-                      <span className="text-lg font-bold">{idea.leverage_score}</span>
-                    </div>
-                  )}
-                  {idea.automation_density != null && (
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Bot className="w-4 h-4 text-blue-500" />
-                        <span className="text-xs text-muted-foreground">Automation</span>
-                      </div>
-                      <span className="text-lg font-bold">{idea.automation_density}</span>
-                    </div>
-                  )}
-                  {idea.autonomy_level != null && (
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Star className="w-4 h-4 text-yellow-500" />
-                        <span className="text-xs text-muted-foreground">Autonomy</span>
-                      </div>
-                      <span className="text-lg font-bold">{idea.autonomy_level}</span>
-                    </div>
-                  )}
-                  {idea.culture_tailwind != null && (
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Users className="w-4 h-4 text-purple-500" />
-                        <span className="text-xs text-muted-foreground">Culture Tailwind</span>
-                      </div>
-                      <span className="text-lg font-bold">{idea.culture_tailwind}</span>
-                    </div>
-                  )}
-                  {idea.chaos_factor != null && (
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Zap className="w-4 h-4 text-orange-500" />
-                        <span className="text-xs text-muted-foreground">Chaos Factor</span>
-                      </div>
-                      <span className="text-lg font-bold">{idea.chaos_factor}</span>
-                    </div>
-                  )}
-                </div>
+                <V6MetricsGrid
+                  virality={idea.virality_potential}
+                  leverage={idea.leverage_score}
+                  automation={idea.automation_density}
+                  autonomy={idea.autonomy_level}
+                  culture={idea.culture_tailwind}
+                  chaos={idea.chaos_factor}
+                  shock={idea.shock_factor}
+                  size="md"
+                />
                 {(idea.platform || idea.category || idea.mode) && (
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {idea.platform && <Badge variant="outline">{idea.platform}</Badge>}
-                    {idea.category && <Badge variant="secondary">{idea.category}</Badge>}
-                    {idea.mode && <Badge>{idea.mode} mode</Badge>}
+                    <CategoryBadge type="platform" value={idea.platform} size="md" />
+                    <CategoryBadge type="category" value={idea.category} size="md" />
+                    <ModeBadge mode={idea.mode} size="md" />
                   </div>
                 )}
+              </div>
+            </>
+          )}
+
+          {/* Fusion Lineage */}
+          {(idea as any).fusion_metadata && ((idea as any).fusion_metadata as any)?.source_titles?.length > 0 && (
+            <>
+              <Separator />
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
+                  <GitMerge className="w-4 h-4 text-primary" />
+                  Fusion Lineage
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  {(((idea as any).fusion_metadata as any)?.source_titles || []).join(" + ")} → <span className="text-foreground font-medium">{idea.title}</span>
+                </p>
               </div>
             </>
           )}
