@@ -6,8 +6,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Save, Check, FileText, HelpCircle, Zap } from "lucide-react";
-import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
+import { Save, Check, FileText, HelpCircle, Zap, Eye } from "lucide-react";
+import type { BusinessIdea, BusinessIdeaV6, isV6Idea as isV6IdeaFn } from "@/types/businessIdea";
 import type { IdeaScoreBreakdown } from "@/lib/ideaScoring";
 
 interface IdeaScoredCardProps {
@@ -16,13 +16,16 @@ interface IdeaScoredCardProps {
   isSaved: boolean;
   isSaving: boolean;
   isPromoting: boolean;
+  isOpening?: boolean;
   onSave: () => void;
   onPromote: () => void;
+  onViewDetails?: () => void;
 }
 
 // Type guard for v6 ideas
 function isV6Idea(idea: BusinessIdea | BusinessIdeaV6): idea is BusinessIdeaV6 {
-  return "engineVersion" in idea && idea.engineVersion === "v6";
+  const engineVer = (idea as any).engineVersion || (idea as any).engine_version;
+  return engineVer === "v6";
 }
 
 export function IdeaScoredCard({
@@ -31,8 +34,10 @@ export function IdeaScoredCard({
   isSaved,
   isSaving,
   isPromoting,
+  isOpening = false,
   onSave,
   onPromote,
+  onViewDetails,
 }: IdeaScoredCardProps) {
   const fitBadgeClass =
     scores.overall >= 70
@@ -170,13 +175,13 @@ export function IdeaScoredCard({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-2 mt-2">
+      <div className="flex gap-2 mt-2 flex-wrap">
         <Button
           onClick={onSave}
           disabled={isSaved || isSaving}
           variant={isSaved ? "secondary" : "default"}
           size="sm"
-          className="flex-1 gap-2"
+          className="flex-1 gap-2 min-w-[80px]"
         >
           {isSaved ? (
             <><Check className="w-4 h-4" />Saved</>
@@ -186,17 +191,32 @@ export function IdeaScoredCard({
             <><Save className="w-4 h-4" />Save</>
           )}
         </Button>
+        {onViewDetails && (
+          <Button
+            onClick={onViewDetails}
+            disabled={isOpening}
+            variant="outline"
+            size="sm"
+            className="flex-1 gap-2 min-w-[80px]"
+          >
+            {isOpening ? (
+              <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />Opening...</>
+            ) : (
+              <><Eye className="w-4 h-4" />View Details</>
+            )}
+          </Button>
+        )}
         <Button
           onClick={onPromote}
           disabled={isPromoting}
           variant="outline"
           size="sm"
-          className="flex-1 gap-2"
+          className="flex-1 gap-2 min-w-[80px]"
         >
           {isPromoting ? (
             <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />Creating...</>
           ) : (
-            <><FileText className="w-4 h-4" />Open in Workspace</>
+            <><FileText className="w-4 h-4" />Workspace</>
           )}
         </Button>
       </div>

@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const authHeader = req.headers.get("Authorization");
 
     if (!authHeader) {
@@ -23,11 +23,12 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    // Use anon key with auth header for user verification
+    const supabaseAuth = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     if (authError || !user) {
       console.error("Auth error:", authError);
       return new Response(
@@ -35,6 +36,9 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Use service role for DB operations
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     const { idea } = await req.json();
 
@@ -46,45 +50,77 @@ serve(async (req) => {
       );
     }
 
-    // Check if already saved
-    const { data: existing } = await supabase
+    // Check if already saved in ideas table
+    const { data: existingIdea } = await supabase
+      .from("ideas")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("title", idea.title)
+      .maybeSingle();
+
+    let ideaDbId = existingIdea?.id;
+
+    if (!existingIdea) {
+      // Insert into ideas table for IdeaDetail page compatibility
+      const { data: newIdea, error: insertError } = await supabase
+        .from("ideas")
+        .insert({
+          user_id: user.id,
+          title: idea.title,
+          description: idea.description || idea.oneLiner || null,
+          category: idea.category || null,
+          business_model_type: idea.model || idea.businessArchetype || idea.revenueModel || null,
+          target_customer: idea.targetCustomer || null,
+          platform: idea.platform || null,
+          complexity: idea.difficulty === "easy" ? "low" : idea.difficulty === "hard" ? "high" : "medium",
+          time_to_first_dollar: idea.timeToRevenue || null,
+          mode: idea.mode || "generated",
+          engine_version: idea.engineVersion || "v6",
+          shock_factor: idea.shockFactor ?? null,
+          virality_potential: idea.viralityPotential ?? null,
+          leverage_score: idea.leverageScore ?? null,
+          automation_density: idea.automationDensity ?? null,
+          autonomy_level: idea.autonomyLevel ?? null,
+          culture_tailwind: idea.cultureTailwind ?? null,
+          chaos_factor: idea.chaosFactor ?? null,
+          status: "candidate",
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Ideas table insert error:", insertError);
+        return new Response(
+          JSON.stringify({ error: "Failed to save idea" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      ideaDbId = newIdea.id;
+      console.log("Saved to ideas table:", ideaDbId);
+    }
+
+    // Also save to founder_generated_ideas for library tracking
+    const { data: existingGenerated } = await supabase
       .from("founder_generated_ideas")
       .select("id")
       .eq("user_id", user.id)
       .eq("idea_id", idea.id)
       .maybeSingle();
 
-    if (existing) {
-      return new Response(
-        JSON.stringify({ success: true, message: "Idea already saved", id: existing.id }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!existingGenerated) {
+      await supabase
+        .from("founder_generated_ideas")
+        .insert({
+          user_id: user.id,
+          idea_id: idea.id,
+          idea: idea,
+          source: "trueblazer_ideation_engine",
+        });
     }
-
-    // Insert the idea
-    const { data, error } = await supabase
-      .from("founder_generated_ideas")
-      .insert({
-        user_id: user.id,
-        idea_id: idea.id,
-        idea: idea,
-        source: "trueblazer_ideation_engine",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Insert error:", error);
-      return new Response(
-        JSON.stringify({ error: "Failed to save idea" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("Saved founder idea:", data.id);
 
     return new Response(
-      JSON.stringify({ success: true, id: data.id }),
+      JSON.stringify({ success: true, id: ideaDbId, idea_id: idea.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
