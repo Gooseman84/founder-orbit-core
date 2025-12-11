@@ -7,6 +7,7 @@ import { useScoredFounderIdeas } from "@/hooks/useScoredFounderIdeas";
 import { useSaveFounderIdea } from "@/hooks/useSaveFounderIdea";
 import { usePromoteIdeaToWorkspace } from "@/hooks/usePromoteIdeaToWorkspace";
 import { useAuth } from "@/hooks/useAuth";
+import { useIdeaSessionStore } from "@/store/ideaSessionStore";
 import { IdeaCard } from "@/components/ideas/IdeaCard";
 import { IdeaScoredCard } from "@/components/ideas/IdeaScoredCard";
 import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
@@ -21,7 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, Scale, Sparkles, ArrowUpDown } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 
@@ -51,11 +53,21 @@ const Ideas = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Session store
+  const { 
+    sessionIdeas, 
+    setSessionIdeas, 
+    focusArea, 
+    setFocusArea,
+    currentMode,
+    setCurrentMode 
+  } = useIdeaSessionStore();
+
   const [savedIdeaIds, setSavedIdeaIds] = useState<Set<string>>(new Set());
   const [savingIdeaId, setSavingIdeaId] = useState<string | null>(null);
   const [promotingIdeaId, setPromotingIdeaId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("fit_desc");
-  const [selectedMode, setSelectedMode] = useState<IdeaMode>("breadth");
+  const [selectedMode, setSelectedMode] = useState<IdeaMode>(currentMode || "breadth");
   const [edgyMode, setEdgyMode] = useState<string | null>(null);
   const [filters, setFilters] = useState<IdeaFiltersState>({
     archetypes: [],
@@ -64,6 +76,15 @@ const Ideas = () => {
     timeCommitment: null,
     capitalRequired: null,
   });
+  const [activeTab, setActiveTab] = useState<string>("generated");
+
+  // Sync session ideas with scored ideas
+  useEffect(() => {
+    if (founderScoredIdeas.length > 0) {
+      const v6Ideas = founderScoredIdeas.map(s => s.idea) as BusinessIdeaV6[];
+      setSessionIdeas(v6Ideas);
+    }
+  }, [founderScoredIdeas, setSessionIdeas]);
 
   // Fetch edgy_mode from founder_profiles
   useEffect(() => {
@@ -163,7 +184,8 @@ const Ideas = () => {
 
   const handleGenerateFounderIdeas = async () => {
     try {
-      await generateFounderIdeas({ mode: selectedMode });
+      setCurrentMode(selectedMode);
+      await generateFounderIdeas({ mode: selectedMode, focus_area: focusArea || undefined });
       setSavedIdeaIds(new Set());
       toast({ 
         title: "Ideas Generated!", 
@@ -182,7 +204,7 @@ const Ideas = () => {
     setSavingIdeaId(null);
     if (success) {
       setSavedIdeaIds((prev) => new Set(prev).add(idea.id));
-      toast({ title: "Saved!", description: "This idea is now in your library." });
+      toast({ title: "Saved to Library!", description: "This idea is now in your Ideas → Library." });
     }
   };
 
@@ -215,9 +237,12 @@ const Ideas = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold mb-2">Your Business Ideas</h1>
-          <p className="text-muted-foreground">{ideas.length} ideas in library</p>
+          <p className="text-muted-foreground">{ideas.length} ideas in library · {sessionIdeas.length} in session</p>
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
+          <Button onClick={() => navigate("/fusion-lab")} variant="outline" className="gap-2">
+            <Combine className="w-4 h-4" />Fusion Lab
+          </Button>
           {ideas.length >= 2 && (
             <Button onClick={() => navigate("/ideas/compare")} variant="outline" className="gap-2">
               <Scale className="w-4 h-4" />Compare Ideas
@@ -229,11 +254,13 @@ const Ideas = () => {
         </div>
       </div>
 
-      {/* Mode Selector */}
+      {/* Mode Selector with Focus Area */}
       <div className="bg-card border border-border rounded-lg p-4">
         <ModeSelector 
           selectedMode={selectedMode} 
           onModeChange={setSelectedMode}
+          focusArea={focusArea}
+          onFocusAreaChange={setFocusArea}
           edgyMode={edgyMode}
         />
         <div className="mt-4 flex justify-end">
@@ -255,60 +282,101 @@ const Ideas = () => {
         <IdeaFilters filters={filters} onFiltersChange={setFilters} availableArchetypes={availableArchetypes} availableMarkets={availableMarkets} />
       )}
 
-      {filteredFounderIdeas.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <h2 className="text-2xl font-semibold">v6 Generated Ideas</h2>
-              <p className="text-sm text-muted-foreground">AI-powered ideas from your profile. Save the ones you like.</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
-              <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
-                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SORT_OPTIONS.map((opt) => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredFounderIdeas.map(({ idea, scores }) => (
-              <IdeaScoredCard
-                key={idea.id}
-                idea={idea}
-                scores={scores}
-                isSaved={savedIdeaIds.has(idea.id)}
-                isSaving={isSaving || savingIdeaId === idea.id}
-                isPromoting={isPromoting || promotingIdeaId === idea.id}
-                onSave={() => handleSaveIdea(idea)}
-                onPromote={() => handlePromoteIdea(idea)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Tabbed View: Generated vs Library */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="generated" className="gap-2">
+            <Sparkles className="w-4 h-4" />
+            Generated ({filteredFounderIdeas.length})
+          </TabsTrigger>
+          <TabsTrigger value="library" className="gap-2">
+            <Library className="w-4 h-4" />
+            Library ({filteredSavedIdeas.length})
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Idea Fusion Panel */}
-      {ideas.length >= 2 && (
-        <IdeaFusionPanel 
-          ideas={ideas} 
-          onFusionComplete={(fusedIdea) => {
-            toast({ 
-              title: "New Fused Idea!", 
-              description: `"${fusedIdea.title}" has been added to your library.` 
-            });
-          }} 
-        />
-      )}
+        {/* Generated (v6) Tab */}
+        <TabsContent value="generated" className="space-y-4">
+          {filteredFounderIdeas.length > 0 ? (
+            <section className="space-y-3">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <h2 className="text-2xl font-semibold">v6 Generated Ideas</h2>
+                  <p className="text-sm text-muted-foreground">AI-powered ideas from your profile. Save the ones you like to Library.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+                  <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+                    <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SORT_OPTIONS.map((opt) => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredFounderIdeas.map(({ idea, scores }) => (
+                  <IdeaScoredCard
+                    key={idea.id}
+                    idea={idea}
+                    scores={scores}
+                    isSaved={savedIdeaIds.has(idea.id)}
+                    isSaving={isSaving || savingIdeaId === idea.id}
+                    isPromoting={isPromoting || promotingIdeaId === idea.id}
+                    onSave={() => handleSaveIdea(idea)}
+                    onPromote={() => handlePromoteIdea(idea)}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : (
+            <EmptyIdeasState onGenerateIdeas={handleGenerateFounderIdeas} isGenerating={isGeneratingFounderIdeas} />
+          )}
 
-      {filteredSavedIdeas.length === 0 && ideas.length === 0 ? (
-        <EmptyIdeasState onGenerateIdeas={handleGenerateIdeas} isGenerating={generateIdeas.isPending} />
-      ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSavedIdeas.map((idea) => <IdeaCard key={idea.id} idea={idea} />)}
-        </div>
-      )}
+          {/* Fusion Panel in Generated tab */}
+          {(ideas.length + sessionIdeas.length) >= 2 && (
+            <IdeaFusionPanel 
+              ideas={ideas} 
+              sessionIdeas={sessionIdeas}
+              showSessionGroup
+              onFusionComplete={(fusedIdea) => {
+                toast({ 
+                  title: "New Fused Idea!", 
+                  description: `"${fusedIdea.title}" saved to Library.` 
+                });
+              }} 
+            />
+          )}
+        </TabsContent>
+
+        {/* Library Tab */}
+        <TabsContent value="library" className="space-y-4">
+          {filteredSavedIdeas.length === 0 ? (
+            <div className="text-center py-12">
+              <Library className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Your Library is Empty</h3>
+              <p className="text-muted-foreground mb-4">
+                Save generated ideas to build your library of opportunities.
+              </p>
+              <Button onClick={() => setActiveTab("generated")} variant="outline">
+                Go to Generated Ideas
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <h2 className="text-2xl font-semibold">Ideas Library</h2>
+                  <p className="text-sm text-muted-foreground">Your saved ideas, variants, and fused concepts.</p>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredSavedIdeas.map((idea) => <IdeaCard key={idea.id} idea={idea} />)}
+              </div>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
