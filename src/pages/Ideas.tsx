@@ -8,8 +8,8 @@ import { useSaveFounderIdea } from "@/hooks/useSaveFounderIdea";
 import { usePromoteIdeaToWorkspace } from "@/hooks/usePromoteIdeaToWorkspace";
 import { useAuth } from "@/hooks/useAuth";
 import { useIdeaSessionStore } from "@/store/ideaSessionStore";
-import { IdeaCard } from "@/components/ideas/IdeaCard";
 import { IdeaScoredCard } from "@/components/ideas/IdeaScoredCard";
+import { LibraryIdeaCard } from "@/components/ideas/LibraryIdeaCard";
 import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
 import { IdeaFilters, IdeaFiltersState } from "@/components/ideas/IdeaFilters";
 import { ModeSelector, type IdeaMode } from "@/components/ideas/ModeSelector";
@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine } from "lucide-react";
+import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 
@@ -41,11 +41,12 @@ function isV6Idea(idea: BusinessIdea | BusinessIdeaV6): idea is BusinessIdeaV6 {
 }
 
 const Ideas = () => {
-  const { ideas, isLoading, generateIdeas } = useIdeas();
+  const { ideas: libraryIdeas, isLoading } = useIdeas();
   const {
     scoredIdeas: founderScoredIdeas,
     isLoading: isGeneratingFounderIdeas,
     generate: generateFounderIdeas,
+    clearIdeas: clearGeneratedIdeas,
   } = useScoredFounderIdeas();
   const { saveIdea, isSaving } = useSaveFounderIdea();
   const { promote, isPromoting } = usePromoteIdeaToWorkspace();
@@ -53,18 +54,18 @@ const Ideas = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Session store
+  // Session store for tracking saves
   const { 
     sessionIdeas, 
-    setSessionIdeas, 
     focusArea, 
     setFocusArea,
     currentMode,
-    setCurrentMode 
+    setCurrentMode,
+    markIdeaAsSaved,
+    isIdeaSaved,
+    getDbId,
   } = useIdeaSessionStore();
 
-  const [savedIdeaIds, setSavedIdeaIds] = useState<Set<string>>(new Set());
-  const [savedIdeaDbIds, setSavedIdeaDbIds] = useState<Map<string, string>>(new Map());
   const [savingIdeaId, setSavingIdeaId] = useState<string | null>(null);
   const [promotingIdeaId, setPromotingIdeaId] = useState<string | null>(null);
   const [openingIdeaId, setOpeningIdeaId] = useState<string | null>(null);
@@ -79,14 +80,6 @@ const Ideas = () => {
     capitalRequired: null,
   });
   const [activeTab, setActiveTab] = useState<string>("generated");
-
-  // Sync session ideas with scored ideas
-  useEffect(() => {
-    if (founderScoredIdeas.length > 0) {
-      const v6Ideas = founderScoredIdeas.map(s => s.idea) as BusinessIdeaV6[];
-      setSessionIdeas(v6Ideas);
-    }
-  }, [founderScoredIdeas, setSessionIdeas]);
 
   // Fetch edgy_mode from founder_profiles
   useEffect(() => {
@@ -120,15 +113,16 @@ const Ideas = () => {
       }
     });
 
-    ideas.forEach((idea) => {
+    libraryIdeas.forEach((idea) => {
       if (idea.business_model_type) archetypeSet.add(idea.business_model_type);
+      if (idea.category) archetypeSet.add(idea.category);
     });
 
     return {
       availableArchetypes: Array.from(archetypeSet).sort(),
       availableMarkets: Array.from(marketSet).sort(),
     };
-  }, [founderScoredIdeas, ideas]);
+  }, [founderScoredIdeas, libraryIdeas]);
 
   // Filter and sort founder ideas
   const filteredFounderIdeas = useMemo(() => {
@@ -166,29 +160,22 @@ const Ideas = () => {
     });
   }, [founderScoredIdeas, filters, sortMode]);
 
-  const filteredSavedIdeas = useMemo(() => {
-    return ideas.filter((idea) => {
-      if (filters.archetypes.length > 0 && idea.business_model_type && !filters.archetypes.includes(idea.business_model_type)) {
-        return false;
+  const filteredLibraryIdeas = useMemo(() => {
+    return libraryIdeas.filter((idea) => {
+      if (filters.archetypes.length > 0) {
+        const ideaArchetype = idea.category || idea.business_model_type;
+        if (ideaArchetype && !filters.archetypes.includes(ideaArchetype)) {
+          return false;
+        }
       }
       return true;
     });
-  }, [ideas, filters]);
-
-  const handleGenerateIdeas = async () => {
-    try {
-      await generateIdeas.mutateAsync();
-      toast({ title: "Ideas Generated!", description: "Your personalized business ideas are ready." });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to generate ideas.", variant: "destructive" });
-    }
-  };
+  }, [libraryIdeas, filters]);
 
   const handleGenerateFounderIdeas = async () => {
     try {
       setCurrentMode(selectedMode);
       await generateFounderIdeas({ mode: selectedMode, focus_area: focusArea || undefined });
-      setSavedIdeaIds(new Set());
       toast({ 
         title: "Ideas Generated!", 
         description: `${selectedMode === "breadth" ? "Standard" : selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1).replace("_", " ")} mode ideas are ready.` 
@@ -198,6 +185,11 @@ const Ideas = () => {
     }
   };
 
+  const handleClearSession = () => {
+    clearGeneratedIdeas();
+    toast({ title: "Session Cleared", description: "Generated ideas have been cleared." });
+  };
+
   const handleSaveIdea = async (idea: BusinessIdea | BusinessIdeaV6): Promise<string | null> => {
     setSavingIdeaId(idea.id);
     // Convert v6 idea to legacy format for saving
@@ -205,9 +197,7 @@ const Ideas = () => {
     const result = await saveIdea(legacyIdea);
     setSavingIdeaId(null);
     if (result.success && result.id) {
-      setSavedIdeaIds((prev) => new Set(prev).add(idea.id));
-      // Track the database ID returned from the edge function
-      setSavedIdeaDbIds((prev) => new Map(prev).set(idea.id, result.id!));
+      markIdeaAsSaved(idea.id, result.id);
       toast({ title: "Saved to Library!", description: "This idea is now in your Ideas → Library." });
       return result.id;
     }
@@ -217,10 +207,10 @@ const Ideas = () => {
   const handleViewDetails = async (idea: BusinessIdea | BusinessIdeaV6) => {
     setOpeningIdeaId(idea.id);
     
-    // If already saved, navigate directly
-    if (savedIdeaIds.has(idea.id) || savedIdeaDbIds.has(idea.id)) {
-      const dbId = savedIdeaDbIds.get(idea.id) || idea.id;
-      navigate(`/ideas/${dbId}`);
+    // If already saved, navigate directly using the DB id
+    const existingDbId = getDbId(idea.id);
+    if (isIdeaSaved(idea.id) && existingDbId) {
+      navigate(`/ideas/${existingDbId}`);
       setOpeningIdeaId(null);
       return;
     }
@@ -245,6 +235,50 @@ const Ideas = () => {
     }
   };
 
+  const handlePromoteLibraryIdea = async (ideaId: string) => {
+    const idea = libraryIdeas.find(i => i.id === ideaId);
+    if (!idea) return;
+    
+    // Convert DB idea to BusinessIdea format for promote
+    const businessIdea: BusinessIdea = {
+      id: idea.id,
+      title: idea.title,
+      oneLiner: idea.description || "",
+      description: idea.description || "",
+      problemStatement: "",
+      targetCustomer: idea.target_customer || "",
+      revenueModel: idea.business_model_type || "",
+      mvpApproach: "",
+      goToMarket: "",
+      competitiveAdvantage: "",
+      financialTrajectory: { month3: "", month6: "", month12: "", mrrCeiling: "" },
+      requiredToolsSkills: "",
+      risksMitigation: "",
+      whyItFitsFounder: "",
+      primaryPassionDomains: [],
+      primarySkillNeeds: [],
+      markets: [],
+      businessArchetype: idea.business_model_type || idea.category || "",
+      hoursPerWeekMin: 5,
+      hoursPerWeekMax: 20,
+      capitalRequired: 0,
+      riskLevel: "medium",
+      timeToFirstRevenueMonths: 3,
+      requiresPublicPersonalBrand: false,
+      requiresTeamSoon: false,
+      requiresCoding: false,
+      salesIntensity: 3,
+      asyncDepthWork: 3,
+      firstSteps: [],
+    };
+    
+    const result = await promote(businessIdea);
+    if (result) {
+      toast({ title: "Blueprint created!", description: `Document + ${result.taskIds.length} tasks created.` });
+      navigate(`/workspace/${result.documentId}`);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -256,57 +290,28 @@ const Ideas = () => {
     );
   }
 
-  const showFilters = founderScoredIdeas.length > 0 || ideas.length > 0;
+  const showFilters = founderScoredIdeas.length > 0 || libraryIdeas.length > 0;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold mb-2">Your Business Ideas</h1>
-          <p className="text-muted-foreground">{ideas.length} ideas in library · {sessionIdeas.length} in session</p>
+          <p className="text-muted-foreground">
+            {libraryIdeas.length} saved in library · {sessionIdeas.length} generated this session
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
           <Button onClick={() => navigate("/fusion-lab")} variant="outline" className="gap-2">
             <Combine className="w-4 h-4" />Fusion Lab
           </Button>
-          {ideas.length >= 2 && (
+          {libraryIdeas.length >= 2 && (
             <Button onClick={() => navigate("/ideas/compare")} variant="outline" className="gap-2">
               <Scale className="w-4 h-4" />Compare Ideas
             </Button>
           )}
-          <Button onClick={handleGenerateIdeas} disabled={generateIdeas.isPending} variant="outline" className="gap-2">
-            <RefreshCw className="w-4 h-4" />More Ideas
-          </Button>
         </div>
       </div>
-
-      {/* Mode Selector with Focus Area */}
-      <div className="bg-card border border-border rounded-lg p-4">
-        <ModeSelector 
-          selectedMode={selectedMode} 
-          onModeChange={setSelectedMode}
-          focusArea={focusArea}
-          onFocusAreaChange={setFocusArea}
-          edgyMode={edgyMode}
-        />
-        <div className="mt-4 flex justify-end">
-          <Button 
-            onClick={handleGenerateFounderIdeas} 
-            disabled={isGeneratingFounderIdeas} 
-            className="gap-2"
-          >
-            {isGeneratingFounderIdeas ? (
-              <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />Generating...</>
-            ) : (
-              <><Sparkles className="w-4 h-4" />Generate {selectedMode === "breadth" ? "" : selectedMode.replace("_", " ").charAt(0).toUpperCase() + selectedMode.replace("_", " ").slice(1)} Ideas</>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      {showFilters && (
-        <IdeaFilters filters={filters} onFiltersChange={setFilters} availableArchetypes={availableArchetypes} availableMarkets={availableMarkets} />
-      )}
 
       {/* Tabbed View: Generated vs Library */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -317,25 +322,74 @@ const Ideas = () => {
           </TabsTrigger>
           <TabsTrigger value="library" className="gap-2">
             <Library className="w-4 h-4" />
-            Library ({filteredSavedIdeas.length})
+            Library ({filteredLibraryIdeas.length})
           </TabsTrigger>
         </TabsList>
 
         {/* Generated (v6) Tab */}
         <TabsContent value="generated" className="space-y-4">
+          {/* Mode Selector with Focus Area */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <ModeSelector 
+              selectedMode={selectedMode} 
+              onModeChange={setSelectedMode}
+              focusArea={focusArea}
+              onFocusAreaChange={setFocusArea}
+              edgyMode={edgyMode}
+            />
+            <div className="mt-4 flex justify-between items-center gap-2">
+              {sessionIdeas.length > 0 && (
+                <Button 
+                  onClick={handleClearSession} 
+                  variant="ghost" 
+                  size="sm"
+                  className="gap-2 text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear Session
+                </Button>
+              )}
+              <div className="flex-1" />
+              <Button 
+                onClick={handleGenerateFounderIdeas} 
+                disabled={isGeneratingFounderIdeas} 
+                className="gap-2"
+              >
+                {isGeneratingFounderIdeas ? (
+                  <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />Generating...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" />Generate {selectedMode === "breadth" ? "" : selectedMode.replace("_", " ").charAt(0).toUpperCase() + selectedMode.replace("_", " ").slice(1)} Ideas</>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {showFilters && (
+            <IdeaFilters 
+              filters={filters} 
+              onFiltersChange={setFilters} 
+              availableArchetypes={availableArchetypes} 
+              availableMarkets={availableMarkets} 
+            />
+          )}
+
           {filteredFounderIdeas.length > 0 ? (
             <section className="space-y-3">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
                   <h2 className="text-2xl font-semibold">v6 Generated Ideas</h2>
-                  <p className="text-sm text-muted-foreground">AI-powered ideas from your profile. Save the ones you like to Library.</p>
+                  <p className="text-sm text-muted-foreground">
+                    AI-powered ideas from your profile. Save the ones you like to Library.
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
                   <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
                     <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {SORT_OPTIONS.map((opt) => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                      {SORT_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -346,7 +400,7 @@ const Ideas = () => {
                     key={idea.id}
                     idea={idea}
                     scores={scores}
-                    isSaved={savedIdeaIds.has(idea.id)}
+                    isSaved={isIdeaSaved(idea.id)}
                     isSaving={isSaving || savingIdeaId === idea.id}
                     isPromoting={isPromoting || promotingIdeaId === idea.id}
                     isOpening={openingIdeaId === idea.id}
@@ -362,9 +416,9 @@ const Ideas = () => {
           )}
 
           {/* Fusion Panel in Generated tab */}
-          {(ideas.length + sessionIdeas.length) >= 2 && (
+          {(libraryIdeas.length + sessionIdeas.length) >= 2 && (
             <IdeaFusionPanel 
-              ideas={ideas} 
+              ideas={libraryIdeas} 
               sessionIdeas={sessionIdeas}
               showSessionGroup
               onFusionComplete={(fusedIdea) => {
@@ -379,12 +433,12 @@ const Ideas = () => {
 
         {/* Library Tab */}
         <TabsContent value="library" className="space-y-4">
-          {filteredSavedIdeas.length === 0 ? (
+          {filteredLibraryIdeas.length === 0 ? (
             <div className="text-center py-12">
               <Library className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">Your Library is Empty</h3>
               <p className="text-muted-foreground mb-4">
-                Save generated ideas to build your library of opportunities.
+                Save generated ideas, variants, or fused concepts to build your library.
               </p>
               <Button onClick={() => setActiveTab("generated")} variant="outline">
                 Go to Generated Ideas
@@ -395,11 +449,27 @@ const Ideas = () => {
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
                   <h2 className="text-2xl font-semibold">Ideas Library</h2>
-                  <p className="text-sm text-muted-foreground">Your saved ideas, variants, and fused concepts.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Your saved ideas, variants, and fused concepts. Click to explore.
+                  </p>
                 </div>
+                {showFilters && (
+                  <IdeaFilters 
+                    filters={filters} 
+                    onFiltersChange={setFilters} 
+                    availableArchetypes={availableArchetypes} 
+                    availableMarkets={availableMarkets} 
+                  />
+                )}
               </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredSavedIdeas.map((idea) => <IdeaCard key={idea.id} idea={idea} />)}
+                {filteredLibraryIdeas.map((idea) => (
+                  <LibraryIdeaCard 
+                    key={idea.id} 
+                    idea={idea} 
+                    onPromote={handlePromoteLibraryIdea}
+                  />
+                ))}
               </div>
             </>
           )}

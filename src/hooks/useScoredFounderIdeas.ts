@@ -18,11 +18,12 @@ interface UseScoredFounderIdeasResult {
   isLoading: boolean;
   error: Error | null;
   generate: (params?: { mode?: string; focus_area?: string }) => Promise<void>;
+  clearIdeas: () => void;
 }
 
 export const useScoredFounderIdeas = (): UseScoredFounderIdeasResult => {
   const { user } = useAuth();
-  const { ideas, isPending, error, generate } = useFounderIdeas();
+  const { ideas, isPending, error, generate, clearIdeas } = useFounderIdeas();
   const [profile, setProfile] = useState<FounderProfile | null>(null);
   const [profileError, setProfileError] = useState<Error | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
@@ -82,5 +83,6 @@ export const useScoredFounderIdeas = (): UseScoredFounderIdeasResult => {
     isLoading: isPending || isProfileLoading,
     error: combinedError instanceof Error ? combinedError : combinedError ? new Error(String(combinedError)) : null,
     generate,
+    clearIdeas,
   };
 };
