@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Sparkles, 
   Target, 
@@ -99,6 +101,8 @@ const MODE_OPTIONS: ModeOption[] = [
 interface ModeSelectorProps {
   selectedMode: IdeaMode;
   onModeChange: (mode: IdeaMode) => void;
+  focusArea?: string;
+  onFocusAreaChange?: (value: string) => void;
   edgyMode?: string | null;
   className?: string;
 }
@@ -106,6 +110,8 @@ interface ModeSelectorProps {
 export function ModeSelector({ 
   selectedMode, 
   onModeChange, 
+  focusArea = "",
+  onFocusAreaChange,
   edgyMode,
   className 
 }: ModeSelectorProps) {
@@ -122,7 +128,7 @@ export function ModeSelector({
   });
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn("space-y-4", className)}>
       <div className="flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-primary" />
         <h3 className="font-semibold text-sm">Generation Mode</h3>
@@ -163,6 +169,24 @@ export function ModeSelector({
       <p className="text-xs text-muted-foreground">
         {MODE_OPTIONS.find(m => m.mode === selectedMode)?.description}
       </p>
+
+      {/* Focus Area Input */}
+      <div className="space-y-2 pt-2 border-t border-border">
+        <Label htmlFor="focus-area" className="text-sm font-medium flex items-center gap-2">
+          <Target className="w-4 h-4 text-muted-foreground" />
+          Optional: What should we focus on?
+        </Label>
+        <Input
+          id="focus-area"
+          placeholder='e.g. "AI for real estate agents" or "TikTok offers for moms"'
+          value={focusArea}
+          onChange={(e) => onFocusAreaChange?.(e.target.value)}
+          className="text-sm"
+        />
+        <p className="text-xs text-muted-foreground">
+          Provide a niche, industry, or theme to guide idea generation
+        </p>
+      </div>
     </div>
   );
 }

@@ -17,6 +17,7 @@ import OnboardingInterview from "./pages/OnboardingInterview";
 import Ideas from "./pages/Ideas";
 import IdeaDetail from "./pages/IdeaDetail";
 import CompareIdeas from "./pages/CompareIdeas";
+import FusionLab from "./pages/FusionLab";
 import NorthStar from "./pages/NorthStar";
 import Feed from "./pages/Feed";
 import Tasks from "./pages/Tasks";
@@ -102,6 +103,16 @@ const App = () => (
                 <ProtectedRoute>
                   <MainLayout>
                     <CompareIdeas />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/fusion-lab"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <FusionLab />
                   </MainLayout>
                 </ProtectedRoute>
               }

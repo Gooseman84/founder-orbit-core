@@ -15,6 +15,14 @@ Your job is to merge 2–3 ideas into ONE stronger hybrid that:
 - Uses the strongest AI patterns from the inputs
 - Combines the best elements while eliminating redundancy
 
+MODE BLENDING INSTRUCTIONS:
+The ideas you receive may come from different generation modes (chaos, creator, persona, memetic, automation, money_printer, etc.).
+When fusing:
+1. Identify the dominant modes of the input ideas
+2. Intentionally blend the mode characteristics (e.g., chaos + creator = viral chaos content empire)
+3. The fused idea should feel like a NEW hybrid mode, not just one dominant mode
+4. In the fusion_notes, briefly explain how the modes were blended
+
 When fusing ideas:
 1. Identify the strongest revenue mechanism across all inputs
 2. Find the most viral or leveraged distribution angle
@@ -22,6 +30,7 @@ When fusing ideas:
 4. Take the simplest MVP approach that still captures value
 5. Merge AI patterns into a more powerful combined system
 6. Amplify any "chaos_factor" or "shock_factor" that could accelerate growth
+7. Blend the modes creatively - chaos ideas should add wildness, creator ideas add content angles, etc.
 
 Return a single Idea object using the v6 schema:
 
@@ -52,7 +61,8 @@ Return a single Idea object using the v6 schema:
   "go_to_market": string,
   "why_it_fits_founder": string,
   "first_steps": string[],
-  "fusion_notes": string (brief explanation of what was combined)
+  "fusion_notes": string (explain how the modes/ideas were blended),
+  "blended_modes": string[] (list of modes that influenced this fusion)
 }
 
 Rules:
@@ -60,7 +70,8 @@ Rules:
 - The fused idea should feel like a NEW, stronger concept — not just a mashup
 - Preserve the most compelling elements from each input
 - The chaos/shock factors should reflect the combined intensity
-- Generate a new UUID for the id field`;
+- Generate a new UUID for the id field
+- In fusion_notes, specifically mention which modes contributed what characteristics`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -98,15 +109,26 @@ serve(async (req) => {
       .eq("user_id", userId)
       .maybeSingle();
 
+    // Extract modes from input ideas for mode blending
+    const inputModes = ideas
+      .map((idea: any) => idea.mode || idea.category || "unknown")
+      .filter((m: string) => m !== "unknown");
+
     // Build user prompt with ideas to fuse
     const userPrompt = `Fuse these ${ideas.length} ideas into ONE stronger hybrid venture:
 
-## Ideas to Fuse
+## Ideas to Fuse (with their modes/categories)
 
 ${ideas.map((idea: any, index: number) => `
 ### Idea ${index + 1}: ${idea.title}
+Mode: ${idea.mode || "standard"}
+Category: ${idea.category || idea.business_model_type || "general"}
 ${JSON.stringify(idea, null, 2)}
 `).join("\n")}
+
+## Input Modes to Blend
+These ideas came from the following modes: ${inputModes.join(", ") || "standard"}
+Please intentionally blend characteristics from these modes into the fusion.
 
 ## Founder Context
 ${profile ? JSON.stringify({
@@ -119,7 +141,12 @@ ${profile ? JSON.stringify({
   creator_platforms: profile.creator_platforms,
 }, null, 2) : "No profile available"}
 
-Create a single fused idea that combines the strongest elements of all inputs. Return only the JSON object.`;
+Create a single fused idea that:
+1. Combines the strongest elements of all inputs
+2. Blends the modes (${inputModes.join(" + ") || "standard"}) into something new
+3. Explains the mode blending in fusion_notes
+
+Return only the JSON object.`;
 
     // Call Lovable AI
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -144,7 +171,7 @@ Create a single fused idea that combines the strongest elements of all inputs. R
             type: "function",
             function: {
               name: "create_fused_idea",
-              description: "Create a fused idea from 2-3 input ideas",
+              description: "Create a fused idea from 2-3 input ideas with mode blending",
               parameters: {
                 type: "object",
                 properties: {
@@ -178,8 +205,9 @@ Create a single fused idea that combines the strongest elements of all inputs. R
                       why_it_fits_founder: { type: "string" },
                       first_steps: { type: "array", items: { type: "string" } },
                       fusion_notes: { type: "string" },
+                      blended_modes: { type: "array", items: { type: "string" } },
                     },
-                    required: ["id", "title", "description", "category"],
+                    required: ["id", "title", "description", "category", "fusion_notes"],
                   },
                 },
                 required: ["idea"],
@@ -231,7 +259,7 @@ Create a single fused idea that combines the strongest elements of all inputs. R
       throw new Error("No fused idea in response");
     }
 
-    console.log("fuse-ideas: created fused idea:", fusedIdea.title);
+    console.log("fuse-ideas: created fused idea:", fusedIdea.title, "| modes:", fusedIdea.blended_modes);
 
     // Generate a proper UUID if not provided
     const ideaId = fusedIdea.id || crypto.randomUUID();
@@ -281,6 +309,7 @@ Create a single fused idea that combines the strongest elements of all inputs. R
           why_it_fits_founder: fusedIdea.why_it_fits_founder,
           first_steps: fusedIdea.first_steps,
           fusion_notes: fusedIdea.fusion_notes,
+          blended_modes: fusedIdea.blended_modes,
           ai_pattern: fusedIdea.ai_pattern,
           why_now: fusedIdea.why_now,
           industry: fusedIdea.industry,

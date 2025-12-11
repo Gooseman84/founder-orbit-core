@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,9 @@ import {
   Bot, 
   UserCircle,
   Flame,
-  Sparkles
+  Sparkles,
+  ExternalLink,
+  Library
 } from "lucide-react";
 
 interface IdeaVariantGeneratorProps {
@@ -40,8 +43,10 @@ export const IdeaVariantGenerator = ({
   onVariantsGenerated 
 }: IdeaVariantGeneratorProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [generatingMode, setGeneratingMode] = useState<VariantMode | null>(null);
   const [variants, setVariants] = useState<any[]>([]);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const handleGenerateVariant = async (mode: VariantMode) => {
     setGeneratingMode(mode);
@@ -64,8 +69,15 @@ Generate a ${mode.replace("_", " ")} variant that transforms or evolves this con
       if (error) throw error;
 
       const newVariants = data?.ideas || [];
-      setVariants((prev) => [...prev, ...newVariants.slice(0, 3)]);
-      onVariantsGenerated(newVariants.slice(0, 3));
+      // Mark variants with source mode
+      const markedVariants = newVariants.slice(0, 3).map((v: any) => ({
+        ...v,
+        sourceMode: mode,
+        parentIdeaId: idea.id,
+      }));
+      
+      setVariants((prev) => [...prev, ...markedVariants]);
+      onVariantsGenerated(markedVariants);
 
       toast({
         title: `${mode.replace("_", " ").charAt(0).toUpperCase() + mode.replace("_", " ").slice(1)} Variants Generated!`,
@@ -80,6 +92,77 @@ Generate a ${mode.replace("_", " ")} variant that transforms or evolves this con
       });
     } finally {
       setGeneratingMode(null);
+    }
+  };
+
+  const handleSaveVariant = async (variant: any) => {
+    setSavingId(variant.id);
+    
+    try {
+      // Insert variant into ideas table
+      const { data, error } = await supabase
+        .from("ideas")
+        .insert({
+          user_id: userId,
+          title: variant.title,
+          description: variant.description || variant.oneLiner,
+          category: variant.category,
+          business_model_type: variant.model,
+          target_customer: variant.targetCustomer,
+          platform: variant.platform || null,
+          complexity: variant.difficulty === "easy" ? "low" : variant.difficulty === "hard" ? "high" : "medium",
+          time_to_first_dollar: variant.timeToRevenue,
+          mode: "variant",
+          engine_version: "v6",
+          shock_factor: variant.shockFactor,
+          virality_potential: variant.viralityPotential,
+          leverage_score: variant.leverageScore,
+          automation_density: variant.automationDensity,
+          autonomy_level: variant.autonomyLevel,
+          culture_tailwind: variant.cultureTailwind,
+          chaos_factor: variant.chaosFactor,
+          status: "candidate",
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Saved to Library!",
+        description: `"${variant.title}" is now in your ideas library.`,
+      });
+
+      // Update variant in local state with new ID
+      setVariants((prev) =>
+        prev.map((v) => (v.id === variant.id ? { ...v, savedId: data.id } : v))
+      );
+
+      return data;
+    } catch (error: any) {
+      console.error("Error saving variant:", error);
+      toast({
+        title: "Save Failed",
+        description: error.message || "Could not save variant.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const handleOpenVariant = async (variant: any) => {
+    // If already saved, navigate directly
+    if (variant.savedId) {
+      navigate(`/ideas/${variant.savedId}`);
+      return;
+    }
+
+    // Save first, then navigate
+    const saved = await handleSaveVariant(variant);
+    if (saved) {
+      navigate(`/ideas/${saved.id}`);
     }
   };
 
@@ -123,11 +206,11 @@ Generate a ${mode.replace("_", " ")} variant that transforms or evolves this con
               <Sparkles className="h-4 w-4 text-primary" />
               Generated Variants ({variants.length})
             </h4>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {variants.map((variant, index) => (
                 <div
                   key={variant.id || index}
-                  className="p-3 border border-border rounded-lg bg-muted/30"
+                  className="p-4 border border-border rounded-lg bg-muted/30"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
@@ -136,10 +219,11 @@ Generate a ${mode.replace("_", " ")} variant that transforms or evolves this con
                         {variant.description || variant.oneLiner}
                       </p>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {variant.category || variant.mode}
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      {variant.sourceMode?.replace("_", " ") || variant.category || variant.mode}
                     </Badge>
                   </div>
+                  
                   {variant.viralityPotential !== undefined && (
                     <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
                       <span>🔥 Virality: {variant.viralityPotential}</span>
@@ -147,6 +231,32 @@ Generate a ${mode.replace("_", " ")} variant that transforms or evolves this con
                       <span>🤖 Automation: {variant.automationDensity}</span>
                     </div>
                   )}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1"
+                      disabled={savingId === variant.id || !!variant.savedId}
+                      onClick={() => handleSaveVariant(variant)}
+                    >
+                      {savingId === variant.id ? (
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
+                      ) : (
+                        <Library className="h-3 w-3" />
+                      )}
+                      {variant.savedId ? "Saved" : "Save to Library"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => handleOpenVariant(variant)}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Open as Full Idea
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
