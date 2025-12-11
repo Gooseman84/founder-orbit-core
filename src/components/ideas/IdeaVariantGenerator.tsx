@@ -55,8 +55,8 @@ Generate a ${mode.replace("_", " ")} variant that transforms or evolves this con
 
       const { data, error } = await supabase.functions.invoke("generate-founder-ideas", {
         body: {
+          user_id: userId,
           mode,
-          profile: founderProfile,
           focus_area: focusArea,
         },
       });
