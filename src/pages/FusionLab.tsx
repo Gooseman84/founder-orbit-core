@@ -167,43 +167,40 @@ const FusionLab = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/ideas")}
-            className="mb-2 -ml-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Ideas
-          </Button>
-          <h1 className="text-4xl font-bold flex items-center gap-3">
-            <Combine className="h-8 w-8 text-primary" />
-            Fusion Lab
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Remix your best ideas. Fuse 2–3 at a time and discover new hybrid ventures.
-          </p>
-        </div>
+      <div className="flex flex-col gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/ideas")}
+          className="-ml-2 w-fit"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Ideas
+        </Button>
+        <h1 className="text-2xl md:text-4xl font-bold flex items-center gap-2 md:gap-3">
+          <Combine className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+          Fusion Lab
+        </h1>
+        <p className="text-sm md:text-base text-muted-foreground">
+          Remix your best ideas. Fuse 2–3 at a time and discover new hybrid ventures.
+        </p>
       </div>
 
       {/* Pro Tip */}
-      <div className="flex items-start gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+      <div className="flex items-start gap-3 p-3 md:p-4 bg-primary/5 border border-primary/20 rounded-lg">
         <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-        <div className="text-sm">
+        <div className="text-xs md:text-sm">
           <span className="font-medium text-primary">Pro tip:</span>{" "}
           <span className="text-muted-foreground">
-            Mix different modes (Chaos + Creator, Persona + Memetic) to discover unexpected hybrids. 
-            The best fusions often come from combining opposite approaches!
+            Mix different modes (Chaos + Creator, Persona + Memetic) to discover unexpected hybrids.
           </span>
         </div>
       </div>
 
-      {/* Main Grid: Selection + Result */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      {/* Main Grid: Selection + Result - stacks on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Left Column: Idea Selection */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
@@ -417,7 +414,7 @@ const FusionLab = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {fusionHistory.map((idea) => (
               <Card
                 key={idea.id}
