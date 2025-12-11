@@ -127,8 +127,10 @@ export interface BusinessIdeaV6 {
 }
 
 // Type guard to check if idea is v6 format
-export function isV6Idea(idea: BusinessIdea | BusinessIdeaV6): idea is BusinessIdeaV6 {
-  return idea.engineVersion === "v6" && "category" in idea && "aiPattern" in idea;
+// Accepts both camelCase (frontend) and snake_case (DB) versions
+export function isV6Idea(idea: BusinessIdea | BusinessIdeaV6 | any): idea is BusinessIdeaV6 {
+  const engineVer = idea.engineVersion || idea.engine_version;
+  return engineVer === "v6" && ("category" in idea || "aiPattern" in idea || "ai_pattern" in idea);
 }
 
 // Helper to calculate overall v6 score

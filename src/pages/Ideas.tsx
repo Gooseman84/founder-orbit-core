@@ -64,8 +64,10 @@ const Ideas = () => {
   } = useIdeaSessionStore();
 
   const [savedIdeaIds, setSavedIdeaIds] = useState<Set<string>>(new Set());
+  const [savedIdeaDbIds, setSavedIdeaDbIds] = useState<Map<string, string>>(new Map());
   const [savingIdeaId, setSavingIdeaId] = useState<string | null>(null);
   const [promotingIdeaId, setPromotingIdeaId] = useState<string | null>(null);
+  const [openingIdeaId, setOpeningIdeaId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("fit_desc");
   const [selectedMode, setSelectedMode] = useState<IdeaMode>(currentMode || "breadth");
   const [edgyMode, setEdgyMode] = useState<string | null>(null);
@@ -196,15 +198,39 @@ const Ideas = () => {
     }
   };
 
-  const handleSaveIdea = async (idea: BusinessIdea | BusinessIdeaV6) => {
+  const handleSaveIdea = async (idea: BusinessIdea | BusinessIdeaV6): Promise<string | null> => {
     setSavingIdeaId(idea.id);
     // Convert v6 idea to legacy format for saving
     const legacyIdea = isV6Idea(idea) ? convertV6ToLegacy(idea) : idea;
-    const success = await saveIdea(legacyIdea);
+    const result = await saveIdea(legacyIdea);
     setSavingIdeaId(null);
-    if (success) {
+    if (result.success && result.id) {
       setSavedIdeaIds((prev) => new Set(prev).add(idea.id));
+      // Track the database ID returned from the edge function
+      setSavedIdeaDbIds((prev) => new Map(prev).set(idea.id, result.id!));
       toast({ title: "Saved to Library!", description: "This idea is now in your Ideas → Library." });
+      return result.id;
+    }
+    return null;
+  };
+
+  const handleViewDetails = async (idea: BusinessIdea | BusinessIdeaV6) => {
+    setOpeningIdeaId(idea.id);
+    
+    // If already saved, navigate directly
+    if (savedIdeaIds.has(idea.id) || savedIdeaDbIds.has(idea.id)) {
+      const dbId = savedIdeaDbIds.get(idea.id) || idea.id;
+      navigate(`/ideas/${dbId}`);
+      setOpeningIdeaId(null);
+      return;
+    }
+    
+    // Save first, then navigate
+    const savedId = await handleSaveIdea(idea);
+    setOpeningIdeaId(null);
+    
+    if (savedId) {
+      navigate(`/ideas/${savedId}`);
     }
   };
 
@@ -323,8 +349,10 @@ const Ideas = () => {
                     isSaved={savedIdeaIds.has(idea.id)}
                     isSaving={isSaving || savingIdeaId === idea.id}
                     isPromoting={isPromoting || promotingIdeaId === idea.id}
+                    isOpening={openingIdeaId === idea.id}
                     onSave={() => handleSaveIdea(idea)}
                     onPromote={() => handlePromoteIdea(idea)}
+                    onViewDetails={() => handleViewDetails(idea)}
                   />
                 ))}
               </div>
