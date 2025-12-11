@@ -293,21 +293,26 @@ const Ideas = () => {
   const showFilters = founderScoredIdeas.length > 0 || libraryIdeas.length > 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      {/* Header - stacks on mobile */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Your Business Ideas</h1>
-          <p className="text-muted-foreground">
-            {libraryIdeas.length} saved in library · {sessionIdeas.length} generated this session
+          <h1 className="text-2xl md:text-4xl font-bold mb-1 md:mb-2">Your Business Ideas</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            {libraryIdeas.length} saved · {sessionIdeas.length} generated
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 justify-end">
-          <Button onClick={() => navigate("/fusion-lab")} variant="outline" className="gap-2">
-            <Combine className="w-4 h-4" />Fusion Lab
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => navigate("/fusion-lab")} variant="outline" size="sm" className="gap-2">
+            <Combine className="w-4 h-4" />
+            <span className="hidden sm:inline">Fusion Lab</span>
+            <span className="sm:hidden">Fusion</span>
           </Button>
           {libraryIdeas.length >= 2 && (
-            <Button onClick={() => navigate("/ideas/compare")} variant="outline" className="gap-2">
-              <Scale className="w-4 h-4" />Compare Ideas
+            <Button onClick={() => navigate("/ideas/compare")} variant="outline" size="sm" className="gap-2">
+              <Scale className="w-4 h-4" />
+              <span className="hidden sm:inline">Compare Ideas</span>
+              <span className="sm:hidden">Compare</span>
             </Button>
           )}
         </div>
@@ -316,13 +321,13 @@ const Ideas = () => {
       {/* Tabbed View: Generated vs Library */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="generated" className="gap-2">
+          <TabsTrigger value="generated" className="gap-2 text-xs sm:text-sm">
             <Sparkles className="w-4 h-4" />
-            Generated ({filteredFounderIdeas.length})
+            <span className="hidden xs:inline">Generated</span> ({filteredFounderIdeas.length})
           </TabsTrigger>
-          <TabsTrigger value="library" className="gap-2">
+          <TabsTrigger value="library" className="gap-2 text-xs sm:text-sm">
             <Library className="w-4 h-4" />
-            Library ({filteredLibraryIdeas.length})
+            <span className="hidden xs:inline">Library</span> ({filteredLibraryIdeas.length})
           </TabsTrigger>
         </TabsList>
 
@@ -411,7 +416,7 @@ const Ideas = () => {
                   </Select>
                 </div>
               </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {filteredFounderIdeas.map(({ idea, scores }) => (
                   <IdeaScoredCard
                     key={idea.id}

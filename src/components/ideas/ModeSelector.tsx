@@ -133,7 +133,8 @@ export function ModeSelector({
         <Sparkles className="w-4 h-4 text-primary" />
         <h3 className="font-semibold text-sm">Generation Mode</h3>
       </div>
-      <div className="flex flex-wrap gap-2">
+      {/* Horizontal scrollable strip on mobile, wrap on desktop */}
+      <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 md:flex-wrap scrollbar-hide">
         {availableModes.map((option) => {
           const Icon = option.icon;
           const isSelected = selectedMode === option.mode;

@@ -140,36 +140,40 @@ const Blueprint = () => {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8 flex items-start justify-between">
+    <div className="space-y-4 md:space-y-6">
+      {/* Header - stacks on mobile */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Founder Blueprint</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold">Founder Blueprint</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Your unified life + business strategy
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={handleGenerateBlueprint}
             disabled={generating}
+            size="sm"
             className="flex items-center"
           >
             <Sparkles className={`mr-2 h-4 w-4 ${generating ? "animate-spin" : ""}`} />
-            {generating ? "Generating..." : "Generate from my profile"}
+            {generating ? "Generating..." : "Generate"}
           </Button>
           <Button
             onClick={handleRefreshWithAI}
             disabled={refreshing}
             variant="outline"
+            size="sm"
             className="flex items-center"
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Refreshing..." : "Refresh with AI"}
+            {refreshing ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* 3-column grid on desktop, single column on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Left Column: Life Blueprint */}
         <Card>
           <CardHeader className="pb-3">
