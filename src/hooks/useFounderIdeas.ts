@@ -34,6 +34,7 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
 
       const { data, error } = await supabase.functions.invoke("generate-founder-ideas", {
         body: {
+          user_id: user.id,
           mode,
           focus_area: params.focus_area,
         },

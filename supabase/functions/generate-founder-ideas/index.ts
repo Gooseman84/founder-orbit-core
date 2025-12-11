@@ -132,39 +132,21 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing Authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    const supabaseAuth = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseAuth.auth.getUser();
-
-    if (userError || !user) {
-      console.error("generate-founder-ideas: auth error", userError);
-      return new Response(
-        JSON.stringify({ error: "Not authenticated" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // Parse request body for v6 mode and focus_area
+    // Parse request body for user_id, mode, and focus_area
     const body = await req.json().catch(() => ({}));
+    const userId = body.user_id;
     const mode: IdeaGenerationMode = body.mode || "breadth";
     const focusArea: string | undefined = body.focus_area;
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Missing user_id in request body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     console.log(`generate-founder-ideas v6: mode=${mode}, focus_area=${focusArea || "none"}`);
 
@@ -174,7 +156,7 @@ serve(async (req) => {
     const { data: profileRow, error: profileError } = await supabase
       .from("founder_profiles")
       .select("profile, work_personality, creator_platforms, edgy_mode, wants_money_systems, open_to_personas, open_to_memetic_ideas")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (profileError || !profileRow?.profile) {
@@ -200,7 +182,7 @@ serve(async (req) => {
     const { data: interviewRows } = await supabase
       .from("founder_interviews")
       .select("context_summary, updated_at, status")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("status", "completed")
       .order("updated_at", { ascending: false })
       .limit(1);
