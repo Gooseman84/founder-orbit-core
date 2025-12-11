@@ -530,6 +530,7 @@ export type Database = {
           culture_tailwind: number | null
           description: string | null
           engine_version: string | null
+          fusion_metadata: Json | null
           id: string
           leverage_score: number | null
           lifestyle_fit_score: number | null
@@ -558,6 +559,7 @@ export type Database = {
           culture_tailwind?: number | null
           description?: string | null
           engine_version?: string | null
+          fusion_metadata?: Json | null
           id?: string
           leverage_score?: number | null
           lifestyle_fit_score?: number | null
@@ -586,6 +588,7 @@ export type Database = {
           culture_tailwind?: number | null
           description?: string | null
           engine_version?: string | null
+          fusion_metadata?: Json | null
           id?: string
           leverage_score?: number | null
           lifestyle_fit_score?: number | null
