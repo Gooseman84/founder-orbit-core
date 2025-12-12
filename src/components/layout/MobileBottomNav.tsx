@@ -18,10 +18,17 @@ export function MobileBottomNav() {
         {tabs.map(({ label, path, icon: Icon }) => {
           const isActive = location.pathname === path || location.pathname.startsWith(`${path}/`);
           
+          const handleTap = () => {
+            if (navigator.vibrate) {
+              navigator.vibrate(10);
+            }
+          };
+
           return (
             <Link
               key={path}
               to={path}
+              onClick={handleTap}
               className={cn(
                 "flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all duration-150 active:scale-95",
                 isActive ? "text-[#FF6A00]" : "text-muted-foreground"
