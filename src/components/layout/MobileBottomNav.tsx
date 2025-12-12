@@ -13,7 +13,7 @@ export function MobileBottomNav() {
   const location = useLocation();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 bg-background border-t border-border md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 bg-background/90 backdrop-blur border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)] md:hidden">
       <div className="flex items-center justify-around h-14">
         {tabs.map(({ label, path, icon: Icon }) => {
           const isActive = location.pathname === path || location.pathname.startsWith(`${path}/`);
@@ -23,17 +23,23 @@ export function MobileBottomNav() {
               key={path}
               to={path}
               className={cn(
-                "flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground"
+                "flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all duration-150 active:scale-95",
+                isActive ? "text-[#FF6A00]" : "text-muted-foreground"
               )}
             >
-              <Icon
-                className={cn(
-                  "w-5 h-5 transition-transform",
-                  isActive && "scale-105"
+              <div className="relative flex flex-col items-center">
+                <Icon
+                  className={cn(
+                    "w-5 h-5 transition-transform duration-150",
+                    isActive && "scale-110"
+                  )}
+                />
+                {/* Active indicator dot */}
+                {isActive && (
+                  <span className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-[#FF6A00]" />
                 )}
-              />
-              <span className="text-[11px] font-medium">{label}</span>
+              </div>
+              <span className="text-[11px] font-medium mt-1">{label}</span>
             </Link>
           );
         })}
