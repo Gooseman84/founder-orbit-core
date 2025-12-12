@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarNav } from "./SidebarNav";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { LevelBadge } from "@/components/shared/LevelBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useXP } from "@/hooks/useXP";
@@ -121,11 +122,14 @@ export function AppShell({ children }: AppShellProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="pt-14 md:pt-16 md:pl-64">
+      <main className="pt-14 pb-16 md:pt-16 md:pb-0 md:pl-64">
         <div className="container mx-auto py-4 px-3 md:py-8 md:px-8 max-w-7xl">
           {children}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }
