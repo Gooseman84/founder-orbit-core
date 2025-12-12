@@ -2,97 +2,114 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* TrueBlazer Design System
+   All colors MUST be HSL format.
+   Primary brand: #FF6A00 (TrueBlazer Flame)
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 215 25% 27%;
+    /* TrueBlazer Light Theme */
+    --background: 225 43% 6%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 25% 27%;
+    --card: 224 47% 8%;
+    --card-foreground: 220 14% 90%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 27%;
+    --popover: 224 47% 8%;
+    --popover-foreground: 220 14% 90%;
 
-    --primary: 217 91% 60%;
+    --primary: 24 100% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 215 25% 27%;
+    --secondary: 220 27% 11%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 27% 11%;
+    --muted-foreground: 215 16% 65%;
 
-    --accent: 25 95% 53%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 30 97% 72%;
+    --accent-foreground: 220 27% 11%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive-foreground: 0 40% 15%;
 
     --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
+    --success-foreground: 142 76% 10%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 60%;
+    --warning: 48 96% 47%;
+    --warning-foreground: 35 92% 15%;
+
+    --border: 210 24% 16%;
+    --input: 210 24% 16%;
+    --ring: 24 100% 50%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 217 33% 97%;
-    --sidebar-foreground: 215 25% 27%;
-    --sidebar-primary: 217 91% 60%;
+    /* TrueBlazer Gradient */
+    --tb-gradient-primary: linear-gradient(135deg, hsl(24 100% 50%) 0%, hsl(30 100% 62%) 100%);
+    --tb-gradient-subtle: linear-gradient(180deg, hsl(24 100% 50% / 0.15) 0%, transparent 100%);
+
+    /* Sidebar */
+    --sidebar-background: 225 43% 6%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 24 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 214 32% 91%;
-    --sidebar-accent-foreground: 215 25% 27%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 220 27% 11%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 210 24% 16%;
+    --sidebar-ring: 24 100% 50%;
 
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
-    --background: 222 47% 11%;
+    /* TrueBlazer Dark Theme (same as root for now - dark-first design) */
+    --background: 225 43% 6%;
     --foreground: 210 40% 98%;
 
-    --card: 217 33% 17%;
-    --card-foreground: 210 40% 98%;
+    --card: 224 47% 8%;
+    --card-foreground: 220 14% 90%;
 
-    --popover: 217 33% 17%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 224 47% 8%;
+    --popover-foreground: 220 14% 90%;
 
-    --primary: 217 91% 60%;
+    --primary: 24 100% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 28% 17%;
+    --secondary: 220 27% 11%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 215 28% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 220 27% 11%;
+    --muted-foreground: 215 16% 65%;
 
-    --accent: 25 95% 53%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 30 97% 72%;
+    --accent-foreground: 220 27% 11%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 40% 15%;
 
     --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
+    --success-foreground: 142 76% 10%;
 
-    --border: 215 28% 17%;
-    --input: 215 28% 17%;
-    --ring: 217 91% 60%;
+    --warning: 48 96% 47%;
+    --warning-foreground: 35 92% 15%;
 
-    --sidebar-background: 222 47% 11%;
+    --border: 210 24% 16%;
+    --input: 210 24% 16%;
+    --ring: 24 100% 50%;
+
+    --tb-gradient-primary: linear-gradient(135deg, hsl(24 100% 50%) 0%, hsl(30 100% 62%) 100%);
+    --tb-gradient-subtle: linear-gradient(180deg, hsl(24 100% 50% / 0.15) 0%, transparent 100%);
+
+    --sidebar-background: 225 43% 6%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 24 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 28% 17%;
+    --sidebar-accent: 220 27% 11%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 28% 17%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-border: 210 24% 16%;
+    --sidebar-ring: 24 100% 50%;
   }
 }
 
@@ -102,17 +119,47 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
 }
 
 @layer utilities {
   /* Hide scrollbar while maintaining scroll functionality */
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
   .scrollbar-hide::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari, Opera */
+    display: none;
+  }
+
+  /* TrueBlazer gradient background utility */
+  .tb-gradient-bg {
+    background: var(--tb-gradient-primary);
+  }
+
+  .tb-gradient-subtle {
+    background: var(--tb-gradient-subtle);
+  }
+
+  /* Native-feel tap targets */
+  .tap-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+}
+
+@layer components {
+  /* TrueBlazer gradient button */
+  .btn-gradient {
+    background: var(--tb-gradient-primary);
+    @apply text-primary-foreground font-medium transition-all duration-150 ease-out;
+  }
+  
+  .btn-gradient:hover {
+    filter: brightness(1.1);
+  }
+  
+  .btn-gradient:active {
+    @apply scale-95;
   }
 }
