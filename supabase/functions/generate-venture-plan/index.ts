@@ -89,40 +89,21 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing Authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
-    const supabaseAuth = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseAuth.auth.getUser();
-
-    if (userError || !user) {
-      console.error("generate-venture-plan: auth error", userError);
-      return new Response(
-        JSON.stringify({ error: "Not authenticated" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Parse request body
+    // Parse request body - userId comes from request body (JWT validated at gateway)
     const body = await req.json();
-    const { ventureId, planType = "30_day", startDate } = body;
+    const { ventureId, planType = "30_day", startDate, userId } = body;
+
+    if (!userId) {
+      console.error("generate-venture-plan: missing userId");
+      return new Response(
+        JSON.stringify({ error: "userId is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!ventureId) {
       return new Response(
@@ -131,12 +112,14 @@ serve(async (req) => {
       );
     }
 
+    console.log("generate-venture-plan: generating for user", userId, "venture", ventureId);
+
     // Load venture and verify ownership
     const { data: venture, error: ventureError } = await supabase
       .from("ventures")
       .select("*")
       .eq("id", ventureId)
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (ventureError || !venture) {
@@ -162,7 +145,7 @@ serve(async (req) => {
     const { data: profileRow, error: profileError } = await supabase
       .from("founder_profiles")
       .select("profile")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (profileError || !profileRow?.profile) {
@@ -309,7 +292,7 @@ serve(async (req) => {
     const { data: planRow, error: planInsertError } = await supabase
       .from("venture_plans")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         venture_id: venture.id,
         plan_type: planType,
         start_date: planData.startDate || planStartDate,
@@ -345,7 +328,7 @@ serve(async (req) => {
     for (const week of planData.weeks) {
       for (const task of week.tasks || []) {
         tasksToInsert.push({
-          user_id: user.id,
+          user_id: userId,
           venture_id: venture.id,
           title: task.title,
           description: task.description || null,

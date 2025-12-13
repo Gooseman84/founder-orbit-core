@@ -41,6 +41,7 @@ export function useGenerateVenturePlan(): UseGenerateVenturePlanResult {
         "generate-venture-plan",
         {
           body: {
+            userId: user.id,
             ventureId,
             planType: opts?.planType ?? "30_day",
             startDate: opts?.startDate,
