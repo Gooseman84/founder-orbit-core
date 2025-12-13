@@ -1188,7 +1188,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_subscription_info: {
+        Row: {
+          cancel_at: string | null
+          created_at: string | null
+          current_period_end: string | null
+          id: string | null
+          plan: string | null
+          renewal_period: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          cancel_at?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          id?: string | null
+          plan?: string | null
+          renewal_period?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          cancel_at?: string | null
+          created_at?: string | null
+          current_period_end?: string | null
+          id?: string | null
+          plan?: string | null
+          renewal_period?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_total_xp: { Args: { p_user_id: string }; Returns: number }

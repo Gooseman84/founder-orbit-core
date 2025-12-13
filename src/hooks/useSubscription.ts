@@ -31,8 +31,9 @@ export const useSubscription = (): UseSubscriptionReturn => {
       setLoading(true);
       setError(null);
 
+      // Use secure view that excludes Stripe IDs
       const { data, error: queryError } = await supabase
-        .from("user_subscriptions")
+        .from("user_subscription_info")
         .select("*")
         .eq("user_id", user.id)
         .limit(1)
