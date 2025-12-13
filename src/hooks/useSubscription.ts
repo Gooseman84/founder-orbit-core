@@ -31,12 +31,9 @@ export const useSubscription = (): UseSubscriptionReturn => {
       setLoading(true);
       setError(null);
 
-      // Use secure view that excludes Stripe IDs
+      // Use secure RPC function that excludes Stripe IDs
       const { data, error: queryError } = await supabase
-        .from("user_subscription_info")
-        .select("*")
-        .eq("user_id", user.id)
-        .limit(1)
+        .rpc("get_user_subscription", { p_user_id: user.id })
         .maybeSingle();
 
       if (queryError) {
