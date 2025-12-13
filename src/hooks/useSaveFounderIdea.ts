@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./useAuth";
 import type { BusinessIdea } from "@/types/businessIdea";
 
 interface SaveResult {
@@ -8,17 +9,23 @@ interface SaveResult {
 }
 
 export function useSaveFounderIdea() {
+  const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const saveIdea = async (idea: BusinessIdea): Promise<SaveResult> => {
+    if (!user) {
+      setError(new Error("Not authenticated"));
+      return { success: false };
+    }
+
     setIsSaving(true);
     setError(null);
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke(
         "save-founder-idea",
-        { body: { idea } }
+        { body: { idea, userId: user.id } }
       );
 
       if (invokeError) {

@@ -14,33 +14,19 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const authHeader = req.headers.get("Authorization");
-
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Use anon key with auth header for user verification
-    const supabaseAuth = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
-    if (authError || !user) {
-      console.error("Auth error:", authError);
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     // Use service role for DB operations
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    const { idea } = await req.json();
+    const { idea, userId } = await req.json();
+
+    if (!userId) {
+      console.error("save-founder-idea: missing userId");
+      return new Response(
+        JSON.stringify({ error: "userId is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Light validation
     if (!idea || typeof idea !== "object" || !idea.id || !idea.title) {
@@ -50,11 +36,13 @@ serve(async (req) => {
       );
     }
 
+    console.log("save-founder-idea: saving for user", userId, "idea", idea.title);
+
     // Check if already saved in ideas table
     const { data: existingIdea } = await supabase
       .from("ideas")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("title", idea.title)
       .maybeSingle();
 
@@ -65,7 +53,7 @@ serve(async (req) => {
       const { data: newIdea, error: insertError } = await supabase
         .from("ideas")
         .insert({
-          user_id: user.id,
+          user_id: userId,
           title: idea.title,
           description: idea.description || idea.oneLiner || null,
           category: idea.category || null,
@@ -104,7 +92,7 @@ serve(async (req) => {
     const { data: existingGenerated } = await supabase
       .from("founder_generated_ideas")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("idea_id", idea.id)
       .maybeSingle();
 
@@ -112,7 +100,7 @@ serve(async (req) => {
       await supabase
         .from("founder_generated_ideas")
         .insert({
-          user_id: user.id,
+          user_id: userId,
           idea_id: idea.id,
           idea: idea,
           source: "trueblazer_ideation_engine",
