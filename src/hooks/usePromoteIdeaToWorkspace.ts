@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./useAuth";
 import type { BusinessIdea } from "@/types/businessIdea";
 
 interface PromoteResult {
@@ -8,10 +9,16 @@ interface PromoteResult {
 }
 
 export function usePromoteIdeaToWorkspace() {
+  const { user } = useAuth();
   const [isPromoting, setIsPromoting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const promote = async (idea: BusinessIdea, createTasks = true): Promise<PromoteResult | null> => {
+    if (!user) {
+      setError(new Error("Not authenticated"));
+      return null;
+    }
+
     setIsPromoting(true);
     setError(null);
 
@@ -19,7 +26,7 @@ export function usePromoteIdeaToWorkspace() {
       const { data, error: fnError } = await supabase.functions.invoke(
         "promote-idea-to-workspace",
         {
-          body: { idea, createTasks },
+          body: { idea, createTasks, userId: user.id },
         }
       );
 

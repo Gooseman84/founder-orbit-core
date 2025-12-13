@@ -129,33 +129,19 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user from auth
-    const supabaseAuth = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    const { idea, createTasks = true, userId } = await req.json();
 
-    if (userError || !user) {
-      console.error("Auth error:", userError);
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
+    if (!userId) {
+      console.error("promote-idea-to-workspace: missing userId");
+      return new Response(JSON.stringify({ error: "userId is required" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const { idea, createTasks = true } = await req.json();
 
     if (!idea || !idea.id || !idea.title) {
       return new Response(JSON.stringify({ error: "Invalid idea object" }), {
@@ -164,7 +150,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Creating workspace blueprint for idea: ${idea.title} for user: ${user.id}`);
+    console.log(`Creating workspace blueprint for idea: ${idea.title} for user: ${userId}`);
 
     // Generate markdown content
     const markdownContent = generateBlueprintMarkdown(idea);
@@ -173,7 +159,7 @@ serve(async (req) => {
     const { data: doc, error: docError } = await supabase
       .from("workspace_documents")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         doc_type: "idea_blueprint",
         title: `Blueprint: ${idea.title}`,
         content: markdownContent,
@@ -196,7 +182,7 @@ serve(async (req) => {
     if (createTasks) {
       const starterTasks = generateStarterTasks(idea);
       const tasksToInsert = starterTasks.map((t) => ({
-        user_id: user.id,
+        user_id: userId,
         title: t.title,
         description: t.description,
         category: t.category,
