@@ -20,7 +20,6 @@ import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
 import { WorkspaceAssistantPanel } from '@/components/workspace/WorkspaceAssistantPanel';
 import { ProBadge } from '@/components/billing/ProBadge';
 import { ProUpgradeModal } from '@/components/billing/ProUpgradeModal';
-import { PLAN_ERROR_CODES } from '@/config/plans';
 import type { TaskContext } from '@/types/tasks';
 
 export default function Workspace() {
@@ -425,7 +424,7 @@ export default function Workspace() {
       <ProUpgradeModal 
         open={showPaywall} 
         onClose={() => setShowPaywall(false)}
-        reasonCode={PLAN_ERROR_CODES.EXPORT_REQUIRES_PRO}
+        reasonCode="EXPORT_REQUIRES_PRO"
       />
     </div>
   );

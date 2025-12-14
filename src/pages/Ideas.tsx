@@ -20,6 +20,7 @@ import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
 import { supabase } from "@/integrations/supabase/client";
 import { PLAN_ERROR_CODES, type PlanErrorCode } from "@/config/plans";
+import type { PaywallReasonCode } from "@/config/paywallCopy";
 import {
   Select,
   SelectContent,
@@ -91,25 +92,32 @@ const Ideas = () => {
   });
   const [activeTab, setActiveTab] = useState<string>("generated");
   const [showPaywall, setShowPaywall] = useState(false);
-  const [paywallErrorCode, setPaywallErrorCode] = useState<PlanErrorCode | undefined>();
+  const [paywallReasonCode, setPaywallReasonCode] = useState<PaywallReasonCode | undefined>();
 
   // Show paywall when plan errors occur
   useEffect(() => {
     if (genPlanError?.code || savePlanError?.code) {
-      setPaywallErrorCode(genPlanError?.code || savePlanError?.code);
+      // Map PLAN_ERROR_CODES to PaywallReasonCode
+      const errorCode = genPlanError?.code || savePlanError?.code;
+      const reasonMap: Record<string, PaywallReasonCode> = {
+        [PLAN_ERROR_CODES.IDEA_LIMIT_REACHED]: "IDEA_LIMIT_REACHED",
+        [PLAN_ERROR_CODES.MODE_REQUIRES_PRO]: "MODE_REQUIRES_PRO",
+        [PLAN_ERROR_CODES.LIBRARY_FULL]: "LIBRARY_FULL_FREE",
+      };
+      setPaywallReasonCode(reasonMap[errorCode as string] || "IDEA_LIMIT_REACHED");
       setShowPaywall(true);
     }
   }, [genPlanError, savePlanError]);
 
   const handleClosePaywall = () => {
     setShowPaywall(false);
-    setPaywallErrorCode(undefined);
+    setPaywallReasonCode(undefined);
     clearGenPlanError();
     clearSavePlanError();
   };
 
   const handleProModeClick = (mode: IdeaMode) => {
-    setPaywallErrorCode(PLAN_ERROR_CODES.MODE_REQUIRES_PRO);
+    setPaywallReasonCode("MODE_REQUIRES_PRO");
     setShowPaywall(true);
   };
   useEffect(() => {
@@ -536,7 +544,7 @@ const Ideas = () => {
       <ProUpgradeModal
         open={showPaywall}
         onClose={handleClosePaywall}
-        reasonCode={paywallErrorCode}
+        reasonCode={paywallReasonCode}
       />
     </div>
   );
