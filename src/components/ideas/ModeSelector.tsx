@@ -11,20 +11,11 @@ import {
   Flame, 
   DollarSign, 
   Share2, 
-  MessageCircle 
+  MessageCircle,
+  Lock,
+  Crown
 } from "lucide-react";
-
-export type IdeaMode = 
-  | "breadth" 
-  | "focus" 
-  | "creator" 
-  | "automation" 
-  | "persona" 
-  | "boundless" 
-  | "chaos" 
-  | "money_printer" 
-  | "memetic" 
-  | "locker_room";
+import { IDEA_MODES, type IdeaMode, modeRequiresPro } from "@/config/plans";
 
 interface ModeOption {
   mode: IdeaMode;
@@ -32,71 +23,30 @@ interface ModeOption {
   description: string;
   icon: React.ElementType;
   requiresEdgy?: "bold" | "unhinged";
+  requiresPro: boolean;
 }
 
-const MODE_OPTIONS: ModeOption[] = [
-  {
-    mode: "breadth",
-    label: "Standard",
-    description: "Wide sampling across all sane categories",
-    icon: Sparkles,
-  },
-  {
-    mode: "focus",
-    label: "Focus",
-    description: "Deep exploration of one niche or theme",
-    icon: Target,
-  },
-  {
-    mode: "creator",
-    label: "Creator",
-    description: "Content empires, creator tools, monetization",
-    icon: Video,
-  },
-  {
-    mode: "automation",
-    label: "Automation",
-    description: "Workflow, RPA, agents, 'do it for me' backends",
-    icon: Cpu,
-  },
-  {
-    mode: "persona",
-    label: "Persona",
-    description: "AI characters, avatars, companions, mentors",
-    icon: User,
-  },
-  {
-    mode: "boundless",
-    label: "Boundless",
-    description: "Ignore conventions; maximize creativity",
-    icon: Infinity,
-  },
-  {
-    mode: "chaos",
-    label: "Chaos",
-    description: "Wild combinations; high shock, high leverage",
-    icon: Flame,
-  },
-  {
-    mode: "money_printer",
-    label: "Money Printer",
-    description: "Systems that earn while you sleep",
-    icon: DollarSign,
-  },
-  {
-    mode: "memetic",
-    label: "Memetic",
-    description: "Ideas that spread as jokes/memes with monetization",
-    icon: Share2,
-  },
-  {
-    mode: "locker_room",
-    label: "Locker Room",
-    description: "Bold, culture-first, 'shouldn't exist but could'",
-    icon: MessageCircle,
-    requiresEdgy: "bold",
-  },
-];
+const MODE_ICONS: Record<IdeaMode, React.ElementType> = {
+  breadth: Sparkles,
+  focus: Target,
+  creator: Video,
+  automation: Cpu,
+  persona: User,
+  boundless: Infinity,
+  chaos: Flame,
+  money_printer: DollarSign,
+  memetic: Share2,
+  locker_room: MessageCircle,
+};
+
+const MODE_OPTIONS: ModeOption[] = IDEA_MODES.map(m => ({
+  mode: m.mode,
+  label: m.label,
+  description: m.description,
+  icon: MODE_ICONS[m.mode],
+  requiresPro: m.requiresPro,
+  requiresEdgy: m.mode === "locker_room" ? "bold" : undefined,
+}));
 
 interface ModeSelectorProps {
   selectedMode: IdeaMode;
@@ -105,6 +55,8 @@ interface ModeSelectorProps {
   onFocusAreaChange?: (value: string) => void;
   edgyMode?: string | null;
   className?: string;
+  isPro?: boolean;
+  onProModeClick?: (mode: IdeaMode) => void;
 }
 
 export function ModeSelector({ 
@@ -113,9 +65,11 @@ export function ModeSelector({
   focusArea = "",
   onFocusAreaChange,
   edgyMode,
-  className 
+  className,
+  isPro = false,
+  onProModeClick,
 }: ModeSelectorProps) {
-  // Filter modes based on edgy_mode
+  // Filter modes based on edgy_mode for locker_room
   const availableModes = MODE_OPTIONS.filter((option) => {
     if (!option.requiresEdgy) return true;
     if (option.requiresEdgy === "bold") {
@@ -127,39 +81,73 @@ export function ModeSelector({
     return true;
   });
 
+  const handleModeClick = (option: ModeOption) => {
+    // If mode requires Pro and user doesn't have it, trigger paywall
+    if (option.requiresPro && !isPro) {
+      onProModeClick?.(option.mode);
+      return;
+    }
+    onModeChange(option.mode);
+  };
+
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-primary" />
         <h3 className="font-semibold text-sm">Generation Mode</h3>
+        {!isPro && (
+          <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+            <Crown className="w-3 h-3 text-primary" />
+            Pro modes locked
+          </span>
+        )}
       </div>
       {/* Horizontal scrollable strip on mobile, wrap on desktop */}
       <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 md:flex-wrap scrollbar-hide">
         {availableModes.map((option) => {
           const Icon = option.icon;
           const isSelected = selectedMode === option.mode;
+          const isLocked = option.requiresPro && !isPro;
           
           return (
             <button
               key={option.mode}
-              onClick={() => onModeChange(option.mode)}
+              onClick={() => handleModeClick(option)}
               className={cn(
                 "group relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm",
-                "hover:border-primary/50 hover:bg-primary/5",
-                isSelected 
+                isLocked 
+                  ? "border-border bg-muted/30 text-muted-foreground cursor-pointer hover:border-primary/30"
+                  : "hover:border-primary/50 hover:bg-primary/5",
+                isSelected && !isLocked
                   ? "border-primary bg-primary/10 text-primary font-medium shadow-sm" 
-                  : "border-border bg-background text-muted-foreground"
+                  : !isLocked && "border-border bg-background text-muted-foreground"
               )}
             >
               <Icon className={cn(
                 "w-4 h-4 transition-colors",
-                isSelected ? "text-primary" : "text-muted-foreground group-hover:text-primary/70"
+                isLocked 
+                  ? "text-muted-foreground/50" 
+                  : isSelected 
+                    ? "text-primary" 
+                    : "text-muted-foreground group-hover:text-primary/70"
               )} />
-              <span>{option.label}</span>
+              <span className={isLocked ? "opacity-60" : ""}>{option.label}</span>
+              
+              {/* Lock icon for Pro modes */}
+              {isLocked && (
+                <Lock className="w-3 h-3 text-primary ml-1" />
+              )}
               
               {/* Tooltip on hover */}
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-popover border border-border rounded-md shadow-lg text-xs text-popover-foreground opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                {option.description}
+                {isLocked ? (
+                  <span className="flex items-center gap-1">
+                    <Crown className="w-3 h-3 text-primary" />
+                    Pro: {option.description}
+                  </span>
+                ) : (
+                  option.description
+                )}
               </div>
             </button>
           );
@@ -191,3 +179,5 @@ export function ModeSelector({
     </div>
   );
 }
+
+export type { IdeaMode };

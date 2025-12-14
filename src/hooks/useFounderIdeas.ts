@@ -4,19 +4,29 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIdeaSessionStore } from "@/store/ideaSessionStore";
 import type { BusinessIdeaV6 } from "@/types/businessIdea";
 import type { IdeaGenerationMode } from "@/types/idea";
+import type { PlanErrorCode } from "@/config/plans";
 
 interface GenerateIdeasParams {
   mode?: IdeaGenerationMode;
   focus_area?: string;
 }
 
+interface PlanLimitError {
+  code: PlanErrorCode;
+  mode?: string;
+  limit?: number;
+  plan?: string;
+}
+
 interface UseFounderIdeasResult {
   ideas: BusinessIdeaV6[];
   isPending: boolean;
   error: unknown;
+  planError: PlanLimitError | null;
   currentMode: IdeaGenerationMode | null;
   generate: (params?: GenerateIdeasParams) => Promise<void>;
   clearIdeas: () => void;
+  clearPlanError: () => void;
 }
 
 export const useFounderIdeas = (): UseFounderIdeasResult => {
@@ -30,6 +40,9 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
     setCurrentMode,
     clearSessionIdeas,
     clearSavedTracking,
+    planError,
+    setPlanError,
+    clearPlanError,
   } = useIdeaSessionStore();
 
   const mutation = useMutation({
@@ -40,6 +53,7 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
 
       const mode = params.mode || "breadth";
       setCurrentMode(mode);
+      clearPlanError();
 
       const { data, error } = await supabase.functions.invoke("generate-founder-ideas", {
         body: {
@@ -50,6 +64,18 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
       });
 
       if (error) throw error;
+
+      // Check for plan limit errors in response
+      if (data?.code) {
+        const planErr: PlanLimitError = {
+          code: data.code,
+          mode: data.mode,
+          limit: data.limit,
+          plan: data.plan,
+        };
+        setPlanError(planErr);
+        throw new Error(data.error || "Plan limit reached");
+      }
 
       const ideasData = (data as { ideas?: BusinessIdeaV6[] } | null)?.ideas ?? [];
       
@@ -71,11 +97,13 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
     ideas: sessionIdeas,
     isPending: mutation.isPending,
     error: mutation.error ?? null,
+    planError,
     currentMode,
     generate: async (params?: GenerateIdeasParams) => {
       await mutation.mutateAsync(params || {});
     },
     clearIdeas,
+    clearPlanError,
   };
 };
 

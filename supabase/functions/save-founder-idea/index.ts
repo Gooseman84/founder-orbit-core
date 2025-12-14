@@ -36,6 +36,38 @@ serve(async (req) => {
       );
     }
 
+    // ===== PLAN CHECK: Get user subscription =====
+    const { data: subData } = await supabase
+      .from("user_subscriptions")
+      .select("plan, status")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const plan = (subData?.status === "active" && subData?.plan) || "free";
+    const isPro = plan === "pro" || plan === "founder";
+
+    // ===== PLAN CHECK: Library limit (FREE = 5 saved ideas) =====
+    if (!isPro) {
+      const { count: savedCount } = await supabase
+        .from("ideas")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      const MAX_FREE_SAVED = 5;
+      if ((savedCount || 0) >= MAX_FREE_SAVED) {
+        console.log(`save-founder-idea: FREE user ${userId} hit library limit`);
+        return new Response(
+          JSON.stringify({ 
+            error: "Library full on Free plan",
+            code: "LIBRARY_FULL",
+            plan: "free",
+            limit: MAX_FREE_SAVED
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     console.log("save-founder-idea: saving for user", userId, "idea", idea.title);
 
     // Check if already saved in ideas table

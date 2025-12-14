@@ -8,6 +8,7 @@ import { useSaveFounderIdea } from "@/hooks/useSaveFounderIdea";
 import { usePromoteIdeaToWorkspace } from "@/hooks/usePromoteIdeaToWorkspace";
 import { useAuth } from "@/hooks/useAuth";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useIdeaSessionStore } from "@/store/ideaSessionStore";
 import { IdeaScoredCard } from "@/components/ideas/IdeaScoredCard";
 import { LibraryIdeaCard } from "@/components/ideas/LibraryIdeaCard";
@@ -15,8 +16,10 @@ import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
 import { IdeaFilters, IdeaFiltersState } from "@/components/ideas/IdeaFilters";
 import { ModeSelector, type IdeaMode } from "@/components/ideas/ModeSelector";
 import { IdeaFusionPanel } from "@/components/ideas/IdeaFusionPanel";
+import { PaywallModal } from "@/components/paywall/PaywallModal";
 import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
 import { supabase } from "@/integrations/supabase/client";
+import { PLAN_ERROR_CODES, type PlanErrorCode } from "@/config/plans";
 import {
   Select,
   SelectContent,
@@ -50,12 +53,16 @@ const Ideas = () => {
     generate: generateFounderIdeas,
     clearIdeas: clearGeneratedIdeas,
   } = useScoredFounderIdeas();
-  const { saveIdea, isSaving } = useSaveFounderIdea();
+  const { saveIdea, isSaving, planError: savePlanError, clearPlanError: clearSavePlanError } = useSaveFounderIdea();
   const { promote, isPromoting } = usePromoteIdeaToWorkspace();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { track } = useAnalytics();
+  const { hasPro } = useFeatureAccess();
+
+  // Plan error from session store
+  const { planError: genPlanError, clearPlanError: clearGenPlanError } = useIdeaSessionStore();
 
   // Session store for tracking saves
   const { 
@@ -83,8 +90,28 @@ const Ideas = () => {
     capitalRequired: null,
   });
   const [activeTab, setActiveTab] = useState<string>("generated");
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallErrorCode, setPaywallErrorCode] = useState<PlanErrorCode | undefined>();
 
-  // Fetch edgy_mode from founder_profiles
+  // Show paywall when plan errors occur
+  useEffect(() => {
+    if (genPlanError?.code || savePlanError?.code) {
+      setPaywallErrorCode(genPlanError?.code || savePlanError?.code);
+      setShowPaywall(true);
+    }
+  }, [genPlanError, savePlanError]);
+
+  const handleClosePaywall = () => {
+    setShowPaywall(false);
+    setPaywallErrorCode(undefined);
+    clearGenPlanError();
+    clearSavePlanError();
+  };
+
+  const handleProModeClick = (mode: IdeaMode) => {
+    setPaywallErrorCode(PLAN_ERROR_CODES.MODE_REQUIRES_PRO);
+    setShowPaywall(true);
+  };
   useEffect(() => {
     const fetchEdgyMode = async () => {
       if (!user?.id) return;
@@ -346,6 +373,8 @@ const Ideas = () => {
               focusArea={focusArea}
               onFocusAreaChange={setFocusArea}
               edgyMode={edgyMode}
+              isPro={hasPro}
+              onProModeClick={handleProModeClick}
             />
             
             {/* Active Focus Pill */}
@@ -502,6 +531,14 @@ const Ideas = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        featureName="ideas"
+        open={showPaywall}
+        onClose={handleClosePaywall}
+        errorCode={paywallErrorCode}
+      />
     </div>
   );
 };

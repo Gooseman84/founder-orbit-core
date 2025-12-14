@@ -152,6 +152,55 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    // ===== PLAN CHECK: Get user subscription =====
+    const { data: subData } = await supabase
+      .from("user_subscriptions")
+      .select("plan, status")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const plan = (subData?.status === "active" && subData?.plan) || "free";
+    const isPro = plan === "pro" || plan === "founder";
+
+    // ===== PLAN CHECK: Daily generation limit (FREE = 2/day) =====
+    if (!isPro) {
+      const today = new Date().toISOString().split("T")[0];
+      const { count: todayCount } = await supabase
+        .from("founder_generated_ideas")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .gte("created_at", `${today}T00:00:00.000Z`);
+
+      const MAX_FREE_GENERATIONS = 2;
+      if ((todayCount || 0) >= MAX_FREE_GENERATIONS) {
+        console.log(`generate-founder-ideas: FREE user ${userId} hit daily limit`);
+        return new Response(
+          JSON.stringify({ 
+            error: "Daily idea generation limit reached",
+            code: "IDEA_LIMIT_REACHED",
+            plan: "free",
+            limit: MAX_FREE_GENERATIONS
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    // ===== PLAN CHECK: Mode restrictions (FREE = breadth, focus, creator only) =====
+    const FREE_MODES = ["breadth", "focus", "creator"];
+    if (!isPro && !FREE_MODES.includes(mode)) {
+      console.log(`generate-founder-ideas: FREE user ${userId} tried Pro mode ${mode}`);
+      return new Response(
+        JSON.stringify({ 
+          error: `The "${mode}" mode requires TrueBlazer Pro`,
+          code: "MODE_REQUIRES_PRO",
+          mode,
+          plan: "free"
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // Load founder profile (normalized JSON)
     const { data: profileRow, error: profileError } = await supabase
       .from("founder_profiles")
