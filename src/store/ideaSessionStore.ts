@@ -2,6 +2,14 @@
 import { create } from "zustand";
 import type { BusinessIdeaV6 } from "@/types/businessIdea";
 import type { IdeaGenerationMode } from "@/types/idea";
+import type { PlanErrorCode } from "@/config/plans";
+
+interface PlanLimitError {
+  code: PlanErrorCode;
+  mode?: string;
+  limit?: number;
+  plan?: string;
+}
 
 interface IdeaSessionState {
   // Session-generated ideas (not yet saved to DB)
@@ -13,6 +21,9 @@ interface IdeaSessionState {
   savedIdeaIds: Set<string>;
   // Map session idea id -> database id after save
   savedIdeaDbIds: Map<string, string>;
+  
+  // Plan limit error tracking
+  planError: PlanLimitError | null;
   
   // Actions
   setSessionIdeas: (ideas: BusinessIdeaV6[]) => void;
@@ -26,6 +37,10 @@ interface IdeaSessionState {
   isIdeaSaved: (sessionId: string) => boolean;
   getDbId: (sessionId: string) => string | undefined;
   clearSavedTracking: () => void;
+  
+  // Plan error
+  setPlanError: (error: PlanLimitError | null) => void;
+  clearPlanError: () => void;
 }
 
 export const useIdeaSessionStore = create<IdeaSessionState>((set, get) => ({
@@ -34,6 +49,7 @@ export const useIdeaSessionStore = create<IdeaSessionState>((set, get) => ({
   focusArea: "",
   savedIdeaIds: new Set(),
   savedIdeaDbIds: new Map(),
+  planError: null,
 
   setSessionIdeas: (ideas) => set({ sessionIdeas: ideas }),
   
@@ -67,4 +83,8 @@ export const useIdeaSessionStore = create<IdeaSessionState>((set, get) => ({
     savedIdeaIds: new Set(),
     savedIdeaDbIds: new Map(),
   }),
+  
+  setPlanError: (error) => set({ planError: error }),
+  
+  clearPlanError: () => set({ planError: null }),
 }));
