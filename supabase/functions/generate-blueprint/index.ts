@@ -193,6 +193,49 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check user subscription for blueprint limit
+    const { data: subscription } = await supabase
+      .from("user_subscriptions")
+      .select("plan, status")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    const userPlan = subscription?.plan || "free";
+    const isPro = userPlan === "pro" || userPlan === "founder";
+
+    // Check existing blueprint count for Free users
+    if (!isPro) {
+      const { count: blueprintCount } = await supabase
+        .from("founder_blueprints")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      if ((blueprintCount ?? 0) >= 1) {
+        // Check if there's an existing blueprint with content
+        const { data: existingBlueprint } = await supabase
+          .from("founder_blueprints")
+          .select("id, life_vision, north_star_one_liner")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        // If a non-empty blueprint exists, block creation
+        if (existingBlueprint && (existingBlueprint.life_vision || existingBlueprint.north_star_one_liner)) {
+          console.log("[generate-blueprint] FREE user at blueprint limit");
+          return new Response(
+            JSON.stringify({ 
+              error: "Blueprint limit reached", 
+              code: "BLUEPRINT_LIMIT_FREE" 
+            }),
+            {
+              status: 403,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+      }
+    }
+
     // Load founder profile
     const { data: founderProfile, error: founderError } = await supabase
       .from("founder_profiles")

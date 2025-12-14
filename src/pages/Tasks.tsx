@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { TaskList } from "@/components/tasks/TaskList";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 import { recordXpEvent } from "@/lib/xpEngine";
 import { useQueryClient } from "@tanstack/react-query";
 import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
-import { Loader2, Sparkles, ListTodo, CheckCircle2, Activity, ArrowRight } from "lucide-react";
+import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
+import { ProBadge } from "@/components/billing/ProBadge";
+import { Loader2, Sparkles, ListTodo, CheckCircle2, Activity, ArrowRight, Filter, Lock } from "lucide-react";
+import type { PaywallReasonCode } from "@/config/paywallCopy";
 
 interface Task {
   id: string;
@@ -26,6 +30,7 @@ interface Task {
   completed_at: string | null;
   created_at: string;
   workspace_document_id?: string | null;
+  venture_id?: string | null;
 }
 
 const Tasks = () => {
@@ -34,19 +39,37 @@ const Tasks = () => {
   const { toast } = useToast();
   const { refresh: refreshXp } = useXP();
   const { track } = useAnalytics();
+  const { plan } = useSubscription();
+  const isPro = plan === "pro" || plan === "founder";
   const queryClient = useQueryClient();
+  
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [ventures, setVentures] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [chosenIdeaId, setChosenIdeaId] = useState<string | null>(null);
+  const [selectedVentureId, setSelectedVentureId] = useState<string | "all">("all");
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<PaywallReasonCode>("MULTI_BLUEPRINT_TASKS");
 
   useEffect(() => {
     if (user) {
       fetchTasks();
       fetchChosenIdea();
+      fetchVentures();
     }
   }, [user]);
+
+  const fetchVentures = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("ventures")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    if (data) setVentures(data);
+  };
 
   const fetchChosenIdea = async () => {
     if (!user) return;
@@ -76,6 +99,26 @@ const Tasks = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Filter tasks based on selected venture
+  const filteredTasks = useMemo(() => {
+    if (selectedVentureId === "all") return tasks;
+    return tasks.filter(t => t.venture_id === selectedVentureId);
+  }, [tasks, selectedVentureId]);
+
+  // Check if user has multiple ventures (multi-blueprint scenario)
+  const hasMultipleVentures = ventures.length > 1;
+
+  const handleVentureFilterChange = (ventureId: string) => {
+    // If FREE user tries to filter across ventures, show paywall
+    if (!isPro && ventureId === "all" && hasMultipleVentures) {
+      setPaywallReason("MULTI_BLUEPRINT_TASKS");
+      setShowPaywall(true);
+      track("paywall_shown", { reasonCode: "MULTI_BLUEPRINT_TASKS" });
+      return;
+    }
+    setSelectedVentureId(ventureId);
   };
 
   const handleGenerateTasks = async () => {
@@ -142,7 +185,7 @@ const Tasks = () => {
           "---",
           "",
           "Use this space to think through this task:",
-          "- What does “done” look like for this?",
+          '- What does "done" look like for this?',
           "- What decisions do I need to make?",
           "- What drafts or experiments should I create?",
         ]
@@ -157,7 +200,7 @@ const Tasks = () => {
             doc_type: task.category || "task",
             source_type: "task",
             content: initialContent,
-            linked_task_id: task.id, // if you added this column
+            linked_task_id: task.id,
           })
           .select("id")
           .single();
@@ -205,8 +248,8 @@ const Tasks = () => {
     }
   };
 
-  const openTasks = tasks.filter((t) => t.status !== "completed");
-  const completedTasks = tasks.filter((t) => t.status === "completed");
+  const openTasks = filteredTasks.filter((t) => t.status !== "completed");
+  const completedTasks = filteredTasks.filter((t) => t.status === "completed");
 
   if (isLoading) {
     return (
@@ -218,7 +261,7 @@ const Tasks = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-4xl font-bold">Founder Quests</h1>
           <p className="text-muted-foreground mt-1">Complete micro-tasks to build momentum and earn XP</p>
@@ -248,6 +291,56 @@ const Tasks = () => {
             to select one.
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Multi-Blueprint Filter (Pro feature) */}
+      {hasMultipleVentures && (
+        <Card className="border-border/50">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filter by Blueprint:</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant={selectedVentureId === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleVentureFilterChange("all")}
+                  className="gap-1"
+                >
+                  All Blueprints
+                  {!isPro && <ProBadge variant="icon" size="sm" locked />}
+                </Button>
+                {ventures.slice(0, isPro ? ventures.length : 1).map((venture) => (
+                  <Button
+                    key={venture.id}
+                    variant={selectedVentureId === venture.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedVentureId(venture.id)}
+                  >
+                    {venture.name}
+                  </Button>
+                ))}
+                {!isPro && ventures.length > 1 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setPaywallReason("MULTI_BLUEPRINT_TASKS");
+                      setShowPaywall(true);
+                      track("locked_feature_clicked", { feature: "multi_blueprint_tasks" });
+                    }}
+                    className="gap-1 opacity-60"
+                  >
+                    <Lock className="h-3 w-3" />
+                    +{ventures.length - 1} more
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Daily Pulse Link */}
@@ -284,6 +377,13 @@ const Tasks = () => {
           <TaskList tasks={completedTasks} onTaskCompleted={handleCompleteTask} />
         </TabsContent>
       </Tabs>
+
+      {/* Pro Upgrade Modal */}
+      <ProUpgradeModal
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        reasonCode={paywallReason}
+      />
     </div>
   );
 };
