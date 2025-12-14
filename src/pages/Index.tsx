@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
-import { ArrowRight, Sparkles, Target, Zap, Brain, Compass, Lightbulb, Flame, Check, User, Clock, Rocket, Repeat } from "lucide-react";
+import { ArrowRight, Sparkles, Target, Zap, Brain, Compass, Lightbulb, Flame, Check, User, Clock, Rocket, Repeat, Crown } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -35,6 +35,7 @@ const Index = () => {
       <FutureSelfSection />
       <WhoThisIsForSection />
       <WeekOneSection />
+      <PricingSection onNavigate={() => navigate("/auth")} />
       <FinalCTASection onNavigate={() => navigate("/auth")} />
 
       <footer className="py-12 px-6 border-t border-border/30">
@@ -319,7 +320,7 @@ const WeekOneSection = () => {
   ];
 
   return (
-    <section ref={ref} className="py-24 md:py-32 px-6 bg-gradient-to-b from-muted/20 to-background">
+    <section ref={ref} id="week-one" className="py-24 md:py-32 px-6 bg-gradient-to-b from-muted/20 to-background">
       <div className="container mx-auto max-w-4xl text-center">
         <div className={`transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <p className="text-primary font-semibold mb-4 tracking-wide uppercase text-sm">Power Proof</p>
@@ -344,6 +345,116 @@ const WeekOneSection = () => {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const PricingSection = ({ onNavigate }: { onNavigate: () => void }) => {
+  const { ref, isVisible } = useScrollAnimation({ threshold: 0.2 });
+
+  const features = [
+    "Full Founder Profile",
+    "Unlimited Idea Generation",
+    "Idea Library & Scoring",
+    "Blueprints & Workspace",
+    "Tasks & Daily Pulse",
+    "Progress & XP Tracking"
+  ];
+
+  return (
+    <section ref={ref} className="py-24 md:py-32 px-6">
+      <div className="container mx-auto max-w-4xl">
+        <div className={`text-center mb-16 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+          <p className="text-primary font-semibold mb-4 tracking-wide uppercase text-sm">Pricing</p>
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6">
+            Simple, sane pricing{" "}
+            <span className="text-muted-foreground">for builders.</span>
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Start free. Upgrade only when you know it's helping you build the life you want.
+          </p>
+        </div>
+        
+        {/* Pricing Card */}
+        <div 
+          className={`relative p-8 md:p-12 rounded-3xl bg-card border border-primary/30 transition-all duration-1000 delay-200 hover:border-primary/50 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+          style={{ boxShadow: "0 0 80px rgba(255, 106, 0, 0.08)" }}
+        >
+          {/* Glow effect */}
+          <div className="absolute -inset-px rounded-3xl bg-gradient-to-b from-primary/20 to-transparent opacity-50 pointer-events-none" />
+          
+          <div className="relative z-10">
+            {/* Plan header */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                    <Crown className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold">Founder Mode</h3>
+                </div>
+                <p className="text-muted-foreground">Everything you need to find and build your business.</p>
+              </div>
+              
+              <div className="text-left md:text-right">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl md:text-5xl font-bold">$29</span>
+                  <span className="text-muted-foreground">/month</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">or $199/year (save 43%)</p>
+              </div>
+            </div>
+            
+            {/* Features grid */}
+            <div className="grid md:grid-cols-2 gap-4 mb-10">
+              {features.map((feature, index) => (
+                <div 
+                  key={index}
+                  className={`flex items-center gap-3 transition-all duration-500 ${isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-5"}`}
+                  style={{ transitionDelay: `${400 + index * 80}ms` }}
+                >
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <span className="text-foreground">{feature}</span>
+                </div>
+              ))}
+            </div>
+            
+            {/* CTA */}
+            <div className="flex flex-col items-center gap-4">
+              <Button 
+                variant="gradient" 
+                size="lg" 
+                className="w-full md:w-auto text-lg px-12 py-7 group min-h-[60px]" 
+                onClick={onNavigate}
+              >
+                Start free — unlock TrueBlazer
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+              
+              <p className="text-sm text-muted-foreground">
+                No contracts. Cancel anytime in 2 clicks.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Secondary link */}
+        <div className={`text-center mt-8 transition-all duration-1000 delay-600 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+          <a 
+            href="#week-one"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById("week-one")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2"
+          >
+            See what you can build in 7 days
+            <ArrowRight className="w-4 h-4" />
+          </a>
         </div>
       </div>
     </section>
