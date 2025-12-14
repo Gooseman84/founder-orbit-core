@@ -7,6 +7,7 @@ import { useScoredFounderIdeas } from "@/hooks/useScoredFounderIdeas";
 import { useSaveFounderIdea } from "@/hooks/useSaveFounderIdea";
 import { usePromoteIdeaToWorkspace } from "@/hooks/usePromoteIdeaToWorkspace";
 import { useAuth } from "@/hooks/useAuth";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { useIdeaSessionStore } from "@/store/ideaSessionStore";
 import { IdeaScoredCard } from "@/components/ideas/IdeaScoredCard";
 import { LibraryIdeaCard } from "@/components/ideas/LibraryIdeaCard";
@@ -14,6 +15,7 @@ import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
 import { IdeaFilters, IdeaFiltersState } from "@/components/ideas/IdeaFilters";
 import { ModeSelector, type IdeaMode } from "@/components/ideas/ModeSelector";
 import { IdeaFusionPanel } from "@/components/ideas/IdeaFusionPanel";
+import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -53,6 +55,7 @@ const Ideas = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { track } = useAnalytics();
 
   // Session store for tracking saves
   const { 
@@ -176,6 +179,7 @@ const Ideas = () => {
     try {
       setCurrentMode(selectedMode);
       await generateFounderIdeas({ mode: selectedMode, focus_area: focusArea || undefined });
+      track("idea_generated", { mode: selectedMode, focusArea });
       toast({ 
         title: "Ideas Generated!", 
         description: `${selectedMode === "breadth" ? "Standard" : selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1).replace("_", " ")} mode ideas are ready.` 
@@ -198,6 +202,7 @@ const Ideas = () => {
     setSavingIdeaId(null);
     if (result.success && result.id) {
       markIdeaAsSaved(idea.id, result.id);
+      track("idea_saved", { ideaId: result.id, title: idea.title });
       toast({ title: "Saved to Library!", description: "This idea is now in your Ideas → Library." });
       return result.id;
     }

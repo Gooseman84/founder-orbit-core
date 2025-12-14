@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { TaskList } from "@/components/tasks/TaskList";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { recordXpEvent } from "@/lib/xpEngine";
 import { useQueryClient } from "@tanstack/react-query";
+import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
 import { Loader2, Sparkles, ListTodo, CheckCircle2, Activity, ArrowRight } from "lucide-react";
 
 interface Task {
@@ -31,6 +33,7 @@ const Tasks = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { refresh: refreshXp } = useXP();
+  const { track } = useAnalytics();
   const queryClient = useQueryClient();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,6 +86,7 @@ const Tasks = () => {
         body: { userId: user.id },
       });
       if (error) throw error;
+      track("task_generated", { count: data.tasks?.length || 0 });
       toast({ title: "Tasks Generated!", description: `Created ${data.tasks?.length || 0} new tasks.` });
       await fetchTasks();
     } catch (error) {
@@ -107,6 +111,7 @@ const Tasks = () => {
       if (error) throw error;
       const xpAmount = task.xp_reward || 10;
       await recordXpEvent(user.id, "task_completed", xpAmount, { taskId, task_title: task.title });
+      track("task_completed", { taskId, xpAmount, title: task.title });
       queryClient.invalidateQueries({ queryKey: ["xp", user.id] });
       await refreshXp();
       toast({ title: "Task Completed! 🎉", description: `You earned ${xpAmount} XP!` });

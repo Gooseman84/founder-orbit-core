@@ -23,6 +23,111 @@ export function CardSkeleton({ className }: { className?: string }) {
   );
 }
 
+// Dashboard stats skeleton
+export function DashboardStatsSkeleton() {
+  return (
+    <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i} className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-8 rounded-md" />
+          </div>
+          <Skeleton className="h-8 w-16 mb-1" />
+          <Skeleton className="h-3 w-24" />
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// Dashboard card skeleton (larger cards)
+export function DashboardCardSkeleton({ className }: { className?: string }) {
+  return (
+    <Card className={cn("p-5", className)}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-10 w-10 rounded-lg" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+        </div>
+        <Skeleton className="h-8 w-24 rounded-md" />
+      </div>
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+      </div>
+    </Card>
+  );
+}
+
+// Blueprint skeleton
+export function BlueprintSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-10 w-32 rounded-md" />
+          <Skeleton className="h-10 w-40 rounded-md" />
+        </div>
+      </div>
+      
+      {/* Three columns */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} className="p-5 space-y-4">
+            <div className="flex items-center gap-3 mb-4">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <Skeleton className="h-5 w-28" />
+            </div>
+            {Array.from({ length: 4 }).map((_, j) => (
+              <div key={j} className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            ))}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Workspace skeleton
+export function WorkspaceSkeleton() {
+  return (
+    <div className="flex h-[calc(100vh-120px)] gap-4">
+      {/* Sidebar */}
+      <div className="w-64 hidden md:block space-y-3 p-4 border rounded-lg">
+        <Skeleton className="h-8 w-full rounded-md mb-4" />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-2 p-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-4 flex-1" />
+          </div>
+        ))}
+      </div>
+      
+      {/* Editor area */}
+      <div className="flex-1 border rounded-lg p-6 space-y-4">
+        <Skeleton className="h-8 w-2/3" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+    </div>
+  );
+}
+
 // Idea card skeleton
 export function IdeaCardSkeleton() {
   return (
