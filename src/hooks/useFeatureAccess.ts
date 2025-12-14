@@ -1,33 +1,37 @@
 import { useSubscription } from "@/hooks/useSubscription";
-
-const FEATURE_MATRIX: Record<string, "free" | "pro" | "founder"> = {
-  idea_generation: "free",
-  idea_vetting: "free",
-  opportunity_score: "pro",
-  compare_engine: "pro",
-  radar: "pro",
-  workspace_unlimited: "pro",
-};
+import { 
+  canUseFeature, 
+  getPlanFeatures, 
+  hasPaidPlan, 
+  getPlanDisplayInfo,
+  type PlanId,
+  type PlanFeatures 
+} from "@/lib/entitlements";
+import { PLAN_FEATURES } from "@/config/plans";
 
 interface UseFeatureAccessReturn {
-  plan: string;
+  plan: PlanId;
   hasPro: boolean;
   hasFounder: boolean;
   gate: (featureName: string) => boolean;
+  features: PlanFeatures;
+  planInfo: ReturnType<typeof getPlanDisplayInfo>;
+  loading: boolean;
 }
 
 export const useFeatureAccess = (): UseFeatureAccessReturn => {
-  const { plan } = useSubscription();
-
-  const hasPro = plan === "pro" || plan === "founder";
+  const { plan: rawPlan, loading } = useSubscription();
+  
+  // Normalize plan to valid PlanId
+  const plan: PlanId = (rawPlan === "pro" || rawPlan === "founder") ? rawPlan : "free";
+  
+  const hasPro = hasPaidPlan(plan);
   const hasFounder = plan === "founder";
+  const features = getPlanFeatures(plan);
+  const planInfo = getPlanDisplayInfo(plan);
 
   const gate = (featureName: string): boolean => {
-    const requiredPlan = FEATURE_MATRIX[featureName];
-    if (!requiredPlan || requiredPlan === 'free') return true;
-    if (requiredPlan === 'pro') return hasPro;
-    if (requiredPlan === 'founder') return hasFounder;
-    return false;
+    return canUseFeature(plan, featureName);
   };
 
   return {
@@ -35,5 +39,8 @@ export const useFeatureAccess = (): UseFeatureAccessReturn => {
     hasPro,
     hasFounder,
     gate,
+    features,
+    planInfo,
+    loading,
   };
 };
