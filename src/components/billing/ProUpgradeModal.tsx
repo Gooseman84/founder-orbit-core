@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { getPaywallCopy, type PaywallReasonCode } from "@/config/paywallCopy";
 import {
   Dialog,
   DialogContent,
@@ -19,35 +20,6 @@ import {
   Crown,
   X
 } from "lucide-react";
-import { PLAN_ERROR_CODES, type PlanErrorCode } from "@/config/plans";
-
-// Contextual messages for different limit scenarios
-const REASON_MESSAGES: Record<PlanErrorCode, { headline: string; subhead: string }> = {
-  [PLAN_ERROR_CODES.IDEA_LIMIT_REACHED]: {
-    headline: "You're on fire! 🔥",
-    subhead: "You've used your 2 free idea generations today. Unlock unlimited ideas with Pro.",
-  },
-  [PLAN_ERROR_CODES.MODE_REQUIRES_PRO]: {
-    headline: "Unlock Creative Power",
-    subhead: "This generation mode opens new creative dimensions. Go Pro to explore them all.",
-  },
-  [PLAN_ERROR_CODES.LIBRARY_FULL]: {
-    headline: "Your Library is Full",
-    subhead: "You've saved 5 ideas — the max on Free. Upgrade to save unlimited ideas.",
-  },
-  [PLAN_ERROR_CODES.BLUEPRINT_LIMIT]: {
-    headline: "Ready for More?",
-    subhead: "Free accounts include 1 Blueprint. Go Pro for unlimited strategic planning.",
-  },
-  [PLAN_ERROR_CODES.FEATURE_REQUIRES_PRO]: {
-    headline: "Unlock This Feature",
-    subhead: "This is a Pro feature. Upgrade to access the full TrueBlazer toolkit.",
-  },
-  [PLAN_ERROR_CODES.EXPORT_REQUIRES_PRO]: {
-    headline: "Export Your Work",
-    subhead: "Download and share your Blueprints, plans, and docs with TrueBlazer Pro.",
-  },
-};
 
 const PRO_FEATURES = [
   { icon: Infinity, text: "Unlimited idea generations", highlight: true },
@@ -60,8 +32,8 @@ const PRO_FEATURES = [
 interface ProUpgradeModalProps {
   open: boolean;
   onClose: () => void;
-  reasonCode?: PlanErrorCode;
-  context?: Record<string, any>;
+  reasonCode?: PaywallReasonCode | string;
+  context?: Record<string, unknown>;
 }
 
 export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgradeModalProps) {
@@ -69,6 +41,9 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
   const { track } = useAnalytics();
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
+
+  // Get dynamic copy based on reasonCode
+  const copy = getPaywallCopy(reasonCode);
 
   const handleUpgrade = async () => {
     if (!user) {
@@ -118,9 +93,12 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
     }
   };
 
-  const message = reasonCode ? REASON_MESSAGES[reasonCode] : null;
-  const headline = message?.headline || "Unlock TrueBlazer Pro";
-  const subhead = message?.subhead || "Go from curiosity to a real, guided path to your next business.";
+  // Track paywall shown
+  useState(() => {
+    if (open && reasonCode) {
+      track("paywall_shown", { reasonCode, ...context });
+    }
+  });
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -143,9 +121,9 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
               TrueBlazer Pro
             </span>
           </div>
-          <h2 className="text-2xl font-bold tracking-tight">{headline}</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{copy.headline}</h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            {subhead}
+            {copy.subhead}
           </p>
         </div>
 
@@ -234,7 +212,7 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
                 ) : (
                   <>
                     <Rocket className="mr-2 h-5 w-5" />
-                    Upgrade to Pro
+                    {copy.cta}
                   </>
                 )}
               </Button>
@@ -242,11 +220,11 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
               {/* Trust indicators */}
               <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
-                  <CheckCircle className="w-3.5 h-3.5 text-success" />
-                  <span>Cancel anytime</span>
+                  <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                  <span>{copy.microcopy || "Cancel anytime"}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <CheckCircle className="w-3.5 h-3.5 text-success" />
+                  <CheckCircle className="w-3.5 h-3.5 text-green-500" />
                   <span>Secure checkout</span>
                 </div>
               </div>

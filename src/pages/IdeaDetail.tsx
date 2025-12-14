@@ -11,7 +11,6 @@ import { useIdeaDetail } from "@/hooks/useIdeaDetail";
 import { IdeaVettingCard } from "@/components/ideas/IdeaVettingCard";
 import { OpportunityScoreCard } from "@/components/opportunity/OpportunityScoreCard";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
-import { PLAN_ERROR_CODES } from "@/config/plans";
 import { IdeaVariantGenerator } from "@/components/ideas/IdeaVariantGenerator";
 import { IdeaOptimizerBar } from "@/components/shared/IdeaOptimizerBar";
 import { V6MetricsGrid } from "@/components/shared/V6MetricBadge";
@@ -520,7 +519,7 @@ const IdeaDetail = () => {
       <ProUpgradeModal 
         open={showPaywall} 
         onClose={() => setShowPaywall(false)}
-        reasonCode={PLAN_ERROR_CODES.FEATURE_REQUIRES_PRO}
+        reasonCode="IDEA_DETAIL_PRO"
       />
     </div>
   );
