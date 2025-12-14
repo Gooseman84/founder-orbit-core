@@ -208,10 +208,10 @@ const Dashboard = () => {
 
     setLoadingScore(true);
     try {
-      // Fetch all opportunity scores for user
+      // Fetch highest opportunity score for user with joined idea data
       const { data: scores, error: scoresError } = await supabase
         .from("opportunity_scores")
-        .select("*, ideas!inner(id, title)")
+        .select("*, ideas(id, title)")
         .eq("user_id", user.id)
         .order("total_score", { ascending: false })
         .limit(1)
@@ -219,7 +219,12 @@ const Dashboard = () => {
 
       if (scoresError) throw scoresError;
 
-      setHighestScore(scores);
+      // Only set if we have both score and valid idea reference
+      if (scores && scores.ideas) {
+        setHighestScore(scores);
+      } else {
+        setHighestScore(null);
+      }
     } catch (error) {
       console.error("Error fetching highest score:", error);
     } finally {
