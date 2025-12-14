@@ -2,14 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
+import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { LevelBadge } from "@/components/shared/LevelBadge";
 import { XpProgressBar } from "@/components/shared/XpProgressBar";
+import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity, Radar, FileText, Flame, BarChart3, Scale } from "lucide-react";
+import { AlertCircle, Target, Zap, ListTodo, TrendingUp, Activity, Radar, FileText, Flame, BarChart3, Scale, Crown, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScoreGauge } from "@/components/opportunity/ScoreGauge";
 import { calculateReflectionStreak } from "@/lib/streakEngine";
@@ -17,7 +19,9 @@ import { calculateReflectionStreak } from "@/lib/streakEngine";
 const Dashboard = () => {
   const { user } = useAuth();
   const { xpSummary, loading, error } = useXP();
+  const { plan } = useSubscription();
   const navigate = useNavigate();
+  const isFree = plan === "free";
   const [taskStats, setTaskStats] = useState({
     total: 0,
     open: 0,
@@ -284,6 +288,24 @@ const Dashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Pro Upgrade CTA for Free Users */}
+      {isFree && (
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+          <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/20 ring-1 ring-primary/30">
+                <Crown className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Unlock TrueBlazer Pro</h3>
+                <p className="text-sm text-muted-foreground">Unlimited ideas, all modes, full blueprints & more</p>
+              </div>
+            </div>
+            <UpgradeButton variant="full" />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Task Statistics, Daily Pulse, and Recent Feed */}
       <div className="grid gap-6 md:grid-cols-2">

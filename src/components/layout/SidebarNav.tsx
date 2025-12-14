@@ -18,6 +18,7 @@ import {
   Combine
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UpgradeButton } from "@/components/billing/UpgradeButton";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -63,7 +64,10 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
         </NavLink>
       ))}
       
-      <div className="mt-auto pt-4 border-t border-border">
+      <div className="mt-auto pt-4 border-t border-border space-y-2">
+        {/* Upgrade CTA for free users */}
+        <UpgradeButton variant="sidebar" />
+        
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 px-4 py-3 text-sm font-medium"
