@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { useBlueprint } from "@/hooks/useBlueprint";
 import { useAuth } from "@/hooks/useAuth";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BlueprintSkeleton } from "@/components/shared/SkeletonLoaders";
 import { toast } from "@/hooks/use-toast";
 import { Sparkles, Heart, Target, Briefcase, RefreshCw } from "lucide-react";
 
 const Blueprint = () => {
   const { user } = useAuth();
+  const { track } = useAnalytics();
   const { blueprint, loading, error, saveUpdates, refresh } = useBlueprint();
   // A blueprint row may exist but contain no real data.
   // In that case, we should show the "Generate from my profile" CTA again.
@@ -34,6 +36,7 @@ const Blueprint = () => {
       if (fnError) throw fnError;
 
       await refresh();
+      track("blueprint_refreshed");
       toast({ title: "Blueprint refreshed", description: "AI summary and recommendations updated." });
     } catch (err) {
       console.error("Failed to refresh blueprint:", err);
@@ -64,6 +67,7 @@ const Blueprint = () => {
       }
 
       await refresh();
+      track("blueprint_created");
       toast({
         title: "Blueprint generated",
         description: "We used your profile and chosen idea to build your life + business blueprint.",
@@ -83,12 +87,7 @@ const Blueprint = () => {
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-4">
-        <Skeleton className="h-10 w-64 mb-8" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-[500px]" />
-          <Skeleton className="h-[500px]" />
-          <Skeleton className="h-[500px]" />
-        </div>
+        <BlueprintSkeleton />
       </div>
     );
   }

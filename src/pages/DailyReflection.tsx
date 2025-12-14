@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
 import { useToast } from "@/hooks/use-toast";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { DailyReflectionForm } from "@/components/reflection/DailyReflectionForm";
 import { DailyReflectionInsights } from "@/components/reflection/DailyReflectionInsights";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PageLoader } from "@/components/shared/SkeletonLoaders";
 import { recordXpEvent } from "@/lib/xpEngine";
 import { calculateReflectionStreak, STREAK_MILESTONES, hasReceivedStreakBonus } from "@/lib/streakEngine";
 import { History, Calendar, Loader2, Flame } from "lucide-react";
@@ -17,6 +19,7 @@ export default function DailyReflection() {
   const { user } = useAuth();
   const { refresh: refreshXP } = useXP();
   const { toast } = useToast();
+  const { track } = useAnalytics();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);

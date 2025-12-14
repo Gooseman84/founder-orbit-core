@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { upsertFounderProfile, normalizeFounderProfile } from "@/lib/founderProfileApi";
 import type { RiskTolerance, Runway, WorkPersonality, CreatorPlatform, EdgyMode } from "@/types/founderProfile";
 
@@ -201,6 +202,7 @@ export function CoreOnboardingWizard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { track } = useAnalytics();
 
   const progress = (step / TOTAL_STEPS) * 100;
 
