@@ -16,7 +16,7 @@ import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
 import { IdeaFilters, IdeaFiltersState } from "@/components/ideas/IdeaFilters";
 import { ModeSelector, type IdeaMode } from "@/components/ideas/ModeSelector";
 import { IdeaFusionPanel } from "@/components/ideas/IdeaFusionPanel";
-import { PaywallModal } from "@/components/paywall/PaywallModal";
+import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
 import { supabase } from "@/integrations/supabase/client";
 import { PLAN_ERROR_CODES, type PlanErrorCode } from "@/config/plans";
@@ -532,12 +532,11 @@ const Ideas = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Paywall Modal */}
-      <PaywallModal
-        featureName="ideas"
+      {/* Pro Upgrade Modal */}
+      <ProUpgradeModal
         open={showPaywall}
         onClose={handleClosePaywall}
-        errorCode={paywallErrorCode}
+        reasonCode={paywallErrorCode}
       />
     </div>
   );

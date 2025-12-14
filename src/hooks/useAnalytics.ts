@@ -23,7 +23,10 @@ type TrueBlazerEvent =
   | "page_view"
   | "upgrade_clicked"
   | "checkout_started"
-  | "checkout_completed";
+  | "checkout_completed"
+  | "paywall_shown"
+  | "locked_feature_clicked"
+  | "pro_mode_clicked";
 
 interface UseAnalyticsReturn {
   track: (event: TrueBlazerEvent, properties?: Record<string, any>) => void;

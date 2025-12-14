@@ -4,6 +4,7 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useXP } from '@/hooks/useXP';
+import { useSubscription } from '@/hooks/useSubscription';
 import { recordXpEvent } from '@/lib/xpEngine';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,9 @@ import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
 import { WorkspaceAssistantPanel } from '@/components/workspace/WorkspaceAssistantPanel';
+import { ProBadge } from '@/components/billing/ProBadge';
+import { ProUpgradeModal } from '@/components/billing/ProUpgradeModal';
+import { PLAN_ERROR_CODES } from '@/config/plans';
 import type { TaskContext } from '@/types/tasks';
 
 export default function Workspace() {
@@ -26,6 +30,8 @@ export default function Workspace() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { refresh: refreshXp } = useXP();
+  const { plan } = useSubscription();
+  const isPro = plan === 'pro' || plan === 'founder';
   const {
     documents,
     currentDocument,
@@ -44,6 +50,7 @@ export default function Workspace() {
   const [aiLoading, setAiLoading] = useState(false);
   const [taskCompleted, setTaskCompleted] = useState(false);
   const [completingTask, setCompletingTask] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   // Extract taskContext from navigation state
   const taskContext = (location.state as { taskContext?: TaskContext } | null)?.taskContext;
@@ -293,15 +300,21 @@ export default function Workspace() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
+                onClick={() => {
+                  if (!isPro) {
+                    setShowPaywall(true);
+                    return;
+                  }
                   exportWorkspaceDocToPdf({
                     title: currentDocument.title || 'Workspace Document',
                     content: currentDocument.content || '',
-                  })
-                }
+                  });
+                }}
+                className="gap-1"
               >
-                <Download className="w-4 h-4 mr-1" />
+                <Download className="w-4 h-4" />
                 Export as PDF
+                {!isPro && <ProBadge variant="pill" size="sm" locked />}
               </Button>
             </div>
           </div>
@@ -407,6 +420,13 @@ export default function Workspace() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Pro Upgrade Modal */}
+      <ProUpgradeModal 
+        open={showPaywall} 
+        onClose={() => setShowPaywall(false)}
+        reasonCode={PLAN_ERROR_CODES.EXPORT_REQUIRES_PRO}
+      />
     </div>
   );
 }
