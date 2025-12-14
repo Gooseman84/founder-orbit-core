@@ -20,6 +20,9 @@ import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
 import { WorkspaceAssistantPanel } from '@/components/workspace/WorkspaceAssistantPanel';
 import { ProBadge } from '@/components/billing/ProBadge';
 import { ProUpgradeModal } from '@/components/billing/ProUpgradeModal';
+import { useAnalytics } from '@/hooks/useAnalytics';
+import { PLAN_FEATURES } from '@/config/plans';
+import type { PaywallReasonCode } from '@/config/paywallCopy';
 import type { TaskContext } from '@/types/tasks';
 
 export default function Workspace() {
@@ -50,6 +53,11 @@ export default function Workspace() {
   const [taskCompleted, setTaskCompleted] = useState(false);
   const [completingTask, setCompletingTask] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<PaywallReasonCode>("EXPORT_REQUIRES_PRO");
+  const { track } = useAnalytics();
+  
+  // Get workspace doc limit for free users
+  const maxWorkspaceDocs = isPro ? Infinity : PLAN_FEATURES.free.maxWorkspaceDocs;
 
   // Extract taskContext from navigation state
   const taskContext = (location.state as { taskContext?: TaskContext } | null)?.taskContext;
@@ -135,6 +143,14 @@ export default function Workspace() {
         description: 'Please enter a document title',
         variant: 'destructive',
       });
+      return;
+    }
+
+    // Check workspace document limit for FREE users
+    if (!isPro && documents.length >= maxWorkspaceDocs) {
+      setPaywallReason("WORKSPACE_LIMIT");
+      setShowPaywall(true);
+      track("paywall_shown", { reasonCode: "WORKSPACE_LIMIT" });
       return;
     }
 
@@ -301,7 +317,9 @@ export default function Workspace() {
                 size="sm"
                 onClick={() => {
                   if (!isPro) {
+                    setPaywallReason("EXPORT_REQUIRES_PRO");
                     setShowPaywall(true);
+                    track("paywall_shown", { reasonCode: "EXPORT_REQUIRES_PRO" });
                     return;
                   }
                   exportWorkspaceDocToPdf({
@@ -424,7 +442,7 @@ export default function Workspace() {
       <ProUpgradeModal 
         open={showPaywall} 
         onClose={() => setShowPaywall(false)}
-        reasonCode="EXPORT_REQUIRES_PRO"
+        reasonCode={paywallReason}
       />
     </div>
   );

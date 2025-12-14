@@ -39,6 +39,14 @@ const LIMIT_MESSAGES: Record<PlanErrorCode, { title: string; description: string
     title: "Export requires Pro",
     description: "Export and download features are available with TrueBlazer Pro.",
   },
+  [PLAN_ERROR_CODES.WORKSPACE_LIMIT]: {
+    title: "Workspace limit reached",
+    description: "Advanced workspace features are available with TrueBlazer Pro.",
+  },
+  [PLAN_ERROR_CODES.MULTI_BLUEPRINT_TASKS]: {
+    title: "Multi-blueprint tasks require Pro",
+    description: "Track tasks across multiple blueprints with TrueBlazer Pro.",
+  },
 };
 
 interface PaywallModalProps {

@@ -2,19 +2,24 @@ import { useState } from "react";
 import { useBlueprint } from "@/hooks/useBlueprint";
 import { useAuth } from "@/hooks/useAuth";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BlueprintSkeleton } from "@/components/shared/SkeletonLoaders";
+import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { toast } from "@/hooks/use-toast";
 import { Sparkles, Heart, Target, Briefcase, RefreshCw } from "lucide-react";
+import type { PaywallReasonCode } from "@/config/paywallCopy";
 
 const Blueprint = () => {
   const { user } = useAuth();
   const { track } = useAnalytics();
+  const { plan } = useSubscription();
+  const isPro = plan === "pro" || plan === "founder";
   const { blueprint, loading, error, saveUpdates, refresh } = useBlueprint();
+  
   // A blueprint row may exist but contain no real data.
-  // In that case, we should show the "Generate from my profile" CTA again.
   const isEmptyBlueprint =
     blueprint &&
     !blueprint.life_vision &&
@@ -22,8 +27,12 @@ const Blueprint = () => {
     !blueprint.offer_model &&
     !blueprint.distribution_channels &&
     !blueprint.ai_summary;
+    
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<PaywallReasonCode>("BLUEPRINT_LIMIT_FREE");
+
   const handleRefreshWithAI = async () => {
     if (!user) return;
 
@@ -62,7 +71,14 @@ const Blueprint = () => {
         body: { userId: user.id },
       });
 
-      if (fnError) {
+      // Check for plan limit error
+      if (fnError || data?.code === "BLUEPRINT_LIMIT_FREE") {
+        if (data?.code === "BLUEPRINT_LIMIT_FREE") {
+          setPaywallReason("BLUEPRINT_LIMIT_FREE");
+          setShowPaywall(true);
+          track("paywall_shown", { reasonCode: "BLUEPRINT_LIMIT_FREE" });
+          return;
+        }
         throw fnError;
       }
 
@@ -72,7 +88,14 @@ const Blueprint = () => {
         title: "Blueprint generated",
         description: "We used your profile and chosen idea to build your life + business blueprint.",
       });
-    } catch (err) {
+    } catch (err: any) {
+      // Handle error response with code
+      if (err?.message?.includes("BLUEPRINT_LIMIT_FREE") || err?.code === "BLUEPRINT_LIMIT_FREE") {
+        setPaywallReason("BLUEPRINT_LIMIT_FREE");
+        setShowPaywall(true);
+        track("paywall_shown", { reasonCode: "BLUEPRINT_LIMIT_FREE" });
+        return;
+      }
       console.error("Failed to generate blueprint:", err);
       toast({
         title: "Error",
@@ -134,6 +157,12 @@ const Blueprint = () => {
             </Button>
           </CardContent>
         </Card>
+        
+        <ProUpgradeModal
+          open={showPaywall}
+          onClose={() => setShowPaywall(false)}
+          reasonCode={paywallReason}
+        />
       </div>
     );
   }
@@ -264,6 +293,12 @@ const Blueprint = () => {
           </CardContent>
         </Card>
       </div>
+      
+      <ProUpgradeModal
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        reasonCode={paywallReason}
+      />
     </div>
   );
 };
