@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PromptViewer } from "@/components/shared/PromptViewer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,13 +15,14 @@ import { useVentureTasks } from "@/hooks/useVentureTasks";
 import { ThirtyDayPlanCard } from "@/components/venture/ThirtyDayPlanCard";
 import { EmptyPlanState } from "@/components/venture/EmptyPlanState";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Sparkles, RefreshCw, Calendar } from "lucide-react";
-
-interface MasterPromptData {
-  idea_id: string;
-  platform_target: string;
-  prompt_body: string;
-}
+import { Loader2, AlertCircle, Sparkles, RefreshCw, Calendar, Clock } from "lucide-react";
+import { 
+  PlatformMode, 
+  MasterPromptData,
+  PLATFORM_MODE_LABELS, 
+  PLATFORM_MODE_DESCRIPTIONS 
+} from "@/types/masterPrompt";
+import { formatDistanceToNow } from "date-fns";
 
 export default function NorthStar() {
   const navigate = useNavigate();
@@ -30,6 +33,8 @@ export default function NorthStar() {
   const [chosenIdeaId, setChosenIdeaId] = useState<string | null>(null);
   const [ideaTitle, setIdeaTitle] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [platformMode, setPlatformMode] = useState<PlatformMode>('strategy');
+  const [isOutdated, setIsOutdated] = useState(false);
 
   // Venture hooks
   const { venture, ensureVentureForIdea } = useActiveVenture();
@@ -40,6 +45,68 @@ export default function NorthStar() {
   useEffect(() => {
     document.title = "North Star Master Prompt | TrueBlazer.AI";
   }, []);
+
+  // Check if the prompt is outdated by comparing source timestamps
+  const checkIfOutdated = useCallback(async (promptData: MasterPromptData) => {
+    if (!user || !promptData.source_updated_at) {
+      setIsOutdated(false);
+      return;
+    }
+
+    try {
+      // Get latest timestamps from various sources
+      const [profileRes, ideaRes, docsRes, reflectionsRes, tasksRes] = await Promise.all([
+        supabase.from('founder_profiles').select('updated_at').eq('user_id', user.id).maybeSingle(),
+        supabase.from('ideas').select('created_at').eq('id', promptData.idea_id).maybeSingle(),
+        supabase.from('workspace_documents').select('updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('daily_reflections').select('reflection_date').eq('user_id', user.id).order('reflection_date', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('tasks').select('completed_at').eq('user_id', user.id).not('completed_at', 'is', null).order('completed_at', { ascending: false }).limit(1).maybeSingle(),
+      ]);
+
+      const latestDates = [
+        profileRes.data?.updated_at,
+        ideaRes.data?.created_at,
+        docsRes.data?.updated_at,
+        reflectionsRes.data?.reflection_date,
+        tasksRes.data?.completed_at,
+      ].filter(Boolean).map(d => new Date(d!).getTime());
+
+      if (latestDates.length === 0) {
+        setIsOutdated(false);
+        return;
+      }
+
+      const maxLatest = Math.max(...latestDates);
+      const promptSourceTime = new Date(promptData.source_updated_at).getTime();
+      
+      // Consider outdated if any source is newer than the prompt's source timestamp
+      setIsOutdated(maxLatest > promptSourceTime);
+    } catch (err) {
+      console.error('Error checking outdated status:', err);
+      setIsOutdated(false);
+    }
+  }, [user]);
+
+  const fetchPromptForMode = useCallback(async (mode: PlatformMode) => {
+    if (!user || !chosenIdeaId) return null;
+
+    const { data, error } = await supabase
+      .from("master_prompts")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("idea_id", chosenIdeaId)
+      .eq("platform_mode", mode)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error("Error fetching master prompt:", error);
+      return null;
+    }
+
+    return data;
+  }, [user, chosenIdeaId]);
 
   const fetchData = async () => {
     try {
@@ -92,31 +159,27 @@ export default function NorthStar() {
         return;
       }
 
-      // Step 2: Check if master prompt already exists for this idea
-      const { data: existingPrompt, error: promptError } = await supabase
-        .from("master_prompts")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("idea_id", chosenIdea.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (promptError && promptError.code !== 'PGRST116') {
-        console.error("Error fetching master prompt:", promptError);
-      }
+      // Step 2: Check if master prompt exists for current platform mode
+      const existingPrompt = await fetchPromptForMode(platformMode);
 
       if (existingPrompt) {
-        // Use existing prompt
-        setMasterPrompt({
+        const promptData: MasterPromptData = {
+          id: existingPrompt.id,
+          user_id: existingPrompt.user_id,
           idea_id: existingPrompt.idea_id,
-          platform_target: existingPrompt.platform_target,
           prompt_body: existingPrompt.prompt_body,
-        });
+          platform_target: existingPrompt.platform_target,
+          platform_mode: (existingPrompt.platform_mode as PlatformMode) || 'strategy',
+          context_hash: existingPrompt.context_hash,
+          source_updated_at: existingPrompt.source_updated_at,
+          created_at: existingPrompt.created_at,
+        };
+        setMasterPrompt(promptData);
+        checkIfOutdated(promptData);
         setLoading(false);
       } else {
-        // Step 3: Generate new master prompt if none exists
-        await generateMasterPrompt(user.id, chosenIdea.id);
+        // Step 3: Generate new master prompt if none exists for this mode
+        await generateMasterPrompt(user.id, chosenIdea.id, platformMode);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to load data";
@@ -126,7 +189,7 @@ export default function NorthStar() {
     }
   };
 
-  const generateMasterPrompt = async (userId: string, ideaId: string) => {
+  const generateMasterPrompt = async (userId: string, ideaId: string, mode: PlatformMode) => {
     try {
       setGenerating(true);
       setError(null);
@@ -134,7 +197,7 @@ export default function NorthStar() {
       const { data, error: functionError } = await supabase.functions.invoke(
         "generate-master-prompt",
         {
-          body: { userId, ideaId },
+          body: { userId, ideaId, platform_mode: mode },
         }
       );
 
@@ -143,12 +206,25 @@ export default function NorthStar() {
         throw new Error(functionError.message || "Failed to generate master prompt");
       }
 
-      if (!data) {
+      if (!data || !data.prompt_body) {
         throw new Error("No data returned from function");
       }
 
-      setMasterPrompt(data);
-      toast.success("Master prompt generated successfully!");
+      const promptData: MasterPromptData = {
+        id: data.id,
+        user_id: userId,
+        idea_id: ideaId,
+        prompt_body: data.prompt_body,
+        platform_target: data.platform_target,
+        platform_mode: data.platform_mode || mode,
+        context_hash: data.context_hash,
+        source_updated_at: data.source_updated_at,
+        created_at: new Date().toISOString(),
+      };
+
+      setMasterPrompt(promptData);
+      setIsOutdated(false);
+      toast.success(`${PLATFORM_MODE_LABELS[mode]} generated successfully!`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to generate master prompt";
       setError(errorMessage);
@@ -156,6 +232,37 @@ export default function NorthStar() {
     } finally {
       setGenerating(false);
       setLoading(false);
+    }
+  };
+
+  // Handle platform mode change
+  const handleModeChange = async (newMode: string) => {
+    const mode = newMode as PlatformMode;
+    setPlatformMode(mode);
+    
+    if (!user || !chosenIdeaId) return;
+
+    setLoading(true);
+    const existingPrompt = await fetchPromptForMode(mode);
+
+    if (existingPrompt) {
+      const promptData: MasterPromptData = {
+        id: existingPrompt.id,
+        user_id: existingPrompt.user_id,
+        idea_id: existingPrompt.idea_id,
+        prompt_body: existingPrompt.prompt_body,
+        platform_target: existingPrompt.platform_target,
+        platform_mode: (existingPrompt.platform_mode as PlatformMode) || 'strategy',
+        context_hash: existingPrompt.context_hash,
+        source_updated_at: existingPrompt.source_updated_at,
+        created_at: existingPrompt.created_at,
+      };
+      setMasterPrompt(promptData);
+      checkIfOutdated(promptData);
+      setLoading(false);
+    } else {
+      // Generate for this mode
+      await generateMasterPrompt(user.id, chosenIdeaId, mode);
     }
   };
 
@@ -183,7 +290,7 @@ export default function NorthStar() {
       toast.error("Cannot regenerate: missing user or idea information");
       return;
     }
-    await generateMasterPrompt(user.id, chosenIdeaId);
+    await generateMasterPrompt(user.id, chosenIdeaId, platformMode);
   };
 
   const handleGeneratePlan = async () => {
@@ -200,13 +307,78 @@ export default function NorthStar() {
     }
   };
 
+  // Get usage instructions based on platform mode
+  const getUsageInstructions = () => {
+    if (platformMode === 'strategy') {
+      return (
+        <>
+          <p>
+            This master prompt is your personalized context for AI assistants. Copy it and paste it at the
+            beginning of conversations in:
+          </p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li><strong>ChatGPT:</strong> Start a new chat, paste this prompt, then ask for advice</li>
+            <li><strong>Claude:</strong> Begin a conversation with this context for tailored guidance</li>
+            <li><strong>Perplexity:</strong> Use for research with your business context</li>
+          </ul>
+        </>
+      );
+    }
+
+    if (platformMode === 'lovable') {
+      return (
+        <>
+          <p>
+            This is your <strong>Lovable Build Prompt</strong> — paste it into Lovable to start building your MVP.
+          </p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li><strong>Step 1:</strong> Click "Copy for Lovable" above</li>
+            <li><strong>Step 2:</strong> Open Lovable and start a new project</li>
+            <li><strong>Step 3:</strong> Paste the prompt and let Lovable build your MVP</li>
+            <li><strong>Step 4:</strong> Iterate by asking for specific features</li>
+          </ul>
+        </>
+      );
+    }
+
+    if (platformMode === 'cursor') {
+      return (
+        <>
+          <p>
+            This is your <strong>Cursor Build Prompt</strong> — use it to guide development in Cursor IDE.
+          </p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li><strong>Step 1:</strong> Click "Copy for Cursor" above</li>
+            <li><strong>Step 2:</strong> Open Cursor and start a new project</li>
+            <li><strong>Step 3:</strong> Paste into Composer or Chat with full context</li>
+            <li><strong>Step 4:</strong> Build iteratively with AI assistance</li>
+          </ul>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <p>
+          This is your <strong>v0 UI Prompt</strong> — paste it into v0.dev to generate your UI components.
+        </p>
+        <ul className="list-disc list-inside space-y-1 ml-2">
+          <li><strong>Step 1:</strong> Click "Copy for v0" above</li>
+          <li><strong>Step 2:</strong> Go to v0.dev</li>
+          <li><strong>Step 3:</strong> Paste the prompt to generate your UI</li>
+          <li><strong>Step 4:</strong> Export components to your project</li>
+        </ul>
+      </>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-muted-foreground">
-            {generating ? "Generating your North Star master prompt..." : "Loading..."}
+            {generating ? `Generating your ${PLATFORM_MODE_LABELS[platformMode]}...` : "Loading..."}
           </p>
         </div>
       </div>
@@ -309,6 +481,32 @@ export default function NorthStar() {
         </p>
       </div>
 
+      {/* Platform Mode Selector */}
+      <Card className="p-4">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Prompt Type</h3>
+            <p className="text-xs text-muted-foreground">{PLATFORM_MODE_DESCRIPTIONS[platformMode]}</p>
+          </div>
+          <Tabs value={platformMode} onValueChange={handleModeChange}>
+            <TabsList className="grid grid-cols-4 w-full">
+              <TabsTrigger value="strategy" className="text-xs sm:text-sm">
+                {PLATFORM_MODE_LABELS.strategy}
+              </TabsTrigger>
+              <TabsTrigger value="lovable" className="text-xs sm:text-sm">
+                {PLATFORM_MODE_LABELS.lovable}
+              </TabsTrigger>
+              <TabsTrigger value="cursor" className="text-xs sm:text-sm">
+                {PLATFORM_MODE_LABELS.cursor}
+              </TabsTrigger>
+              <TabsTrigger value="v0" className="text-xs sm:text-sm">
+                {PLATFORM_MODE_LABELS.v0}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </Card>
+
       {/* 30-Day Plan Section */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
@@ -335,27 +533,10 @@ export default function NorthStar() {
       <Card className="p-6 bg-primary/5 border-primary/20">
         <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
           <AlertCircle className="h-5 w-5" />
-          How to Use Your Master Prompt
+          How to Use Your {PLATFORM_MODE_LABELS[platformMode]}
         </h3>
         <div className="space-y-3 text-sm">
-          <p>
-            This master prompt is your personalized context for AI assistants. Copy it and paste it at the
-            beginning of conversations in:
-          </p>
-          <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>
-              <strong>ChatGPT:</strong> Start a new chat, paste this prompt, then ask for advice
-            </li>
-            <li>
-              <strong>Claude:</strong> Begin a conversation with this context for tailored guidance
-            </li>
-            <li>
-              <strong>Lovable:</strong> Use in project knowledge settings for consistent AI assistance
-            </li>
-            <li>
-              <strong>v0.dev:</strong> Include when generating components for your specific business
-            </li>
-          </ul>
+          {getUsageInstructions()}
           <p className="text-muted-foreground italic">
             💡 Tip: Save this prompt and reuse it across all your AI tools for consistent, personalized advice
             aligned with your goals and constraints.
@@ -368,41 +549,69 @@ export default function NorthStar() {
         <section className="space-y-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Prompt context
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {PLATFORM_MODE_LABELS[platformMode]}
+                </p>
+                {isOutdated && (
+                  <Badge variant="outline" className="text-amber-600 border-amber-500 text-xs">
+                    ⚠️ Outdated
+                  </Badge>
+                )}
+              </div>
               <p className="text-sm md:text-base text-foreground">
                 Based on your chosen idea: <span className="font-semibold">{ideaTitle}</span>
               </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRegenerate}
-              disabled={generating}
-              className="gap-2 self-start md:self-auto"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Regenerating...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4" />
-                  Regenerate
-                </>
+              {masterPrompt.source_updated_at && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Generated {formatDistanceToNow(new Date(masterPrompt.source_updated_at), { addSuffix: true })}
+                </p>
               )}
-            </Button>
+            </div>
+            <div className="flex gap-2 self-start md:self-auto">
+              {isOutdated && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerate}
+                  disabled={generating}
+                  className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-50"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={generating}
+                className="gap-2"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4" />
+                    Regenerate
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           <Card className="p-4 md:p-5 shadow-sm border-dashed">
             <h2 className="text-sm font-semibold text-muted-foreground mb-2">
-              Your master prompt
+              Your {PLATFORM_MODE_LABELS[platformMode].toLowerCase()}
             </h2>
             <PromptViewer
               prompt={masterPrompt.prompt_body}
               filename={`trueblazer-${ideaTitle.toLowerCase().replace(/\s+/g, "-")}`}
+              platformMode={platformMode}
             />
           </Card>
         </section>
