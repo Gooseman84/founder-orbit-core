@@ -154,20 +154,27 @@ async function buildMasterPromptContext(
   };
 }
 
-// Compute context hash for staleness detection
+// Compute context hash for staleness detection - stable hash without crypto libs
 function computeContextHash(context: MasterPromptContext): string {
-  const timestamps = [
+  const input = [
     context.founderProfile?.updated_at,
     context.chosenIdea?.created_at,
     context.ideaAnalysis?.created_at,
-    context.recentDocs[0]?.updated_at,
-    context.recentReflections[0]?.reflection_date,
-    context.recentTasks[0]?.completed_at,
-    context.blueprintSummary?.updated_at
-  ].filter(Boolean).sort().reverse();
+    context.recentDocs?.[0]?.updated_at,
+    context.recentReflections?.[0]?.reflection_date,
+    context.recentTasks?.[0]?.completed_at,
+    context.blueprintSummary?.updated_at,
+  ]
+    .filter(Boolean)
+    .join('|');
 
-  // Simple hash: join timestamps
-  return timestamps.slice(0, 5).join('|');
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = ((hash << 5) - hash) + input.charCodeAt(i);
+    hash |= 0;
+  }
+
+  return Math.abs(hash).toString(36);
 }
 
 // Get the latest source updated_at timestamp
@@ -186,12 +193,21 @@ function getSourceUpdatedAt(context: MasterPromptContext): string {
   return new Date(Math.max(...dates)).toISOString();
 }
 
+// Style guidelines for exciting output
+const STYLE_GUIDELINES = `
+STYLE GUIDELINES:
+Write with energy and conviction.
+Short sentences.
+No corporate fluff.
+Be confident, direct, and motivating.
+`;
+
 // Build the STRATEGY prompt (enhanced existing behavior)
 function buildStrategyPrompt(context: MasterPromptContext): string {
   const { founderProfile, chosenIdea, ideaAnalysis, extendedIntake, executionState, blueprintSummary, streakData, totalXp } = context;
   
   return `You are an elite meta-prompt engineer, startup strategist, and entrepreneurial execution architect.
-
+${STYLE_GUIDELINES}
 Your job is to generate a single, extremely powerful MASTER PROMPT that gives the user:
 
 - A complete definition of their founder identity
@@ -297,7 +313,7 @@ VIBE CODING INSTRUCTIONS (V0.DEV):
   const techLevel = founderProfile?.tech_level || 'beginner';
 
   return `You are a senior full-stack architect and product strategist helping a founder build their MVP using ${platformMode === 'v0' ? 'v0.dev' : platformMode === 'lovable' ? 'Lovable' : 'Cursor'}.
-
+${STYLE_GUIDELINES}
 Generate a comprehensive BUILD PROMPT that can be pasted directly into the platform to start building.
 
 INPUT CONTEXT:
@@ -617,45 +633,36 @@ serve(async (req) => {
       );
     }
 
-    // Delete existing prompt for this user/idea/mode combo, then insert new one
-    // This simulates upsert behavior
-    await supabase
+    // Upsert master prompt using the unique constraint
+    const { data: savedPrompt, error: upsertError } = await supabase
       .from('master_prompts')
-      .delete()
-      .eq('user_id', resolvedUserId)
-      .eq('idea_id', resolvedIdeaId)
-      .eq('platform_mode', resolvedMode);
-
-    // Insert new master prompt with all new fields
-    const { data: insertedPrompt, error: insertError } = await supabase
-      .from('master_prompts')
-      .insert({
-        user_id: resolvedUserId,
-        idea_id: resolvedIdeaId,
-        prompt_body: masterPromptData.prompt_body,
-        platform_target: masterPromptData.platform_target || resolvedMode,
-        platform_mode: resolvedMode,
-        context_hash: contextHash,
-        source_updated_at: sourceUpdatedAt
-      })
+      .upsert(
+        {
+          user_id: resolvedUserId,
+          idea_id: resolvedIdeaId,
+          platform_mode: resolvedMode,
+          prompt_body: masterPromptData.prompt_body,
+          platform_target: masterPromptData.platform_target || resolvedMode,
+          context_hash: contextHash,
+          source_updated_at: sourceUpdatedAt,
+        },
+        { onConflict: 'user_id,idea_id,platform_mode' }
+      )
       .select('id')
       .single();
 
-    if (insertError) {
-      console.error('Error inserting master prompt:', insertError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to save master prompt' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (upsertError) {
+      console.error('Error upserting master prompt:', upsertError);
+      throw new Error(`Failed to save master prompt: ${upsertError.message}`);
     }
 
-    console.log('generate-master-prompt: saved successfully');
+    console.log('generate-master-prompt: saved successfully via upsert');
 
     // Return the response with new fields
     return new Response(
       JSON.stringify({
         success: true,
-        id: insertedPrompt.id,
+        id: savedPrompt.id,
         prompt_body: masterPromptData.prompt_body,
         platform_mode: resolvedMode,
         platform_target: masterPromptData.platform_target || resolvedMode,
