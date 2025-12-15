@@ -497,6 +497,23 @@ serve(async (req) => {
 
     console.log('generate-master-prompt: calling AI...');
 
+    // Select model and max_tokens based on platform mode
+    // Strategy: lighter model, builder modes: pro for maximum output quality
+    const aiModel = resolvedMode === 'strategy' 
+      ? 'google/gemini-2.5-flash' 
+      : 'google/gemini-2.5-pro';
+    
+    // Token limits by mode to ensure prompts are never cut short
+    const maxTokensByMode: Record<PlatformMode, number> = {
+      'strategy': 12000,
+      'lovable': 16000,
+      'cursor': 16000,
+      'v0': 10000
+    };
+    const maxTokens = maxTokensByMode[resolvedMode];
+
+    console.log(`generate-master-prompt: using model=${aiModel}, max_tokens=${maxTokens}`);
+
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -504,7 +521,8 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: aiModel,
+        max_tokens: maxTokens,
         messages: [
           { role: 'system', content: promptTemplate },
           { role: 'user', content: `Generate the master prompt for idea_id: ${resolvedIdeaId}` }
