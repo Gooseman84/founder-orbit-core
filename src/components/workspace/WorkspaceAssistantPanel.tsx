@@ -23,15 +23,15 @@ export function WorkspaceAssistantPanel({
   const hasSuggestions = document.ai_suggestions && document.ai_suggestions.trim().length > 0;
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
+    <Card className="flex flex-col">
+      <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <Sparkles className="w-5 h-5" />
           AI Assistant
         </CardTitle>
         <CardDescription>Get AI-powered suggestions for your content</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4 flex-1 flex flex-col">
+      <CardContent className="space-y-4 flex flex-col">
         {/* Task context header if present */}
         {taskContext && (
           <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
@@ -83,13 +83,13 @@ export function WorkspaceAssistantPanel({
 
         {hasSuggestions && (
           <>
-            <div className="border-t pt-4 flex-1 flex flex-col">
+            <div className="border-t pt-4 flex flex-col">
               <p className="text-sm font-medium mb-2">Latest Suggestion:</p>
-              <ScrollArea className="flex-1 border rounded-md p-3">
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">
+              <div className="border rounded-md p-3 max-h-[400px] overflow-y-auto">
+                <p className="text-sm whitespace-pre-wrap leading-relaxed break-words">
                   {document.ai_suggestions}
                 </p>
-              </ScrollArea>
+              </div>
             </div>
 
             <div className="space-y-2 pt-2">
