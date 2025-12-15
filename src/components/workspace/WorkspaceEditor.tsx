@@ -27,7 +27,7 @@ export function WorkspaceEditor({ document, onChange }: WorkspaceEditorProps) {
   );
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div className="flex flex-col gap-4">
       <Card>
         <CardHeader className="pb-4">
           <CardTitle>{document.title}</CardTitle>
@@ -37,13 +37,13 @@ export function WorkspaceEditor({ document, onChange }: WorkspaceEditorProps) {
         </CardHeader>
       </Card>
 
-      <Card className="flex-1 flex flex-col">
-        <CardContent className="flex-1 p-0">
+      <Card>
+        <CardContent className="p-0">
           <Textarea
             value={content}
             onChange={handleChange}
             placeholder="Start writing your content here..."
-            className="h-full min-h-[500px] border-0 resize-none focus-visible:ring-0 font-mono text-sm p-6"
+            className="min-h-[500px] border-0 resize-y focus-visible:ring-0 font-mono text-sm p-6"
           />
         </CardContent>
       </Card>
