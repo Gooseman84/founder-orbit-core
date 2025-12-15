@@ -58,46 +58,54 @@ export default function NorthStar() {
     document.title = "North Star Master Prompt | TrueBlazer.AI";
   }, []);
 
-  // Check if the prompt is outdated by comparing source timestamps
+  // Compute a stable context hash (same algorithm as edge function)
+  const computeContextHash = useCallback((timestamps: (string | null | undefined)[]): string => {
+    const input = timestamps.filter(Boolean).join('|');
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+      hash = ((hash << 5) - hash) + input.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(36);
+  }, []);
+
+  // Check if the prompt is outdated by comparing context_hash
   const checkIfOutdated = useCallback(async (promptData: MasterPromptData) => {
-    if (!user || !promptData.source_updated_at) {
+    if (!user || !promptData.context_hash) {
       setIsOutdated(false);
       return;
     }
 
     try {
-      // Get latest timestamps from various sources
-      const [profileRes, ideaRes, docsRes, reflectionsRes, tasksRes] = await Promise.all([
+      // Get latest timestamps from various sources (same sources as edge function)
+      const [profileRes, ideaRes, analysisRes, docsRes, reflectionsRes, tasksRes, blueprintRes] = await Promise.all([
         supabase.from('founder_profiles').select('updated_at').eq('user_id', user.id).maybeSingle(),
         supabase.from('ideas').select('created_at').eq('id', promptData.idea_id).maybeSingle(),
+        supabase.from('idea_analysis').select('created_at').eq('idea_id', promptData.idea_id).maybeSingle(),
         supabase.from('workspace_documents').select('updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('daily_reflections').select('reflection_date').eq('user_id', user.id).order('reflection_date', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('tasks').select('completed_at').eq('user_id', user.id).not('completed_at', 'is', null).order('completed_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('founder_blueprints').select('updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
       ]);
 
-      const latestDates = [
+      // Compute fresh hash using same algorithm as edge function
+      const freshHash = computeContextHash([
         profileRes.data?.updated_at,
         ideaRes.data?.created_at,
+        analysisRes.data?.created_at,
         docsRes.data?.updated_at,
         reflectionsRes.data?.reflection_date,
         tasksRes.data?.completed_at,
-      ].filter(Boolean).map(d => new Date(d!).getTime());
+        blueprintRes.data?.updated_at,
+      ]);
 
-      if (latestDates.length === 0) {
-        setIsOutdated(false);
-        return;
-      }
-
-      const maxLatest = Math.max(...latestDates);
-      const promptSourceTime = new Date(promptData.source_updated_at).getTime();
-      
-      // Consider outdated if any source is newer than the prompt's source timestamp
-      setIsOutdated(maxLatest > promptSourceTime);
+      // Compare hashes - if different, context has changed
+      setIsOutdated(freshHash !== promptData.context_hash);
     } catch (err) {
       console.error('Error checking outdated status:', err);
       setIsOutdated(false);
     }
-  }, [user]);
+  }, [user, computeContextHash]);
 
   const fetchPromptForMode = useCallback(async (mode: PlatformMode) => {
     if (!user || !chosenIdeaId) return null;
@@ -607,8 +615,8 @@ export default function NorthStar() {
                   </Badge>
                 )}
                 {isOutdated && (
-                  <Badge variant="outline" className="text-amber-600 border-amber-500 text-xs">
-                    ⚠️ Outdated
+                  <Badge variant="outline" className="text-amber-600 border-amber-500 text-xs animate-pulse">
+                    ⚠️ Context changed — regenerate?
                   </Badge>
                 )}
               </div>
