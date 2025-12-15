@@ -609,27 +609,36 @@ export type Database = {
       }
       master_prompts: {
         Row: {
+          context_hash: string | null
           created_at: string
           id: string
           idea_id: string
+          platform_mode: string | null
           platform_target: string | null
           prompt_body: string
+          source_updated_at: string | null
           user_id: string
         }
         Insert: {
+          context_hash?: string | null
           created_at?: string
           id?: string
           idea_id: string
+          platform_mode?: string | null
           platform_target?: string | null
           prompt_body: string
+          source_updated_at?: string | null
           user_id: string
         }
         Update: {
+          context_hash?: string | null
           created_at?: string
           id?: string
           idea_id?: string
+          platform_mode?: string | null
           platform_target?: string | null
           prompt_body?: string
+          source_updated_at?: string | null
           user_id?: string
         }
         Relationships: []
