@@ -5,6 +5,16 @@ import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PromptViewer } from "@/components/shared/PromptViewer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,7 +25,7 @@ import { useVentureTasks } from "@/hooks/useVentureTasks";
 import { ThirtyDayPlanCard } from "@/components/venture/ThirtyDayPlanCard";
 import { EmptyPlanState } from "@/components/venture/EmptyPlanState";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Sparkles, RefreshCw, Calendar, Clock } from "lucide-react";
+import { Loader2, AlertCircle, Sparkles, RefreshCw, Calendar, Clock, Pencil } from "lucide-react";
 import { 
   PlatformMode, 
   MasterPromptData,
@@ -35,6 +45,8 @@ export default function NorthStar() {
   const [error, setError] = useState<string | null>(null);
   const [platformMode, setPlatformMode] = useState<PlatformMode>('strategy');
   const [isOutdated, setIsOutdated] = useState(false);
+  const [isEdited, setIsEdited] = useState(false);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
 
   // Venture hooks
   const { venture, ensureVentureForIdea } = useActiveVenture();
@@ -224,6 +236,7 @@ export default function NorthStar() {
 
       setMasterPrompt(promptData);
       setIsOutdated(false);
+      setIsEdited(false);
       toast.success(`${PLATFORM_MODE_LABELS[mode]} generated successfully!`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to generate master prompt";
@@ -290,7 +303,41 @@ export default function NorthStar() {
       toast.error("Cannot regenerate: missing user or idea information");
       return;
     }
+    
+    // If prompt has been edited, show confirmation dialog
+    if (isEdited) {
+      setShowRegenerateConfirm(true);
+      return;
+    }
+    
     await generateMasterPrompt(user.id, chosenIdeaId, platformMode);
+  };
+
+  const handleConfirmRegenerate = async () => {
+    setShowRegenerateConfirm(false);
+    if (!user || !chosenIdeaId) return;
+    await generateMasterPrompt(user.id, chosenIdeaId, platformMode);
+  };
+
+  // Save edited prompt to database
+  const handleSavePrompt = async (editedPrompt: string) => {
+    if (!masterPrompt?.id) {
+      throw new Error("No prompt to save");
+    }
+
+    const { error } = await supabase
+      .from('master_prompts')
+      .update({ prompt_body: editedPrompt })
+      .eq('id', masterPrompt.id);
+
+    if (error) {
+      console.error("Error saving prompt:", error);
+      throw error;
+    }
+
+    // Update local state
+    setMasterPrompt(prev => prev ? { ...prev, prompt_body: editedPrompt } : null);
+    setIsEdited(true);
   };
 
   const handleGeneratePlan = async () => {
@@ -553,6 +600,12 @@ export default function NorthStar() {
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {PLATFORM_MODE_LABELS[platformMode]}
                 </p>
+                {isEdited && (
+                  <Badge variant="outline" className="text-blue-600 border-blue-500 text-xs gap-1">
+                    <Pencil className="h-3 w-3" />
+                    Edited
+                  </Badge>
+                )}
                 {isOutdated && (
                   <Badge variant="outline" className="text-amber-600 border-amber-500 text-xs">
                     ⚠️ Outdated
@@ -612,10 +665,30 @@ export default function NorthStar() {
               prompt={masterPrompt.prompt_body}
               filename={`trueblazer-${ideaTitle.toLowerCase().replace(/\s+/g, "-")}`}
               platformMode={platformMode}
+              isEditable={true}
+              onSave={handleSavePrompt}
             />
           </Card>
         </section>
       )}
+
+      {/* Regenerate Confirmation Dialog */}
+      <AlertDialog open={showRegenerateConfirm} onOpenChange={setShowRegenerateConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Regenerate Prompt?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have made edits to this prompt. Regenerating will replace your edited version with a new AI-generated prompt. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmRegenerate}>
+              Regenerate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Additional Actions */}
       <Card className="p-4 bg-muted/50">
@@ -623,7 +696,7 @@ export default function NorthStar() {
           <div className="text-sm">
             <p className="font-medium">Need to update your prompt?</p>
             <p className="text-muted-foreground text-xs">
-              Update your profile or re-analyze your idea, then regenerate
+              Edit directly above, update your profile, or regenerate with AI
             </p>
           </div>
           <Button variant="outline" onClick={() => navigate("/profile")}>
