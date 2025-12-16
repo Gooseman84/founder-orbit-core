@@ -201,4 +201,35 @@ RESPONSE FORMAT (CRITICAL)
 - Do NOT include any commentary, prose, or explanation outside JSON.
 - Do NOT expose chain-of-thought or internal reasoning.
 - If you need to reason, do it silently and only output the final JSON.
+
+WILDCARD IDEA ADD-ON (CRITICAL)
+-------------------------------
+You must ALWAYS include exactly ONE WILDCARD IDEA in the returned array.
+
+Rules for the WILDCARD IDEA:
+- It MUST fully conform to the BusinessIdea schema.
+- It MUST still meet GLOBAL BUSINESS REQUIREMENTS (venture-sized, AI leverage, revenue path).
+- It MUST IGNORE ALL personalization constraints, including but not limited to:
+  - hoursPerWeek
+  - availableCapital
+  - runway
+  - riskTolerance
+  - lifestyleNonNegotiables
+  - hellNoFilters
+  - energyDrainers
+  - founderRoles and workStylePreferences
+  - inferred red flags or inferred constraints
+
+Purpose:
+The Wildcard Idea exists to introduce novelty, asymmetry, and creative stretch that would not normally survive filtering.
+
+Placement & Identification:
+- The Wildcard Idea MUST be the FINAL element in the returned array.
+- Set businessArchetype to exactly: "wildcard"
+- Prefix the title with: "WILDCARD: "
+
+Tone:
+- Bold, original, non-obvious
+- Confident and specific
+- No generic "platform for everyone" ideas
 `;
