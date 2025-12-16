@@ -13,8 +13,9 @@ export const useOnboardingGuard = () => {
       // Don't run if still loading auth or no user
       if (loading || !user) return;
 
-      // Don't redirect from auth page
-      if (location.pathname === "/auth") return;
+      // Don't redirect from these pages
+      const exemptPaths = ["/auth", "/onboarding", "/onboarding/interview", "/onboarding/extended"];
+      if (exemptPaths.some(path => location.pathname.startsWith(path))) return;
 
       try {
         const { data: profile, error } = await supabase
@@ -28,14 +29,9 @@ export const useOnboardingGuard = () => {
           return;
         }
 
-        // No profile exists - redirect to onboarding if not already there
-        if (!profile && location.pathname !== "/onboarding") {
+        // No profile exists - redirect to onboarding
+        if (!profile) {
           navigate("/onboarding", { replace: true });
-        }
-
-        // Profile exists - redirect away from onboarding
-        if (profile && location.pathname === "/onboarding") {
-          navigate("/ideas", { replace: true });
         }
       } catch (error) {
         console.error("Unexpected error in onboarding guard:", error);
