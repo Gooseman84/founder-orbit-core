@@ -233,7 +233,18 @@ const Ideas = () => {
     setSavingIdeaId(idea.id);
     // Convert v6 idea to legacy format for saving
     const legacyIdea = isV6Idea(idea) ? convertV6ToLegacy(idea) : idea;
-    const result = await saveIdea(legacyIdea);
+    
+    // Find the scores for this idea from founderScoredIdeas
+    const scoredIdea = founderScoredIdeas.find(si => si.idea.id === idea.id);
+    const fitScores = scoredIdea ? {
+      overall: scoredIdea.scores.overall,
+      passion: scoredIdea.scores.founderFit, // founderFit evaluates passions/skills
+      skill: scoredIdea.scores.marketFit, // marketFit involves skill match for execution
+      constraints: scoredIdea.scores.constraintsFit,
+      lifestyle: scoredIdea.scores.economics, // economics reflects lifestyle balance
+    } : undefined;
+    
+    const result = await saveIdea(legacyIdea, fitScores);
     setSavingIdeaId(null);
     if (result.success && result.id) {
       markIdeaAsSaved(idea.id, result.id);

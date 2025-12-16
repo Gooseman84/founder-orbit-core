@@ -4,6 +4,14 @@ import { useAuth } from "./useAuth";
 import type { BusinessIdea } from "@/types/businessIdea";
 import type { PlanErrorCode } from "@/config/plans";
 
+interface FitScores {
+  overall: number;
+  passion: number;
+  skill: number;
+  constraints: number;
+  lifestyle: number;
+}
+
 interface SaveResult {
   success: boolean;
   id?: string;  // Database ID from ideas table
@@ -17,7 +25,7 @@ export function useSaveFounderIdea() {
   const [error, setError] = useState<Error | null>(null);
   const [planError, setPlanError] = useState<{ code: PlanErrorCode; limit?: number } | null>(null);
 
-  const saveIdea = async (idea: BusinessIdea): Promise<SaveResult> => {
+  const saveIdea = async (idea: BusinessIdea, fitScores?: FitScores): Promise<SaveResult> => {
     if (!user) {
       setError(new Error("Not authenticated"));
       return { success: false };
@@ -30,10 +38,29 @@ export function useSaveFounderIdea() {
     try {
       const { data, error: invokeError } = await supabase.functions.invoke(
         "save-founder-idea",
-        { body: { idea, userId: user.id } }
+        { body: { idea, fitScores } }
       );
 
+      // Handle errors including plan limits from 403 responses
       if (invokeError) {
+        // Try to parse error context for plan limit info
+        const errorContext = (invokeError as any)?.context;
+        let parsedError: any = null;
+        
+        if (errorContext?.body) {
+          try {
+            parsedError = JSON.parse(errorContext.body);
+          } catch {
+            // Not JSON, ignore
+          }
+        }
+        
+        // Check if this is a plan limit error
+        if (parsedError?.code) {
+          setPlanError({ code: parsedError.code, limit: parsedError.limit });
+          return { success: false, errorCode: parsedError.code, limit: parsedError.limit };
+        }
+        
         throw new Error(invokeError.message || "Failed to save idea");
       }
 

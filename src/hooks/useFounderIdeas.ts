@@ -76,9 +76,37 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
         },
       });
 
-      if (error) throw error;
+      // Handle errors - supabase.functions.invoke returns error for non-2xx
+      if (error) {
+        // Try to parse error context for plan limit info
+        // The edge function returns JSON body even on 403
+        const errorContext = (error as any)?.context;
+        let parsedError: any = null;
+        
+        if (errorContext?.body) {
+          try {
+            parsedError = JSON.parse(errorContext.body);
+          } catch {
+            // Not JSON, ignore
+          }
+        }
+        
+        // Check if this is a plan limit error
+        if (parsedError?.code) {
+          const planErr: PlanLimitError = {
+            code: parsedError.code,
+            mode: parsedError.mode,
+            limit: parsedError.limit,
+            plan: parsedError.plan,
+          };
+          setPlanError(planErr);
+          throw new Error(parsedError.error || "Plan limit reached");
+        }
+        
+        throw error;
+      }
 
-      // Check for plan limit errors
+      // Also check for plan limit errors in successful response (legacy pattern)
       if (data?.code) {
         const planErr: PlanLimitError = {
           code: data.code,

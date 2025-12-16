@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
+import type { PaywallReasonCode } from "@/config/paywallCopy";
 import { 
   Zap, 
   DollarSign, 
@@ -47,6 +49,8 @@ export const IdeaVariantGenerator = ({
   const [generatingMode, setGeneratingMode] = useState<VariantMode | null>(null);
   const [variants, setVariants] = useState<any[]>([]);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReasonCode, setPaywallReasonCode] = useState<PaywallReasonCode | undefined>();
 
   const handleGenerateVariant = async (mode: VariantMode) => {
     setGeneratingMode(mode);
@@ -66,7 +70,44 @@ Generate a ${mode.replace("_", " ")} variant that transforms or evolves this con
         },
       });
 
-      if (error) throw error;
+      // Handle errors including plan limits
+      if (error) {
+        // Try to parse error context for plan limit info
+        const errorContext = (error as any)?.context;
+        let parsedError: any = null;
+        
+        if (errorContext?.body) {
+          try {
+            parsedError = JSON.parse(errorContext.body);
+          } catch {
+            // Not JSON, ignore
+          }
+        }
+        
+        // Check if this is a plan limit error
+        if (parsedError?.code) {
+          const reasonMap: Record<string, PaywallReasonCode> = {
+            "IDEA_LIMIT_REACHED": "IDEA_LIMIT_REACHED",
+            "MODE_REQUIRES_PRO": "MODE_REQUIRES_PRO",
+          };
+          setPaywallReasonCode(reasonMap[parsedError.code] || "IDEA_LIMIT_REACHED");
+          setShowPaywall(true);
+          return; // Don't show error toast, paywall handles it
+        }
+        
+        throw error;
+      }
+
+      // Also check data for plan limit errors (legacy pattern)
+      if (data?.code) {
+        const reasonMap: Record<string, PaywallReasonCode> = {
+          "IDEA_LIMIT_REACHED": "IDEA_LIMIT_REACHED",
+          "MODE_REQUIRES_PRO": "MODE_REQUIRES_PRO",
+        };
+        setPaywallReasonCode(reasonMap[data.code] || "IDEA_LIMIT_REACHED");
+        setShowPaywall(true);
+        return;
+      }
 
       const newVariants = data?.ideas || [];
       // Mark variants with source mode
@@ -263,6 +304,16 @@ Generate a ${mode.replace("_", " ")} variant that transforms or evolves this con
           </div>
         )}
       </CardContent>
+
+      <ProUpgradeModal
+        open={showPaywall}
+        onClose={() => {
+          setShowPaywall(false);
+          setPaywallReasonCode(undefined);
+        }}
+        reasonCode={paywallReasonCode}
+        context={{ feature: "idea_variants" }}
+      />
     </Card>
   );
 };

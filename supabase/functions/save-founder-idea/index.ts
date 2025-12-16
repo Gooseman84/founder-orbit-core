@@ -45,7 +45,7 @@ serve(async (req) => {
     // Use service role for DB operations
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    const { idea } = await req.json();
+    const { idea, fitScores } = await req.json();
 
     // Light validation
     if (!idea || typeof idea !== "object" || !idea.id || !idea.title) {
@@ -54,6 +54,8 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("save-founder-idea: fitScores received:", fitScores);
 
     // ===== PLAN CHECK: Get user subscription =====
     const { data: subData } = await supabase
@@ -123,6 +125,13 @@ serve(async (req) => {
           culture_tailwind: idea.cultureTailwind ?? null,
           chaos_factor: idea.chaosFactor ?? null,
           status: "candidate",
+          // Persist fit scores if provided
+          passion_fit_score: fitScores?.passion ?? null,
+          skill_fit_score: fitScores?.skill ?? null,
+          constraint_fit_score: fitScores?.constraints ?? null,
+          lifestyle_fit_score: fitScores?.lifestyle ?? null,
+          overall_fit_score: fitScores?.overall ?? null,
+          fit_scores: fitScores ? JSON.stringify(fitScores) : null,
         })
         .select()
         .single();
