@@ -74,7 +74,8 @@ RESPONSE FORMAT:
 // ============================================
 // PASS B: COMMERCIAL REFINEMENT PROMPT
 // ============================================
-const PASS_B_SYSTEM_PROMPT = `You are TrueBlazer REFINEMENT ENGINE v2.0 — COMMERCIAL REALITY CHECK.
+function buildPassBSystemPrompt(wildcardMode: boolean): string {
+  const basePrompt = `You are TrueBlazer REFINEMENT ENGINE v2.0 — COMMERCIAL REALITY CHECK.
 
 Your mission: Take the best 9-12 raw ideas and make them EXECUTABLE while keeping the excitement.
 
@@ -114,7 +115,8 @@ OUTPUT SCHEMA (STRICT):
   "risk_notes": string,            // honest risks
   "delight_factor": string,        // what makes this novel/fun
   "first_dollar_path": string,     // concrete 7-day revenue steps
-  "idea_mode": "Standard" | "Persona" | "Chaos" | "Memetic" | "Fusion",
+  "idea_mode": "Standard" | "Persona" | "Chaos" | "Memetic" | "Fusion" | "Wildcard",
+  "is_wildcard": boolean,          // OPTIONAL: true ONLY for the wildcard idea
   
   // v6 compatibility scores (0-100)
   "shock_factor": number,
@@ -133,12 +135,33 @@ When tone = "exciting" (DEFAULT):
 - No MBA-speak
 - Write like a sharp founder friend
 - Make readers say "holy sh*t, I want to build that"
+`;
+
+  const wildcardInstructions = wildcardMode ? `
+
+WILDCARD MODE ACTIVE:
+=====================
+You MUST include EXACTLY ONE wildcard idea that:
+- IGNORES all founder constraints (hoursPerWeek, capital, hellNoFilters, lifestyleNonNegotiables, energy drainers, risk tolerance)
+- IS the LAST item in the refined_ideas array
+- HAS "is_wildcard": true set on the idea object
+- HAS "idea_mode": "Wildcard"
+- STILL must be venture-sized, AI-native, monetizable, and executable
+- CAN be ambitious, capital-intensive, or require full-time commitment
+- REPRESENTS a "what if you had no limits?" opportunity
+
+The wildcard is meant to inspire and show what's possible if constraints were removed.
+All other 8-11 ideas should still respect founder constraints normally.
+` : '';
+
+  return basePrompt + wildcardInstructions + `
 
 RESPONSE FORMAT:
 - Return ONLY valid JSON: { "refined_ideas": [...] }
 - 9-12 ideas exactly
 - No markdown, no commentary
 `;
+}
 
 function buildModeContext(mode: IdeaGenerationMode, focusArea?: string): string {
   const modeDescriptions: Record<IdeaGenerationMode, string> = {
@@ -159,6 +182,58 @@ function buildModeContext(mode: IdeaGenerationMode, focusArea?: string): string 
   return modeDescriptions[mode];
 }
 
+// Helper to parse refined ideas from AI response
+function parseRefinedIdeas(content: string): any[] {
+  try {
+    const parsed = JSON.parse(content);
+    return parsed.refined_ideas;
+  } catch {
+    const firstBrace = content.indexOf("{");
+    const lastBrace = content.lastIndexOf("}");
+    if (firstBrace === -1 || lastBrace === -1) {
+      throw new Error("No JSON found in response");
+    }
+    const sliced = content.slice(firstBrace, lastBrace + 1);
+    const parsed = JSON.parse(sliced);
+    return parsed.refined_ideas;
+  }
+}
+
+// Helper to call Pass B
+async function callPassB(
+  apiKey: string,
+  systemPrompt: string,
+  userMessage: string
+): Promise<{ ok: boolean; status?: number; content?: string; error?: string }> {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    return { ok: false, status: response.status, error: await response.text() };
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content as string | undefined;
+  
+  if (!content) {
+    return { ok: false, error: "Empty response" };
+  }
+
+  return { ok: true, content };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -173,6 +248,7 @@ serve(async (req) => {
     const mode: IdeaGenerationMode = body.mode || "breadth";
     const focusArea: string | undefined = body.focus_area;
     const tone: GenerationTone = body.tone || "exciting";
+    const wildcardMode: boolean = body.wildcard_mode === true;
 
     if (!userId) {
       return new Response(
@@ -181,7 +257,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`generate-founder-ideas v7: mode=${mode}, tone=${tone}, focus_area=${focusArea || "none"}`);
+    console.log(`generate-founder-ideas v7: mode=${mode}, tone=${tone}, focus_area=${focusArea || "none"}, wildcard_mode=${wildcardMode}`);
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
@@ -397,39 +473,55 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
     // ============================================
     console.log("generate-founder-ideas v7: Starting Pass B (Commercial Refinement)...");
 
-    const passBMessage = `FOUNDER CONTEXT:
+    const passBSystemPrompt = buildPassBSystemPrompt(wildcardMode);
+
+    const buildPassBMessage = (retryWithStricterInstruction = false) => {
+      let message = `FOUNDER CONTEXT:
 ${JSON.stringify(founderPayload, null, 2)}
 
 RAW IDEAS FROM PASS A (${rawIdeas.length} ideas):
 ${JSON.stringify(rawIdeas, null, 2)}
 
 TONE: ${tone}
+WILDCARD_MODE: ${wildcardMode}
 
 Select the TOP 9-12 ideas based on founder fit + first-dollar potential + excitement.
 Refine them with commercial viability while keeping the ENERGY.
 Apply EXCITEMENT INSURANCE to every idea.
+`;
 
+      if (wildcardMode) {
+        message += `
+If WILDCARD_MODE is true, include exactly one wildcard idea as the LAST item in refined_ideas.
+The wildcard must have "is_wildcard": true and "idea_mode": "Wildcard".
+The wildcard IGNORES founder constraints and represents a "no limits" opportunity.
+`;
+      }
+
+      if (retryWithStricterInstruction) {
+        message += `
+CRITICAL: You forgot the wildcard in your previous response. 
+Replace the last item with a wildcard idea. Set is_wildcard=true and idea_mode="Wildcard".
+This is MANDATORY when WILDCARD_MODE is true.
+`;
+      }
+
+      message += `
 Return ONLY: { "refined_ideas": [...] }`;
 
-    const passBResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: PASS_B_SYSTEM_PROMPT },
-          { role: "user", content: passBMessage },
-        ],
-      }),
-    });
+      return message;
+    };
 
-    if (!passBResponse.ok) {
-      const status = passBResponse.status;
-      const text = await passBResponse.text();
-      console.error("generate-founder-ideas: Pass B AI error", status, text);
+    // First Pass B attempt
+    let passBResult = await callPassB(
+      LOVABLE_API_KEY,
+      passBSystemPrompt,
+      buildPassBMessage(false)
+    );
+
+    if (!passBResult.ok) {
+      const status = passBResult.status;
+      console.error("generate-founder-ideas: Pass B AI error", status, passBResult.error);
       
       if (status === 429) {
         return new Response(
@@ -449,34 +541,15 @@ Return ONLY: { "refined_ideas": [...] }`;
       );
     }
 
-    const passBData = await passBResponse.json();
-    const passBContent = passBData.choices?.[0]?.message?.content as string | undefined;
-
-    if (!passBContent) {
-      console.error("generate-founder-ideas: Pass B empty response");
-      return new Response(
-        JSON.stringify({ error: "Pass B returned empty response" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     let refinedIdeas: any[];
     try {
-      const parsed = JSON.parse(passBContent);
-      refinedIdeas = parsed.refined_ideas;
-    } catch {
-      const firstBrace = passBContent.indexOf("{");
-      const lastBrace = passBContent.lastIndexOf("}");
-      if (firstBrace === -1 || lastBrace === -1) {
-        console.error("generate-founder-ideas: Pass B no JSON found");
-        return new Response(
-          JSON.stringify({ error: "Failed to parse Pass B response" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      const sliced = passBContent.slice(firstBrace, lastBrace + 1);
-      const parsed = JSON.parse(sliced);
-      refinedIdeas = parsed.refined_ideas;
+      refinedIdeas = parseRefinedIdeas(passBResult.content!);
+    } catch (e) {
+      console.error("generate-founder-ideas: Pass B parse error", e);
+      return new Response(
+        JSON.stringify({ error: "Failed to parse Pass B response" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     if (!Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
@@ -487,62 +560,110 @@ Return ONLY: { "refined_ideas": [...] }`;
       );
     }
 
+    // ===== WILDCARD SAFETY GUARD =====
+    if (wildcardMode) {
+      const hasWildcard = refinedIdeas.some((idea: any) => idea.is_wildcard === true);
+      
+      if (!hasWildcard) {
+        console.log("generate-founder-ideas v7: Wildcard missing, retrying Pass B with stricter instruction...");
+        
+        // Retry with stricter instruction
+        const retryResult = await callPassB(
+          LOVABLE_API_KEY,
+          passBSystemPrompt,
+          buildPassBMessage(true)
+        );
+
+        if (retryResult.ok && retryResult.content) {
+          try {
+            const retryIdeas = parseRefinedIdeas(retryResult.content);
+            if (Array.isArray(retryIdeas) && retryIdeas.length > 0) {
+              const retryHasWildcard = retryIdeas.some((idea: any) => idea.is_wildcard === true);
+              if (retryHasWildcard) {
+                refinedIdeas = retryIdeas;
+                console.log("generate-founder-ideas v7: Wildcard recovered on retry");
+              } else {
+                console.warn("generate-founder-ideas v7: Wildcard still missing after retry, proceeding without");
+              }
+            }
+          } catch (e) {
+            console.warn("generate-founder-ideas v7: Retry parse failed, proceeding without wildcard", e);
+          }
+        } else {
+          console.warn("generate-founder-ideas v7: Retry failed, proceeding without wildcard");
+        }
+      }
+    }
+
     console.log(`generate-founder-ideas v7: Pass B refined ${refinedIdeas.length} ideas`);
 
     // ============================================
     // MAP TO V7 RESPONSE FORMAT
     // ============================================
-    const finalIdeas = refinedIdeas.map((idea: any, index: number) => ({
-      id: idea.id || `v7-${mode}-${index}`,
-      title: idea.title || "Untitled Idea",
-      oneLiner: idea.one_liner_pitch || "",
-      description: `${idea.problem || ""} ${idea.solution || ""}`.trim(),
+    const finalIdeas = refinedIdeas.map((idea: any, index: number) => {
+      const isWildcard = idea.is_wildcard === true;
       
-      // v7 specific
-      problem: idea.problem || "",
-      solution: idea.solution || "",
-      idealCustomer: idea.ideal_customer || "",
-      pricingAnchor: idea.pricing_anchor || "",
-      distributionWedge: idea.distribution_wedge || "",
-      executionDifficulty: idea.execution_difficulty || "Medium",
-      riskNotes: idea.risk_notes || "",
-      delightFactor: idea.delight_factor || "",
-      firstDollarPath: idea.first_dollar_path || idea.time_to_first_dollar || "",
-      
-      // Classification
-      category: inferCategory(idea),
-      industry: "",
-      model: idea.business_model || "subscription",
-      aiPattern: "",
-      platform: null,
-      difficulty: mapDifficulty(idea.execution_difficulty),
-      soloFit: idea.execution_difficulty !== "High",
-      timeToRevenue: "0-30d",
-      
-      // Legacy compat
-      whyNow: idea.why_now || "",
-      whyItFitsFounder: idea.why_now || "",
-      problemStatement: idea.problem || "",
-      targetCustomer: idea.ideal_customer || "",
-      mvpApproach: idea.solution || "",
-      goToMarket: idea.distribution_wedge || "",
-      firstSteps: idea.first_dollar_path ? [idea.first_dollar_path] : [],
-      
-      // v6 scores
-      shockFactor: idea.shock_factor ?? 50,
-      viralityPotential: idea.virality_potential ?? 50,
-      leverageScore: idea.leverage_score ?? 60,
-      automationDensity: idea.automation_density ?? 50,
-      autonomyLevel: idea.autonomy_level ?? 50,
-      cultureTailwind: idea.culture_tailwind ?? 50,
-      chaosFactor: idea.chaos_factor ?? 30,
-      
-      // Metadata
-      engineVersion: "v7",
-      mode,
-      ideaModeV7: idea.idea_mode || "Standard",
-      tone,
-    }));
+      // Handle title prefix for wildcard
+      let title = idea.title || "Untitled Idea";
+      if (isWildcard && !title.startsWith("WILDCARD:")) {
+        title = `WILDCARD: ${title}`;
+      }
+
+      return {
+        id: idea.id || `v7-${mode}-${index}`,
+        title,
+        oneLiner: idea.one_liner_pitch || "",
+        description: `${idea.problem || ""} ${idea.solution || ""}`.trim(),
+        
+        // v7 specific
+        problem: idea.problem || "",
+        solution: idea.solution || "",
+        idealCustomer: idea.ideal_customer || "",
+        pricingAnchor: idea.pricing_anchor || "",
+        distributionWedge: idea.distribution_wedge || "",
+        executionDifficulty: idea.execution_difficulty || "Medium",
+        riskNotes: idea.risk_notes || "",
+        delightFactor: idea.delight_factor || "",
+        firstDollarPath: idea.first_dollar_path || idea.time_to_first_dollar || "",
+        
+        // Classification
+        category: isWildcard ? "wildcard" : inferCategory(idea),
+        industry: "",
+        model: idea.business_model || "subscription",
+        aiPattern: "",
+        platform: null,
+        difficulty: mapDifficulty(idea.execution_difficulty),
+        soloFit: idea.execution_difficulty !== "High",
+        timeToRevenue: "0-30d",
+        
+        // Legacy compat
+        whyNow: idea.why_now || "",
+        whyItFitsFounder: idea.why_now || "",
+        problemStatement: idea.problem || "",
+        targetCustomer: idea.ideal_customer || "",
+        mvpApproach: idea.solution || "",
+        goToMarket: idea.distribution_wedge || "",
+        firstSteps: idea.first_dollar_path ? [idea.first_dollar_path] : [],
+        
+        // v6 scores
+        shockFactor: idea.shock_factor ?? 50,
+        viralityPotential: idea.virality_potential ?? 50,
+        leverageScore: idea.leverage_score ?? 60,
+        automationDensity: idea.automation_density ?? 50,
+        autonomyLevel: idea.autonomy_level ?? 50,
+        cultureTailwind: idea.culture_tailwind ?? 50,
+        chaosFactor: idea.chaos_factor ?? 30,
+        
+        // Metadata
+        engineVersion: "v7",
+        mode,
+        ideaModeV7: isWildcard ? "Wildcard" : (idea.idea_mode || "Standard"),
+        tone,
+        
+        // Wildcard flag
+        wildcard: isWildcard,
+      };
+    });
 
     // Return full v7 response
     const response = {
@@ -550,12 +671,13 @@ Return ONLY: { "refined_ideas": [...] }`;
       tone,
       mode,
       engine_version: "v7",
+      wildcard_mode: wildcardMode,
       pass_a_raw_ideas: rawIdeas,
       final_ranked_ideas: refinedIdeas,
       ideas: finalIdeas, // Backwards compatible field
     };
 
-    console.log(`generate-founder-ideas v7: Complete. ${rawIdeas.length} raw → ${finalIdeas.length} refined`);
+    console.log(`generate-founder-ideas v7: Complete. ${rawIdeas.length} raw → ${finalIdeas.length} refined (wildcard_mode=${wildcardMode})`);
 
     return new Response(
       JSON.stringify(response),
