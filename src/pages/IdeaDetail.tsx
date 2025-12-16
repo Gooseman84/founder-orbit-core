@@ -20,7 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { recordXpEvent } from "@/lib/xpEngine";
-import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, RefreshCw, AlertCircle } from "lucide-react";
+import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp, GitMerge } from "lucide-react";
 
 const getComplexityVariant = (complexity: string | null) => {
   switch (complexity?.toLowerCase()) {
@@ -49,7 +49,6 @@ const IdeaDetail = () => {
   const [showPaywall, setShowPaywall] = useState(false);
   const [founderProfile, setFounderProfile] = useState<any>(null);
   const [generatedVariants, setGeneratedVariants] = useState<any[]>([]);
-  const [recalculatingFit, setRecalculatingFit] = useState(false);
 
   const handleVetIdea = async () => {
     try {
@@ -174,43 +173,6 @@ const IdeaDetail = () => {
       });
     } finally {
       setGeneratingScore(false);
-    }
-  };
-
-  const handleRecalculateFitScores = async () => {
-    if (!user || !id) return;
-    
-    setRecalculatingFit(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("recalculate-fit-scores", {
-        body: { ideaId: id },
-      });
-
-      if (error) {
-        const errorData = error.context ? JSON.parse(await error.context.text?.() || "{}") : {};
-        throw new Error(errorData?.error || error.message || "Failed to recalculate fit scores");
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      // Refresh the idea data to show updated scores
-      window.location.reload();
-      
-      toast({
-        title: "Fit Scores Updated!",
-        description: "Your fit scores have been recalculated based on your profile.",
-      });
-    } catch (error: any) {
-      console.error("Error recalculating fit scores:", error);
-      toast({
-        title: "Recalculation Failed",
-        description: error.message || "Could not recalculate fit scores. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setRecalculatingFit(false);
     }
   };
 
@@ -346,96 +308,54 @@ const IdeaDetail = () => {
           <Separator />
 
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-primary" />
-                Fit Scores
-              </h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRecalculateFitScores}
-                disabled={recalculatingFit}
-                className="gap-1.5"
-              >
-                {recalculatingFit ? (
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
-                ) : (
-                  <RefreshCw className="h-3 w-3" />
-                )}
-                Recalculate
-              </Button>
-            </div>
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Fit Scores
+            </h3>
 
-            {/* Check if fit scores are calculated */}
-            {!idea.overall_fit_score && !idea.passion_fit_score && !idea.skill_fit_score ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center bg-muted/30 rounded-lg border border-dashed border-border">
-                <AlertCircle className="w-8 h-8 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground mb-3">Fit scores not calculated yet</p>
-                <Button
-                  size="sm"
-                  onClick={handleRecalculateFitScores}
-                  disabled={recalculatingFit}
-                  className="gap-1.5"
-                >
-                  {recalculatingFit ? (
-                    <>
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
-                      Calculating...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-3 w-3" />
-                      Calculate Fit Scores
-                    </>
-                  )}
-                </Button>
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Overall Fit</span>
+                  <span className="text-sm font-bold">{idea.overall_fit_score || 0}%</span>
+                </div>
+                <Progress value={idea.overall_fit_score || 0} className="h-2" />
               </div>
-            ) : (
-              <div className="space-y-4">
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Overall Fit</span>
-                    <span className="text-sm font-bold">{idea.overall_fit_score || 0}%</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground">Passion Fit</span>
+                    <span className="text-xs font-semibold">{idea.passion_fit_score || 0}%</span>
                   </div>
-                  <Progress value={idea.overall_fit_score || 0} className="h-2" />
+                  <Progress value={idea.passion_fit_score || 0} className="h-1.5" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">Passion Fit</span>
-                      <span className="text-xs font-semibold">{idea.passion_fit_score || 0}%</span>
-                    </div>
-                    <Progress value={idea.passion_fit_score || 0} className="h-1.5" />
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground">Skill Fit</span>
+                    <span className="text-xs font-semibold">{idea.skill_fit_score || 0}%</span>
                   </div>
+                  <Progress value={idea.skill_fit_score || 0} className="h-1.5" />
+                </div>
 
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">Skill Fit</span>
-                      <span className="text-xs font-semibold">{idea.skill_fit_score || 0}%</span>
-                    </div>
-                    <Progress value={idea.skill_fit_score || 0} className="h-1.5" />
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground">Constraint Fit</span>
+                    <span className="text-xs font-semibold">{idea.constraint_fit_score || 0}%</span>
                   </div>
+                  <Progress value={idea.constraint_fit_score || 0} className="h-1.5" />
+                </div>
 
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">Constraint Fit</span>
-                      <span className="text-xs font-semibold">{idea.constraint_fit_score || 0}%</span>
-                    </div>
-                    <Progress value={idea.constraint_fit_score || 0} className="h-1.5" />
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground">Lifestyle Fit</span>
+                    <span className="text-xs font-semibold">{idea.lifestyle_fit_score || 0}%</span>
                   </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">Lifestyle Fit</span>
-                      <span className="text-xs font-semibold">{idea.lifestyle_fit_score || 0}%</span>
-                    </div>
-                    <Progress value={idea.lifestyle_fit_score || 0} className="h-1.5" />
-                  </div>
+                  <Progress value={idea.lifestyle_fit_score || 0} className="h-1.5" />
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* V6 Metrics Section */}

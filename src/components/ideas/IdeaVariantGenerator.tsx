@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { 
   Zap, 
   DollarSign, 
@@ -48,63 +47,28 @@ export const IdeaVariantGenerator = ({
   const [generatingMode, setGeneratingMode] = useState<VariantMode | null>(null);
   const [variants, setVariants] = useState<any[]>([]);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [showPaywall, setShowPaywall] = useState(false);
 
   const handleGenerateVariant = async (mode: VariantMode) => {
     setGeneratingMode(mode);
 
     try {
-      const { data, error } = await supabase.functions.invoke("generate-variants", {
+      // Build focus_area from current idea
+      const focusArea = `Based on this existing idea: "${idea.title}" - ${idea.description || ""}. 
+Category: ${idea.category || idea.business_model_type || "general"}. 
+Platform: ${idea.platform || "any"}.
+Generate a ${mode.replace("_", " ")} variant that transforms or evolves this concept.`;
+
+      const { data, error } = await supabase.functions.invoke("generate-founder-ideas", {
         body: {
-          ideaId: idea.id,
-          variantType: mode,
+          user_id: userId,
+          mode,
+          focus_area: focusArea,
         },
       });
 
-      if (error) {
-        // Check for specific error codes in the response
-        const errorData = error.context ? JSON.parse(await error.context.text?.() || "{}") : {};
-        const code = errorData?.code || data?.code;
-        
-        console.error("Variant generation error:", { code, error, errorData });
+      if (error) throw error;
 
-        if (code === "UPGRADE_REQUIRED") {
-          setShowPaywall(true);
-          return;
-        }
-
-        if (code === "AUTH_REQUIRED") {
-          toast({
-            title: "Authentication Required",
-            description: "Please sign in to generate variants.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        throw new Error(errorData?.error || error.message || "Failed to generate variants");
-      }
-
-      // Check response for error codes (functions.invoke may not throw on 4xx)
-      if (data?.code === "UPGRADE_REQUIRED") {
-        setShowPaywall(true);
-        return;
-      }
-
-      if (data?.code === "AUTH_REQUIRED") {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to generate variants.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      const newVariants = data?.variants || [];
+      const newVariants = data?.ideas || [];
       // Mark variants with source mode
       const markedVariants = newVariants.slice(0, 3).map((v: any) => ({
         ...v,
@@ -121,14 +85,9 @@ export const IdeaVariantGenerator = ({
       });
     } catch (error: any) {
       console.error("Error generating variants:", error);
-      
-      // Better error visibility in dev mode
-      const errorMessage = error.message || "Failed to generate variants";
-      const isDev = import.meta.env.DEV;
-      
       toast({
-        title: "Generation Failed",
-        description: isDev ? `${errorMessage} (check console for details)` : errorMessage,
+        title: "Error",
+        description: error.message || "Failed to generate variants.",
         variant: "destructive",
       });
     } finally {
@@ -148,11 +107,11 @@ export const IdeaVariantGenerator = ({
           title: variant.title,
           description: variant.description || variant.oneLiner,
           category: variant.category,
-          business_model_type: variant.businessModel || variant.model,
+          business_model_type: variant.model,
           target_customer: variant.targetCustomer,
           platform: variant.platform || null,
           complexity: variant.difficulty === "easy" ? "low" : variant.difficulty === "hard" ? "high" : "medium",
-          time_to_first_dollar: variant.timeToFirstDollar || variant.timeToRevenue,
+          time_to_first_dollar: variant.timeToRevenue,
           mode: "variant",
           engine_version: "v6",
           shock_factor: variant.shockFactor,
@@ -208,110 +167,102 @@ export const IdeaVariantGenerator = ({
   };
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Flame className="h-5 w-5 text-primary" />
-            Generate Variants
-          </CardTitle>
-          <CardDescription>
-            Explore different angles and transformations of this idea
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {VARIANT_OPTIONS.map(({ mode, label, icon: Icon, description }) => (
-              <Button
-                key={mode}
-                variant="outline"
-                className="h-auto flex-col items-start p-3 text-left"
-                disabled={generatingMode !== null}
-                onClick={() => handleGenerateVariant(mode)}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  {generatingMode === mode ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
-                  ) : (
-                    <Icon className="h-4 w-4 text-primary" />
-                  )}
-                  <span className="font-medium text-sm">{label}</span>
-                </div>
-                <span className="text-xs text-muted-foreground">{description}</span>
-              </Button>
-            ))}
-          </div>
-
-          {variants.length > 0 && (
-            <div className="mt-6 space-y-3">
-              <h4 className="font-semibold flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Generated Variants ({variants.length})
-              </h4>
-              <div className="space-y-3">
-                {variants.map((variant, index) => (
-                  <div
-                    key={variant.id || index}
-                    className="p-4 border border-border rounded-lg bg-muted/30"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="font-medium">{variant.title}</p>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {variant.description || variant.oneLiner}
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="text-xs shrink-0">
-                        {variant.sourceMode?.replace("_", " ") || variant.variantType || variant.category || variant.mode}
-                      </Badge>
-                    </div>
-                    
-                    {variant.viralityPotential !== undefined && (
-                      <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
-                        <span>🔥 Virality: {variant.viralityPotential}</span>
-                        <span>⚡ Leverage: {variant.leverageScore}</span>
-                        <span>🤖 Automation: {variant.automationDensity}</span>
-                      </div>
-                    )}
-
-                    {/* Action buttons */}
-                    <div className="flex gap-2 mt-3">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1"
-                        disabled={savingId === variant.id || !!variant.savedId}
-                        onClick={() => handleSaveVariant(variant)}
-                      >
-                        {savingId === variant.id ? (
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
-                        ) : (
-                          <Library className="h-3 w-3" />
-                        )}
-                        {variant.savedId ? "Saved" : "Save to Library"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="gap-1"
-                        onClick={() => handleOpenVariant(variant)}
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Open as Full Idea
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Flame className="h-5 w-5 text-orange-500" />
+          Generate Variants
+        </CardTitle>
+        <CardDescription>
+          Explore different angles and transformations of this idea
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {VARIANT_OPTIONS.map(({ mode, label, icon: Icon, description }) => (
+            <Button
+              key={mode}
+              variant="outline"
+              className="h-auto flex-col items-start p-3 text-left"
+              disabled={generatingMode !== null}
+              onClick={() => handleGenerateVariant(mode)}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                {generatingMode === mode ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                ) : (
+                  <Icon className="h-4 w-4 text-primary" />
+                )}
+                <span className="font-medium text-sm">{label}</span>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              <span className="text-xs text-muted-foreground">{description}</span>
+            </Button>
+          ))}
+        </div>
 
-      <ProUpgradeModal
-        open={showPaywall}
-        onClose={() => setShowPaywall(false)}
-        reasonCode="MODE_REQUIRES_PRO"
-      />
-    </>
+        {variants.length > 0 && (
+          <div className="mt-6 space-y-3">
+            <h4 className="font-semibold flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Generated Variants ({variants.length})
+            </h4>
+            <div className="space-y-3">
+              {variants.map((variant, index) => (
+                <div
+                  key={variant.id || index}
+                  className="p-4 border border-border rounded-lg bg-muted/30"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <p className="font-medium">{variant.title}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {variant.description || variant.oneLiner}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      {variant.sourceMode?.replace("_", " ") || variant.category || variant.mode}
+                    </Badge>
+                  </div>
+                  
+                  {variant.viralityPotential !== undefined && (
+                    <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
+                      <span>🔥 Virality: {variant.viralityPotential}</span>
+                      <span>⚡ Leverage: {variant.leverageScore}</span>
+                      <span>🤖 Automation: {variant.automationDensity}</span>
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1"
+                      disabled={savingId === variant.id || !!variant.savedId}
+                      onClick={() => handleSaveVariant(variant)}
+                    >
+                      {savingId === variant.id ? (
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
+                      ) : (
+                        <Library className="h-3 w-3" />
+                      )}
+                      {variant.savedId ? "Saved" : "Save to Library"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => handleOpenVariant(variant)}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Open as Full Idea
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };

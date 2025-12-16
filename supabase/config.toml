@@ -98,9 +98,3 @@ verify_jwt = true
 
 [functions.fuse-ideas]
 verify_jwt = true
-
-[functions.generate-variants]
-verify_jwt = true
-
-[functions.recalculate-fit-scores]
-verify_jwt = true
