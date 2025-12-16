@@ -182,21 +182,44 @@ function buildModeContext(mode: IdeaGenerationMode, focusArea?: string): string 
   return modeDescriptions[mode];
 }
 
+// Helper to extract valid JSON from potentially messy AI response
+function extractJSON(content: string): any {
+  // First try direct parse
+  try {
+    return JSON.parse(content);
+  } catch {}
+  
+  // Find the outermost { } pair by counting braces
+  const firstBrace = content.indexOf("{");
+  if (firstBrace === -1) {
+    throw new Error("No JSON object found in response");
+  }
+  
+  let depth = 0;
+  let endIndex = -1;
+  for (let i = firstBrace; i < content.length; i++) {
+    if (content[i] === "{") depth++;
+    else if (content[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        endIndex = i;
+        break;
+      }
+    }
+  }
+  
+  if (endIndex === -1) {
+    throw new Error("No matching closing brace found");
+  }
+  
+  const jsonStr = content.slice(firstBrace, endIndex + 1);
+  return JSON.parse(jsonStr);
+}
+
 // Helper to parse refined ideas from AI response
 function parseRefinedIdeas(content: string): any[] {
-  try {
-    const parsed = JSON.parse(content);
-    return parsed.refined_ideas;
-  } catch {
-    const firstBrace = content.indexOf("{");
-    const lastBrace = content.lastIndexOf("}");
-    if (firstBrace === -1 || lastBrace === -1) {
-      throw new Error("No JSON found in response");
-    }
-    const sliced = content.slice(firstBrace, lastBrace + 1);
-    const parsed = JSON.parse(sliced);
-    return parsed.refined_ideas;
-  }
+  const parsed = extractJSON(content);
+  return parsed.refined_ideas;
 }
 
 // Helper to call Pass B
@@ -440,22 +463,14 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
 
     let rawIdeas: any[];
     try {
-      const parsed = JSON.parse(passAContent);
+      const parsed = extractJSON(passAContent);
       rawIdeas = parsed.raw_ideas;
-    } catch {
-      // Try extraction
-      const firstBrace = passAContent.indexOf("{");
-      const lastBrace = passAContent.lastIndexOf("}");
-      if (firstBrace === -1 || lastBrace === -1) {
-        console.error("generate-founder-ideas: Pass A no JSON found");
-        return new Response(
-          JSON.stringify({ error: "Failed to parse Pass A response" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      const sliced = passAContent.slice(firstBrace, lastBrace + 1);
-      const parsed = JSON.parse(sliced);
-      rawIdeas = parsed.raw_ideas;
+    } catch (e) {
+      console.error("generate-founder-ideas: Pass A JSON parse error", e);
+      return new Response(
+        JSON.stringify({ error: "Failed to parse Pass A response" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     if (!Array.isArray(rawIdeas) || rawIdeas.length === 0) {
