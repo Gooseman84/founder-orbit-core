@@ -364,53 +364,26 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
 
     let rawIdeas: any[];
     try {
-      // Strip markdown fences if present
-      let cleanContent = passAContent.trim();
-      if (cleanContent.startsWith("```")) {
-        // Remove opening fence (```json or ```)
-        cleanContent = cleanContent.replace(/^```(?:json)?\s*\n?/, "");
-        // Remove closing fence
-        cleanContent = cleanContent.replace(/\n?```\s*$/, "");
-      }
-      
-      console.log("generate-founder-ideas: Pass A content preview:", cleanContent.substring(0, 300));
-      
-      const parsed = JSON.parse(cleanContent);
+      const parsed = JSON.parse(passAContent);
       rawIdeas = parsed.raw_ideas;
-      
-      if (!rawIdeas) {
-        // Maybe it returned an array directly
-        rawIdeas = Array.isArray(parsed) ? parsed : [];
-      }
-    } catch (parseErr) {
-      console.error("generate-founder-ideas: Pass A JSON parse error:", parseErr);
-      console.log("generate-founder-ideas: Raw content was:", passAContent.substring(0, 500));
-      
-      // Try extraction from raw content
+    } catch {
+      // Try extraction
       const firstBrace = passAContent.indexOf("{");
       const lastBrace = passAContent.lastIndexOf("}");
       if (firstBrace === -1 || lastBrace === -1) {
-        console.error("generate-founder-ideas: Pass A no JSON found in content");
+        console.error("generate-founder-ideas: Pass A no JSON found");
         return new Response(
           JSON.stringify({ error: "Failed to parse Pass A response" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      try {
-        const sliced = passAContent.slice(firstBrace, lastBrace + 1);
-        const parsed = JSON.parse(sliced);
-        rawIdeas = parsed.raw_ideas || (Array.isArray(parsed) ? parsed : []);
-      } catch (e2) {
-        console.error("generate-founder-ideas: Pass A fallback parse also failed:", e2);
-        return new Response(
-          JSON.stringify({ error: "Failed to parse Pass A response after retries" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
+      const sliced = passAContent.slice(firstBrace, lastBrace + 1);
+      const parsed = JSON.parse(sliced);
+      rawIdeas = parsed.raw_ideas;
     }
 
     if (!Array.isArray(rawIdeas) || rawIdeas.length === 0) {
-      console.error("generate-founder-ideas: Pass A returned no ideas. rawIdeas:", JSON.stringify(rawIdeas));
+      console.error("generate-founder-ideas: Pass A returned no ideas");
       return new Response(
         JSON.stringify({ error: "Pass A returned no ideas" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -489,25 +462,9 @@ Return ONLY: { "refined_ideas": [...] }`;
 
     let refinedIdeas: any[];
     try {
-      // Strip markdown fences if present
-      let cleanContent = passBContent.trim();
-      if (cleanContent.startsWith("```")) {
-        cleanContent = cleanContent.replace(/^```(?:json)?\s*\n?/, "");
-        cleanContent = cleanContent.replace(/\n?```\s*$/, "");
-      }
-      
-      console.log("generate-founder-ideas: Pass B content preview:", cleanContent.substring(0, 300));
-      
-      const parsed = JSON.parse(cleanContent);
+      const parsed = JSON.parse(passBContent);
       refinedIdeas = parsed.refined_ideas;
-      
-      if (!refinedIdeas) {
-        refinedIdeas = Array.isArray(parsed) ? parsed : [];
-      }
-    } catch (parseErr) {
-      console.error("generate-founder-ideas: Pass B JSON parse error:", parseErr);
-      console.log("generate-founder-ideas: Raw content was:", passBContent.substring(0, 500));
-      
+    } catch {
       const firstBrace = passBContent.indexOf("{");
       const lastBrace = passBContent.lastIndexOf("}");
       if (firstBrace === -1 || lastBrace === -1) {
@@ -517,21 +474,13 @@ Return ONLY: { "refined_ideas": [...] }`;
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      try {
-        const sliced = passBContent.slice(firstBrace, lastBrace + 1);
-        const parsed = JSON.parse(sliced);
-        refinedIdeas = parsed.refined_ideas || (Array.isArray(parsed) ? parsed : []);
-      } catch (e2) {
-        console.error("generate-founder-ideas: Pass B fallback parse also failed:", e2);
-        return new Response(
-          JSON.stringify({ error: "Failed to parse Pass B response after retries" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
+      const sliced = passBContent.slice(firstBrace, lastBrace + 1);
+      const parsed = JSON.parse(sliced);
+      refinedIdeas = parsed.refined_ideas;
     }
 
     if (!Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
-      console.error("generate-founder-ideas: Pass B returned no ideas. refinedIdeas:", JSON.stringify(refinedIdeas));
+      console.error("generate-founder-ideas: Pass B returned no ideas");
       return new Response(
         JSON.stringify({ error: "Pass B returned no refined ideas" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
