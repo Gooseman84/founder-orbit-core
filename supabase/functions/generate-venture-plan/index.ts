@@ -90,20 +90,40 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Parse request body - userId comes from request body (JWT validated at gateway)
-    const body = await req.json();
-    const { ventureId, planType = "30_day", startDate, userId } = body;
-
-    if (!userId) {
-      console.error("generate-venture-plan: missing userId");
+    // Validate JWT and get authenticated user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "userId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Authorization header required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error("generate-venture-plan: auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Use authenticated user's ID (ignore userId from body to prevent impersonation)
+    const userId = user.id;
+    console.log("generate-venture-plan: authenticated user", userId);
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Parse request body for other parameters only
+    const body = await req.json();
+    const { ventureId, planType = "30_day", startDate } = body;
 
     if (!ventureId) {
       return new Response(
