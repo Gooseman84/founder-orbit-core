@@ -97,9 +97,7 @@ export default function OnboardingInterview() {
         const nextTranscript = (data as any).transcript as InterviewTurn[];
         const interviewId = (data as any).interviewId as string;
 
-        setInterview((prev) =>
-          prev ? { ...prev, id: interviewId, transcript: nextTranscript } : prev
-        );
+        setInterview((prev) => (prev ? { ...prev, id: interviewId, transcript: nextTranscript } : prev));
         setTranscript(nextTranscript);
       } catch (e: any) {
         console.error("OnboardingInterview: failed to get next question", e);
@@ -113,7 +111,7 @@ export default function OnboardingInterview() {
         setAsking(false);
       }
     },
-    [user, interview, transcript, toast]
+    [user, interview, transcript, toast],
   );
 
   const handleSubmit = async () => {
@@ -128,16 +126,13 @@ export default function OnboardingInterview() {
 
     try {
       // First, generate the structured context summary
-      const { data: summaryData, error: summaryError } = await supabase.functions.invoke(
-        "dynamic-founder-interview",
-        {
-          body: {
-            user_id: user.id,
-            interview_id: interview.id,
-            mode: "summary",
-          },
-        }
-      );
+      const { data: summaryData, error: summaryError } = await supabase.functions.invoke("dynamic-founder-interview", {
+        body: {
+          user_id: user.id,
+          interview_id: interview.id,
+          mode: "summary",
+        },
+      });
 
       if (summaryError) {
         console.error("dynamic-founder-interview summary error", summaryError);
@@ -149,15 +144,12 @@ export default function OnboardingInterview() {
       }
 
       // Then, merge into the FounderProfile
-      const { data: finalizeData, error: finalizeError } = await supabase.functions.invoke(
-        "finalize-founder-profile",
-        {
-          body: {
-            user_id: user.id,
-            interview_id: interview.id,
-          },
-        }
-      );
+      const { data: finalizeData, error: finalizeError } = await supabase.functions.invoke("finalize-founder-profile", {
+        body: {
+          user_id: user.id,
+          interview_id: interview.id,
+        },
+      });
 
       if (finalizeError) {
         console.error("finalize-founder-profile error", finalizeError);
@@ -200,48 +192,29 @@ export default function OnboardingInterview() {
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold">Founder Interview with Mavrik</h1>
           <p className="text-muted-foreground text-sm">
-            We\'ll ask around 12–18 short questions to understand your real constraints, energy, and edge. Take
-            your time—there are no perfect answers.
+            We'll ask around 12–18 short questions to understand your real constraints, energy, and edge. Take your
+            time—there are no perfect answers.
           </p>
-          <p className="text-xs text-muted-foreground">
-            Progress: question {Math.max(aiQuestionCount, 1)} of about 15
-          </p>
+          <p className="text-xs text-muted-foreground">Progress: question {Math.max(aiQuestionCount, 1)} of about 15</p>
         </div>
 
-        {error && (
-          <p className="text-xs text-destructive">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-xs text-destructive">{error}</p>}
 
         <div className="border rounded-lg bg-background/50">
           <ScrollArea className="h-80 sm:h-96 p-4 pr-6">
             <div className="flex flex-col gap-3">
-              {loading && (
-                <div className="text-sm text-muted-foreground">Loading your interview...</div>
-              )}
+              {loading && <div className="text-sm text-muted-foreground">Loading your interview...</div>}
 
               {!loading && transcript.length === 0 && (
-                <div className="text-sm text-muted-foreground">
-                  Mavrik is getting ready to start your interview.
-                </div>
+                <div className="text-sm text-muted-foreground">Mavrik is getting ready to start your interview.</div>
               )}
 
               {transcript.map((turn, index) => (
-                <div
-                  key={index}
-                  className={
-                    turn.role === "user"
-                      ? "flex justify-end"
-                      : "flex justify-start"
-                  }
-                >
+                <div key={index} className={turn.role === "user" ? "flex justify-end" : "flex justify-start"}>
                   <div
                     className={
                       "max-w-[80%] rounded-2xl px-4 py-2 text-sm " +
-                      (turn.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground")
+                      (turn.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")
                     }
                   >
                     {turn.content}
@@ -270,18 +243,10 @@ export default function OnboardingInterview() {
           />
           <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
             <div className="flex gap-2">
-              <Button
-                onClick={handleSubmit}
-                disabled={!answer.trim() || asking || loading || finalizing}
-              >
+              <Button onClick={handleSubmit} disabled={!answer.trim() || asking || loading || finalizing}>
                 {asking ? "Sending..." : "Send answer"}
               </Button>
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => navigate("/ideas")}
-                disabled={finalizing}
-              >
+              <Button variant="outline" type="button" onClick={() => navigate("/ideas")} disabled={finalizing}>
                 Skip for now
               </Button>
             </div>
@@ -296,8 +261,7 @@ export default function OnboardingInterview() {
           </div>
           {!canFinalize && (
             <p className="text-xs text-muted-foreground">
-              After a handful of questions (usually 8+), you can finalize and let Mavrik weave this into your
-              profile.
+              After a handful of questions (usually 8+), you can finalize and let Mavrik weave this into your profile.
             </p>
           )}
         </div>
