@@ -131,28 +131,58 @@ const Profile = () => {
         </Card>
       )}
 
-      {/* Extended Profile CTA (if not completed) */}
-      {hasCore && !hasExtended && (
-        <Card className="border-primary/50 bg-primary/5">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <Sparkles className="h-6 w-6 text-primary mt-0.5" />
-                <div>
-                  <h3 className="font-semibold">Complete Your Extended Profile</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Get more personalized ideas by sharing your deeper motivations, energy patterns, and work preferences.
-                  </p>
+      {/* Deep Dive Profile - Optional Enhancement */}
+      <Card className={hasExtended ? "border-border" : "border-primary/50 bg-primary/5"}>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Sparkles className={`h-6 w-6 mt-0.5 ${hasExtended ? "text-muted-foreground" : "text-primary"}`} />
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold">Deep Dive Profile</h3>
+                  {hasExtended && (
+                    <Badge variant="secondary" className="text-xs">Completed</Badge>
+                  )}
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  {hasExtended 
+                    ? "Your extended profile helps generate more personalized ideas."
+                    : "Optional: Share deeper motivations and energy patterns for better idea matching."
+                  }
+                </p>
               </div>
-              <Button onClick={() => navigate("/onboarding/extended")}>
-                Complete Now
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <Button 
+              variant={hasExtended ? "outline" : "default"}
+              onClick={() => navigate("/onboarding/extended")}
+            >
+              {hasExtended ? "Edit Deep Dive" : "Start Deep Dive"}
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Talk to Mavrik CTA */}
+      <Card className="border-border hover:border-primary/50 transition-colors">
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Brain className="h-6 w-6 text-primary mt-0.5" />
+              <div>
+                <h3 className="font-semibold">Talk to Mavrik</h3>
+                <p className="text-sm text-muted-foreground">
+                  Have a conversation with your AI co-founder to discover hidden strengths and refine your profile.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" onClick={() => navigate("/onboarding/interview")}>
+              Start Conversation
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Core Profile - Passions & Skills */}
       {hasCore && core && (

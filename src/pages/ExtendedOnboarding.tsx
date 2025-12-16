@@ -63,10 +63,10 @@ export default function ExtendedOnboarding() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Sparkles className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold">Extended Profile</h1>
+            <h1 className="text-3xl font-bold">Deep Dive Profile</h1>
           </div>
           <p className="text-muted-foreground">
-            Help us understand you better to generate more personalized ideas
+            Optional: Share more about yourself for even better personalized ideas
           </p>
         </div>
 
