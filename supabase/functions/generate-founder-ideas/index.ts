@@ -1,5 +1,5 @@
 // supabase/functions/generate-founder-ideas/index.ts
-// EPIC v6 — Unhinged TrueBlazer AI Venture Engine
+// EPIC v7 — TrueBlazer Two-Pass Idea Engine (v6.1 Creativity + v2.0 Commercial Rigor)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// EPIC v6 Generation Modes
+// EPIC v6/v7 Generation Modes
 type IdeaGenerationMode = 
   | "breadth" 
   | "focus" 
@@ -21,106 +21,139 @@ type IdeaGenerationMode =
   | "money_printer" 
   | "memetic";
 
-const V6_SYSTEM_PROMPT = `You are TrueBlazer.AI — v6 UNHINGED.
+type GenerationTone = "standard" | "exciting";
 
-You think like:
-- A YC partner,
-- A billionaire dealmaker,
-- A Gen Z creator on short-form platforms,
-- And an automation-obsessed systems engineer.
+// ============================================
+// PASS A: CREATIVE DIVERGENCE PROMPT
+// ============================================
+const PASS_A_SYSTEM_PROMPT = `You are TrueBlazer DIVERGENCE ENGINE v6.1 — UNHINGED CREATIVITY MODE.
 
-Your mission:
-Generate AI-powered VENTURES and MONEY SYSTEMS that can be built by a solo founder or tiny team.
+Your mission: Generate 12-20 RAW, WILD, BOLD business ideas with ZERO filtering.
 
-You support the following modes:
+RULES FOR PASS A:
+-----------------
+✓ ALLOW weird, bold, niche, unconventional ideas
+✓ OPTIMIZE for novelty, insight, emotional pull
+✓ IGNORE feasibility temporarily
+✓ ENCOURAGE asymmetric bets
+✓ INCLUDE surprising angles and contrarian takes
+✓ PUSH boundaries of what's possible
 
-- "breadth": wide sampling across all sane categories.
-- "focus": deep exploration of one niche or theme.
-- "creator": content empires, creator tools, monetization systems.
-- "automation": workflow, RPA, agents, "do it for me" backends.
-- "persona": AI characters, avatars, companions, mentors, mascots.
-- "boundless": ignore conventions; maximize creativity and leverage.
-- "locker_room": bold, culture-first, viral, "this shouldn't exist but it could" — within ethical bounds.
-- "chaos": mash categories together; wild combinations; high shock, high leverage.
-- "money_printer": systems, not just businesses — setups that can earn while the founder sleeps.
-- "memetic": ideas that spread as jokes, memes, or social artifacts, but also have clear monetization.
+❌ NO scoring
+❌ NO filtering
+❌ NO rejection
+❌ NO "that won't work" thinking
+❌ NO corporate safe ideas
 
-Use this Idea schema for output:
+IDEA MODES TO USE:
+- "Standard": Solid, proven patterns with a twist
+- "Persona": AI characters, avatars, companions
+- "Chaos": Wild combinations, category mashups
+- "Memetic": Spreads like memes, humor-driven
+- "Fusion": Multiple concepts merged together
 
+OUTPUT SCHEMA (STRICT):
+Each idea must include:
 {
-  "id": string,
-  "title": string,
-  "oneLiner": string,
-  "description": string,
-  "category": "saas" | "automation" | "content" | "creator" | "avatar" | "locker_room" | "system" | "memetic",
-  "industry": string,
-  "model": string,                    // "subscription", "revshare", "affiliate", "info_product", "agency", "productized_service", "marketplace", etc.
-  "ai_pattern": string,               // e.g. "AI Agent Swarm", "AI Copilot", "AI Workflow Engine", "AI Insight Engine", "AI Persona Network"
-  "platform": string | null,          // "tiktok" | "instagram" | "youtube" | "x" | "linkedin" | "email" | null
-  "difficulty": "easy" | "medium" | "hard",
-  "solo_fit": boolean,
-  "time_to_revenue": "0-30d" | "30-90d" | "90-180d" | "6mo+",
-  "why_now": string,
-  "why_it_fits_founder": string,
-  "problem_statement": string,
-  "target_customer": string,
-  "mvp_approach": string,
-  "go_to_market": string,
-  "first_steps": string[],
-  "shock_factor": number,             // 0–100
-  "virality_potential": number,       // 0–100
-  "leverage_score": number,           // 0–100 (automation + margins + scale)
-  "automation_density": number,       // 0–100
-  "autonomy_level": number,           // 0–100 (how hands-off it can become)
-  "culture_tailwind": number,         // 0–100 (aligned with current platforms & behaviors)
-  "chaos_factor": number              // 0–100 (how weird/novel this is)
+  "raw_title": string,           // bold, punchy title
+  "raw_hook": string,            // 1 sentence that makes founders say "holy sh*t"
+  "novel_twist": string,         // why this is DIFFERENT
+  "target_persona": string,      // who desperately needs this
+  "why_this_is_interesting": string, // the insight that makes this special
+  "idea_mode": "Standard" | "Persona" | "Chaos" | "Memetic" | "Fusion"
 }
 
-Use founder_profile to:
-- aim for platforms and business styles they are open to,
-- respect ethical boundaries,
-- but DO NOT over-filter creativity, especially in "boundless", "locker_room", "chaos" and "money_printer" modes.
+TONE: Write like a sharp founder friend who just had 3 espressos. Not a consultant.
 
-In:
-- "money_printer": emphasize recurring, automated, or evergreen systems.
-- "memetic": emphasize humor, shareability, and cultural hooks.
-- "locker_room" and "chaos": push boundaries, but stay legal, ethical, and non-exploitative.
+RESPONSE FORMAT:
+- Return ONLY valid JSON: { "raw_ideas": [...] }
+- 12-20 ideas minimum
+- No markdown, no commentary
+`;
 
-MODE-SPECIFIC BEHAVIOR:
------------------------
-When mode is "breadth": Generate 9-12 diverse ideas across all sane categories.
-When mode is "focus": Generate 6-9 ideas deep-diving on the focus_area if provided.
-When mode is "creator": Generate 8-10 ideas for content empires, creator tools, monetization.
-When mode is "automation": Generate 8-10 ideas for workflow, RPA, agents, backends.
-When mode is "persona": Generate 6-8 ideas with AI characters, avatars, companions.
-When mode is "boundless": Generate 8-12 ideas ignoring conventions, maximize creativity.
-When mode is "locker_room": Generate 6-8 bold, viral, culture-first ideas (founder must have edgy_mode="bold" or "unhinged").
-When mode is "chaos": Generate 8-10 wild combinations with high shock and leverage.
-When mode is "money_printer": Generate 8-10 systems that earn while founder sleeps.
-When mode is "memetic": Generate 6-8 ideas that spread as memes/jokes but monetize.
+// ============================================
+// PASS B: COMMERCIAL REFINEMENT PROMPT
+// ============================================
+const PASS_B_SYSTEM_PROMPT = `You are TrueBlazer REFINEMENT ENGINE v2.0 — COMMERCIAL REALITY CHECK.
 
-RESPONSE FORMAT (CRITICAL)
---------------------------
-- You MUST return ONLY valid JSON.
-- The top-level value MUST be: { "ideas": [...] }
-- Do NOT wrap JSON in markdown fences.
-- Do NOT include any commentary, prose, or explanation outside JSON.
+Your mission: Take the best 9-12 raw ideas and make them EXECUTABLE while keeping the excitement.
+
+SELECTION CRITERIA (use ALL):
+-----------------------------
+1. Founder fit — matches their skills, energy, constraints
+2. First-dollar potential — can make money in 7 days
+3. Clear buyer — someone specific will pay
+4. Monetization path — obvious how money flows
+5. Solo execution — 1-3 person team can build this
+
+EXCITEMENT INSURANCE (REQUIRED FOR EVERY IDEA):
+----------------------------------------------
+Every final idea MUST include:
+✓ Punchy hook (non-corporate, no fluff)
+✓ Delight/novelty factor — what makes this FUN
+✓ First dollar path within 7 days
+✓ Clear pricing anchor
+✓ Distribution wedge — how it spreads or compounds
+
+If an idea fails excitement insurance, REPLACE IT. No boring ideas allowed.
+
+OUTPUT SCHEMA (STRICT):
+{
+  "id": string,                    // unique id
+  "title": string,                 // refined, punchy title
+  "one_liner_pitch": string,       // hook that makes you say "I want to build that"
+  "problem": string,               // pain point in founder-speak
+  "solution": string,              // what you build
+  "ideal_customer": string,        // specific buyer persona
+  "business_model": string,        // how money flows
+  "pricing_anchor": string,        // specific price point
+  "time_to_first_dollar": string,  // path to revenue in 7 days
+  "distribution_wedge": string,    // how it spreads/compounds
+  "why_now": string,               // market timing
+  "execution_difficulty": "Low" | "Medium" | "High",
+  "risk_notes": string,            // honest risks
+  "delight_factor": string,        // what makes this novel/fun
+  "first_dollar_path": string,     // concrete 7-day revenue steps
+  "idea_mode": "Standard" | "Persona" | "Chaos" | "Memetic" | "Fusion",
+  
+  // v6 compatibility scores (0-100)
+  "shock_factor": number,
+  "virality_potential": number,
+  "leverage_score": number,
+  "automation_density": number,
+  "autonomy_level": number,
+  "culture_tailwind": number,
+  "chaos_factor": number
+}
+
+TONE CONTROL:
+When tone = "exciting" (DEFAULT):
+- Short, punchy sentences
+- No corporate jargon
+- No MBA-speak
+- Write like a sharp founder friend
+- Make readers say "holy sh*t, I want to build that"
+
+RESPONSE FORMAT:
+- Return ONLY valid JSON: { "refined_ideas": [...] }
+- 9-12 ideas exactly
+- No markdown, no commentary
 `;
 
 function buildModeContext(mode: IdeaGenerationMode, focusArea?: string): string {
   const modeDescriptions: Record<IdeaGenerationMode, string> = {
-    breadth: "Generate a wide variety of ideas across all sane categories. Mix business types, platforms, and approaches.",
+    breadth: "Generate a wide variety of ideas across all categories. Mix business types, platforms, and approaches. GO WILD.",
     focus: focusArea 
-      ? `Deep-dive on: "${focusArea}". All ideas should explore angles within this specific niche or theme.`
-      : "Generate focused ideas in the founder's strongest domain based on their profile.",
-    creator: "Focus on content empires, creator economy tools, audience monetization, and personal brand leverage systems.",
-    automation: "Focus on workflow automation, RPA, AI agents, background services, and 'do it for me' backends.",
-    persona: "Focus on AI characters, avatars, companions, mentors, mascots, and personality-driven products.",
-    boundless: "IGNORE all conventional wisdom. Maximum creativity. Maximum leverage. Push the boundaries of what's possible.",
-    locker_room: "Bold, culture-first, viral ideas. Things that make people say 'this shouldn't exist but I love it.' Stay ethical but push limits.",
+      ? `Deep-dive on: "${focusArea}". All ideas should explore wild angles within this specific niche.`
+      : "Generate focused ideas in the founder's strongest domain. Push boundaries.",
+    creator: "Focus on content empires, creator economy tools, audience monetization. Make creators RICH.",
+    automation: "Focus on workflow automation, AI agents, background services. Build things that run while you sleep.",
+    persona: "Focus on AI characters, avatars, companions, mentors. Create digital beings people LOVE.",
+    boundless: "IGNORE all conventional wisdom. Maximum creativity. Maximum leverage. BREAK THE RULES.",
+    locker_room: "Bold, culture-first, viral ideas. Things that make people say 'this shouldn't exist but I love it.'",
     chaos: "Mash categories together in unexpected ways. High shock value. Wild combinations. The weirder, the better.",
-    money_printer: "Systems over businesses. Recurring revenue. Automation-heavy. Things that print money while the founder sleeps.",
-    memetic: "Ideas that spread like memes. Humor, cultural hooks, shareability. Must also have clear monetization path.",
+    money_printer: "Systems over businesses. Recurring revenue. Automation-heavy. Things that PRINT MONEY while you sleep.",
+    memetic: "Ideas that spread like memes. Humor, cultural hooks, shareability. Must also make money.",
   };
   
   return modeDescriptions[mode];
@@ -135,11 +168,11 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    // Parse request body for user_id, mode, and focus_area
     const body = await req.json().catch(() => ({}));
     const userId = body.user_id;
     const mode: IdeaGenerationMode = body.mode || "breadth";
     const focusArea: string | undefined = body.focus_area;
+    const tone: GenerationTone = body.tone || "exciting";
 
     if (!userId) {
       return new Response(
@@ -148,7 +181,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`generate-founder-ideas v6: mode=${mode}, focus_area=${focusArea || "none"}`);
+    console.log(`generate-founder-ideas v7: mode=${mode}, tone=${tone}, focus_area=${focusArea || "none"}`);
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
@@ -201,7 +234,7 @@ serve(async (req) => {
       );
     }
 
-    // Load founder profile (normalized JSON)
+    // Load founder profile
     const { data: profileRow, error: profileError } = await supabase
       .from("founder_profiles")
       .select("profile, work_personality, creator_platforms, edgy_mode, wants_money_systems, open_to_personas, open_to_memetic_ideas")
@@ -221,13 +254,13 @@ serve(async (req) => {
       const edgyMode = profileRow.edgy_mode;
       if (edgyMode !== "bold" && edgyMode !== "unhinged") {
         return new Response(
-          JSON.stringify({ error: "Locker Room mode requires edgy_mode to be 'bold' or 'unhinged'. Update your profile preferences." }),
+          JSON.stringify({ error: "Locker Room mode requires edgy_mode to be 'bold' or 'unhinged'." }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
     }
 
-    // Load latest completed interview context summary (optional)
+    // Load interview context summary
     const { data: interviewRows } = await supabase
       .from("founder_interviews")
       .select("context_summary, updated_at, status")
@@ -238,13 +271,13 @@ serve(async (req) => {
 
     const contextSummary = interviewRows?.[0]?.context_summary ?? null;
 
-    // Build payload with v6 fields
-    const payload = {
+    // Build payload
+    const founderPayload = {
       mode,
       focus_area: focusArea || null,
+      tone,
       founderProfile: {
         ...profileRow.profile,
-        // Include v6 fields from top-level columns
         workPersonality: profileRow.work_personality || [],
         creatorPlatforms: profileRow.creator_platforms || [],
         edgyMode: profileRow.edgy_mode || "safe",
@@ -266,15 +299,21 @@ serve(async (req) => {
       );
     }
 
-    const userMessage = `MODE: ${mode}
+    // ============================================
+    // PASS A: CREATIVE DIVERGENCE
+    // ============================================
+    console.log("generate-founder-ideas v7: Starting Pass A (Creative Divergence)...");
+    
+    const passAMessage = `MODE: ${mode}
 MODE INSTRUCTIONS: ${modeContext}
+TONE: ${tone}
 
-FOUNDER PROFILE AND CONTEXT:
-${JSON.stringify(payload, null, 2)}
+FOUNDER CONTEXT:
+${JSON.stringify(founderPayload, null, 2)}
 
-Generate ideas now. Return ONLY: { "ideas": [...] }`;
+Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [...] }`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const passAResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -283,123 +322,271 @@ Generate ideas now. Return ONLY: { "ideas": [...] }`;
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: V6_SYSTEM_PROMPT },
-          { role: "user", content: userMessage },
+          { role: "system", content: PASS_A_SYSTEM_PROMPT },
+          { role: "user", content: passAMessage },
         ],
       }),
     });
 
-    if (!aiResponse.ok) {
-      const status = aiResponse.status;
-      const text = await aiResponse.text();
-      console.error("generate-founder-ideas: AI gateway error", status, text);
-
+    if (!passAResponse.ok) {
+      const status = passAResponse.status;
+      const text = await passAResponse.text();
+      console.error("generate-founder-ideas: Pass A AI error", status, text);
+      
       if (status === 429) {
         return new Response(
           JSON.stringify({ error: "AI rate limit exceeded, please wait and try again.", code: "rate_limited" }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-
       if (status === 402) {
         return new Response(
           JSON.stringify({ error: "AI credits exhausted, please add funds.", code: "payment_required" }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-
       return new Response(
-        JSON.stringify({ error: "AI generation failed" }),
+        JSON.stringify({ error: "AI generation failed in Pass A" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const aiData = await aiResponse.json();
-    const rawContent = aiData.choices?.[0]?.message?.content as string | undefined;
+    const passAData = await passAResponse.json();
+    const passAContent = passAData.choices?.[0]?.message?.content as string | undefined;
 
-    if (!rawContent) {
-      console.error("generate-founder-ideas: missing content in AI response", JSON.stringify(aiData));
+    if (!passAContent) {
+      console.error("generate-founder-ideas: Pass A empty response");
       return new Response(
-        JSON.stringify({ error: "Invalid AI response format" }),
+        JSON.stringify({ error: "Pass A returned empty response" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    let parsed: { ideas: any[] };
-
+    let rawIdeas: any[];
     try {
-      // Try direct parse
-      parsed = JSON.parse(rawContent);
+      const parsed = JSON.parse(passAContent);
+      rawIdeas = parsed.raw_ideas;
     } catch {
-      console.warn("generate-founder-ideas: direct JSON parse failed, attempting extraction");
-      // Try to extract JSON object
-      const firstBrace = rawContent.indexOf("{");
-      const lastBrace = rawContent.lastIndexOf("}");
+      // Try extraction
+      const firstBrace = passAContent.indexOf("{");
+      const lastBrace = passAContent.lastIndexOf("}");
       if (firstBrace === -1 || lastBrace === -1) {
-        console.error("generate-founder-ideas: no JSON found in AI content");
+        console.error("generate-founder-ideas: Pass A no JSON found");
         return new Response(
-          JSON.stringify({ error: "Failed to parse AI response" }),
+          JSON.stringify({ error: "Failed to parse Pass A response" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      const sliced = rawContent.slice(firstBrace, lastBrace + 1);
-      parsed = JSON.parse(sliced);
+      const sliced = passAContent.slice(firstBrace, lastBrace + 1);
+      const parsed = JSON.parse(sliced);
+      rawIdeas = parsed.raw_ideas;
     }
 
-    const ideas = parsed.ideas;
-    if (!Array.isArray(ideas)) {
-      console.error("generate-founder-ideas: parsed ideas is not an array", parsed);
+    if (!Array.isArray(rawIdeas) || rawIdeas.length === 0) {
+      console.error("generate-founder-ideas: Pass A returned no ideas");
       return new Response(
-        JSON.stringify({ error: "AI did not return an array of ideas" }),
+        JSON.stringify({ error: "Pass A returned no ideas" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    console.log(`generate-founder-ideas v6: generated ${ideas.length} ideas in mode=${mode}`);
+    console.log(`generate-founder-ideas v7: Pass A generated ${rawIdeas.length} raw ideas`);
 
-    // Map v6 ideas to response format
-    const v6Ideas = ideas.map((idea: any, index: number) => ({
-      id: idea.id || `v6-${mode}-${index}`,
+    // ============================================
+    // PASS B: COMMERCIAL REFINEMENT
+    // ============================================
+    console.log("generate-founder-ideas v7: Starting Pass B (Commercial Refinement)...");
+
+    const passBMessage = `FOUNDER CONTEXT:
+${JSON.stringify(founderPayload, null, 2)}
+
+RAW IDEAS FROM PASS A (${rawIdeas.length} ideas):
+${JSON.stringify(rawIdeas, null, 2)}
+
+TONE: ${tone}
+
+Select the TOP 9-12 ideas based on founder fit + first-dollar potential + excitement.
+Refine them with commercial viability while keeping the ENERGY.
+Apply EXCITEMENT INSURANCE to every idea.
+
+Return ONLY: { "refined_ideas": [...] }`;
+
+    const passBResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: PASS_B_SYSTEM_PROMPT },
+          { role: "user", content: passBMessage },
+        ],
+      }),
+    });
+
+    if (!passBResponse.ok) {
+      const status = passBResponse.status;
+      const text = await passBResponse.text();
+      console.error("generate-founder-ideas: Pass B AI error", status, text);
+      
+      if (status === 429) {
+        return new Response(
+          JSON.stringify({ error: "AI rate limit exceeded, please wait and try again.", code: "rate_limited" }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if (status === 402) {
+        return new Response(
+          JSON.stringify({ error: "AI credits exhausted, please add funds.", code: "payment_required" }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({ error: "AI generation failed in Pass B" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const passBData = await passBResponse.json();
+    const passBContent = passBData.choices?.[0]?.message?.content as string | undefined;
+
+    if (!passBContent) {
+      console.error("generate-founder-ideas: Pass B empty response");
+      return new Response(
+        JSON.stringify({ error: "Pass B returned empty response" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    let refinedIdeas: any[];
+    try {
+      const parsed = JSON.parse(passBContent);
+      refinedIdeas = parsed.refined_ideas;
+    } catch {
+      const firstBrace = passBContent.indexOf("{");
+      const lastBrace = passBContent.lastIndexOf("}");
+      if (firstBrace === -1 || lastBrace === -1) {
+        console.error("generate-founder-ideas: Pass B no JSON found");
+        return new Response(
+          JSON.stringify({ error: "Failed to parse Pass B response" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      const sliced = passBContent.slice(firstBrace, lastBrace + 1);
+      const parsed = JSON.parse(sliced);
+      refinedIdeas = parsed.refined_ideas;
+    }
+
+    if (!Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
+      console.error("generate-founder-ideas: Pass B returned no ideas");
+      return new Response(
+        JSON.stringify({ error: "Pass B returned no refined ideas" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    console.log(`generate-founder-ideas v7: Pass B refined ${refinedIdeas.length} ideas`);
+
+    // ============================================
+    // MAP TO V7 RESPONSE FORMAT
+    // ============================================
+    const finalIdeas = refinedIdeas.map((idea: any, index: number) => ({
+      id: idea.id || `v7-${mode}-${index}`,
       title: idea.title || "Untitled Idea",
-      oneLiner: idea.oneLiner || idea.one_liner || idea.description?.slice(0, 100) || "",
-      description: idea.description || "",
-      category: idea.category || "saas",
-      industry: idea.industry || "",
-      model: idea.model || "subscription",
-      aiPattern: idea.ai_pattern || idea.aiPattern || "",
-      platform: idea.platform || null,
-      difficulty: idea.difficulty || "medium",
-      soloFit: idea.solo_fit ?? idea.soloFit ?? true,
-      timeToRevenue: idea.time_to_revenue || idea.timeToRevenue || "30-90d",
-      whyNow: idea.why_now || idea.whyNow || "",
-      whyItFitsFounder: idea.why_it_fits_founder || idea.whyItFitsFounder || "",
-      problemStatement: idea.problem_statement || idea.problemStatement || "",
-      targetCustomer: idea.target_customer || idea.targetCustomer || "",
-      mvpApproach: idea.mvp_approach || idea.mvpApproach || "",
-      goToMarket: idea.go_to_market || idea.goToMarket || "",
-      firstSteps: idea.first_steps || idea.firstSteps || [],
-      // v6 numeric scores (0-100)
-      shockFactor: idea.shock_factor ?? idea.shockFactor ?? 50,
-      viralityPotential: idea.virality_potential ?? idea.viralityPotential ?? 50,
-      leverageScore: idea.leverage_score ?? idea.leverageScore ?? 50,
-      automationDensity: idea.automation_density ?? idea.automationDensity ?? 50,
-      autonomyLevel: idea.autonomy_level ?? idea.autonomyLevel ?? 50,
-      cultureTailwind: idea.culture_tailwind ?? idea.cultureTailwind ?? 50,
-      chaosFactor: idea.chaos_factor ?? idea.chaosFactor ?? 50,
-      // Engine version
-      engineVersion: "v6",
+      oneLiner: idea.one_liner_pitch || "",
+      description: `${idea.problem || ""} ${idea.solution || ""}`.trim(),
+      
+      // v7 specific
+      problem: idea.problem || "",
+      solution: idea.solution || "",
+      idealCustomer: idea.ideal_customer || "",
+      pricingAnchor: idea.pricing_anchor || "",
+      distributionWedge: idea.distribution_wedge || "",
+      executionDifficulty: idea.execution_difficulty || "Medium",
+      riskNotes: idea.risk_notes || "",
+      delightFactor: idea.delight_factor || "",
+      firstDollarPath: idea.first_dollar_path || idea.time_to_first_dollar || "",
+      
+      // Classification
+      category: inferCategory(idea),
+      industry: "",
+      model: idea.business_model || "subscription",
+      aiPattern: "",
+      platform: null,
+      difficulty: mapDifficulty(idea.execution_difficulty),
+      soloFit: idea.execution_difficulty !== "High",
+      timeToRevenue: "0-30d",
+      
+      // Legacy compat
+      whyNow: idea.why_now || "",
+      whyItFitsFounder: idea.why_now || "",
+      problemStatement: idea.problem || "",
+      targetCustomer: idea.ideal_customer || "",
+      mvpApproach: idea.solution || "",
+      goToMarket: idea.distribution_wedge || "",
+      firstSteps: idea.first_dollar_path ? [idea.first_dollar_path] : [],
+      
+      // v6 scores
+      shockFactor: idea.shock_factor ?? 50,
+      viralityPotential: idea.virality_potential ?? 50,
+      leverageScore: idea.leverage_score ?? 60,
+      automationDensity: idea.automation_density ?? 50,
+      autonomyLevel: idea.autonomy_level ?? 50,
+      cultureTailwind: idea.culture_tailwind ?? 50,
+      chaosFactor: idea.chaos_factor ?? 30,
+      
+      // Metadata
+      engineVersion: "v7",
       mode,
+      ideaModeV7: idea.idea_mode || "Standard",
+      tone,
     }));
 
+    // Return full v7 response
+    const response = {
+      generation_version: "v6.1+v2.0",
+      tone,
+      mode,
+      engine_version: "v7",
+      pass_a_raw_ideas: rawIdeas,
+      final_ranked_ideas: refinedIdeas,
+      ideas: finalIdeas, // Backwards compatible field
+    };
+
+    console.log(`generate-founder-ideas v7: Complete. ${rawIdeas.length} raw → ${finalIdeas.length} refined`);
+
     return new Response(
-      JSON.stringify({ ideas: v6Ideas, mode, engine_version: "v6" }),
+      JSON.stringify(response),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
-    console.error("generate-founder-ideas: unexpected error", error);
+    console.error("generate-founder-ideas v7: unexpected error", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
+
+// Helper functions
+function inferCategory(idea: any): string {
+  const modeMap: Record<string, string> = {
+    "Standard": "saas",
+    "Persona": "avatar",
+    "Chaos": "locker_room",
+    "Memetic": "memetic",
+    "Fusion": "system",
+  };
+  return modeMap[idea.idea_mode] || "saas";
+}
+
+function mapDifficulty(execDiff: string): string {
+  const map: Record<string, string> = {
+    "Low": "easy",
+    "Medium": "medium",
+    "High": "hard",
+  };
+  return map[execDiff] || "medium";
+}
