@@ -1,6 +1,6 @@
-// Zustand store for session-level v6 idea persistence
+// Zustand store for session-level v7 idea persistence
 import { create } from "zustand";
-import type { BusinessIdeaV6 } from "@/types/businessIdea";
+import type { BusinessIdeaV6, RawIdeaV7, RefinedIdeaV7, GenerationTone } from "@/types/businessIdea";
 import type { IdeaGenerationMode } from "@/types/idea";
 import type { PlanErrorCode } from "@/config/plans";
 
@@ -11,26 +11,50 @@ interface PlanLimitError {
   plan?: string;
 }
 
+// Union type for backwards compatibility
+type SessionIdea = BusinessIdeaV6 | (BusinessIdeaV6 & { 
+  ideaModeV7?: string; 
+  tone?: GenerationTone;
+  problem?: string;
+  solution?: string;
+  pricingAnchor?: string;
+  distributionWedge?: string;
+  delightFactor?: string;
+  firstDollarPath?: string;
+});
+
 interface IdeaSessionState {
   // Session-generated ideas (not yet saved to DB)
-  sessionIdeas: BusinessIdeaV6[];
+  sessionIdeas: SessionIdea[];
   currentMode: IdeaGenerationMode | null;
   focusArea: string;
+  currentTone: GenerationTone;
   
-  // Track which ideas have been saved to library (by original session id)
+  // v7 two-pass data
+  rawIdeas: RawIdeaV7[];
+  refinedIdeas: RefinedIdeaV7[];
+  generationVersion: string | null;
+  
+  // Track which ideas have been saved to library
   savedIdeaIds: Set<string>;
-  // Map session idea id -> database id after save
   savedIdeaDbIds: Map<string, string>;
   
   // Plan limit error tracking
   planError: PlanLimitError | null;
   
   // Actions
-  setSessionIdeas: (ideas: BusinessIdeaV6[]) => void;
-  addSessionIdeas: (ideas: BusinessIdeaV6[]) => void;
+  setSessionIdeas: (ideas: SessionIdea[]) => void;
+  addSessionIdeas: (ideas: SessionIdea[]) => void;
   clearSessionIdeas: () => void;
   setCurrentMode: (mode: IdeaGenerationMode | null) => void;
   setFocusArea: (area: string) => void;
+  setCurrentTone: (tone: GenerationTone) => void;
+  
+  // v7 specific
+  setRawIdeas: (ideas: RawIdeaV7[]) => void;
+  setRefinedIdeas: (ideas: RefinedIdeaV7[]) => void;
+  setGenerationVersion: (version: string | null) => void;
+  setTwoPassData: (raw: RawIdeaV7[], refined: RefinedIdeaV7[], version: string) => void;
   
   // Saved tracking
   markIdeaAsSaved: (sessionId: string, dbId: string) => void;
@@ -47,6 +71,10 @@ export const useIdeaSessionStore = create<IdeaSessionState>((set, get) => ({
   sessionIdeas: [],
   currentMode: null,
   focusArea: "",
+  currentTone: "exciting",
+  rawIdeas: [],
+  refinedIdeas: [],
+  generationVersion: null,
   savedIdeaIds: new Set(),
   savedIdeaDbIds: new Map(),
   planError: null,
@@ -59,13 +87,26 @@ export const useIdeaSessionStore = create<IdeaSessionState>((set, get) => ({
   
   clearSessionIdeas: () => set({ 
     sessionIdeas: [],
+    rawIdeas: [],
+    refinedIdeas: [],
+    generationVersion: null,
     savedIdeaIds: new Set(),
     savedIdeaDbIds: new Map(),
   }),
   
   setCurrentMode: (mode) => set({ currentMode: mode }),
-  
   setFocusArea: (area) => set({ focusArea: area }),
+  setCurrentTone: (tone) => set({ currentTone: tone }),
+  
+  // v7 specific actions
+  setRawIdeas: (ideas) => set({ rawIdeas: ideas }),
+  setRefinedIdeas: (ideas) => set({ refinedIdeas: ideas }),
+  setGenerationVersion: (version) => set({ generationVersion: version }),
+  setTwoPassData: (raw, refined, version) => set({
+    rawIdeas: raw,
+    refinedIdeas: refined,
+    generationVersion: version,
+  }),
   
   markIdeaAsSaved: (sessionId, dbId) => set((state) => {
     const newSavedIds = new Set(state.savedIdeaIds);
@@ -76,7 +117,6 @@ export const useIdeaSessionStore = create<IdeaSessionState>((set, get) => ({
   }),
   
   isIdeaSaved: (sessionId) => get().savedIdeaIds.has(sessionId),
-  
   getDbId: (sessionId) => get().savedIdeaDbIds.get(sessionId),
   
   clearSavedTracking: () => set({
@@ -85,6 +125,5 @@ export const useIdeaSessionStore = create<IdeaSessionState>((set, get) => ({
   }),
   
   setPlanError: (error) => set({ planError: error }),
-  
   clearPlanError: () => set({ planError: null }),
 }));
