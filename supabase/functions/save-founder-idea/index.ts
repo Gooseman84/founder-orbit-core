@@ -132,6 +132,11 @@ serve(async (req) => {
           lifestyle_fit_score: fitScores?.lifestyle ?? null,
           overall_fit_score: fitScores?.overall ?? null,
           fit_scores: fitScores ? JSON.stringify(fitScores) : null,
+          // Multi-source idea fields (default to 'generated' for AI-generated ideas)
+          source_type: idea.source_type || 'generated',
+          source_meta: idea.source_meta || {},
+          normalized: idea.normalized || null,
+          parent_idea_ids: idea.parent_idea_ids || null,
         })
         .select()
         .single();
