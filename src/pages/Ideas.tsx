@@ -18,6 +18,7 @@ import { ModeSelector, type IdeaMode } from "@/components/ideas/ModeSelector";
 import { IdeaFusionPanel } from "@/components/ideas/IdeaFusionPanel";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
+import { MarketDomainViewer } from "@/components/admin/MarketDomainViewer";
 import { supabase } from "@/integrations/supabase/client";
 import { PLAN_ERROR_CODES, type PlanErrorCode } from "@/config/plans";
 import type { PaywallReasonCode } from "@/config/paywallCopy";
@@ -557,6 +558,9 @@ const Ideas = () => {
         onClose={handleClosePaywall}
         reasonCode={paywallReasonCode}
       />
+
+      {/* Debug: Market Signal Domains (only visible when VITE_DEBUG_MODE=true) */}
+      <MarketDomainViewer />
     </div>
   );
 };

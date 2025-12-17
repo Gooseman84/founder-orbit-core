@@ -536,11 +536,15 @@ export type Database = {
           leverage_score: number | null
           lifestyle_fit_score: number | null
           mode: string | null
+          normalized: Json | null
           overall_fit_score: number | null
+          parent_idea_ids: string[] | null
           passion_fit_score: number | null
           platform: string | null
           shock_factor: number | null
           skill_fit_score: number | null
+          source_meta: Json
+          source_type: Database["public"]["Enums"]["idea_source_type"]
           status: string | null
           target_customer: string | null
           time_to_first_dollar: string | null
@@ -566,11 +570,15 @@ export type Database = {
           leverage_score?: number | null
           lifestyle_fit_score?: number | null
           mode?: string | null
+          normalized?: Json | null
           overall_fit_score?: number | null
+          parent_idea_ids?: string[] | null
           passion_fit_score?: number | null
           platform?: string | null
           shock_factor?: number | null
           skill_fit_score?: number | null
+          source_meta?: Json
+          source_type?: Database["public"]["Enums"]["idea_source_type"]
           status?: string | null
           target_customer?: string | null
           time_to_first_dollar?: string | null
@@ -596,17 +604,75 @@ export type Database = {
           leverage_score?: number | null
           lifestyle_fit_score?: number | null
           mode?: string | null
+          normalized?: Json | null
           overall_fit_score?: number | null
+          parent_idea_ids?: string[] | null
           passion_fit_score?: number | null
           platform?: string | null
           shock_factor?: number | null
           skill_fit_score?: number | null
+          source_meta?: Json
+          source_type?: Database["public"]["Enums"]["idea_source_type"]
           status?: string | null
           target_customer?: string | null
           time_to_first_dollar?: string | null
           title?: string
           user_id?: string
           virality_potential?: number | null
+        }
+        Relationships: []
+      }
+      market_signal_domains: {
+        Row: {
+          created_at: string | null
+          domain: string
+          id: string
+          is_active: boolean | null
+          priority: string
+          subreddits: string[]
+        }
+        Insert: {
+          created_at?: string | null
+          domain: string
+          id?: string
+          is_active?: boolean | null
+          priority: string
+          subreddits?: string[]
+        }
+        Update: {
+          created_at?: string | null
+          domain?: string
+          id?: string
+          is_active?: boolean | null
+          priority?: string
+          subreddits?: string[]
+        }
+        Relationships: []
+      }
+      market_signal_runs: {
+        Row: {
+          created_at: string | null
+          founder_profile_snapshot: Json | null
+          id: string
+          selected_domains: string[]
+          selected_subreddits: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          founder_profile_snapshot?: Json | null
+          id?: string
+          selected_domains: string[]
+          selected_subreddits: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          founder_profile_snapshot?: Json | null
+          id?: string
+          selected_domains?: string[]
+          selected_subreddits?: string[]
+          user_id?: string
         }
         Relationships: []
       }
@@ -1227,7 +1293,7 @@ export type Database = {
       get_user_total_xp: { Args: { p_user_id: string }; Returns: number }
     }
     Enums: {
-      [_ in never]: never
+      idea_source_type: "generated" | "market_signal" | "imported" | "fused"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1354,6 +1420,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      idea_source_type: ["generated", "market_signal", "imported", "fused"],
+    },
   },
 } as const
