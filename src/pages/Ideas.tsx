@@ -1,5 +1,6 @@
 // src/pages/Ideas.tsx
 import { useState, useMemo, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useIdeas } from "@/hooks/useIdeas";
@@ -19,6 +20,8 @@ import { IdeaFusionPanel } from "@/components/ideas/IdeaFusionPanel";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
 import { MarketDomainViewer } from "@/components/admin/MarketDomainViewer";
+import { MarketSignalModal } from "@/components/ideas/MarketSignalModal";
+import { SourceTypeBadge, SOURCE_TYPE_FILTERS, type SourceTypeFilter } from "@/components/ideas/SourceTypeBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { PLAN_ERROR_CODES, type PlanErrorCode } from "@/config/plans";
 import type { PaywallReasonCode } from "@/config/paywallCopy";
@@ -30,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2, Target, X } from "lucide-react";
+import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2, Target, X, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 
@@ -48,6 +51,7 @@ function isV6Idea(idea: BusinessIdea | BusinessIdeaV6): idea is BusinessIdeaV6 {
 }
 
 const Ideas = () => {
+  const queryClient = useQueryClient();
   const { ideas: libraryIdeas, isLoading } = useIdeas();
   const {
     scoredIdeas: founderScoredIdeas,
@@ -94,6 +98,8 @@ const Ideas = () => {
   const [activeTab, setActiveTab] = useState<string>("generated");
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReasonCode, setPaywallReasonCode] = useState<PaywallReasonCode | undefined>();
+  const [showMarketSignalModal, setShowMarketSignalModal] = useState(false);
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
 
   // Show paywall when plan errors occur
   useEffect(() => {
@@ -201,6 +207,14 @@ const Ideas = () => {
 
   const filteredLibraryIdeas = useMemo(() => {
     return libraryIdeas.filter((idea) => {
+      // Source type filter
+      if (sourceTypeFilter !== "all") {
+        const ideaSourceType = (idea as any).source_type || "generated";
+        if (ideaSourceType !== sourceTypeFilter) {
+          return false;
+        }
+      }
+      
       if (filters.archetypes.length > 0) {
         const ideaArchetype = idea.category || idea.business_model_type;
         if (ideaArchetype && !filters.archetypes.includes(ideaArchetype)) {
@@ -209,7 +223,24 @@ const Ideas = () => {
       }
       return true;
     });
-  }, [libraryIdeas, filters]);
+  }, [libraryIdeas, filters, sourceTypeFilter]);
+
+  // Count ideas by source type for filter badges
+  const sourceTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: libraryIdeas.length };
+    libraryIdeas.forEach((idea) => {
+      const st = (idea as any).source_type || "generated";
+      counts[st] = (counts[st] || 0) + 1;
+    });
+    return counts;
+  }, [libraryIdeas]);
+
+  const handleMarketSignalSuccess = () => {
+    // Refresh library ideas after market signal generation
+    queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] });
+    setActiveTab("library");
+    setSourceTypeFilter("market_signal");
+  };
 
   const handleGenerateFounderIdeas = async () => {
     try {
@@ -355,6 +386,16 @@ const Ideas = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button 
+            onClick={() => setShowMarketSignalModal(true)} 
+            variant="outline" 
+            size="sm" 
+            className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span className="hidden sm:inline">Market Pain</span>
+            <span className="sm:hidden">Market</span>
+          </Button>
           <Button onClick={() => navigate("/fusion-lab")} variant="outline" size="sm" className="gap-2">
             <Combine className="w-4 h-4" />
             <span className="hidden sm:inline">Fusion Lab</span>
@@ -538,6 +579,27 @@ const Ideas = () => {
                   />
                 )}
               </div>
+              
+              {/* Source Type Filter Chips */}
+              <div className="flex flex-wrap gap-2">
+                {SOURCE_TYPE_FILTERS.map((filter) => {
+                  const count = sourceTypeCounts[filter.value] || 0;
+                  if (filter.value !== "all" && count === 0) return null;
+                  return (
+                    <Button
+                      key={filter.value}
+                      variant={sourceTypeFilter === filter.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSourceTypeFilter(filter.value)}
+                      className="gap-1.5"
+                    >
+                      {filter.label}
+                      <span className="text-xs opacity-70">({filter.value === "all" ? libraryIdeas.length : count})</span>
+                    </Button>
+                  );
+                })}
+              </div>
+              
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredLibraryIdeas.map((idea) => (
                   <LibraryIdeaCard 
@@ -561,6 +623,13 @@ const Ideas = () => {
 
       {/* Debug: Market Signal Domains (only visible when VITE_DEBUG_MODE=true) */}
       <MarketDomainViewer />
+
+      {/* Market Signal Modal */}
+      <MarketSignalModal
+        open={showMarketSignalModal}
+        onClose={() => setShowMarketSignalModal(false)}
+        onSuccess={handleMarketSignalSuccess}
+      />
     </div>
   );
 };
