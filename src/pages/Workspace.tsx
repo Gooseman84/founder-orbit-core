@@ -252,9 +252,9 @@ export default function Workspace() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row min-h-[calc(100vh-4rem)] gap-4">
+    <div className="flex flex-col md:flex-row min-h-[calc(100vh-4rem)] gap-4 overflow-hidden">
       {/* Left Sidebar - Documents List (hidden on mobile, shown as full-width section) */}
-      <aside className="w-full md:w-56 shrink-0">
+      <aside className="w-full md:w-56 shrink-0 min-w-0 overflow-hidden">
         <WorkspaceSidebar
           documents={documents}
           currentId={currentDocument?.id}
@@ -266,7 +266,7 @@ export default function Workspace() {
       </aside>
 
       {/* Main Editor Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {currentDocument && (
           <div className="flex items-center justify-between mb-2 gap-2">
             <div className="flex items-center gap-2">
@@ -353,7 +353,7 @@ export default function Workspace() {
 
       {/* Right Panel - AI Assistant (stacks below on mobile) */}
       {currentDocument && (
-        <aside className="w-full md:w-96 shrink-0 flex flex-col gap-4">
+        <aside className="w-full md:w-96 shrink-0 min-w-0 flex flex-col gap-4 overflow-hidden">
           {/* Linked Task Card */}
           {taskContext && (
             <Card className="border-primary/20 bg-primary/5">

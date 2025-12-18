@@ -85,8 +85,8 @@ function NavSection({ label, items, defaultOpen = false, onNavigate }: NavSectio
             key={item.name}
             to={item.href}
             onClick={onNavigate}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg text-foreground/80 hover:bg-accent hover:text-foreground transition-colors ml-2"
-            activeClassName="bg-accent text-primary font-semibold"
+            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg text-foreground/80 hover:bg-secondary hover:text-foreground transition-colors ml-2"
+            activeClassName="bg-primary text-primary-foreground font-semibold"
           >
             <item.icon className="w-4 h-4 shrink-0" />
             <span className="truncate">{item.name}</span>
@@ -118,8 +118,8 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
               key={item.name}
               to={item.href}
               onClick={onNavigate}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg text-foreground/80 hover:bg-accent hover:text-foreground transition-colors"
-              activeClassName="bg-accent text-primary font-semibold"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg text-foreground/80 hover:bg-secondary hover:text-foreground transition-colors"
+              activeClassName="bg-primary text-primary-foreground font-semibold"
             >
               <item.icon className="w-4 h-4 shrink-0" />
               <span className="truncate">{item.name}</span>

@@ -168,16 +168,16 @@ const Blueprint = () => {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-4 md:space-y-6 overflow-hidden">
       {/* Header - stacks on mobile */}
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Founder Blueprint</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold truncate">Founder Blueprint</h1>
           <p className="text-sm md:text-base text-muted-foreground mt-1">
             Your unified life + business strategy
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button
             onClick={handleGenerateBlueprint}
             disabled={generating}
@@ -201,17 +201,17 @@ const Blueprint = () => {
       </div>
 
       {/* 3-column grid on desktop, single column on mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 min-w-0">
         {/* Left Column: Life Blueprint */}
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-rose-500" />
-              <CardTitle className="text-lg">Life Blueprint</CardTitle>
+              <Heart className="h-5 w-5 text-rose-500 shrink-0" />
+              <CardTitle className="text-lg truncate">Life Blueprint</CardTitle>
             </div>
             <CardDescription>Your personal foundation</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 overflow-hidden">
             <BlueprintField label="Life Vision" value={blueprint.life_vision} />
             <BlueprintField label="Time Horizon" value={blueprint.life_time_horizon} />
             <BlueprintField label="Income Target" value={blueprint.income_target?.toString()} prefix="$" />
@@ -232,15 +232,15 @@ const Blueprint = () => {
         </Card>
 
         {/* Center Column: North Star Snapshot */}
-        <Card className="border-primary/30 bg-primary/5">
+        <Card className="border-primary/30 bg-primary/5 min-w-0 overflow-hidden">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">North Star Snapshot</CardTitle>
+              <Target className="h-5 w-5 text-primary shrink-0" />
+              <CardTitle className="text-lg truncate">North Star Snapshot</CardTitle>
             </div>
             <CardDescription>Your guiding direction</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 overflow-hidden">
             <BlueprintField label="One-Liner" value={blueprint.north_star_one_liner} highlight />
             <BlueprintField label="Target Audience" value={blueprint.target_audience} />
             <BlueprintField label="Problem Statement" value={blueprint.problem_statement} />
@@ -258,15 +258,15 @@ const Blueprint = () => {
         </Card>
 
         {/* Right Column: Business Blueprint */}
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-amber-500" />
-              <CardTitle className="text-lg">Business Blueprint</CardTitle>
+              <Briefcase className="h-5 w-5 text-amber-500 shrink-0" />
+              <CardTitle className="text-lg truncate">Business Blueprint</CardTitle>
             </div>
             <CardDescription>Your execution strategy</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 overflow-hidden">
             <BlueprintField label="Offer Model" value={blueprint.offer_model} />
             <BlueprintField label="Monetization Strategy" value={blueprint.monetization_strategy} />
             <BlueprintField label="Distribution Channels" value={blueprint.distribution_channels} />
