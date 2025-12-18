@@ -21,6 +21,7 @@ import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
 import { MarketDomainViewer } from "@/components/admin/MarketDomainViewer";
 import { MarketSignalModal } from "@/components/ideas/MarketSignalModal";
+import { ImportIdeaModal } from "@/components/ideas/ImportIdeaModal";
 import { SourceTypeBadge, SOURCE_TYPE_FILTERS, type SourceTypeFilter } from "@/components/ideas/SourceTypeBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { PLAN_ERROR_CODES, type PlanErrorCode } from "@/config/plans";
@@ -33,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2, Target, X, TrendingUp } from "lucide-react";
+import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2, Target, X, TrendingUp, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 
@@ -99,6 +100,8 @@ const Ideas = () => {
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReasonCode, setPaywallReasonCode] = useState<PaywallReasonCode | undefined>();
   const [showMarketSignalModal, setShowMarketSignalModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [newlyImportedIds, setNewlyImportedIds] = useState<string[]>([]);
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
 
   // Show paywall when plan errors occur
@@ -240,6 +243,24 @@ const Ideas = () => {
     queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] });
     setActiveTab("library");
     setSourceTypeFilter("market_signal");
+  };
+
+  const handleImportSuccess = (ideas: any[]) => {
+    // Track newly imported idea IDs for banner display
+    const importedIds = ideas.map((idea) => idea.id);
+    setNewlyImportedIds(importedIds);
+    
+    // Refresh library ideas
+    queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] });
+    setActiveTab("library");
+    setSourceTypeFilter("imported");
+    
+    // Auto-navigate to first idea after a short delay
+    if (ideas.length > 0) {
+      setTimeout(() => {
+        navigate(`/ideas/${ideas[0].id}`);
+      }, 500);
+    }
   };
 
   const handleGenerateFounderIdeas = async () => {
@@ -395,6 +416,16 @@ const Ideas = () => {
             <TrendingUp className="w-4 h-4" />
             <span className="hidden sm:inline">Market Pain</span>
             <span className="sm:hidden">Market</span>
+          </Button>
+          <Button 
+            onClick={() => setShowImportModal(true)} 
+            variant="outline" 
+            size="sm" 
+            className="gap-2 border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="hidden sm:inline">Import My Idea</span>
+            <span className="sm:hidden">Import</span>
           </Button>
           <Button onClick={() => navigate("/fusion-lab")} variant="outline" size="sm" className="gap-2">
             <Combine className="w-4 h-4" />
@@ -600,6 +631,31 @@ const Ideas = () => {
                 })}
               </div>
               
+              {/* Newly Imported Ideas Banner */}
+              {newlyImportedIds.length > 0 && sourceTypeFilter === "imported" && (
+                <div className="bg-violet-500/10 border border-violet-500/30 rounded-lg p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-5 h-5 text-violet-500" />
+                    <div>
+                      <p className="font-medium text-violet-700 dark:text-violet-300">
+                        We generated {newlyImportedIds.length} variants. Pick the one you want to pursue.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Each variant offers a different angle on your original idea.
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setNewlyImportedIds([])}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+              
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredLibraryIdeas.map((idea) => (
                   <LibraryIdeaCard 
@@ -629,6 +685,13 @@ const Ideas = () => {
         open={showMarketSignalModal}
         onClose={() => setShowMarketSignalModal(false)}
         onSuccess={handleMarketSignalSuccess}
+      />
+
+      {/* Import Idea Modal */}
+      <ImportIdeaModal
+        open={showImportModal}
+        onOpenChange={setShowImportModal}
+        onSuccess={handleImportSuccess}
       />
     </div>
   );

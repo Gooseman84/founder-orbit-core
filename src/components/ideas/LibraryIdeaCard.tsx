@@ -28,6 +28,8 @@ interface IdeaPayload {
 interface SourceMeta {
   idea_payload?: IdeaPayload;
   inferred_pain_themes?: string[];
+  variant_label?: string;
+  import_source?: string;
 }
 
 const getScoreColor = (score: number | null) => {
@@ -41,11 +43,13 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
   const navigate = useNavigate();
   const isV6 = idea.engine_version === "v6";
   const isMarketSignal = (idea as any).source_type === "market_signal";
+  const isImported = (idea as any).source_type === "imported";
   
-  // Extract idea_payload and pain themes from source_meta for market signal ideas
+  // Extract idea_payload and pain themes from source_meta for market signal and imported ideas
   const sourceMeta = (idea as any).source_meta as SourceMeta | null;
   const ideaPayload = sourceMeta?.idea_payload;
   const painThemes = sourceMeta?.inferred_pain_themes;
+  const variantLabel = sourceMeta?.variant_label;
 
   return (
     <Card className="hover:shadow-lg transition-all duration-200 flex flex-col group hover:border-primary/30">
@@ -60,6 +64,12 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
                 <Zap className="w-3 h-3" />v6
               </span>
             )}
+            {/* Variant label for imported ideas */}
+            {isImported && variantLabel && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                Variant {variantLabel}
+              </span>
+            )}
             <SourceTypeBadge sourceType={(idea as any).source_type} size="sm" />
           </div>
           <ModeBadge mode={idea.mode} size="sm" />
@@ -72,8 +82,8 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col gap-3">
-        {/* Market Signal enhanced content */}
-        {isMarketSignal && ideaPayload ? (
+        {/* Market Signal or Imported enhanced content */}
+        {(isMarketSignal || isImported) && ideaPayload ? (
           <div className="space-y-2.5">
             {/* Problem */}
             {ideaPayload.problem && (
