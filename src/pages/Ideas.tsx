@@ -650,7 +650,7 @@ const Ideas = () => {
                       <Button 
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/ideas/compare-variants?ids=${newlyImportedIds.join(",")}`)}
+                        onClick={() => navigate(`/ideas/compare?ids=${newlyImportedIds.join(",")}`)}
                         className="gap-2"
                       >
                         <Scale className="w-4 h-4" />
