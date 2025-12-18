@@ -21,7 +21,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { recordXpEvent } from "@/lib/xpEngine";
 import { PainThemesPanel } from "@/components/ideas/PainThemesPanel";
-import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio } from "lucide-react";
+import { NormalizationDetailsPanel } from "@/components/ideas/NormalizationDetailsPanel";
+import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload } from "lucide-react";
 
 const getComplexityVariant = (complexity: string | null) => {
   switch (complexity?.toLowerCase()) {
@@ -486,6 +487,25 @@ const IdeaDetail = () => {
           </>
         );
       })()}
+
+      {/* Imported Idea - Normalization Details */}
+      {(idea as any).source_type === 'imported' && (idea as any).normalized && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-3">
+              <Upload className="w-5 h-5 text-primary" />
+              <h3 className="font-semibold">Imported Idea Analysis</h3>
+              {(idea as any).source_meta?.variant_label && (
+                <Badge variant="outline" className="text-xs">
+                  Variant {(idea as any).source_meta.variant_label}
+                </Badge>
+              )}
+            </div>
+            <NormalizationDetailsPanel normalized={(idea as any).normalized} />
+          </div>
+        </>
+      )}
     </CardContent>
       </Card>
 
