@@ -33,9 +33,12 @@ OUTPUT SCHEMA (STRICT JSON - use EXACT field names):
   "ideas": [
     {
       "title": "Punchy, memorable title",
-      "description": "One sentence hook explaining the solution",
+      "summary": "One sentence hook explaining the solution",
+      "problem": "What specific pain does this solve? (1-2 sentences)",
+      "target_customer": "Who desperately needs this (specific persona)",
+      "why_it_fits": "Why this founder should build this (1 sentence)",
+      "first_steps": ["Step 1 (action)", "Step 2 (action)", "Step 3 (action)"],
       "business_model_type": "saas" | "content" | "agency" | "marketplace" | "tool" | "community" | null,
-      "target_customer": "Who desperately needs this",
       "time_to_first_dollar": "7 days" | "14 days" | "30 days" | null,
       "complexity": "Low" | "Medium" | "High" | null,
       "category": "saas" | "content" | "agency" | "marketplace" | "tool" | "community" | null,
@@ -47,7 +50,7 @@ OUTPUT SCHEMA (STRICT JSON - use EXACT field names):
   ]
 }
 
-CRITICAL: Use EXACTLY these field names: title, description, business_model_type, target_customer, time_to_first_dollar, complexity, category, shock_factor, virality_potential, leverage_score, automation_density.
+CRITICAL: Use EXACTLY these field names. Include summary, problem, why_it_fits, and first_steps for each idea.
 
 TONE: Write like a sharp founder friend. Punchy, direct, no corporate jargon.
 Return ONLY valid JSON. No markdown, no commentary.`;
@@ -204,6 +207,7 @@ ${JSON.stringify(founderProfileSnapshot, null, 2)}` : ""}
 Analyze these topic clusters and:
 1. Identify 3-6 pain themes that people in these domains commonly experience
 2. Generate 5-7 business ideas that solve these pain points
+3. For each idea, include: title, summary, problem, target_customer, why_it_fits, first_steps (3 actions), and metrics
 
 Return ONLY valid JSON with exact field names as specified.`;
 
@@ -282,11 +286,11 @@ Return ONLY valid JSON with exact field names as specified.`;
     console.log(`generate-market-signal-ideas: ${painThemes.length} themes, ${rawIdeas.length} ideas`);
 
     // Insert ideas into ideas table with source_type='market_signal'
-    // Use exact field names from prompt schema
+    // Put rich fields into source_meta.idea_payload
     const ideasToInsert = rawIdeas.map((idea: any) => ({
       user_id: userId,
       title: idea.title || "Untitled Idea",
-      description: idea.description || "",
+      description: idea.summary || idea.problem || "",
       business_model_type: idea.business_model_type || null,
       target_customer: idea.target_customer || null,
       time_to_first_dollar: idea.time_to_first_dollar || null,
@@ -301,6 +305,12 @@ Return ONLY valid JSON with exact field names as specified.`;
         subreddits: allSubreddits,
         signal_run_id: signalRunId,
         inferred_pain_themes: painThemes,
+        idea_payload: {
+          summary: idea.summary || null,
+          problem: idea.problem || null,
+          why_it_fits: idea.why_it_fits || null,
+          first_steps: idea.first_steps || [],
+        },
       },
       // v6 metrics
       shock_factor: idea.shock_factor ?? null,
@@ -312,7 +322,7 @@ Return ONLY valid JSON with exact field names as specified.`;
     const { data: insertedIdeas, error: insertError } = await supabase
       .from("ideas")
       .insert(ideasToInsert)
-      .select("id, title, description, business_model_type, target_customer, time_to_first_dollar, complexity, category, mode, engine_version, status, source_type, source_meta, shock_factor, virality_potential, leverage_score, automation_density, created_at");
+      .select("*");
 
     if (insertError) {
       console.error("generate-market-signal-ideas: insert error", insertError);

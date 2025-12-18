@@ -1,10 +1,10 @@
 // src/components/ideas/LibraryIdeaCard.tsx
-// Enhanced card for Library view that shows v6 metrics when available
+// Enhanced card for Library view that shows v6 metrics and market signal details
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Zap, Eye, FileText, Trash2 } from "lucide-react";
+import { Zap, Eye, FileText, Trash2, AlertCircle, Lightbulb, ListChecks } from "lucide-react";
 import { V6MetricsInline } from "@/components/shared/V6MetricBadge";
 import { ModeBadge } from "@/components/shared/ModeBadge";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
@@ -17,6 +17,13 @@ interface LibraryIdeaCardProps {
   onPromote?: (id: string) => void;
 }
 
+interface IdeaPayload {
+  summary?: string;
+  problem?: string;
+  why_it_fits?: string;
+  first_steps?: string[];
+}
+
 const getScoreColor = (score: number | null) => {
   if (!score) return "text-muted-foreground";
   if (score >= 80) return "text-green-600 dark:text-green-400";
@@ -27,6 +34,11 @@ const getScoreColor = (score: number | null) => {
 export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardProps) {
   const navigate = useNavigate();
   const isV6 = idea.engine_version === "v6";
+  const isMarketSignal = (idea as any).source_type === "market_signal";
+  
+  // Extract idea_payload from source_meta for market signal ideas
+  const sourceMeta = (idea as any).source_meta as { idea_payload?: IdeaPayload } | null;
+  const ideaPayload = sourceMeta?.idea_payload;
 
   return (
     <Card className="hover:shadow-lg transition-all duration-200 flex flex-col group hover:border-primary/30">
@@ -53,9 +65,44 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground line-clamp-2">
-          {idea.description || "No description available"}
-        </p>
+        {/* Market Signal enhanced content */}
+        {isMarketSignal && ideaPayload ? (
+          <div className="space-y-2.5">
+            {/* Problem */}
+            {ideaPayload.problem && (
+              <div className="flex gap-2">
+                <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  <span className="font-medium text-foreground">Problem:</span> {ideaPayload.problem}
+                </p>
+              </div>
+            )}
+            
+            {/* Why it fits */}
+            {ideaPayload.why_it_fits && (
+              <div className="flex gap-2">
+                <Lightbulb className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  <span className="font-medium text-foreground">Why it fits:</span> {ideaPayload.why_it_fits}
+                </p>
+              </div>
+            )}
+            
+            {/* First steps preview */}
+            {ideaPayload.first_steps && ideaPayload.first_steps.length > 0 && (
+              <div className="flex gap-2">
+                <ListChecks className="w-3.5 h-3.5 text-accent-foreground mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-muted-foreground">
+                  {ideaPayload.first_steps.length} steps available
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {idea.description || "No description available"}
+          </p>
+        )}
 
         {/* Tags row */}
         <div className="flex flex-wrap gap-1">

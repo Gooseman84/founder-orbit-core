@@ -20,7 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { recordXpEvent } from "@/lib/xpEngine";
-import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp, GitMerge } from "lucide-react";
+import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio } from "lucide-react";
 
 const getComplexityVariant = (complexity: string | null) => {
   switch (complexity?.toLowerCase()) {
@@ -389,22 +389,112 @@ const IdeaDetail = () => {
             </>
           )}
 
-          {/* Fusion Lineage */}
-          {(idea as any).fusion_metadata && ((idea as any).fusion_metadata as any)?.source_titles?.length > 0 && (
-            <>
-              <Separator />
-              <div className="p-4 bg-muted/30 rounded-lg">
-                <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
-                  <GitMerge className="w-4 h-4 text-primary" />
-                  Fusion Lineage
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  {(((idea as any).fusion_metadata as any)?.source_titles || []).join(" + ")} → <span className="text-foreground font-medium">{idea.title}</span>
-                </p>
-              </div>
-            </>
-          )}
-        </CardContent>
+      {/* Fusion Lineage */}
+      {(idea as any).fusion_metadata && ((idea as any).fusion_metadata as any)?.source_titles?.length > 0 && (
+        <>
+          <Separator />
+          <div className="p-4 bg-muted/30 rounded-lg">
+            <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
+              <GitMerge className="w-4 h-4 text-primary" />
+              Fusion Lineage
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              {(((idea as any).fusion_metadata as any)?.source_titles || []).join(" + ")} → <span className="text-foreground font-medium">{idea.title}</span>
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* Market Signal Details */}
+      {(() => {
+        const sourceMeta = (idea as any).source_meta as { 
+          idea_payload?: { 
+            summary?: string; 
+            problem?: string; 
+            why_it_fits?: string; 
+            first_steps?: string[] 
+          };
+          inferred_pain_themes?: string[];
+          domains?: string[];
+        } | null;
+        const ideaPayload = sourceMeta?.idea_payload;
+        const painThemes = sourceMeta?.inferred_pain_themes;
+        const domains = sourceMeta?.domains;
+        
+        if ((idea as any).source_type !== 'market_signal' || !ideaPayload) return null;
+        
+        return (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Radio className="w-5 h-5 text-primary" />
+                Market Signal Insights
+                {domains && domains.length > 0 && (
+                  <span className="text-xs text-muted-foreground font-normal">
+                    from {domains.join(", ")}
+                  </span>
+                )}
+              </h3>
+
+              {/* Problem */}
+              {ideaPayload.problem && (
+                <div className="flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold mb-1">Problem</h4>
+                    <p className="text-sm text-muted-foreground">{ideaPayload.problem}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Why It Fits */}
+              {ideaPayload.why_it_fits && (
+                <div className="flex gap-3">
+                  <Lightbulb className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-semibold mb-1">Why This Fits You</h4>
+                    <p className="text-sm text-muted-foreground">{ideaPayload.why_it_fits}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* First Steps */}
+              {ideaPayload.first_steps && ideaPayload.first_steps.length > 0 && (
+                <div className="flex gap-3">
+                  <ListChecks className="w-5 h-5 text-accent-foreground mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold mb-2">First Steps</h4>
+                    <ol className="space-y-2">
+                      {ideaPayload.first_steps.map((step, idx) => (
+                        <li key={idx} className="flex gap-2 text-sm text-muted-foreground">
+                          <span className="font-medium text-foreground">{idx + 1}.</span>
+                          {step}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </div>
+              )}
+
+              {/* Pain Themes */}
+              {painThemes && painThemes.length > 0 && (
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <h4 className="font-semibold mb-2 text-sm">Inferred Pain Themes</h4>
+                  <ul className="space-y-1">
+                    {painThemes.map((theme, idx) => (
+                      <li key={idx} className="text-sm text-muted-foreground">
+                        • {theme}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </>
+        );
+      })()}
+    </CardContent>
       </Card>
 
       {analysis ? (
