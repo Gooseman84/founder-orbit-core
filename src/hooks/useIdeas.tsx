@@ -32,6 +32,11 @@ export interface Idea {
   autonomy_level: number | null;
   culture_tailwind: number | null;
   chaos_factor: number | null;
+  // Multi-source fields
+  source_type: string | null;
+  source_meta: any;
+  normalized: any;
+  parent_idea_ids: string[] | null;
 }
 
 const fetchIdeas = async (userId: string): Promise<Idea[]> => {

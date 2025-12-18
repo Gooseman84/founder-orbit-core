@@ -98,3 +98,6 @@ verify_jwt = true
 
 [functions.fuse-ideas]
 verify_jwt = true
+
+[functions.generate-market-signal-ideas]
+verify_jwt = true

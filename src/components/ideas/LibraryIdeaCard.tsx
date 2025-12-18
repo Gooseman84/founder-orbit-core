@@ -8,6 +8,7 @@ import { Zap, Eye, FileText, Trash2 } from "lucide-react";
 import { V6MetricsInline } from "@/components/shared/V6MetricBadge";
 import { ModeBadge } from "@/components/shared/ModeBadge";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
+import { SourceTypeBadge } from "@/components/ideas/SourceTypeBadge";
 import type { Idea } from "@/hooks/useIdeas";
 
 interface LibraryIdeaCardProps {
@@ -40,6 +41,7 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
                 <Zap className="w-3 h-3" />v6
               </span>
             )}
+            <SourceTypeBadge sourceType={(idea as any).source_type} size="sm" />
           </div>
           <ModeBadge mode={idea.mode} size="sm" />
         </div>
