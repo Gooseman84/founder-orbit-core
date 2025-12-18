@@ -23,7 +23,7 @@ import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { recordXpEvent } from "@/lib/xpEngine";
 import { PainThemesPanel } from "@/components/ideas/PainThemesPanel";
 import { NormalizationDetailsPanel } from "@/components/ideas/NormalizationDetailsPanel";
-import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload } from "lucide-react";
+import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload } from "lucide-react";
 
 const getComplexityVariant = (complexity: string | null) => {
   switch (complexity?.toLowerCase()) {
@@ -54,6 +54,7 @@ const IdeaDetail = () => {
   const [founderProfile, setFounderProfile] = useState<any>(null);
   const [generatedVariants, setGeneratedVariants] = useState<any[]>([]);
   const [settingNorthStar, setSettingNorthStar] = useState(false);
+  const [unsettingNorthStar, setUnsettingNorthStar] = useState(false);
 
   const handleVetIdea = async () => {
     try {
@@ -123,6 +124,38 @@ const IdeaDetail = () => {
       });
     } finally {
       setSettingNorthStar(false);
+    }
+  };
+
+  const handleUnsetNorthStar = async () => {
+    if (!user || !id) return;
+    
+    setUnsettingNorthStar(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("unset-north-star-idea", {
+        body: { idea_id: id },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "North Star removed",
+        description: "You can choose a new North Star anytime.",
+      });
+
+      // Invalidate queries to refresh ideas list and current idea
+      queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
+      refetch();
+
+    } catch (error: any) {
+      console.error("Error unsetting North Star:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove North Star. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUnsettingNorthStar(false);
     }
   };
 
@@ -262,8 +295,8 @@ const IdeaDetail = () => {
             </Button>
           )}
 
-          {/* North Star Button */}
-          {idea.status !== "north_star" && (
+          {/* North Star Buttons */}
+          {idea.status !== "north_star" ? (
             <Button
               onClick={handleSetNorthStar}
               disabled={settingNorthStar}
@@ -279,6 +312,25 @@ const IdeaDetail = () => {
                 <>
                   <Star className="w-4 h-4" />
                   Choose as North Star
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleUnsetNorthStar}
+              disabled={unsettingNorthStar}
+              variant="outline"
+              className="gap-2 border-destructive/50 text-destructive hover:bg-destructive/10"
+            >
+              {unsettingNorthStar ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-destructive"></div>
+                  Removing...
+                </>
+              ) : (
+                <>
+                  <StarOff className="w-4 h-4" />
+                  Unset North Star
                 </>
               )}
             </Button>
