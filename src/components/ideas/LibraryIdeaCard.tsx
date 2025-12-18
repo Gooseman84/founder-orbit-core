@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Zap, Eye, FileText, Trash2, AlertCircle, Lightbulb, ListChecks } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Zap, Eye, FileText, Trash2, AlertCircle, Lightbulb, ListChecks, Star } from "lucide-react";
 import { V6MetricsInline } from "@/components/shared/V6MetricBadge";
 import { ModeBadge } from "@/components/shared/ModeBadge";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
@@ -44,6 +45,7 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
   const isV6 = idea.engine_version === "v6";
   const isMarketSignal = (idea as any).source_type === "market_signal";
   const isImported = (idea as any).source_type === "imported";
+  const isNorthStar = idea.status === "north_star";
   
   // Extract idea_payload and pain themes from source_meta for market signal and imported ideas
   const sourceMeta = (idea as any).source_meta as SourceMeta | null;
@@ -52,13 +54,20 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
   const variantLabel = sourceMeta?.variant_label;
 
   return (
-    <Card className="hover:shadow-lg transition-all duration-200 flex flex-col group hover:border-primary/30">
+    <Card className={`hover:shadow-lg transition-all duration-200 flex flex-col group hover:border-primary/30 ${isNorthStar ? 'ring-2 ring-amber-500/40 border-amber-500/30' : ''}`}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="flex items-center gap-2 flex-wrap">
             <CardTitle className="text-lg leading-tight group-hover:text-primary transition-colors">
               {idea.title}
             </CardTitle>
+            {/* North Star Badge */}
+            {isNorthStar && (
+              <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1 px-2 py-0.5">
+                <Star className="w-3 h-3 fill-current" />
+                North Star
+              </Badge>
+            )}
             {isV6 && (
               <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary flex items-center gap-1">
                 <Zap className="w-3 h-3" />v6

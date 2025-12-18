@@ -104,3 +104,6 @@ verify_jwt = true
 
 [functions.normalize-imported-idea]
 verify_jwt = true
+
+[functions.set-north-star-idea]
+verify_jwt = true
