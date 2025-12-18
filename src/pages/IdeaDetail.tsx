@@ -1,6 +1,7 @@
 // src/pages/IdeaDetail.tsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +44,8 @@ const IdeaDetail = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { gate } = useFeatureAccess();
-  const { idea, analysis, isLoading, analyzeIdea, updateIdeaStatus } = useIdeaDetail(id);
+  const queryClient = useQueryClient();
+  const { idea, analysis, isLoading, analyzeIdea, updateIdeaStatus, refetch } = useIdeaDetail(id);
   
   const [opportunityScore, setOpportunityScore] = useState<any>(null);
   const [loadingScore, setLoadingScore] = useState(true);
@@ -51,6 +53,7 @@ const IdeaDetail = () => {
   const [showPaywall, setShowPaywall] = useState(false);
   const [founderProfile, setFounderProfile] = useState<any>(null);
   const [generatedVariants, setGeneratedVariants] = useState<any[]>([]);
+  const [settingNorthStar, setSettingNorthStar] = useState(false);
 
   const handleVetIdea = async () => {
     try {
@@ -88,6 +91,38 @@ const IdeaDetail = () => {
         description: "Failed to update idea status. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSetNorthStar = async () => {
+    if (!user || !id) return;
+    
+    setSettingNorthStar(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("set-north-star-idea", {
+        body: { idea_id: id },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "North Star set",
+        description: "This idea is now your primary focus.",
+      });
+
+      // Invalidate queries to refresh ideas list and current idea
+      queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
+      refetch();
+
+    } catch (error: any) {
+      console.error("Error setting North Star:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to set North Star. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSettingNorthStar(false);
     }
   };
 
@@ -227,22 +262,23 @@ const IdeaDetail = () => {
             </Button>
           )}
 
-          {idea.status !== "chosen" && (
+          {/* North Star Button */}
+          {idea.status !== "north_star" && (
             <Button
-              onClick={handleMakeMainIdea}
-              disabled={updateIdeaStatus.isPending}
+              onClick={handleSetNorthStar}
+              disabled={settingNorthStar}
               variant="default"
               className="gap-2"
             >
-              {updateIdeaStatus.isPending ? (
+              {settingNorthStar ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Updating...
+                  Setting...
                 </>
               ) : (
                 <>
                   <Star className="w-4 h-4" />
-                  Make This My Main Idea
+                  Choose as North Star
                 </>
               )}
             </Button>
@@ -262,7 +298,15 @@ const IdeaDetail = () => {
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2 flex-1">
-              <CardTitle className="text-3xl">{idea.title}</CardTitle>
+              <div className="flex items-center gap-3">
+                <CardTitle className="text-3xl">{idea.title}</CardTitle>
+                {idea.status === "north_star" && (
+                  <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1.5 px-2.5 py-1">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    North Star
+                  </Badge>
+                )}
+              </div>
               {idea.business_model_type && (
                 <CardDescription className="text-lg font-medium">{idea.business_model_type}</CardDescription>
               )}

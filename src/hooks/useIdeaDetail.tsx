@@ -85,6 +85,7 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
     data: idea,
     isLoading: ideaLoading,
     error: ideaError,
+    refetch: refetchIdea,
   } = useQuery({
     queryKey: ["idea", ideaId],
     queryFn: () => fetchIdea(ideaId!, user!.id),
@@ -137,5 +138,6 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
     error: ideaError,
     analyzeIdea,
     updateIdeaStatus,
+    refetch: refetchIdea,
   };
 };
