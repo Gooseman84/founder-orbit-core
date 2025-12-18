@@ -120,29 +120,32 @@ serve(async (req) => {
   }
 
   try {
-    // Auth: Extract user from JWT token
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+    // --- Security: derive userId from auth token ---
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Missing or invalid Authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    
-    // Decode JWT to get user ID (JWT already verified by Supabase gateway)
-    const payloadBase64 = token.split('.')[1];
-    const payloadJson = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'));
-    const payload = JSON.parse(payloadJson);
-    const userId = payload.sub;
+    // Extract JWT token and verify user via Supabase auth
+    const jwt = authHeader.replace("Bearer ", "");
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
 
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "Invalid token - no user ID" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
+    if (authError || !user) {
+      console.error("normalize-imported-idea: auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
+
+    const userId = user.id;
 
     // Parse and validate input
     const { title, description } = await req.json();
@@ -163,8 +166,7 @@ serve(async (req) => {
 
     const rawText = title ? `Title: ${title}\n\nDescription: ${description}` : description;
 
-    // Fetch founder profile for context
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    // Service role client for DB operations
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
