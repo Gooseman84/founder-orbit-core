@@ -216,10 +216,29 @@ function extractJSON(content: string): any {
   return JSON.parse(jsonStr);
 }
 
-// Helper to parse refined ideas from AI response
+// Helper to parse refined ideas from AI response (robust version)
 function parseRefinedIdeas(content: string): any[] {
+  // Log raw content for debugging (first 500 chars)
+  console.log("generate-founder-ideas: Pass B raw response preview:", content.slice(0, 500));
+  
   const parsed = extractJSON(content);
-  return parsed.refined_ideas;
+  
+  // Handle various possible response formats
+  if (Array.isArray(parsed)) {
+    return parsed;
+  } else if (parsed.refined_ideas && Array.isArray(parsed.refined_ideas)) {
+    return parsed.refined_ideas;
+  } else if (parsed.ideas && Array.isArray(parsed.ideas)) {
+    return parsed.ideas;
+  } else {
+    // Try to find any array property
+    const arrayProp = Object.values(parsed).find((v) => Array.isArray(v)) as any[] | undefined;
+    if (arrayProp && arrayProp.length > 0) {
+      return arrayProp;
+    }
+    console.error("generate-founder-ideas: Pass B response structure unexpected:", Object.keys(parsed));
+    return [];
+  }
 }
 
 // Helper to call Pass B
