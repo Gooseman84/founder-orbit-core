@@ -18,7 +18,6 @@ import OnboardingInterview from "./pages/OnboardingInterview";
 import Ideas from "./pages/Ideas";
 import IdeaDetail from "./pages/IdeaDetail";
 import CompareIdeas from "./pages/CompareIdeas";
-import CompareVariants from "./pages/CompareVariants";
 import FusionLab from "./pages/FusionLab";
 import NorthStar from "./pages/NorthStar";
 import Feed from "./pages/Feed";
@@ -106,16 +105,6 @@ const App = () => (
                 <ProtectedRoute>
                   <MainLayout>
                     <CompareIdeas />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/ideas/compare-variants"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <CompareVariants />
                   </MainLayout>
                 </ProtectedRoute>
               }
