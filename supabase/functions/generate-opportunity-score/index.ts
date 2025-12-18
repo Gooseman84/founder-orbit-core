@@ -73,30 +73,33 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
 
-    // Validate JWT and get authenticated user
+    // Extract user ID from JWT (verify_jwt=true already validated the token)
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({ error: 'Authorization header required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
-    if (authError || !user) {
-      console.error('[generate-opportunity-score] Auth error:', authError);
+    // Decode JWT to get user ID (token already verified by Supabase gateway)
+    const token = authHeader.replace('Bearer ', '');
+    let userId: string;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      userId = payload.sub;
+      if (!userId) {
+        throw new Error('No user ID in token');
+      }
+    } catch (e) {
+      console.error('[generate-opportunity-score] JWT decode error:', e);
       return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
+        JSON.stringify({ error: 'Invalid token format' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Use authenticated user's ID (ignore userId from body to prevent impersonation)
-    const userId = user.id;
+    console.log('[generate-opportunity-score] Authenticated user:', userId);
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body for ideaId only
