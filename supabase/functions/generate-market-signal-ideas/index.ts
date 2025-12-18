@@ -313,7 +313,7 @@ Return ONLY valid JSON with exact field names as specified.`;
     const { data: insertedIdeas, error: insertError } = await supabase
       .from("ideas")
       .insert(ideasToInsert)
-      .select("id, title");
+      .select("id, title, description, business_model_type, target_customer, time_to_first_dollar, complexity, category, mode, engine_version, status, source_type, source_meta, shock_factor, virality_potential, leverage_score, automation_density, created_at");
 
     if (insertError) {
       console.error("generate-market-signal-ideas: insert error", insertError);

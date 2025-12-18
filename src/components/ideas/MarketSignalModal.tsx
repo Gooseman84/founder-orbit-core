@@ -99,10 +99,50 @@ export function MarketSignalModal({ open, onClose, onSuccess }: MarketSignalModa
         body: { selectedDomainIds: selectedIds },
       });
 
+      // Handle auth errors (401/unauthorized)
+      const isAuthError = 
+        error?.message?.includes("401") ||
+        error?.message?.toLowerCase().includes("unauthorized") ||
+        data?.error?.toLowerCase().includes("invalid or expired authentication") ||
+        data?.error?.toLowerCase().includes("unauthorized");
+
+      if (isAuthError) {
+        toast({ 
+          title: "Session expired", 
+          description: "Please sign in again and retry.", 
+          variant: "destructive" 
+        });
+        setIsGenerating(false);
+        return;
+      }
+
+      // Handle rate limits
+      if (data?.code === "rate_limited" || error?.message?.includes("429")) {
+        toast({ 
+          title: "Rate Limited", 
+          description: "AI is busy. Try again in a minute.", 
+          variant: "destructive" 
+        });
+        setIsGenerating(false);
+        return;
+      }
+
+      // Handle payment/credits required
+      if (data?.code === "payment_required" || error?.message?.includes("402")) {
+        toast({ 
+          title: "Credits Exhausted", 
+          description: "AI credits exhausted. Please add funds.", 
+          variant: "destructive" 
+        });
+        setIsGenerating(false);
+        return;
+      }
+
       if (error) throw error;
 
       if (data?.error) {
         toast({ title: "Error", description: data.error, variant: "destructive" });
+        setIsGenerating(false);
         return;
       }
 
@@ -119,7 +159,11 @@ export function MarketSignalModal({ open, onClose, onSuccess }: MarketSignalModa
       onClose();
     } catch (e: any) {
       console.error("Market signal generation failed:", e);
-      toast({ title: "Generation Failed", description: e.message || "Please try again", variant: "destructive" });
+      toast({ 
+        title: "Generation Failed", 
+        description: "Something went wrong generating ideas. Please try again.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsGenerating(false);
     }
