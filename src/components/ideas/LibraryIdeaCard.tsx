@@ -9,6 +9,7 @@ import { V6MetricsInline } from "@/components/shared/V6MetricBadge";
 import { ModeBadge } from "@/components/shared/ModeBadge";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
 import { SourceTypeBadge } from "@/components/ideas/SourceTypeBadge";
+import { PainThemesPanel } from "@/components/ideas/PainThemesPanel";
 import type { Idea } from "@/hooks/useIdeas";
 
 interface LibraryIdeaCardProps {
@@ -24,6 +25,11 @@ interface IdeaPayload {
   first_steps?: string[];
 }
 
+interface SourceMeta {
+  idea_payload?: IdeaPayload;
+  inferred_pain_themes?: string[];
+}
+
 const getScoreColor = (score: number | null) => {
   if (!score) return "text-muted-foreground";
   if (score >= 80) return "text-green-600 dark:text-green-400";
@@ -36,9 +42,10 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
   const isV6 = idea.engine_version === "v6";
   const isMarketSignal = (idea as any).source_type === "market_signal";
   
-  // Extract idea_payload from source_meta for market signal ideas
-  const sourceMeta = (idea as any).source_meta as { idea_payload?: IdeaPayload } | null;
+  // Extract idea_payload and pain themes from source_meta for market signal ideas
+  const sourceMeta = (idea as any).source_meta as SourceMeta | null;
   const ideaPayload = sourceMeta?.idea_payload;
+  const painThemes = sourceMeta?.inferred_pain_themes;
 
   return (
     <Card className="hover:shadow-lg transition-all duration-200 flex flex-col group hover:border-primary/30">
@@ -96,6 +103,11 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
                   {ideaPayload.first_steps.length} steps available
                 </p>
               </div>
+            )}
+            
+            {/* Pain Themes Toggle */}
+            {painThemes && painThemes.length > 0 && (
+              <PainThemesPanel themes={painThemes} variant="compact" />
             )}
           </div>
         ) : (

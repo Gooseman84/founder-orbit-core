@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { recordXpEvent } from "@/lib/xpEngine";
+import { PainThemesPanel } from "@/components/ideas/PainThemesPanel";
 import { ArrowLeft, Sparkles, Star, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio } from "lucide-react";
 
 const getComplexityVariant = (complexity: string | null) => {
@@ -477,18 +478,9 @@ const IdeaDetail = () => {
                 </div>
               )}
 
-              {/* Pain Themes */}
+              {/* Why These Ideas - Pain Themes Panel */}
               {painThemes && painThemes.length > 0 && (
-                <div className="p-4 bg-muted/30 rounded-lg">
-                  <h4 className="font-semibold mb-2 text-sm">Inferred Pain Themes</h4>
-                  <ul className="space-y-1">
-                    {painThemes.map((theme, idx) => (
-                      <li key={idx} className="text-sm text-muted-foreground">
-                        • {theme}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <PainThemesPanel themes={painThemes} defaultExpanded={true} />
               )}
             </div>
           </>
