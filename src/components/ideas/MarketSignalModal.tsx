@@ -46,18 +46,27 @@ export function MarketSignalModal({ open, onClose, onSuccess }: MarketSignalModa
     }
   }, [open]);
 
+  // Priority rank map for sorting (core first, then high, then medium)
+  const PRIORITY_RANK: Record<string, number> = { core: 0, high: 1, medium: 2 };
+
   const loadDomains = async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from("market_signal_domains")
         .select("*")
-        .eq("is_active", true)
-        .order("priority", { ascending: true });
+        .eq("is_active", true);
 
       if (error) throw error;
-      // Cast to our type (the DB returns the right shape)
-      setDomains((data || []) as unknown as MarketSignalDomain[]);
+      
+      // Sort by priority using rank map (core=0, high=1, medium=2, fallback=9)
+      const sorted = (data || []).sort((a, b) => {
+        const rankA = PRIORITY_RANK[a.priority] ?? 9;
+        const rankB = PRIORITY_RANK[b.priority] ?? 9;
+        return rankA - rankB;
+      });
+      
+      setDomains(sorted as unknown as MarketSignalDomain[]);
     } catch (e) {
       console.error("Failed to load domains:", e);
       toast({ title: "Error", description: "Failed to load market domains", variant: "destructive" });
@@ -85,8 +94,9 @@ export function MarketSignalModal({ open, onClose, onSuccess }: MarketSignalModa
 
     setIsGenerating(true);
     try {
+      // Security: do NOT pass user_id in body - auth header is used by edge function
       const { data, error } = await supabase.functions.invoke("generate-market-signal-ideas", {
-        body: { user_id: user.id, selectedDomainIds: selectedIds },
+        body: { selectedDomainIds: selectedIds },
       });
 
       if (error) throw error;

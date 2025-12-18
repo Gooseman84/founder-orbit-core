@@ -24,37 +24,30 @@ PROCESS:
 2. Identify 3-6 recurring pain themes these communities experience
 3. Generate 5-7 business ideas that address these pain points
 
-OUTPUT SCHEMA (STRICT JSON):
+OUTPUT SCHEMA (STRICT JSON - use EXACT field names):
 {
   "painThemes": [
     "Theme 1: Brief description of the pain pattern",
-    "Theme 2: Brief description of the pain pattern",
-    ...
+    "Theme 2: Brief description of the pain pattern"
   ],
   "ideas": [
     {
-      "id": "unique_id",
       "title": "Punchy, memorable title",
-      "one_liner_pitch": "One sentence hook",
-      "problem": "The pain point this solves",
-      "solution": "What you build",
-      "ideal_customer": "Who desperately needs this",
-      "business_model": "How money flows",
-      "pricing_anchor": "$X/month or $X one-time",
-      "time_to_first_dollar": "7 days / 14 days / 30 days",
-      "distribution_wedge": "How it spreads",
-      "why_now": "Why this timing is perfect",
-      "execution_difficulty": "Low" | "Medium" | "High",
-      "risk_notes": "Honest risks",
-      "delight_factor": "What makes this special",
-      "category": "saas" | "content" | "agency" | "marketplace" | "tool" | "community",
-      "shock_factor": 0-100,
-      "virality_potential": 0-100,
-      "leverage_score": 0-100,
-      "automation_density": 0-100
+      "description": "One sentence hook explaining the solution",
+      "business_model_type": "saas" | "content" | "agency" | "marketplace" | "tool" | "community" | null,
+      "target_customer": "Who desperately needs this",
+      "time_to_first_dollar": "7 days" | "14 days" | "30 days" | null,
+      "complexity": "Low" | "Medium" | "High" | null,
+      "category": "saas" | "content" | "agency" | "marketplace" | "tool" | "community" | null,
+      "shock_factor": 0-100 or null,
+      "virality_potential": 0-100 or null,
+      "leverage_score": 0-100 or null,
+      "automation_density": 0-100 or null
     }
   ]
 }
+
+CRITICAL: Use EXACTLY these field names: title, description, business_model_type, target_customer, time_to_first_dollar, complexity, category, shock_factor, virality_potential, leverage_score, automation_density.
 
 TONE: Write like a sharp founder friend. Punchy, direct, no corporate jargon.
 Return ONLY valid JSON. No markdown, no commentary.`;
@@ -98,6 +91,7 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
@@ -109,16 +103,34 @@ serve(async (req) => {
       );
     }
 
-    const body = await req.json().catch(() => ({}));
-    const userId = body.user_id;
-    const selectedDomainIds: string[] = body.selectedDomainIds || [];
-
-    if (!userId) {
+    // --- Security: derive userId from auth token ---
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "Missing user_id in request body" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Missing Authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    // Create anon client with user's auth token
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error("generate-market-signal-ideas: auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const userId = user.id;
+
+    // Parse body for selectedDomainIds only (ignore any user_id in body)
+    const body = await req.json().catch(() => ({}));
+    const selectedDomainIds: string[] = body.selectedDomainIds || [];
 
     if (!selectedDomainIds.length || selectedDomainIds.length > 2) {
       return new Response(
@@ -129,6 +141,7 @@ serve(async (req) => {
 
     console.log(`generate-market-signal-ideas: user=${userId}, domains=${selectedDomainIds.length}`);
 
+    // Service role client for DB operations
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Load selected domains
@@ -193,7 +206,7 @@ Analyze these topic clusters and:
 1. Identify 3-6 pain themes that people in these domains commonly experience
 2. Generate 5-7 business ideas that solve these pain points
 
-Return ONLY: { "painThemes": [...], "ideas": [...] }`;
+Return ONLY valid JSON with exact field names as specified.`;
 
     // Call AI
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -270,14 +283,15 @@ Return ONLY: { "painThemes": [...], "ideas": [...] }`;
     console.log(`generate-market-signal-ideas: ${painThemes.length} themes, ${rawIdeas.length} ideas`);
 
     // Insert ideas into ideas table with source_type='market_signal'
+    // Use exact field names from prompt schema
     const ideasToInsert = rawIdeas.map((idea: any) => ({
       user_id: userId,
       title: idea.title || "Untitled Idea",
-      description: idea.one_liner_pitch || idea.problem || "",
-      business_model_type: idea.business_model || null,
-      target_customer: idea.ideal_customer || null,
+      description: idea.description || "",
+      business_model_type: idea.business_model_type || null,
+      target_customer: idea.target_customer || null,
       time_to_first_dollar: idea.time_to_first_dollar || null,
-      complexity: idea.execution_difficulty || null,
+      complexity: idea.complexity || null,
       category: idea.category || null,
       mode: "market_signal",
       engine_version: "v6",
