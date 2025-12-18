@@ -98,10 +98,10 @@ export function WorkspaceSidebar({
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-2 pt-3 px-3">
+    <Card className="h-full flex flex-col overflow-hidden">
+      <CardHeader className="pb-2 pt-3 px-3 shrink-0">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Documents</CardTitle>
+          <CardTitle className="text-base truncate">Documents</CardTitle>
           <Button size="sm" variant="outline" onClick={onNewDocument}>
             <FileText className="w-4 h-4" />
           </Button>
@@ -118,8 +118,8 @@ export function WorkspaceSidebar({
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent className="p-0 flex-1">
-        <ScrollArea className="h-full">
+      <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
+        <ScrollArea className="h-full w-full">
           {loading && documents.length === 0 ? (
             <div className="p-2 space-y-2">
               {[1, 2, 3].map((i) => (
@@ -160,8 +160,8 @@ export function WorkspaceSidebar({
                             className="h-6 text-sm py-0 px-1"
                           />
                         ) : (
-                          <div className="flex items-center gap-1">
-                            <p className="font-medium text-sm break-words flex-1">{doc.title}</p>
+                          <div className="flex items-center gap-1 min-w-0">
+                            <p className="font-medium text-sm truncate flex-1">{doc.title}</p>
                             {isSelected && onRename && (
                               <button
                                 onClick={(e) => startRenaming(doc, e)}
