@@ -132,11 +132,12 @@ serve(async (req) => {
       );
     }
 
-    // Extract JWT token and verify user via Supabase auth
-    const jwt = authHeader.replace("Bearer ", "");
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
+    // Verify user via Supabase auth (secure pattern - no manual JWT parsing)
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     if (authError || !user) {
       console.error("normalize-imported-idea: auth error", authError);
       return new Response(
