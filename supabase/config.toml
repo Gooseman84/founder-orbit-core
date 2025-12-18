@@ -101,3 +101,6 @@ verify_jwt = true
 
 [functions.generate-market-signal-ideas]
 verify_jwt = true
+
+[functions.normalize-imported-idea]
+verify_jwt = true
