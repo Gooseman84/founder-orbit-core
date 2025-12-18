@@ -463,10 +463,36 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
 
     let rawIdeas: any[];
     try {
+      // Log raw content for debugging (first 500 chars)
+      console.log("generate-founder-ideas: Pass A raw response preview:", passAContent.slice(0, 500));
+      
       const parsed = extractJSON(passAContent);
-      rawIdeas = parsed.raw_ideas;
+      
+      // Handle various possible response formats
+      if (Array.isArray(parsed)) {
+        // Direct array response
+        rawIdeas = parsed;
+      } else if (parsed.raw_ideas && Array.isArray(parsed.raw_ideas)) {
+        // Expected format: { raw_ideas: [...] }
+        rawIdeas = parsed.raw_ideas;
+      } else if (parsed.ideas && Array.isArray(parsed.ideas)) {
+        // Alternate format: { ideas: [...] }
+        rawIdeas = parsed.ideas;
+      } else {
+        // Try to find any array property
+        const arrayProp = Object.values(parsed).find((v) => Array.isArray(v)) as any[] | undefined;
+        if (arrayProp && arrayProp.length > 0) {
+          rawIdeas = arrayProp;
+        } else {
+          console.error("generate-founder-ideas: Pass A response structure unexpected:", Object.keys(parsed));
+          return new Response(
+            JSON.stringify({ error: "Pass A response format unexpected" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      }
     } catch (e) {
-      console.error("generate-founder-ideas: Pass A JSON parse error", e);
+      console.error("generate-founder-ideas: Pass A JSON parse error", e, "Content preview:", passAContent.slice(0, 300));
       return new Response(
         JSON.stringify({ error: "Failed to parse Pass A response" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -474,7 +500,7 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
     }
 
     if (!Array.isArray(rawIdeas) || rawIdeas.length === 0) {
-      console.error("generate-founder-ideas: Pass A returned no ideas");
+      console.error("generate-founder-ideas: Pass A returned no ideas after parsing");
       return new Response(
         JSON.stringify({ error: "Pass A returned no ideas" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
