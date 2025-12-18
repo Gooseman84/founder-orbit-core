@@ -105,19 +105,18 @@ serve(async (req) => {
 
     // --- Security: derive userId from auth token ---
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Missing Authorization header" }),
+        JSON.stringify({ error: "Missing or invalid Authorization header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Create anon client with user's auth token
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Extract JWT token and verify user
+    const jwt = authHeader.replace("Bearer ", "");
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
 
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
     if (authError || !user) {
       console.error("generate-market-signal-ideas: auth error", authError);
       return new Response(
