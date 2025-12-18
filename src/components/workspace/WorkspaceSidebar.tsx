@@ -142,12 +142,14 @@ export function WorkspaceSidebar({
                   <button
                     key={doc.id}
                     onClick={() => !isRenaming && onSelect(doc.id)}
-                    className={`w-full py-1.5 px-2 text-left rounded-md hover:bg-accent transition-colors group ${
-                      isSelected ? 'bg-accent border-l-2 border-primary' : ''
+                    className={`w-full py-1.5 px-2 text-left rounded-md transition-colors group min-w-0 ${
+                      isSelected 
+                        ? 'bg-primary text-primary-foreground ring-1 ring-primary/40 hover:bg-primary/90' 
+                        : 'hover:bg-secondary'
                     }`}
                   >
                     <div className="flex items-start gap-1.5">
-                      <FileText className="w-3.5 h-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                      <FileText className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${isSelected ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
                       <div className="flex-1 min-w-0">
                         {isRenaming ? (
                           <Input
@@ -173,7 +175,7 @@ export function WorkspaceSidebar({
                             )}
                           </div>
                         )}
-                        <p className="text-xs text-muted-foreground capitalize">
+                        <p className={`text-xs capitalize ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                           {doc.doc_type?.replace('_', ' ')} · {format(new Date(doc.updated_at), 'MMM d')}
                         </p>
                       </div>
