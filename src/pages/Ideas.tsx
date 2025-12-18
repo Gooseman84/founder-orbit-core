@@ -633,9 +633,9 @@ const Ideas = () => {
               
               {/* Newly Imported Ideas Banner */}
               {newlyImportedIds.length > 0 && sourceTypeFilter === "imported" && (
-                <div className="bg-violet-500/10 border border-violet-500/30 rounded-lg p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Sparkles className="w-5 h-5 text-violet-500" />
+                <div className="bg-violet-500/10 border border-violet-500/30 rounded-lg p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <Sparkles className="w-5 h-5 text-violet-500 flex-shrink-0" />
                     <div>
                       <p className="font-medium text-violet-700 dark:text-violet-300">
                         We generated {newlyImportedIds.length} variants. Pick the one you want to pursue.
@@ -645,14 +645,27 @@ const Ideas = () => {
                       </p>
                     </div>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setNewlyImportedIds([])}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {newlyImportedIds.length >= 2 && (
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/ideas/compare-variants?ids=${newlyImportedIds.join(",")}`)}
+                        className="gap-2"
+                      >
+                        <Scale className="w-4 h-4" />
+                        Compare Variants
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setNewlyImportedIds([])}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
               
