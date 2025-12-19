@@ -112,7 +112,6 @@ const IdeaDetail = () => {
       });
 
       // Invalidate queries to refresh ideas list and current idea
-      queryClient.invalidateQueries({ queryKey: ["ideas"] });
       queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
       refetch();
 
@@ -145,7 +144,6 @@ const IdeaDetail = () => {
       });
 
       // Invalidate queries to refresh ideas list and current idea
-      queryClient.invalidateQueries({ queryKey: ["ideas"] });
       queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
       refetch();
 

@@ -68,39 +68,38 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY') ?? '';
 
-    // Extract user ID from JWT (verify_jwt=true already validated the token)
+    // ===== AUTH: Require Authorization header =====
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Authorization header required' }),
+        JSON.stringify({ error: 'Missing Authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Decode JWT to get user ID (token already verified by Supabase gateway)
-    const token = authHeader.replace('Bearer ', '');
-    let userId: string;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      userId = payload.sub;
-      if (!userId) {
-        throw new Error('No user ID in token');
-      }
-    } catch (e) {
-      console.error('[generate-opportunity-score] JWT decode error:', e);
-      return new Response(
-        JSON.stringify({ error: 'Invalid token format' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('[generate-opportunity-score] Authenticated user:', userId);
+    // ===== TWO CLIENTS: Auth (anon key) + Admin (service role) =====
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ===== VERIFY USER via supabaseAuth.auth.getUser() (no token param) =====
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error('[generate-opportunity-score] auth error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+    console.log('[generate-opportunity-score] Authenticated user:', userId);
 
     // Parse request body for ideaId only
     const { ideaId } = await req.json();

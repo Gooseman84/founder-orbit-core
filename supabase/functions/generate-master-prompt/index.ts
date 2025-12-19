@@ -425,41 +425,45 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, ideaId, platform_mode } = await req.json();
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+    // ===== AUTH: Require Authorization header =====
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ===== TWO CLIENTS: Auth (anon key) + Admin (service role) =====
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ===== VERIFY USER via supabaseAuth.auth.getUser() (no token param) =====
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error('generate-master-prompt: auth error', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const resolvedUserId = user.id;
+
+    // ===== REQUEST BODY (no userId required) =====
+    const { ideaId, platform_mode } = await req.json();
     
     // Validate and default platform_mode
     const validModes: PlatformMode[] = ['strategy', 'lovable', 'cursor', 'v0'];
     const resolvedMode: PlatformMode = validModes.includes(platform_mode) ? platform_mode : 'strategy';
-    
-    // Resolve userId: prefer body, fallback to auth context
-    let resolvedUserId = userId;
-    
-    if (!resolvedUserId) {
-      const authHeader = req.headers.get('Authorization');
-      if (authHeader) {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-        const tempClient = createClient(supabaseUrl, supabaseAnonKey);
-        
-        const { data: { user } } = await tempClient.auth.getUser(authHeader.replace('Bearer ', ''));
-        if (user) {
-          resolvedUserId = user.id;
-        }
-      }
-    }
-    
-    if (!resolvedUserId) {
-      return new Response(
-        JSON.stringify({ error: 'Missing user id' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     console.log(`generate-master-prompt: userId=${resolvedUserId}, mode=${resolvedMode}`);
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Resolve ideaId if not provided
     let resolvedIdeaId = ideaId;
