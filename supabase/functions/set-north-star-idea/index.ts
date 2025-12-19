@@ -26,7 +26,7 @@ serve(async (req) => {
       );
     }
 
-    // Get authorization header
+    // Get authorization header and extract JWT token
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       console.error("set-north-star-idea: Missing Authorization header");
@@ -36,12 +36,12 @@ serve(async (req) => {
       );
     }
 
-    // Verify user via Supabase auth
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Extract the JWT token from "Bearer <token>"
+    const token = authHeader.replace("Bearer ", "");
 
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    // Verify user via Supabase auth using the token directly
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
     if (authError || !user) {
       console.error("set-north-star-idea: auth error", authError);
       return new Response(
