@@ -189,17 +189,46 @@ function extractJSON(content: string): any {
     return JSON.parse(content);
   } catch {}
   
+  // Remove markdown code blocks if present
+  let cleaned = content.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
+  
+  // Try parsing cleaned content
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+  
   // Find the outermost { } pair by counting braces
-  const firstBrace = content.indexOf("{");
+  const firstBrace = cleaned.indexOf("{");
   if (firstBrace === -1) {
+    // Try to find an array instead
+    const firstBracket = cleaned.indexOf("[");
+    if (firstBracket !== -1) {
+      let depth = 0;
+      let endIndex = -1;
+      for (let i = firstBracket; i < cleaned.length; i++) {
+        if (cleaned[i] === "[") depth++;
+        else if (cleaned[i] === "]") {
+          depth--;
+          if (depth === 0) {
+            endIndex = i;
+            break;
+          }
+        }
+      }
+      if (endIndex !== -1) {
+        try {
+          return JSON.parse(cleaned.slice(firstBracket, endIndex + 1));
+        } catch {}
+      }
+    }
     throw new Error("No JSON object found in response");
   }
   
   let depth = 0;
   let endIndex = -1;
-  for (let i = firstBrace; i < content.length; i++) {
-    if (content[i] === "{") depth++;
-    else if (content[i] === "}") {
+  for (let i = firstBrace; i < cleaned.length; i++) {
+    if (cleaned[i] === "{") depth++;
+    else if (cleaned[i] === "}") {
       depth--;
       if (depth === 0) {
         endIndex = i;
@@ -208,12 +237,40 @@ function extractJSON(content: string): any {
     }
   }
   
-  if (endIndex === -1) {
-    throw new Error("No matching closing brace found");
+  // If we found a complete object, parse it
+  if (endIndex !== -1) {
+    const jsonStr = cleaned.slice(firstBrace, endIndex + 1);
+    return JSON.parse(jsonStr);
   }
   
-  const jsonStr = content.slice(firstBrace, endIndex + 1);
-  return JSON.parse(jsonStr);
+  // JSON is truncated - attempt repair by finding last complete object in array
+  console.warn("generate-founder-ideas: Attempting to repair truncated JSON");
+  
+  // Find all complete objects by tracking the last valid closing brace at depth 1
+  let lastCompleteObjectEnd = -1;
+  depth = 0;
+  for (let i = firstBrace; i < cleaned.length; i++) {
+    if (cleaned[i] === "{") depth++;
+    else if (cleaned[i] === "}") {
+      depth--;
+      if (depth === 1) {
+        // This closes an object inside the main object/array
+        lastCompleteObjectEnd = i;
+      }
+    }
+  }
+  
+  if (lastCompleteObjectEnd !== -1) {
+    // Close the array and object
+    const repairedJson = cleaned.slice(firstBrace, lastCompleteObjectEnd + 1) + "]}";
+    try {
+      const parsed = JSON.parse(repairedJson);
+      console.log("generate-founder-ideas: Successfully repaired truncated JSON");
+      return parsed;
+    } catch {}
+  }
+  
+  throw new Error("No matching closing brace found and repair failed");
 }
 
 // Helper to parse refined ideas from AI response (robust version)
@@ -255,6 +312,7 @@ async function callPassB(
     },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
+      max_tokens: 16000,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
@@ -439,6 +497,7 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
+        max_tokens: 16000,
         messages: [
           { role: "system", content: PASS_A_SYSTEM_PROMPT },
           { role: "user", content: passAMessage },
