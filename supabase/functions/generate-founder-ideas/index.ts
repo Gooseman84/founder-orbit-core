@@ -277,8 +277,8 @@ function parseRefinedIdeas(content: string): any[] {
   }
 }
 
-// Helper to call Pass B (and other small JSON-only calls)
-async function callPassB(
+// Generic model call wrapper - decoupled from Pass semantics
+async function callModel(
   apiKey: string,
   systemPrompt: string,
   userMessage: string,
@@ -319,7 +319,7 @@ async function repairJsonWithModel(apiKey: string, rawText: string) {
   const repairPrompt =
     "Fix this into valid JSON only. Do not add new content. Preserve as much as possible. If truncated, remove the incomplete trailing item and close all brackets properly. Return ONLY valid JSON.";
 
-  const result = await callPassB(
+  const result = await callModel(
     apiKey,
     "You are a JSON repair assistant. Output JSON only.",
     `${repairPrompt}\n\n---\n${rawText}`,
@@ -330,6 +330,8 @@ async function repairJsonWithModel(apiKey: string, rawText: string) {
 }
 
 function salvagePassBJsonLastCompleteObject(rawText: string): string | null {
+  console.warn("Pass B salvage used: truncated JSON");
+  
   // Last-resort salvage: keep only complete objects inside refined_ideas.
   const cleaned = rawText.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
   const keyIdx = cleaned.indexOf('"refined_ideas"');
@@ -337,13 +339,17 @@ function salvagePassBJsonLastCompleteObject(rawText: string): string | null {
   const arrStart = cleaned.indexOf("[", keyIdx);
   if (arrStart === -1) return null;
 
-  // Walk the array and remember the last index where an object closed at depth=1 (inside the array)
+  // Find the first object AFTER the array bracket
+  const firstObjStart = cleaned.indexOf("{", arrStart);
+  if (firstObjStart === -1) return null;
+
+  // Walk the array and remember the last index where an object closed at depth=0 (complete object)
   let depth = 0;
   let inString = false;
   let escape = false;
   let lastObjEnd = -1;
 
-  for (let i = arrStart; i < cleaned.length; i++) {
+  for (let i = firstObjStart; i < cleaned.length; i++) {
     const ch = cleaned[i];
 
     if (inString) {
@@ -376,11 +382,8 @@ function salvagePassBJsonLastCompleteObject(rawText: string): string | null {
 
   if (lastObjEnd === -1) return null;
 
-  const prefixObjStart = cleaned.lastIndexOf("{", lastObjEnd);
-  if (prefixObjStart === -1) return null;
-
-  // Build a minimal JSON object wrapper and close it.
-  const arrBody = cleaned.slice(arrStart + 1, lastObjEnd + 1);
+  // Slice from first object through last complete object
+  const arrBody = cleaned.slice(firstObjStart, lastObjEnd + 1);
   return `{ "refined_ideas": [${arrBody}] }`;
 }
 
@@ -703,7 +706,7 @@ Return ONLY: { "refined_ideas": [...] }`;
     };
 
     // First Pass B attempt
-    let passBResult = await callPassB(
+    let passBResult = await callModel(
       LOVABLE_API_KEY,
       passBSystemPrompt,
       buildPassBMessage(false)
@@ -789,7 +792,7 @@ Return ONLY: { "refined_ideas": [...] }`;
         console.log("generate-founder-ideas v7: Wildcard missing, retrying Pass B with stricter instruction...");
         
         // Retry with stricter instruction
-        const retryResult = await callPassB(
+        const retryResult = await callModel(
           LOVABLE_API_KEY,
           passBSystemPrompt,
           buildPassBMessage(true)
