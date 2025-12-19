@@ -8,12 +8,13 @@ import { Star, ArrowRight, Briefcase, Sparkles } from "lucide-react";
 import { useIdeas, type Idea } from "@/hooks/useIdeas";
 import { usePromoteIdeaToWorkspace } from "@/hooks/usePromoteIdeaToWorkspace";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import type { BusinessIdea } from "@/types/businessIdea";
 
 export function NorthStarCard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const { ideas, isLoading } = useIdeas();
   const { promote, isPromoting } = usePromoteIdeaToWorkspace();
@@ -67,9 +68,12 @@ export function NorthStarCard() {
       const result = await promote(businessIdea, true);
 
       if (result) {
+        const taskCount = Array.isArray(result?.taskIds) ? result.taskIds.length : 0;
         toast({
           title: "Promoted to Workspace",
-          description: `Blueprint + ${result.taskIds.length} tasks created.`,
+          description: taskCount > 0 
+            ? `Blueprint + ${taskCount} tasks created.` 
+            : "Blueprint created.",
         });
         queryClient.invalidateQueries({ queryKey: ["workspace-documents"] });
         navigate(`/workspace/${result.documentId}`);
