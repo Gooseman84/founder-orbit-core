@@ -77,88 +77,67 @@ RESPONSE FORMAT:
 function buildPassBSystemPrompt(wildcardMode: boolean): string {
   const basePrompt = `You are TrueBlazer REFINEMENT ENGINE v2.0 — COMMERCIAL REALITY CHECK.
 
-Your mission: Take the best 9-12 raw ideas and make them EXECUTABLE while keeping the excitement.
+Your mission: Take the best raw ideas and rewrite them as EXECUTABLE ventures while keeping the excitement.
 
-SELECTION CRITERIA (use ALL):
------------------------------
-1. Founder fit — matches their skills, energy, constraints
-2. First-dollar potential — can make money in 7 days
-3. Clear buyer — someone specific will pay
-4. Monetization path — obvious how money flows
-5. Solo execution — 1-3 person team can build this
-
-EXCITEMENT INSURANCE (REQUIRED FOR EVERY IDEA):
-----------------------------------------------
-Every final idea MUST include:
-✓ Punchy hook (non-corporate, no fluff)
-✓ Delight/novelty factor — what makes this FUN
-✓ First dollar path within 7 days
-✓ Clear pricing anchor
-✓ Distribution wedge — how it spreads or compounds
-
-If an idea fails excitement insurance, REPLACE IT. No boring ideas allowed.
+IMPORTANT: Keep output SMALL. Your #1 job is to obey the schema + length limits.
+If you exceed limits, shorten text. DO NOT add extra fields.
 
 OUTPUT SCHEMA (STRICT):
+Return ONLY valid JSON in this exact shape:
 {
-  "id": string,                    // unique id
-  "title": string,                 // refined, punchy title
-  "one_liner_pitch": string,       // hook that makes you say "I want to build that"
-  "problem": string,               // pain point in founder-speak
-  "solution": string,              // what you build
-  "ideal_customer": string,        // specific buyer persona
-  "business_model": string,        // how money flows
-  "pricing_anchor": string,        // specific price point
-  "time_to_first_dollar": string,  // path to revenue in 7 days
-  "distribution_wedge": string,    // how it spreads/compounds
-  "why_now": string,               // market timing
-  "execution_difficulty": "Low" | "Medium" | "High",
-  "risk_notes": string,            // honest risks
-  "delight_factor": string,        // what makes this novel/fun
-  "first_dollar_path": string,     // concrete 7-day revenue steps
-  "idea_mode": "Standard" | "Persona" | "Chaos" | "Memetic" | "Fusion" | "Wildcard",
-  "is_wildcard": boolean,          // OPTIONAL: true ONLY for the wildcard idea
-  
-  // v6 compatibility scores (0-100)
-  "shock_factor": number,
-  "virality_potential": number,
-  "leverage_score": number,
-  "automation_density": number,
-  "autonomy_level": number,
-  "culture_tailwind": number,
-  "chaos_factor": number
+  "refined_ideas": [
+    {
+      "id": string,
+      "title": string,
+      "one_liner_pitch": string,
+      "problem": string,          // max 240 chars
+      "solution": string,         // max 240 chars
+      "ideal_customer": string,   // max 160 chars
+      "business_model": string,   // short
+      "first_steps": [string, string, string], // exactly 3 items; each max 120 chars
+
+      // v6 metrics (numbers 0–100)
+      "shock_factor": number,
+      "virality_potential": number,
+      "leverage_score": number,
+      "automation_density": number,
+      "autonomy_level": number,
+      "culture_tailwind": number,
+      "chaos_factor": number
+    }
+  ]
 }
 
-TONE CONTROL:
-When tone = "exciting" (DEFAULT):
+CONSTRAINTS (HARD):
+- refined_ideas MUST contain exactly 6 ideas total.
+- NEVER include any additional keys.
+- NEVER use markdown.
+- NO commentary before/after JSON.
+
+TONE:
 - Short, punchy sentences
 - No corporate jargon
 - No MBA-speak
 - Write like a sharp founder friend
-- Make readers say "holy sh*t, I want to build that"
 `;
 
   const wildcardInstructions = wildcardMode ? `
 
 WILDCARD MODE ACTIVE:
 =====================
-You MUST include EXACTLY ONE wildcard idea that:
-- IGNORES all founder constraints (hoursPerWeek, capital, hellNoFilters, lifestyleNonNegotiables, energy drainers, risk tolerance)
-- IS the LAST item in the refined_ideas array
-- HAS "is_wildcard": true set on the idea object
-- HAS "idea_mode": "Wildcard"
-- STILL must be venture-sized, AI-native, monetizable, and executable
-- CAN be ambitious, capital-intensive, or require full-time commitment
-- REPRESENTS a "what if you had no limits?" opportunity
+- refined_ideas MUST contain exactly 6 ideas total.
+- EXACTLY ONE wildcard idea MUST be included as the LAST item.
+- The wildcard ignores founder constraints.
+- Mark it with: "idea_mode": "Wildcard" and "is_wildcard": true
+- For the wildcard, still obey all length limits and schema.
 
-The wildcard is meant to inspire and show what's possible if constraints were removed.
-All other 8-11 ideas should still respect founder constraints normally.
+All other 5 ideas should respect founder constraints.
 ` : '';
 
   return basePrompt + wildcardInstructions + `
 
 RESPONSE FORMAT:
 - Return ONLY valid JSON: { "refined_ideas": [...] }
-- 9-12 ideas exactly
 - No markdown, no commentary
 `;
 }
@@ -298,11 +277,12 @@ function parseRefinedIdeas(content: string): any[] {
   }
 }
 
-// Helper to call Pass B
+// Helper to call Pass B (and other small JSON-only calls)
 async function callPassB(
   apiKey: string,
   systemPrompt: string,
-  userMessage: string
+  userMessage: string,
+  opts?: { max_tokens?: number; temperature?: number }
 ): Promise<{ ok: boolean; status?: number; content?: string; error?: string }> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -312,7 +292,8 @@ async function callPassB(
     },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
-      max_tokens: 16000,
+      max_tokens: opts?.max_tokens ?? 6000,
+      temperature: opts?.temperature ?? 0.6,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
@@ -326,12 +307,81 @@ async function callPassB(
 
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content as string | undefined;
-  
+
   if (!content) {
     return { ok: false, error: "Empty response" };
   }
 
   return { ok: true, content };
+}
+
+async function repairJsonWithModel(apiKey: string, rawText: string) {
+  const repairPrompt =
+    "Fix this into valid JSON only. Do not add new content. Preserve as much as possible. If truncated, remove the incomplete trailing item and close all brackets properly. Return ONLY valid JSON.";
+
+  const result = await callPassB(
+    apiKey,
+    "You are a JSON repair assistant. Output JSON only.",
+    `${repairPrompt}\n\n---\n${rawText}`,
+    { max_tokens: 2000, temperature: 0.2 }
+  );
+
+  return result;
+}
+
+function salvagePassBJsonLastCompleteObject(rawText: string): string | null {
+  // Last-resort salvage: keep only complete objects inside refined_ideas.
+  const cleaned = rawText.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
+  const keyIdx = cleaned.indexOf('"refined_ideas"');
+  if (keyIdx === -1) return null;
+  const arrStart = cleaned.indexOf("[", keyIdx);
+  if (arrStart === -1) return null;
+
+  // Walk the array and remember the last index where an object closed at depth=1 (inside the array)
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  let lastObjEnd = -1;
+
+  for (let i = arrStart; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+
+    if (inString) {
+      if (escape) {
+        escape = false;
+      } else if (ch === "\\") {
+        escape = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (ch === "{") depth++;
+    if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        lastObjEnd = i;
+      }
+    }
+
+    // stop if we find a clean close bracket after at least one object
+    if (ch === "]" && lastObjEnd !== -1) break;
+  }
+
+  if (lastObjEnd === -1) return null;
+
+  const prefixObjStart = cleaned.lastIndexOf("{", lastObjEnd);
+  if (prefixObjStart === -1) return null;
+
+  // Build a minimal JSON object wrapper and close it.
+  const arrBody = cleaned.slice(arrStart + 1, lastObjEnd + 1);
+  return `{ "refined_ideas": [${arrBody}] }`;
 }
 
 serve(async (req) => {
@@ -497,7 +547,8 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        max_tokens: 16000,
+        max_tokens: 8000,
+        temperature: 0.9,
         messages: [
           { role: "system", content: PASS_A_SYSTEM_PROMPT },
           { role: "user", content: passAMessage },
@@ -594,34 +645,54 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
 
     const passBSystemPrompt = buildPassBSystemPrompt(wildcardMode);
 
+    // Reduce Pass B payload size: only pass minimal raw idea fields
+    const rawIdeasSlim = rawIdeas.map((idea: any, idx: number) => ({
+      id: idea?.id ?? `raw-${idx}`,
+      raw_title: idea?.raw_title ?? idea?.title ?? "",
+      raw_hook: idea?.raw_hook ?? idea?.hook ?? "",
+      novel_twist: idea?.novel_twist ?? "",
+      target_persona: idea?.target_persona ?? "",
+      idea_mode: idea?.idea_mode ?? "Standard",
+    }));
+
     const buildPassBMessage = (retryWithStricterInstruction = false) => {
+      const ideaCount = wildcardMode ? 6 : 6;
+      const nonWildcardCount = wildcardMode ? 5 : 6;
+
       let message = `FOUNDER CONTEXT:
 ${JSON.stringify(founderPayload, null, 2)}
 
-RAW IDEAS FROM PASS A (${rawIdeas.length} ideas):
-${JSON.stringify(rawIdeas, null, 2)}
+RAW IDEAS FROM PASS A (${rawIdeasSlim.length} ideas; minimal fields):
+${JSON.stringify(rawIdeasSlim, null, 2)}
 
 TONE: ${tone}
 WILDCARD_MODE: ${wildcardMode}
 
-Select the TOP 9-12 ideas based on founder fit + first-dollar potential + excitement.
-Refine them with commercial viability while keeping the ENERGY.
-Apply EXCITEMENT INSURANCE to every idea.
+Select the TOP ${nonWildcardCount} ideas based on founder fit + first-dollar potential + excitement.
+Then rewrite them to match the STRICT schema.
+
+HARD LIMITS:
+- refined_ideas must contain exactly ${ideaCount} items total.
+- problem max 240 chars
+- solution max 240 chars
+- ideal_customer max 160 chars
+- first_steps must be exactly 3 strings, each max 120 chars
+- If you exceed limits, shorten text.
+- Do NOT add extra fields.
+- Do NOT use markdown.
 `;
 
       if (wildcardMode) {
         message += `
-If WILDCARD_MODE is true, include exactly one wildcard idea as the LAST item in refined_ideas.
-The wildcard must have "is_wildcard": true and "idea_mode": "Wildcard".
-The wildcard IGNORES founder constraints and represents a "no limits" opportunity.
+Add exactly one wildcard idea as the LAST item in refined_ideas.
+Mark it with is_wildcard=true and idea_mode="Wildcard".
 `;
       }
 
       if (retryWithStricterInstruction) {
         message += `
-CRITICAL: You forgot the wildcard in your previous response. 
-Replace the last item with a wildcard idea. Set is_wildcard=true and idea_mode="Wildcard".
-This is MANDATORY when WILDCARD_MODE is true.
+CRITICAL: You forgot the wildcard in your previous response.
+Add it as the LAST item. This is mandatory when WILDCARD_MODE is true.
 `;
       }
 
@@ -660,15 +731,46 @@ Return ONLY: { "refined_ideas": [...] }`;
       );
     }
 
-    let refinedIdeas: any[];
+    let refinedIdeas: any[] = [];
     try {
       refinedIdeas = parseRefinedIdeas(passBResult.content!);
     } catch (e) {
       console.error("generate-founder-ideas: Pass B parse error", e);
-      return new Response(
-        JSON.stringify({ error: "Failed to parse Pass B response" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      console.log("generate-founder-ideas: Pass B parse failed; attempting JSON repair");
+
+      // 1) Retry once with a JSON repair prompt (fast + cheap)
+      const repair = await repairJsonWithModel(LOVABLE_API_KEY, passBResult.content!);
+      if (repair.ok && repair.content) {
+        try {
+          refinedIdeas = parseRefinedIdeas(repair.content);
+        } catch (e2) {
+          console.warn("generate-founder-ideas: JSON repair parse failed", e2);
+        }
+      }
+
+      // 2) Last-resort salvage: truncate to last complete object
+      if (!refinedIdeas || !Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
+        const salvaged = salvagePassBJsonLastCompleteObject(passBResult.content!);
+        if (salvaged) {
+          try {
+            refinedIdeas = parseRefinedIdeas(salvaged);
+          } catch (e3) {
+            console.warn("generate-founder-ideas: salvage parse failed", e3);
+          }
+        }
+      }
+
+      // 3) Graceful failure (no unhandled exception)
+      if (!refinedIdeas || !Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
+        return new Response(
+          JSON.stringify({
+            error: "AI returned malformed JSON. Please retry.",
+            code: "parse_failed",
+            message: "AI returned malformed JSON. Please retry.",
+          }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     if (!Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
