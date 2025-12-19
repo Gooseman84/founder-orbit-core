@@ -277,13 +277,13 @@ function parseRefinedIdeas(content: string): any[] {
   }
 }
 
-// Generic model call wrapper - decoupled from Pass semantics
+// Generic model call wrapper - returns string only, throws on error
 async function callModel(
   apiKey: string,
   systemPrompt: string,
   userMessage: string,
-  opts?: { max_tokens?: number; temperature?: number }
-): Promise<{ ok: boolean; status?: number; content?: string; error?: string }> {
+  opts?: { maxTokens?: number; temperature?: number }
+): Promise<string> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -292,7 +292,7 @@ async function callModel(
     },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
-      max_tokens: opts?.max_tokens ?? 6000,
+      max_tokens: opts?.maxTokens ?? 6000,
       temperature: opts?.temperature ?? 0.6,
       messages: [
         { role: "system", content: systemPrompt },
@@ -302,37 +302,42 @@ async function callModel(
   });
 
   if (!response.ok) {
-    return { ok: false, status: response.status, error: await response.text() };
+    const errorText = await response.text();
+    const err = new Error(`Model call failed: ${response.status}`);
+    (err as any).status = response.status;
+    (err as any).body = errorText;
+    throw err;
   }
 
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content as string | undefined;
 
   if (!content) {
-    return { ok: false, error: "Empty response" };
+    throw new Error("Empty response from model");
   }
 
-  return { ok: true, content };
+  return content;
 }
 
-async function repairJsonWithModel(apiKey: string, rawText: string) {
+// Repair JSON using model - returns parsed JSON or throws
+async function repairJsonWithModel(apiKey: string, rawText: string): Promise<any> {
   const repairPrompt =
     "Fix this into valid JSON only. Do not add new content. Preserve as much as possible. If truncated, remove the incomplete trailing item and close all brackets properly. Return ONLY valid JSON.";
 
-  const result = await callModel(
+  const repairedText = await callModel(
     apiKey,
     "You are a JSON repair assistant. Output JSON only.",
     `${repairPrompt}\n\n---\n${rawText}`,
-    { max_tokens: 2000, temperature: 0.2 }
+    { maxTokens: 2000, temperature: 0.2 }
   );
 
-  return result;
+  return extractJSON(repairedText);
 }
 
+// Last-resort salvage: keep only complete objects inside refined_ideas
 function salvagePassBJsonLastCompleteObject(rawText: string): string | null {
   console.warn("Pass B salvage used: truncated JSON");
   
-  // Last-resort salvage: keep only complete objects inside refined_ideas.
   const cleaned = rawText.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
   const keyIdx = cleaned.indexOf('"refined_ideas"');
   if (keyIdx === -1) return null;
@@ -343,7 +348,7 @@ function salvagePassBJsonLastCompleteObject(rawText: string): string | null {
   const firstObjStart = cleaned.indexOf("{", arrStart);
   if (firstObjStart === -1) return null;
 
-  // Walk the array and remember the last index where an object closed at depth=0 (complete object)
+  // Walk the array and track depth/inString/escape
   let depth = 0;
   let inString = false;
   let escape = false;
@@ -376,8 +381,10 @@ function salvagePassBJsonLastCompleteObject(rawText: string): string | null {
       }
     }
 
-    // stop if we find a clean close bracket after at least one object
-    if (ch === "]" && lastObjEnd !== -1) break;
+    // Stop at closing bracket of refined_ideas array (depth=0, not in string, have at least one object)
+    if (ch === "]" && depth === 0 && !inString && lastObjEnd !== -1) {
+      break;
+    }
   }
 
   if (lastObjEnd === -1) return null;
@@ -706,15 +713,17 @@ Return ONLY: { "refined_ideas": [...] }`;
     };
 
     // First Pass B attempt
-    let passBResult = await callModel(
-      LOVABLE_API_KEY,
-      passBSystemPrompt,
-      buildPassBMessage(false)
-    );
-
-    if (!passBResult.ok) {
-      const status = passBResult.status;
-      console.error("generate-founder-ideas: Pass B AI error", status, passBResult.error);
+    let passBContent: string;
+    try {
+      passBContent = await callModel(
+        LOVABLE_API_KEY,
+        passBSystemPrompt,
+        buildPassBMessage(false),
+        { maxTokens: 6000, temperature: 0.6 }
+      );
+    } catch (err: any) {
+      const status = err.status;
+      console.error("generate-founder-ideas: Pass B AI error", status, err.body || err.message);
       
       if (status === 429) {
         return new Response(
@@ -736,24 +745,26 @@ Return ONLY: { "refined_ideas": [...] }`;
 
     let refinedIdeas: any[] = [];
     try {
-      refinedIdeas = parseRefinedIdeas(passBResult.content!);
+      refinedIdeas = parseRefinedIdeas(passBContent);
     } catch (e) {
       console.error("generate-founder-ideas: Pass B parse error", e);
       console.log("generate-founder-ideas: Pass B parse failed; attempting JSON repair");
 
       // 1) Retry once with a JSON repair prompt (fast + cheap)
-      const repair = await repairJsonWithModel(LOVABLE_API_KEY, passBResult.content!);
-      if (repair.ok && repair.content) {
-        try {
-          refinedIdeas = parseRefinedIdeas(repair.content);
-        } catch (e2) {
-          console.warn("generate-founder-ideas: JSON repair parse failed", e2);
+      try {
+        const repaired = await repairJsonWithModel(LOVABLE_API_KEY, passBContent);
+        if (repaired.refined_ideas && Array.isArray(repaired.refined_ideas)) {
+          refinedIdeas = repaired.refined_ideas;
+        } else if (Array.isArray(repaired)) {
+          refinedIdeas = repaired;
         }
+      } catch (e2) {
+        console.warn("generate-founder-ideas: JSON repair failed", e2);
       }
 
       // 2) Last-resort salvage: truncate to last complete object
       if (!refinedIdeas || !Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
-        const salvaged = salvagePassBJsonLastCompleteObject(passBResult.content!);
+        const salvaged = salvagePassBJsonLastCompleteObject(passBContent);
         if (salvaged) {
           try {
             refinedIdeas = parseRefinedIdeas(salvaged);
@@ -792,15 +803,16 @@ Return ONLY: { "refined_ideas": [...] }`;
         console.log("generate-founder-ideas v7: Wildcard missing, retrying Pass B with stricter instruction...");
         
         // Retry with stricter instruction
-        const retryResult = await callModel(
-          LOVABLE_API_KEY,
-          passBSystemPrompt,
-          buildPassBMessage(true)
-        );
+        try {
+          const retryContent = await callModel(
+            LOVABLE_API_KEY,
+            passBSystemPrompt,
+            buildPassBMessage(true),
+            { maxTokens: 6000, temperature: 0.6 }
+          );
 
-        if (retryResult.ok && retryResult.content) {
           try {
-            const retryIdeas = parseRefinedIdeas(retryResult.content);
+            const retryIdeas = parseRefinedIdeas(retryContent);
             if (Array.isArray(retryIdeas) && retryIdeas.length > 0) {
               const retryHasWildcard = retryIdeas.some((idea: any) => idea.is_wildcard === true);
               if (retryHasWildcard) {
@@ -813,8 +825,8 @@ Return ONLY: { "refined_ideas": [...] }`;
           } catch (e) {
             console.warn("generate-founder-ideas v7: Retry parse failed, proceeding without wildcard", e);
           }
-        } else {
-          console.warn("generate-founder-ideas v7: Retry failed, proceeding without wildcard");
+        } catch (e) {
+          console.warn("generate-founder-ideas v7: Retry failed, proceeding without wildcard", e);
         }
       }
     }
