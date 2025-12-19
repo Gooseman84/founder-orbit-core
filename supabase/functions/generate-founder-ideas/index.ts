@@ -400,29 +400,48 @@ serve(async (req) => {
   }
 
   try {
+    // ===== ENV VARS =====
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
+    // ===== AUTH: Require Authorization header =====
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Missing Authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ===== TWO CLIENTS: Auth (anon key) + Admin (service role) =====
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    // ===== VERIFY USER via supabaseAuth.auth.getUser() (no token param) =====
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error("generate-founder-ideas: auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const userId = user.id;
+
+    // ===== REQUEST BODY (no user_id required) =====
     const body = await req.json().catch(() => ({}));
-    const userId = body.user_id;
     const mode: IdeaGenerationMode = body.mode || "breadth";
     const focusArea: string | undefined = body.focus_area;
     const tone: GenerationTone = body.tone || "exciting";
     const wildcardMode: boolean = body.wildcard_mode === true;
 
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "Missing user_id in request body" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    console.log(`generate-founder-ideas v7: mode=${mode}, tone=${tone}, focus_area=${focusArea || "none"}, wildcard_mode=${wildcardMode}`);
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    console.log(`generate-founder-ideas v7: user=${userId}, mode=${mode}, tone=${tone}, focus_area=${focusArea || "none"}, wildcard_mode=${wildcardMode}`);
 
     // ===== PLAN CHECK: Get user subscription =====
-    const { data: subData } = await supabase
+    const { data: subData } = await supabaseAdmin
       .from("user_subscriptions")
       .select("plan, status")
       .eq("user_id", userId)
@@ -434,7 +453,7 @@ serve(async (req) => {
     // ===== PLAN CHECK: Daily generation limit (FREE = 2/day) =====
     if (!isPro) {
       const today = new Date().toISOString().split("T")[0];
-      const { count: todayCount } = await supabase
+      const { count: todayCount } = await supabaseAdmin
         .from("founder_generated_ideas")
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId)
@@ -471,7 +490,7 @@ serve(async (req) => {
     }
 
     // Load founder profile
-    const { data: profileRow, error: profileError } = await supabase
+    const { data: profileRow, error: profileError } = await supabaseAdmin
       .from("founder_profiles")
       .select("profile, work_personality, creator_platforms, edgy_mode, wants_money_systems, open_to_personas, open_to_memetic_ideas")
       .eq("user_id", userId)
@@ -497,7 +516,7 @@ serve(async (req) => {
     }
 
     // Load interview context summary
-    const { data: interviewRows } = await supabase
+    const { data: interviewRows } = await supabaseAdmin
       .from("founder_interviews")
       .select("context_summary, updated_at, status")
       .eq("user_id", userId)
