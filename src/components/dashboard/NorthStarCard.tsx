@@ -76,7 +76,9 @@ export function NorthStarCard() {
             : "Blueprint created.",
         });
         queryClient.invalidateQueries({ queryKey: ["workspace-documents"] });
-        navigate(`/workspace/${result.documentId}`);
+        queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
+        queryClient.invalidateQueries({ queryKey: ["ideas"] });
+        navigate(result?.documentId ? `/workspace/${result.documentId}` : "/workspace");
       }
     } catch (error) {
       console.error("Error promoting idea:", error);
