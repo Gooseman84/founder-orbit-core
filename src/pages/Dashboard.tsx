@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { LevelBadge } from "@/components/shared/LevelBadge";
 import { XpProgressBar } from "@/components/shared/XpProgressBar";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
+import { NorthStarCard } from "@/components/dashboard/NorthStarCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -306,6 +307,9 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* North Star Card */}
+      <NorthStarCard />
 
       {/* Task Statistics, Daily Pulse, and Recent Feed */}
       <div className="grid gap-6 md:grid-cols-2">
