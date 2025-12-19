@@ -23,12 +23,11 @@ serve(async (req) => {
   }
 
   try {
-    const body = (await req.json().catch(() => ({}))) as FinalizeRequestBody;
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
       console.error("finalize-founder-profile: missing Supabase env config");
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
@@ -36,15 +35,35 @@ serve(async (req) => {
       );
     }
 
-    // Trust user_id from request body - JWT validation happens at gateway level (verify_jwt = true)
-    const resolvedUserId = body.user_id;
-    if (!resolvedUserId) {
-      console.error("finalize-founder-profile: missing user_id in request body");
+    // ===== AUTH: Require Authorization header =====
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "Missing user_id" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing Authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // ===== TWO CLIENTS: Auth (anon key) + Admin (service role) =====
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // ===== VERIFY USER via supabaseAuth.auth.getUser() (no token param) =====
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error("finalize-founder-profile: auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const resolvedUserId = user.id;
+
+    // ===== REQUEST BODY (no user_id required) =====
+    const body = (await req.json().catch(() => ({}))) as FinalizeRequestBody;
 
     if (!body.interview_id) {
       return new Response(
@@ -52,8 +71,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Load existing founder profile
     const { data: profileRow, error: profileError } = await supabase

@@ -14,9 +14,9 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
       console.error("set-north-star-idea: Missing environment variables");
@@ -26,26 +26,28 @@ serve(async (req) => {
       );
     }
 
-    // Get authorization header and extract JWT token
+    // ===== AUTH: Require Authorization header =====
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       console.error("set-north-star-idea: Missing Authorization header");
       return new Response(
-        JSON.stringify({ error: "Invalid or expired authentication" }),
+        JSON.stringify({ error: "Missing Authorization header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Extract the JWT token from "Bearer <token>"
-    const token = authHeader.replace("Bearer ", "");
+    // ===== TWO CLIENTS: Auth (anon key) + Admin (service role) =====
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const supabaseService = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    // Verify user via Supabase auth using the token directly
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    // ===== VERIFY USER via supabaseAuth.auth.getUser() (no token param) =====
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     if (authError || !user) {
       console.error("set-north-star-idea: auth error", authError);
       return new Response(
-        JSON.stringify({ error: "Invalid or expired authentication" }),
+        JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -65,8 +67,7 @@ serve(async (req) => {
 
     console.log("set-north-star-idea: setting north star for idea", idea_id);
 
-    // Use service role client for DB operations
-    const supabaseService = createClient(supabaseUrl, supabaseServiceRoleKey);
+    // Verify idea exists and belongs to the user
 
     // Verify idea exists and belongs to the user
     const { data: idea, error: ideaError } = await supabaseService

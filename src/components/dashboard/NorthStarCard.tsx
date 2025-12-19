@@ -77,7 +77,6 @@ export function NorthStarCard() {
         });
         queryClient.invalidateQueries({ queryKey: ["workspace-documents"] });
         queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
-        queryClient.invalidateQueries({ queryKey: ["ideas"] });
         navigate(result?.documentId ? `/workspace/${result.documentId}` : "/workspace");
       }
     } catch (error) {
