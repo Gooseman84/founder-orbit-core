@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,6 +9,7 @@ import { useIdeas, type Idea } from "@/hooks/useIdeas";
 import { usePromoteIdeaToWorkspace } from "@/hooks/usePromoteIdeaToWorkspace";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import type { BusinessIdea } from "@/types/businessIdea";
 
 export function NorthStarCard() {
   const navigate = useNavigate();
@@ -21,30 +21,66 @@ export function NorthStarCard() {
   // Find the North Star idea
   const northStarIdea = ideas.find((idea) => idea.status === "north_star");
 
+  // Convert DB idea to BusinessIdea format (same pattern as Ideas.tsx handlePromoteLibraryIdea)
+  const convertToBusinessIdea = (idea: Idea): BusinessIdea => {
+    const sourceMeta = idea.source_meta as any;
+    const ideaPayload = sourceMeta?.idea_payload;
+    
+    return {
+      id: idea.id,
+      title: idea.title,
+      oneLiner: idea.description || "",
+      description: idea.description || "",
+      problemStatement: ideaPayload?.problem || "",
+      targetCustomer: idea.target_customer || ideaPayload?.target_customer || "",
+      revenueModel: idea.business_model_type || "",
+      mvpApproach: ideaPayload?.mvp_approach || "",
+      goToMarket: ideaPayload?.go_to_market || "",
+      competitiveAdvantage: ideaPayload?.competitive_advantage || "",
+      financialTrajectory: { month3: "", month6: "", month12: "", mrrCeiling: "" },
+      requiredToolsSkills: "",
+      risksMitigation: "",
+      whyItFitsFounder: ideaPayload?.why_it_fits || "",
+      primaryPassionDomains: [],
+      primarySkillNeeds: [],
+      markets: [],
+      businessArchetype: idea.business_model_type || idea.category || "",
+      hoursPerWeekMin: 5,
+      hoursPerWeekMax: 20,
+      capitalRequired: 0,
+      riskLevel: "medium",
+      timeToFirstRevenueMonths: 3,
+      requiresPublicPersonalBrand: false,
+      requiresTeamSoon: false,
+      requiresCoding: false,
+      salesIntensity: 3,
+      asyncDepthWork: 3,
+      firstSteps: ideaPayload?.first_steps || [],
+    };
+  };
+
   const handlePromote = async () => {
     if (!northStarIdea || !user) return;
 
-    // Build the BusinessIdea payload from Idea
-    const ideaPayload = {
-      id: northStarIdea.id,
-      title: northStarIdea.title,
-      description: northStarIdea.description || "",
-      business_model_type: northStarIdea.business_model_type,
-      target_customer: northStarIdea.target_customer,
-      time_to_first_dollar: northStarIdea.time_to_first_dollar,
-      complexity: northStarIdea.complexity,
-      first_steps: getFirstSteps(northStarIdea),
-    };
+    try {
+      const businessIdea = convertToBusinessIdea(northStarIdea);
+      const result = await promote(businessIdea, true);
 
-    const result = await promote(ideaPayload as any, true);
-
-    if (result) {
+      if (result) {
+        toast({
+          title: "Promoted to Workspace",
+          description: `Blueprint + ${result.taskIds.length} tasks created.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["workspace-documents"] });
+        navigate(`/workspace/${result.documentId}`);
+      }
+    } catch (error) {
+      console.error("Error promoting idea:", error);
       toast({
-        title: "Promoted to Workspace",
-        description: "Your North Star idea is now in your Workspace with starter tasks.",
+        variant: "destructive",
+        title: "Promotion failed",
+        description: error instanceof Error ? error.message : "Could not promote idea to workspace.",
       });
-      queryClient.invalidateQueries({ queryKey: ["workspace-documents"] });
-      navigate("/workspace");
     }
   };
 
@@ -166,7 +202,7 @@ export function NorthStarCard() {
           <Button 
             variant="outline" 
             className="flex-1 gap-2"
-            onClick={() => navigate(`/idea/${northStarIdea.id}`)}
+            onClick={() => navigate(`/ideas/${northStarIdea.id}`)}
           >
             Open Idea
             <ArrowRight className="h-4 w-4" />
@@ -174,7 +210,7 @@ export function NorthStarCard() {
           <Button 
             className="flex-1 gap-2"
             onClick={handlePromote}
-            disabled={isPromoting}
+            disabled={!northStarIdea || isPromoting}
           >
             <Briefcase className="h-4 w-4" />
             {isPromoting ? "Promoting..." : "Promote to Workspace"}
