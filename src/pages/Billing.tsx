@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CreditCard, Calendar, CheckCircle, ArrowUpRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { useToast } from "@/hooks/use-toast";
 
 const Billing = () => {
@@ -177,16 +177,13 @@ const Billing = () => {
                   className="w-full gap-2"
                   onClick={async () => {
                     try {
-                      const { data: { user } } = await supabase.auth.getUser();
-                      if (!user) return;
-
-                      const response = await supabase.functions.invoke("create-customer-portal", {
-                        body: { userId: user.id },
+                      const { data, error } = await invokeAuthedFunction<{ url?: string }>("create-customer-portal", {
+                        body: {},
                       });
 
-                      if (response.error) throw response.error;
-                      if (response.data?.url) {
-                        window.location.href = response.data.url;
+                      if (error) throw error;
+                      if (data?.url) {
+                        window.location.href = data.url;
                       }
                     } catch (error) {
                       toast({

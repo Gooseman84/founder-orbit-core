@@ -66,8 +66,8 @@ export function useSaveFounderIdea() {
 
       // Check for plan limit errors
       if (data?.code) {
-        setPlanError({ code: data.code, limit: data.limit });
-        return { success: false, errorCode: data.code, limit: data.limit };
+        setPlanError({ code: data.code as PlanErrorCode, limit: data.limit });
+        return { success: false, errorCode: data.code as PlanErrorCode, limit: data.limit };
       }
 
       if (data?.error && !data?.code) {

@@ -3,7 +3,7 @@ import { useBlueprint } from "@/hooks/useBlueprint";
 import { useAuth } from "@/hooks/useAuth";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSubscription } from "@/hooks/useSubscription";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BlueprintSkeleton } from "@/components/shared/SkeletonLoaders";
@@ -38,8 +38,8 @@ const Blueprint = () => {
 
     setRefreshing(true);
     try {
-      const { error: fnError } = await supabase.functions.invoke("refresh-blueprint", {
-        body: { userId: user.id },
+      const { error: fnError } = await invokeAuthedFunction("refresh-blueprint", {
+        body: {},
       });
 
       if (fnError) throw fnError;
@@ -67,8 +67,8 @@ const Blueprint = () => {
 
     setGenerating(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("generate-blueprint", {
-        body: { userId: user.id },
+      const { data, error: fnError } = await invokeAuthedFunction<{ code?: string }>("generate-blueprint", {
+        body: {},
       });
 
       // Check for plan limit error
