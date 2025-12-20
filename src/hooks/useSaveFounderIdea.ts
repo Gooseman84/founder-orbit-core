@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import type { BusinessIdea } from "@/types/businessIdea";
 import type { PlanErrorCode } from "@/config/plans";
 
@@ -36,7 +36,7 @@ export function useSaveFounderIdea() {
     setPlanError(null);
 
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke(
+      const { data, error: invokeError } = await invokeAuthedFunction<{ id?: string; code?: string; limit?: number; error?: string }>(
         "save-founder-idea",
         { body: { idea, fitScores } }
       );

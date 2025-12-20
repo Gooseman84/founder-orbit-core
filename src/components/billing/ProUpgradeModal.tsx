@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { getPaywallCopy, type PaywallReasonCode } from "@/config/paywallCopy";
 import {
@@ -9,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { 
   Loader2, 
   Sparkles, 
@@ -64,9 +64,8 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
     track("upgrade_clicked", { reasonCode, plan: selectedPlan, ...context });
 
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+      const { data, error } = await invokeAuthedFunction<{ url?: string }>("create-checkout-session", {
         body: {
-          userId: user.id,
           priceId,
           successUrl: `${window.location.origin}/billing?status=success`,
           cancelUrl: `${window.location.origin}/billing?status=cancelled`,

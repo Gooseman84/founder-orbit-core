@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { recordXpEvent } from '@/lib/xpEngine';
+import { invokeAuthedFunction, AuthSessionMissingError } from '@/lib/invokeAuthedFunction';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 import type { TaskContext } from '@/types/tasks';
 
@@ -199,11 +200,10 @@ export function useWorkspace() {
     setError(null);
 
     try {
-      const { data, error: functionError } = await supabase.functions.invoke(
+      const { data, error: functionError } = await invokeAuthedFunction<{ suggestion?: string }>(
         'generate-workspace-suggestion',
         {
           body: {
-            userId: user.id,
             documentId,
             taskContext: taskContext ?? null,
           },

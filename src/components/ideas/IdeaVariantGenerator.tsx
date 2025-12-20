@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import type { PaywallReasonCode } from "@/config/paywallCopy";
 import { 
@@ -62,9 +63,8 @@ Category: ${idea.category || idea.business_model_type || "general"}.
 Platform: ${idea.platform || "any"}.
 Generate a ${mode.replace("_", " ")} variant that transforms or evolves this concept.`;
 
-      const { data, error } = await supabase.functions.invoke("generate-founder-ideas", {
+      const { data, error } = await invokeAuthedFunction<{ ideas?: any[]; code?: string }>("generate-founder-ideas", {
         body: {
-          user_id: userId,
           mode,
           focus_area: focusArea,
         },

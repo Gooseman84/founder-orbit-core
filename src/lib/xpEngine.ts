@@ -1,6 +1,7 @@
 // XP engine for leveling and progress tracking
 
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { XpEvent, XpSummary, LEVELS } from "@/types/xp";
 
 /**
@@ -22,10 +23,9 @@ export async function recordXpEvent(
   }
 
   try {
-    // Call the edge function with service role permissions to bypass RLS
-    const { data, error } = await supabase.functions.invoke('record-xp-event', {
+    // Call the edge function with auth to record XP
+    const { data, error } = await invokeAuthedFunction<{ success?: boolean }>('record-xp-event', {
       body: {
-        userId,
         eventType,
         amount,
         metadata: metadata || null,

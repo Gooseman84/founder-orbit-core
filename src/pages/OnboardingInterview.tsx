@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { getOrCreateInterview } from "@/lib/founderProfileApi";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import type { FounderInterview, InterviewTurn } from "@/types/founderInterview";
 
 export default function OnboardingInterview() {
@@ -76,9 +76,8 @@ export default function OnboardingInterview() {
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke("dynamic-founder-interview", {
+        const { data, error } = await invokeAuthedFunction<{ transcript: InterviewTurn[]; interviewId: string }>("dynamic-founder-interview", {
           body: {
-            user_id: user.id,
             interview_id: activeInterview.id,
             mode: "question",
             latestUserAnswer: latestUserAnswer?.trim() || undefined,
@@ -126,9 +125,8 @@ export default function OnboardingInterview() {
 
     try {
       // First, generate the structured context summary
-      const { data: summaryData, error: summaryError } = await supabase.functions.invoke("dynamic-founder-interview", {
+      const { data: summaryData, error: summaryError } = await invokeAuthedFunction<any>("dynamic-founder-interview", {
         body: {
-          user_id: user.id,
           interview_id: interview.id,
           mode: "summary",
         },
@@ -144,9 +142,8 @@ export default function OnboardingInterview() {
       }
 
       // Then, merge into the FounderProfile
-      const { data: finalizeData, error: finalizeError } = await supabase.functions.invoke("finalize-founder-profile", {
+      const { data: finalizeData, error: finalizeError } = await invokeAuthedFunction<any>("finalize-founder-profile", {
         body: {
-          user_id: user.id,
           interview_id: interview.id,
         },
       });

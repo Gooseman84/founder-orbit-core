@@ -2,6 +2,7 @@
 // Helper functions for reading and writing normalized founder profiles
 
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import type { FounderProfile } from "@/types/founderProfile";
 import type { FounderInterview, InterviewTurn } from "@/types/founderInterview";
 
@@ -80,7 +81,7 @@ export async function upsertFounderProfile(
 }
 
 export async function normalizeFounderProfile(raw: any): Promise<FounderProfile> {
-  const { data, error } = await supabase.functions.invoke("normalize-founder-profile", {
+  const { data, error } = await invokeAuthedFunction<{ profile?: FounderProfile }>("normalize-founder-profile", {
     body: raw,
   });
 

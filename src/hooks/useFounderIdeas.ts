@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useIdeaSessionStore } from "@/store/ideaSessionStore";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import type { BusinessIdeaV6, GenerationTone } from "@/types/businessIdea";
 import type { IdeaGenerationMode } from "@/types/idea";
 import type { PlanErrorCode } from "@/config/plans";
@@ -67,9 +67,18 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
       setCurrentTone(tone);
       clearPlanError();
 
-      const { data, error } = await supabase.functions.invoke("generate-founder-ideas", {
+      const { data, error } = await invokeAuthedFunction<{
+        ideas?: BusinessIdeaV6[];
+        code?: string;
+        mode?: string;
+        limit?: number;
+        plan?: string;
+        error?: string;
+        generation_version?: string;
+        pass_a_raw_ideas?: any[];
+        final_ranked_ideas?: any[];
+      }>("generate-founder-ideas", {
         body: {
-          user_id: user.id,
           mode,
           focus_area: params.focus_area,
           tone,
@@ -109,7 +118,7 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
       // Also check for plan limit errors in successful response (legacy pattern)
       if (data?.code) {
         const planErr: PlanLimitError = {
-          code: data.code,
+          code: data.code as PlanErrorCode,
           mode: data.mode,
           limit: data.limit,
           plan: data.plan,

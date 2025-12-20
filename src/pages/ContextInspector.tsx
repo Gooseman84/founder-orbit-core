@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -33,7 +34,7 @@ export default function ContextInspector() {
     setExporting(true);
     try {
       // Call the edge function to generate the document
-      const { data: funcData, error: funcError } = await supabase.functions.invoke(
+      const { data: funcData, error: funcError } = await invokeAuthedFunction<{ content?: string; error?: string }>(
         "generate-context-doc",
         { body: { context } }
       );

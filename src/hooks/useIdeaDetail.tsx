@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { Idea } from "./useIdeas";
 import { recordXpEvent } from "@/lib/xpEngine";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 
 export interface IdeaAnalysis {
   id: string;
@@ -43,9 +44,9 @@ const fetchIdeaAnalysis = async (ideaId: string, userId: string): Promise<IdeaAn
   return data;
 };
 
-const invokeAnalyzeIdea = async (ideaId: string, userId: string) => {
-  const { data, error } = await supabase.functions.invoke("analyze-idea", {
-    body: { ideaId, userId },
+const invokeAnalyzeIdea = async (ideaId: string) => {
+  const { data, error } = await invokeAuthedFunction<any>("analyze-idea", {
+    body: { ideaId },
   });
 
   if (error) throw error;
@@ -101,7 +102,7 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
   const analyzeIdea = useMutation({
     mutationFn: () => {
       if (!ideaId || !user) throw new Error("No idea ID or user");
-      return invokeAnalyzeIdea(ideaId, user.id);
+      return invokeAnalyzeIdea(ideaId);
     },
     onSuccess: async () => {
       // Award XP for vetting an idea

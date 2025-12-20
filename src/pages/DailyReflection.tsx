@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
 import { useToast } from "@/hooks/use-toast";
@@ -119,11 +120,10 @@ export default function DailyReflection() {
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      const { data, error } = await supabase.functions.invoke(
+      const { data, error } = await invokeAuthedFunction<{ reflection?: any }>(
         "generate-daily-reflection",
         {
           body: {
-            userId: user.id,
             reflectionDate: today,
             energyLevel: formData.energy_level,
             stressLevel: formData.stress_level,

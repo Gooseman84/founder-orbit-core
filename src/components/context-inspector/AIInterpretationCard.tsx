@@ -3,8 +3,8 @@ import { Brain, RefreshCw, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { UserContextData } from "@/hooks/useUserContext";
 
 interface AIInterpretationCardProps {
@@ -22,7 +22,7 @@ export function AIInterpretationCard({ context, loading }: AIInterpretationCardP
 
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-context-interpretation", {
+      const { data, error } = await invokeAuthedFunction<{ interpretation: string }>("generate-context-interpretation", {
         body: { context },
       });
 
