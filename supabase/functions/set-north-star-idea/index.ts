@@ -31,7 +31,7 @@ serve(async (req) => {
     if (!authHeader) {
       console.error("set-north-star-idea: Missing Authorization header");
       return new Response(
-        JSON.stringify({ error: "Missing Authorization header" }),
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -47,7 +47,7 @@ serve(async (req) => {
     if (authError || !user) {
       console.error("set-north-star-idea: auth error", authError);
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

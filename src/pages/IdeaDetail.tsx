@@ -18,6 +18,7 @@ import { V6MetricsGrid } from "@/components/shared/V6MetricBadge";
 import { ModeBadge } from "@/components/shared/ModeBadge";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { recordXpEvent } from "@/lib/xpEngine";
@@ -100,7 +101,7 @@ const IdeaDetail = () => {
     
     setSettingNorthStar(true);
     try {
-      const { data, error } = await supabase.functions.invoke("set-north-star-idea", {
+      const { data, error } = await invokeAuthedFunction("set-north-star-idea", {
         body: { idea_id: id },
       });
 
@@ -117,9 +118,12 @@ const IdeaDetail = () => {
 
     } catch (error: any) {
       console.error("Error setting North Star:", error);
+      const message = error instanceof AuthSessionMissingError 
+        ? "Session expired. Please sign in again."
+        : error.message || "Failed to set North Star. Please try again.";
       toast({
         title: "Error",
-        description: error.message || "Failed to set North Star. Please try again.",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -132,7 +136,7 @@ const IdeaDetail = () => {
     
     setUnsettingNorthStar(true);
     try {
-      const { data, error } = await supabase.functions.invoke("unset-north-star-idea", {
+      const { data, error } = await invokeAuthedFunction("unset-north-star-idea", {
         body: { idea_id: id },
       });
 
@@ -149,9 +153,12 @@ const IdeaDetail = () => {
 
     } catch (error: any) {
       console.error("Error unsetting North Star:", error);
+      const message = error instanceof AuthSessionMissingError 
+        ? "Session expired. Please sign in again."
+        : error.message || "Failed to remove North Star. Please try again.";
       toast({
         title: "Error",
-        description: error.message || "Failed to remove North Star. Please try again.",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -212,8 +219,8 @@ const IdeaDetail = () => {
 
     setGeneratingScore(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-opportunity-score", {
-        body: { userId: user.id, ideaId: id },
+      const { data, error } = await invokeAuthedFunction("generate-opportunity-score", {
+        body: { ideaId: id },
       });
 
       if (error) throw error;
@@ -228,13 +235,17 @@ const IdeaDetail = () => {
         description: "Opportunity score has been calculated successfully. +25 XP earned!",
       });
     } catch (error: any) {
-      const errorMessage = error.message?.includes("Rate limit")
-        ? "Too many requests. Please wait a moment and try again."
-        : error.message?.includes("Payment required")
-          ? "AI service requires payment. Please contact support."
-          : error.message?.includes("not found")
-            ? "Please analyze the idea first before calculating opportunity score."
-            : "Failed to generate score. Please try again.";
+      let errorMessage = "Failed to generate score. Please try again.";
+      
+      if (error instanceof AuthSessionMissingError || error?.code === "AUTH_SESSION_MISSING") {
+        errorMessage = "Session expired. Please sign in again.";
+      } else if (error.message?.includes("Rate limit")) {
+        errorMessage = "Too many requests. Please wait a moment and try again.";
+      } else if (error.message?.includes("Payment required")) {
+        errorMessage = "AI service requires payment. Please contact support.";
+      } else if (error.message?.includes("not found")) {
+        errorMessage = "Please analyze the idea first before calculating opportunity score.";
+      }
 
       toast({
         title: "Error",
