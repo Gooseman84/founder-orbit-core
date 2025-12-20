@@ -62,13 +62,6 @@ export function ImportIdeaModal({ open, onOpenChange, onSuccess }: ImportIdeaMod
           });
           return;
         }
-          toast({
-            title: "Session expired",
-            description: "Please sign in again.",
-            variant: "destructive",
-          });
-          return;
-        }
 
         if (errorMessage.includes("429")) {
           toast({

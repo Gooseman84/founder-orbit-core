@@ -19,6 +19,7 @@ import { useIdeas } from "@/hooks/useIdeas";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Trophy, ArrowRight, Lock, Lightbulb, ArrowLeft, Users, Clock, 
@@ -459,10 +460,10 @@ const CompareIdeas = () => {
         firstSteps: ideaPayload?.first_steps || [],
       };
 
-      const { data, error } = await supabase.functions.invoke(
+      const { data, error } = await invokeAuthedFunction<{ documentId?: string }>(
         "promote-idea-to-workspace",
         {
-          body: { idea: ideaForPromotion, createTasks: true, userId: user.id },
+          body: { idea: ideaForPromotion, createTasks: true },
         }
       );
 
