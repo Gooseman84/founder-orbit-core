@@ -14,6 +14,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, TrendingUp, Info, Sparkles } from "lucide-react";
@@ -94,27 +95,17 @@ export function MarketSignalModal({ open, onClose, onSuccess }: MarketSignalModa
 
     setIsGenerating(true);
     try {
-      // Security: do NOT pass user_id in body - auth header is used by edge function
-      const { data, error } = await supabase.functions.invoke("generate-market-signal-ideas", {
+      // Security: use invokeAuthedFunction to guarantee JWT is passed
+      const { data, error } = await invokeAuthedFunction<{
+        painThemes?: string[];
+        ideas?: any[];
+        signalRunId?: string;
+        domainsUsed?: string[];
+        error?: string;
+        code?: string;
+      }>("generate-market-signal-ideas", {
         body: { selectedDomainIds: selectedIds },
       });
-
-      // Handle auth errors (401/unauthorized)
-      const isAuthError = 
-        error?.message?.includes("401") ||
-        error?.message?.toLowerCase().includes("unauthorized") ||
-        data?.error?.toLowerCase().includes("invalid or expired authentication") ||
-        data?.error?.toLowerCase().includes("unauthorized");
-
-      if (isAuthError) {
-        toast({ 
-          title: "Session expired", 
-          description: "Please sign in again and retry.", 
-          variant: "destructive" 
-        });
-        setIsGenerating(false);
-        return;
-      }
 
       // Handle rate limits
       if (data?.code === "rate_limited" || error?.message?.includes("429")) {
@@ -159,11 +150,21 @@ export function MarketSignalModal({ open, onClose, onSuccess }: MarketSignalModa
       onClose();
     } catch (e: any) {
       console.error("Market signal generation failed:", e);
-      toast({ 
-        title: "Generation Failed", 
-        description: "Something went wrong generating ideas. Please try again.", 
-        variant: "destructive" 
-      });
+      
+      // Handle AuthSessionMissingError specifically
+      if (e instanceof AuthSessionMissingError || e?.code === "AUTH_SESSION_MISSING") {
+        toast({ 
+          title: "Session expired", 
+          description: "Please sign in again and retry.", 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ 
+          title: "Generation Failed", 
+          description: "Something went wrong generating ideas. Please try again.", 
+          variant: "destructive" 
+        });
+      }
     } finally {
       setIsGenerating(false);
     }

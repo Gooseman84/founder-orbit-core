@@ -31,7 +31,7 @@ serve(async (req) => {
     if (!authHeader) {
       console.error("unset-north-star-idea: Missing Authorization header");
       return new Response(
-        JSON.stringify({ error: "Invalid or expired authentication" }),
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -45,7 +45,7 @@ serve(async (req) => {
     if (authError || !user) {
       console.error("unset-north-star-idea: auth error", authError);
       return new Response(
-        JSON.stringify({ error: "Invalid or expired authentication" }),
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
