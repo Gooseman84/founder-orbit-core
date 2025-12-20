@@ -68,10 +68,19 @@ serve(async (req) => {
       try {
         console.log(`refresh-daily-feed: generating feed for user ${userId}`);
 
-        // Call generate-feed-items function for this user
-        const { data, error } = await supabase.functions.invoke("generate-feed-items", {
-          body: { userId },
+        // Call generate-feed-items function directly via HTTP to avoid edge-to-edge auth trap
+        const functionUrl = `${supabaseUrl}/functions/v1/generate-feed-items`;
+        const response = await fetch(functionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseServiceRoleKey}`,
+          },
+          body: JSON.stringify({ userId }),
         });
+        
+        const data = response.ok ? await response.json() : null;
+        const error = response.ok ? null : { message: `HTTP ${response.status}` };
 
         if (error) {
           console.error(`refresh-daily-feed: error for user ${userId}`, error);

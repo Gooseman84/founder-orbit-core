@@ -69,10 +69,19 @@ serve(async (req) => {
       try {
         console.log(`refresh-niche-radar: generating radar signals for user ${userId}`);
 
-        // Call generate-niche-radar function for this user
-        const { data, error } = await supabase.functions.invoke("generate-niche-radar", {
-          body: { userId },
+        // Call generate-niche-radar function directly via HTTP to avoid edge-to-edge auth trap
+        const functionUrl = `${supabaseUrl}/functions/v1/generate-niche-radar`;
+        const response = await fetch(functionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseServiceRoleKey}`,
+          },
+          body: JSON.stringify({ userId }),
         });
+        
+        const data = response.ok ? await response.json() : null;
+        const error = response.ok ? null : { message: `HTTP ${response.status}` };
 
         if (error) {
           console.error(`refresh-niche-radar: error for user ${userId}`, error);
