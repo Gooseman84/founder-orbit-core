@@ -83,13 +83,12 @@ Deno.serve(async (req) => {
     }
 
     // ===== TWO CLIENTS: Auth (anon key) + Admin (service role) =====
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const jwt = authHeader.replace("Bearer ", "").trim();
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // ===== VERIFY USER via supabaseAuth.auth.getUser() (no token param) =====
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    // ===== VERIFY USER via supabaseAuth.auth.getUser(jwt) =====
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
     if (authError || !user) {
       console.error('[generate-opportunity-score] auth error:', authError);
       return new Response(
