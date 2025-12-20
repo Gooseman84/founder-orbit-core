@@ -82,13 +82,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ===== TWO CLIENTS: Auth (anon key) + Admin (service role) =====
-    const jwt = authHeader.replace("Bearer ", "").trim();
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
+    // ===== TWO CLIENTS: Auth (anon key + persistSession:false) + Admin (service role) =====
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader.trim();
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false },
+    });
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // ===== VERIFY USER via supabaseAuth.auth.getUser(jwt) =====
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
+    // ===== VERIFY USER via supabaseAuth.auth.getUser(token) =====
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
     if (authError || !user) {
       console.error('[generate-opportunity-score] auth error:', authError);
       return new Response(
