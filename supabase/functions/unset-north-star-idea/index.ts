@@ -36,12 +36,11 @@ serve(async (req) => {
       );
     }
 
-    // Verify user via Supabase auth
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Verify user via Supabase auth using getUser(jwt)
+    const jwt = authHeader.replace("Bearer ", "").trim();
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
 
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
     if (authError || !user) {
       console.error("unset-north-star-idea: auth error", authError);
       return new Response(

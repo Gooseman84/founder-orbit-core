@@ -116,12 +116,11 @@ serve(async (req) => {
       );
     }
 
-    // ===== VERIFY USER via supabaseAuth.auth.getUser() (no token param) =====
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // ===== VERIFY USER via supabaseAuth.auth.getUser(jwt) =====
+    const jwt = authHeader.replace("Bearer ", "").trim();
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
 
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
     if (authError || !user) {
       console.error("generate-market-signal-ideas: auth error", authError);
       return new Response(
