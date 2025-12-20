@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { recordXpEvent } from "@/lib/xpEngine";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 
 export interface Idea {
   id: string;
@@ -50,12 +51,8 @@ const fetchIdeas = async (userId: string): Promise<Idea[]> => {
   return data;
 };
 
-const invokeGenerateIdeas = async (userId: string) => {
-  const { data, error } = await supabase.functions.invoke("generate-ideas", {
-    body: {
-      userId,
-    },
-  });
+const invokeGenerateIdeas = async () => {
+  const { data, error } = await invokeAuthedFunction<{ ideas?: any[] }>("generate-ideas", {});
 
   if (error) throw error;
   return data;
@@ -80,7 +77,7 @@ export const useIdeas = () => {
       if (!user?.id) {
         return Promise.reject(new Error("You must be logged in to generate ideas"));
       }
-      return invokeGenerateIdeas(user.id);
+      return invokeGenerateIdeas();
     },
     onSuccess: async (data) => {
       // Award XP for generating ideas

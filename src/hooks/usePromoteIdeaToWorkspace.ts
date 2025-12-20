@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import type { BusinessIdea } from "@/types/businessIdea";
 
 interface PromoteResult {
@@ -23,10 +23,10 @@ export function usePromoteIdeaToWorkspace() {
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke(
+      const { data, error: fnError } = await invokeAuthedFunction<{ documentId: string; taskIds?: string[]; error?: string }>(
         "promote-idea-to-workspace",
         {
-          body: { idea, createTasks, userId: user.id },
+          body: { idea, createTasks },
         }
       );
 

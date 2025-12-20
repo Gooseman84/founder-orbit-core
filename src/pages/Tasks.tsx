@@ -5,6 +5,7 @@ import { useXP } from "@/hooks/useXP";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { TaskList } from "@/components/tasks/TaskList";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -125,9 +126,7 @@ const Tasks = () => {
     if (!user || !chosenIdeaId) return;
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-micro-tasks", {
-        body: { userId: user.id },
-      });
+      const { data, error } = await invokeAuthedFunction<{ tasks?: any[] }>("generate-micro-tasks", {});
       if (error) throw error;
       track("task_generated", { count: data.tasks?.length || 0 });
       toast({ title: "Tasks Generated!", description: `Created ${data.tasks?.length || 0} new tasks.` });

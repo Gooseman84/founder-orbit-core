@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import {
   Dialog,
   DialogContent,
@@ -69,9 +69,8 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+      const { data, error } = await invokeAuthedFunction<{ url?: string }>("create-checkout-session", {
         body: {
-          userId: user.id,
           priceId,
           successUrl: `${window.location.origin}/billing?status=success`,
           cancelUrl: `${window.location.origin}/billing?status=cancelled`,

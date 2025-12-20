@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Radar as RadarIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { recordXpEvent } from "@/lib/xpEngine";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 
 interface RadarSignal {
   id: string;
@@ -61,9 +62,7 @@ export default function Radar() {
 
     try {
       setGenerating(true);
-      const { data, error } = await supabase.functions.invoke("generate-niche-radar", {
-        body: { userId: user.id },
-      });
+      const { data, error } = await invokeAuthedFunction<{ signals?: any[] }>("generate-niche-radar", {});
 
       if (error) throw error;
 

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PromptViewer } from "@/components/shared/PromptViewer";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveVenture } from "@/hooks/useActiveVenture";
 import { useGenerateVenturePlan } from "@/hooks/useGenerateVenturePlan";
@@ -214,10 +215,17 @@ export default function NorthStar() {
       setGenerating(true);
       setError(null);
 
-      const { data, error: functionError } = await supabase.functions.invoke(
+      const { data, error: functionError } = await invokeAuthedFunction<{
+        id: string;
+        prompt_body: string;
+        platform_target?: string;
+        platform_mode?: string;
+        context_hash?: string;
+        source_updated_at?: string;
+      }>(
         "generate-master-prompt",
         {
-          body: { userId, ideaId, platform_mode: mode },
+          body: { ideaId, platform_mode: mode },
         }
       );
 
@@ -236,7 +244,7 @@ export default function NorthStar() {
         idea_id: ideaId,
         prompt_body: data.prompt_body,
         platform_target: data.platform_target,
-        platform_mode: data.platform_mode || mode,
+        platform_mode: (data.platform_mode as PlatformMode) || mode,
         context_hash: data.context_hash,
         source_updated_at: data.source_updated_at,
         created_at: new Date().toISOString(),

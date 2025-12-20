@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { Combine, Sparkles, ExternalLink, ArrowLeft, GitMerge, Zap, Info } from "lucide-react";
 
 interface FusionMetadata {
@@ -130,8 +131,8 @@ const FusionLab = () => {
     setFusedResult(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke("fuse-ideas", {
-        body: { userId: user?.id, ideas: selectedIdeas },
+      const { data, error } = await invokeAuthedFunction<{ idea?: LibraryIdea }>("fuse-ideas", {
+        body: { ideas: selectedIdeas },
       });
 
       if (error) throw error;

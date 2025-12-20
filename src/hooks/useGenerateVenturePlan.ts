@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import type { VenturePlan, VenturePlanType } from "@/types/venture";
 
 interface GenerateOptions {
@@ -37,11 +37,10 @@ export function useGenerateVenturePlan(): UseGenerateVenturePlanResult {
     setError(null);
 
     try {
-      const { data, error: functionError } = await supabase.functions.invoke(
+      const { data, error: functionError } = await invokeAuthedFunction<{ plan: VenturePlan; tasksCreated?: string[] }>(
         "generate-venture-plan",
         {
           body: {
-            userId: user.id,
             ventureId,
             planType: opts?.planType ?? "30_day",
             startDate: opts?.startDate,

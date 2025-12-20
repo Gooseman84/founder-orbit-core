@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { Upload, Loader2, Sparkles, Info } from "lucide-react";
 
 interface ImportIdeaModalProps {
@@ -43,7 +43,7 @@ export function ImportIdeaModal({ open, onOpenChange, onSuccess }: ImportIdeaMod
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("normalize-imported-idea", {
+      const { data, error } = await invokeAuthedFunction<{ success?: boolean; ideas?: any[]; error?: string }>("normalize-imported-idea", {
         body: { 
           title: title.trim() || undefined, 
           description: description.trim() 
@@ -52,16 +52,16 @@ export function ImportIdeaModal({ open, onOpenChange, onSuccess }: ImportIdeaMod
 
       if (error) {
         // Handle specific error codes
-        const errorBody = error.context?.body;
-        let parsedError: any = null;
-        
-        try {
-          parsedError = typeof errorBody === 'string' ? JSON.parse(errorBody) : errorBody;
-        } catch {
-          parsedError = { error: error.message };
-        }
+        const errorMessage = error.message || "Unknown error";
 
-        if (error.message?.includes("401") || parsedError?.error?.includes("token")) {
+        if (errorMessage.includes("401") || errorMessage.includes("token") || errorMessage.includes("session")) {
+          toast({
+            title: "Session expired",
+            description: "Please sign in again.",
+            variant: "destructive",
+          });
+          return;
+        }
           toast({
             title: "Session expired",
             description: "Please sign in again.",
@@ -70,7 +70,7 @@ export function ImportIdeaModal({ open, onOpenChange, onSuccess }: ImportIdeaMod
           return;
         }
 
-        if (error.message?.includes("429")) {
+        if (errorMessage.includes("429")) {
           toast({
             title: "AI is busy",
             description: "Too many requests. Please try again in a moment.",
@@ -79,7 +79,7 @@ export function ImportIdeaModal({ open, onOpenChange, onSuccess }: ImportIdeaMod
           return;
         }
 
-        if (error.message?.includes("402") || parsedError?.error?.includes("Payment")) {
+        if (errorMessage.includes("402") || errorMessage.includes("Payment")) {
           toast({
             title: "AI credits exhausted",
             description: "Please add more credits to continue.",
@@ -88,7 +88,7 @@ export function ImportIdeaModal({ open, onOpenChange, onSuccess }: ImportIdeaMod
           return;
         }
 
-        throw new Error(parsedError?.error || error.message || "Failed to normalize idea");
+        throw new Error(error.message || "Failed to normalize idea");
       }
 
       if (!data?.success || !data?.ideas?.length) {

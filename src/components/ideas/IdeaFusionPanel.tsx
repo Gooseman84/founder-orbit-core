@@ -5,9 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Combine, Sparkles, X, ExternalLink, Library } from "lucide-react";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import type { BusinessIdeaV6 } from "@/types/businessIdea";
 
 interface IdeaFusionPanelProps {
@@ -65,9 +65,8 @@ export const IdeaFusionPanel = ({
     setIsFusing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("fuse-ideas", {
+      const { data, error } = await invokeAuthedFunction<{ idea: any }>("fuse-ideas", {
         body: {
-          userId: user.id,
           ideas: selectedIdeas,
         },
       });

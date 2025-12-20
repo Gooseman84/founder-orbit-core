@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -107,9 +108,7 @@ export default function DailyStreak() {
 
     setUpdating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("update-daily-streak", {
-        body: { userId: user.id },
-      });
+      const { data, error } = await invokeAuthedFunction<{ streak: { current_streak: number }; badgesEarned?: any[] }>("update-daily-streak", {});
 
       if (error) throw error;
 

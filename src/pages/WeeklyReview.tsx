@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { WeeklySummaryCard } from "@/components/reflection/WeeklySummaryCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,11 +29,9 @@ export default function WeeklyReview() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke(
+      const { data, error } = await invokeAuthedFunction<{ error?: string; message?: string; summary?: any }>(
         "generate-weekly-summary",
-        {
-          body: { userId: user.id },
-        }
+        {}
       );
 
       if (error) {

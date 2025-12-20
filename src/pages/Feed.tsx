@@ -8,6 +8,7 @@ import { recordXpEvent } from "@/lib/xpEngine";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, Sparkles, AlertCircle } from "lucide-react";
+import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 
 interface FeedItem {
   id: string;
@@ -88,9 +89,7 @@ export default function Feed() {
       setGenerating(true);
       toast.info("Generating personalized feed items...");
 
-      const { data, error } = await supabase.functions.invoke("generate-feed-items", {
-        body: { userId: user.id },
-      });
+      const { data, error } = await invokeAuthedFunction<{ items?: any[] }>("generate-feed-items", {});
 
       if (error) {
         console.error("Error generating feed:", error);
