@@ -106,29 +106,32 @@ serve(async (req) => {
       );
     }
 
-    // --- Security: derive userId from auth token ---
+    // --- Security: derive userId from Authorization header ---
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader) {
+      console.error("generate-market-signal-ideas: Missing Authorization header");
       return new Response(
-        JSON.stringify({ error: "Missing or invalid Authorization header" }),
+        JSON.stringify({ error: "Missing Authorization header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Extract JWT token and verify user
-    const jwt = authHeader.replace("Bearer ", "");
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
+    // ===== VERIFY USER via supabaseAuth.auth.getUser() (no token param) =====
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(jwt);
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     if (authError || !user) {
       console.error("generate-market-signal-ideas: auth error", authError);
       return new Response(
-        JSON.stringify({ error: "Invalid or expired authentication" }),
+        JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const userId = user.id;
+    console.log("generate-market-signal-ideas: authenticated user", userId);
 
     // Parse body for selectedDomainIds only (ignore any user_id in body)
     const body = await req.json().catch(() => ({}));
