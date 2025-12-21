@@ -15,31 +15,36 @@ serve(async (req) => {
   try {
     // Parse request body
     const requestJson = await req.json().catch(() => ({} as any));
-    const { ideaId, userId: bodyUserId } = requestJson as { ideaId?: string; userId?: string };
+    const { ideaId } = requestJson as { ideaId?: string };
 
-    // Resolve userId: prefer body, fallback to auth
-    let resolvedUserId = bodyUserId;
-    
-    if (!resolvedUserId) {
-      const authHeader = req.headers.get("Authorization");
-      if (authHeader) {
-        const supabaseAuth = createClient(
-          Deno.env.get("SUPABASE_URL") ?? "",
-          Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-          { global: { headers: { Authorization: authHeader } } }
-        );
-        const { data: { user } } = await supabaseAuth.auth.getUser();
-        resolvedUserId = user?.id;
-      }
-    }
-
-    if (!resolvedUserId) {
+    // ===== CANONICAL AUTH BLOCK =====
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Missing user id. Make sure you are logged in." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error("analyze-idea: auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const resolvedUserId = user.id;
     console.log("analyze-idea: resolved userId", resolvedUserId);
 
     if (!ideaId) {
