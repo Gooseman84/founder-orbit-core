@@ -65,12 +65,12 @@ export const IdeaFusionPanel = ({
     setIsFusing(true);
 
     try {
-      const data = await invokeAuthedFunction<any, { idea: any }>({
-        functionName: "fuse-ideas",
-        body: {
-          ideas: selectedIdeas,
-        },
-      });
+      const { data, error } = await invokeAuthedFunction<{ idea: any }>(
+        "fuse-ideas",
+        { body: { ideas: selectedIdeas } }
+      );
+
+      if (error) throw error;
 
       const newFusedIdea = data?.idea;
       if (newFusedIdea) {

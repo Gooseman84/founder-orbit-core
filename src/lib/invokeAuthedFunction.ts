@@ -1,25 +1,21 @@
-// src/lib/invokeAuthedFunction.ts
-// Helper to invoke edge functions with guaranteed user JWT auth header
-
 import { supabase } from "@/integrations/supabase/client";
 
 export class AuthSessionMissingError extends Error {
-  code = "AUTH_SESSION_MISSING";
-  constructor(message = "No active session. Please sign in again.") {
+  constructor(message = "Please sign in again") {
     super(message);
     this.name = "AuthSessionMissingError";
   }
 }
 
-interface InvokeOptions {
-  body?: Record<string, unknown>;
+export interface InvokeOptions<T = any> {
+  body?: T;
 }
 
 /**
  * Invokes a Supabase edge function with guaranteed JWT Authorization header.
  * Throws AuthSessionMissingError if no session exists.
  */
-export async function invokeAuthedFunction<T = unknown>(
+export async function invokeAuthedFunction<T = any>(
   functionName: string,
   options?: InvokeOptions
 ): Promise<{ data: T | null; error: Error | null }> {
@@ -33,7 +29,7 @@ export async function invokeAuthedFunction<T = unknown>(
   const accessToken = sessionData.session.access_token;
 
   // Invoke with explicit Authorization header
-  const { data, error } = await supabase.functions.invoke<T>(functionName, {
+  const { data, error } = await supabase.functions.invoke(functionName, {
     body: options?.body,
     headers: {
       Authorization: `Bearer ${accessToken}`,

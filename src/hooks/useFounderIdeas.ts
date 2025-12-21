@@ -67,7 +67,7 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
       setCurrentTone(tone);
       clearPlanError();
 
-      const data = await invokeAuthedFunction<any, {
+      const { data, error } = await invokeAuthedFunction<{
         ideas?: BusinessIdeaV6[];
         code?: string;
         mode?: string;
@@ -77,15 +77,16 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
         generation_version?: string;
         pass_a_raw_ideas?: any[];
         final_ranked_ideas?: any[];
-      }>({
-        functionName: "generate-founder-ideas",
-        body: {
-          mode,
-          focus_area: params.focus_area,
-          tone,
-        },
-      });
-      const error = null;
+      }>(
+        "generate-founder-ideas",
+        {
+          body: {
+            mode,
+            focus_area: params.focus_area,
+            tone,
+          },
+        }
+      );
 
       // Handle errors - supabase.functions.invoke returns error for non-2xx
       if (error) {
@@ -137,7 +138,7 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
         console.log(`v7 generation: ${rawIdeas.length} raw ideas → ${refinedIdeas.length} refined`);
       }
 
-      const ideasData = (data as { ideas?: BusinessIdeaV6[] } | null)?.ideas ?? [];
+      const ideasData = data?.ideas ?? [];
       
       // Store in session store
       setSessionIdeas(ideasData);

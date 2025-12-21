@@ -24,14 +24,21 @@ export async function recordXpEvent(
 
   try {
     // Call the edge function with auth to record XP
-    const data = await invokeAuthedFunction<any, { success?: boolean }>({
-      functionName: 'record-xp-event',
-      body: {
-        eventType,
-        amount,
-        metadata: metadata || null,
-      },
-    });
+    const { data, error } = await invokeAuthedFunction<{ success?: boolean }>(
+      'record-xp-event',
+      {
+        body: {
+          eventType,
+          amount,
+          metadata: metadata || null,
+        },
+      }
+    );
+
+    if (error) {
+      console.error("XP event recording failed:", error);
+      return;
+    }
 
     if (data?.success) {
       console.log(`Recorded ${amount} XP for ${eventType} to user ${userId}`);
