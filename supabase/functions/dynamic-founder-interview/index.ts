@@ -112,32 +112,33 @@ serve(async (req) => {
       );
     }
 
-    // ===== AUTH: Require Authorization header =====
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    // ===== CANONICAL AUTH BLOCK =====
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Missing Authorization header" }),
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // ===== TWO CLIENTS: Auth (anon key) + Admin (service role) =====
+    const token = authHeader.slice(7).trim();
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // ===== VERIFY USER via supabaseAuth.auth.getUser() (no token param) =====
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
     if (authError || !user) {
       console.error("dynamic-founder-interview: auth error", authError);
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const resolvedUserId = user.id;
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
 
     // ===== REQUEST BODY (no user_id required) =====
     const body = (await req.json().catch(() => ({}))) as QuestionRequestBody;
