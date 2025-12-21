@@ -264,41 +264,42 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    let userId = body.userId;
-
-    // If no userId in body, try to get from auth
-    if (!userId) {
-      const authHeader = req.headers.get('Authorization');
-      if (authHeader) {
-        const anonClient = createClient(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-          {
-            global: {
-              headers: { Authorization: authHeader },
-            },
-          }
-        );
-        const { data: { user } } = await anonClient.auth.getUser();
-        userId = user?.id;
-      }
-    }
-
-    if (!userId) {
-      console.error('No userId provided in body or auth');
+    // ===== CANONICAL AUTH BLOCK =====
+    const authHeader = req.headers.get('Authorization') ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: 'userId is required in request body or auth header' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Missing Authorization header', code: 'AUTH_SESSION_MISSING' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error('generate-micro-tasks: auth error', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', code: 'AUTH_SESSION_MISSING' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
     console.log('generate-micro-tasks: resolved userId:', userId);
 
-    // Create service role client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      }
     );
 
     // --- Fetch full user context ---
