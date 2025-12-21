@@ -63,42 +63,15 @@ Category: ${idea.category || idea.business_model_type || "general"}.
 Platform: ${idea.platform || "any"}.
 Generate a ${mode.replace("_", " ")} variant that transforms or evolves this concept.`;
 
-      const { data, error } = await invokeAuthedFunction<{ ideas?: any[]; code?: string }>("generate-founder-ideas", {
+      const data = await invokeAuthedFunction<any, { ideas?: any[]; code?: string }>({
+        functionName: "generate-founder-ideas",
         body: {
           mode,
           focus_area: focusArea,
         },
       });
 
-      // Handle errors including plan limits
-      if (error) {
-        // Try to parse error context for plan limit info
-        const errorContext = (error as any)?.context;
-        let parsedError: any = null;
-        
-        if (errorContext?.body) {
-          try {
-            parsedError = JSON.parse(errorContext.body);
-          } catch {
-            // Not JSON, ignore
-          }
-        }
-        
-        // Check if this is a plan limit error
-        if (parsedError?.code) {
-          const reasonMap: Record<string, PaywallReasonCode> = {
-            "IDEA_LIMIT_REACHED": "IDEA_LIMIT_REACHED",
-            "MODE_REQUIRES_PRO": "MODE_REQUIRES_PRO",
-          };
-          setPaywallReasonCode(reasonMap[parsedError.code] || "IDEA_LIMIT_REACHED");
-          setShowPaywall(true);
-          return; // Don't show error toast, paywall handles it
-        }
-        
-        throw error;
-      }
-
-      // Also check data for plan limit errors (legacy pattern)
+      // Also check data for plan limit errors
       if (data?.code) {
         const reasonMap: Record<string, PaywallReasonCode> = {
           "IDEA_LIMIT_REACHED": "IDEA_LIMIT_REACHED",

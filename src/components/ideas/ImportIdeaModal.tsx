@@ -43,46 +43,13 @@ export function ImportIdeaModal({ open, onOpenChange, onSuccess }: ImportIdeaMod
     setIsLoading(true);
 
     try {
-      const { data, error } = await invokeAuthedFunction<{ success?: boolean; ideas?: any[]; error?: string }>("normalize-imported-idea", {
+      const data = await invokeAuthedFunction<any, { success?: boolean; ideas?: any[]; error?: string }>({
+        functionName: "normalize-imported-idea",
         body: { 
           title: title.trim() || undefined, 
           description: description.trim() 
         },
       });
-
-      if (error) {
-        // Handle specific error codes
-        const errorMessage = error.message || "Unknown error";
-
-        if (errorMessage.includes("401") || errorMessage.includes("token") || errorMessage.includes("session")) {
-          toast({
-            title: "Session expired",
-            description: "Please sign in again.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (errorMessage.includes("429")) {
-          toast({
-            title: "AI is busy",
-            description: "Too many requests. Please try again in a moment.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (errorMessage.includes("402") || errorMessage.includes("Payment")) {
-          toast({
-            title: "AI credits exhausted",
-            description: "Please add more credits to continue.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        throw new Error(error.message || "Failed to normalize idea");
-      }
 
       if (!data?.success || !data?.ideas?.length) {
         throw new Error("No variants were generated");

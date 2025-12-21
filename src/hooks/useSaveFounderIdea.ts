@@ -36,10 +36,11 @@ export function useSaveFounderIdea() {
     setPlanError(null);
 
     try {
-      const { data, error: invokeError } = await invokeAuthedFunction<{ id?: string; code?: string; limit?: number; error?: string }>(
-        "save-founder-idea",
-        { body: { idea, fitScores } }
-      );
+      const data = await invokeAuthedFunction<any, { id?: string; code?: string; limit?: number; error?: string }>({
+        functionName: "save-founder-idea",
+        body: { idea, fitScores },
+      });
+      const invokeError = null;
 
       // Handle errors including plan limits from 403 responses
       if (invokeError) {

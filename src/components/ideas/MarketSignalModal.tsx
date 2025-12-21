@@ -96,19 +96,20 @@ export function MarketSignalModal({ open, onClose, onSuccess }: MarketSignalModa
     setIsGenerating(true);
     try {
       // Security: use invokeAuthedFunction to guarantee JWT is passed
-      const { data, error } = await invokeAuthedFunction<{
+      const data = await invokeAuthedFunction<any, {
         painThemes?: string[];
         ideas?: any[];
         signalRunId?: string;
         domainsUsed?: string[];
         error?: string;
         code?: string;
-      }>("generate-market-signal-ideas", {
+      }>({
+        functionName: "generate-market-signal-ideas",
         body: { selectedDomainIds: selectedIds },
       });
 
       // Handle rate limits
-      if (data?.code === "rate_limited" || error?.message?.includes("429")) {
+      if (data?.code === "rate_limited") {
         toast({ 
           title: "Rate Limited", 
           description: "AI is busy. Try again in a minute.", 
@@ -119,7 +120,7 @@ export function MarketSignalModal({ open, onClose, onSuccess }: MarketSignalModa
       }
 
       // Handle payment/credits required
-      if (data?.code === "payment_required" || error?.message?.includes("402")) {
+      if (data?.code === "payment_required") {
         toast({ 
           title: "Credits Exhausted", 
           description: "AI credits exhausted. Please add funds.", 
@@ -128,8 +129,6 @@ export function MarketSignalModal({ open, onClose, onSuccess }: MarketSignalModa
         setIsGenerating(false);
         return;
       }
-
-      if (error) throw error;
 
       if (data?.error) {
         toast({ title: "Error", description: data.error, variant: "destructive" });
