@@ -88,43 +88,43 @@ serve(async (req) => {
   try {
     // Parse request body safely
     const requestJson = await req.json().catch(() => ({} as any));
-    const { userId } = requestJson as { userId?: string };
 
-    // Try to get user from auth header if present
-    const authHeader = req.headers.get("Authorization");
-    let resolvedUserId: string | null = null;
-
-    if (userId) {
-      resolvedUserId = userId;
-      console.log("generate-ideas: resolved userId from body", resolvedUserId);
-    } else if (authHeader) {
-      const supabaseAuth = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-        { global: { headers: { Authorization: authHeader } } }
-      );
-
-      const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
-      if (user && !userError) {
-        resolvedUserId = user.id;
-        console.log("generate-ideas: resolved userId from auth header", resolvedUserId);
-      }
-    }
-
-    if (!resolvedUserId) {
-      console.error("No user id found in request body or auth header");
+    // ===== CANONICAL AUTH BLOCK =====
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Missing user id. Make sure you are logged in." }),
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error("generate-ideas: auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const resolvedUserId = user.id;
     console.log("generate-ideas: resolved userId", resolvedUserId);
 
-    // Initialize Supabase client with service role key to bypass RLS
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      }
     );
 
     // Fetch founder profile
