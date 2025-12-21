@@ -23,18 +23,20 @@ export function usePromoteIdeaToWorkspace() {
     setError(null);
 
     try {
-      const data = await invokeAuthedFunction<any, { documentId: string; taskIds?: string[]; error?: string }>({
-        functionName: "promote-idea-to-workspace",
-        body: { idea, createTasks },
-      });
+      const { data, error: invokeError } = await invokeAuthedFunction<{ documentId: string; taskIds?: string[]; error?: string }>(
+        "promote-idea-to-workspace",
+        { body: { idea, createTasks } }
+      );
+
+      if (invokeError) throw invokeError;
 
       if (data?.error) {
         throw new Error(data.error);
       }
 
       return {
-        documentId: data.documentId,
-        taskIds: data.taskIds || [],
+        documentId: data?.documentId || "",
+        taskIds: data?.taskIds || [],
       };
     } catch (err) {
       const e = err instanceof Error ? err : new Error("Unknown error");

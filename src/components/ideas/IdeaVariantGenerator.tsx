@@ -63,13 +63,12 @@ Category: ${idea.category || idea.business_model_type || "general"}.
 Platform: ${idea.platform || "any"}.
 Generate a ${mode.replace("_", " ")} variant that transforms or evolves this concept.`;
 
-      const data = await invokeAuthedFunction<any, { ideas?: any[]; code?: string }>({
-        functionName: "generate-founder-ideas",
-        body: {
-          mode,
-          focus_area: focusArea,
-        },
-      });
+      const { data, error } = await invokeAuthedFunction<{ ideas?: any[]; code?: string }>(
+        "generate-founder-ideas",
+        { body: { mode, focus_area: focusArea } }
+      );
+
+      if (error) throw error;
 
       // Also check data for plan limit errors
       if (data?.code) {

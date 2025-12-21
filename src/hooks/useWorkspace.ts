@@ -200,13 +200,17 @@ export function useWorkspace() {
     setError(null);
 
     try {
-      const data = await invokeAuthedFunction<any, { suggestion?: string }>({
-        functionName: 'generate-workspace-suggestion',
-        body: {
-          documentId,
-          taskContext: taskContext ?? null,
-        },
-      });
+      const { data, error } = await invokeAuthedFunction<{ suggestion?: string }>(
+        'generate-workspace-suggestion',
+        {
+          body: {
+            documentId,
+            taskContext: taskContext ?? null,
+          },
+        }
+      );
+
+      if (error) throw error;
 
       // If we got a suggestion, update ai_suggestions directly
       if (data?.suggestion) {

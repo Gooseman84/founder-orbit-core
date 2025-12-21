@@ -45,11 +45,12 @@ const fetchIdeaAnalysis = async (ideaId: string, userId: string): Promise<IdeaAn
 };
 
 const invokeAnalyzeIdea = async (ideaId: string) => {
-  const data = await invokeAuthedFunction<any, any>({
-    functionName: "analyze-idea",
-    body: { ideaId },
-  });
+  const { data, error } = await invokeAuthedFunction<any>(
+    "analyze-idea",
+    { body: { ideaId } }
+  );
 
+  if (error) throw error;
   return data;
 };
 

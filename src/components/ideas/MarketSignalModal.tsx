@@ -96,17 +96,19 @@ export function MarketSignalModal({ open, onClose, onSuccess }: MarketSignalModa
     setIsGenerating(true);
     try {
       // Security: use invokeAuthedFunction to guarantee JWT is passed
-      const data = await invokeAuthedFunction<any, {
+      const { data, error } = await invokeAuthedFunction<{
         painThemes?: string[];
         ideas?: any[];
         signalRunId?: string;
         domainsUsed?: string[];
         error?: string;
         code?: string;
-      }>({
-        functionName: "generate-market-signal-ideas",
-        body: { selectedDomainIds: selectedIds },
-      });
+      }>(
+        "generate-market-signal-ideas",
+        { body: { selectedDomainIds: selectedIds } }
+      );
+
+      if (error) throw error;
 
       // Handle rate limits
       if (data?.code === "rate_limited") {
@@ -138,13 +140,13 @@ export function MarketSignalModal({ open, onClose, onSuccess }: MarketSignalModa
 
       toast({ 
         title: "Market Signal Ideas Generated!", 
-        description: `${data.ideas?.length || 0} ideas from ${data.domainsUsed?.join(" + ")}` 
+        description: `${data?.ideas?.length || 0} ideas from ${data?.domainsUsed?.join(" + ")}` 
       });
       
       onSuccess({
-        painThemes: data.painThemes || [],
-        ideas: data.ideas || [],
-        signalRunId: data.signalRunId,
+        painThemes: data?.painThemes || [],
+        ideas: data?.ideas || [],
+        signalRunId: data?.signalRunId || "",
       });
       onClose();
     } catch (e: any) {

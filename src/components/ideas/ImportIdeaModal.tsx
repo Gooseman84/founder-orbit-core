@@ -43,13 +43,12 @@ export function ImportIdeaModal({ open, onOpenChange, onSuccess }: ImportIdeaMod
     setIsLoading(true);
 
     try {
-      const data = await invokeAuthedFunction<any, { success?: boolean; ideas?: any[]; error?: string }>({
-        functionName: "normalize-imported-idea",
-        body: { 
-          title: title.trim() || undefined, 
-          description: description.trim() 
-        },
-      });
+      const { data, error } = await invokeAuthedFunction<{ success?: boolean; ideas?: any[]; error?: string }>(
+        "normalize-imported-idea",
+        { body: { title: title.trim() || undefined, description: description.trim() } }
+      );
+
+      if (error) throw error;
 
       if (!data?.success || !data?.ideas?.length) {
         throw new Error("No variants were generated");

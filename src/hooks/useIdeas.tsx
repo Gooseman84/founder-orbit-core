@@ -52,10 +52,11 @@ const fetchIdeas = async (userId: string): Promise<Idea[]> => {
 };
 
 const invokeGenerateIdeas = async () => {
-  const data = await invokeAuthedFunction<any, { ideas?: any[] }>({
-    functionName: "generate-ideas",
-  });
+  const { data, error } = await invokeAuthedFunction<{ ideas?: any[] }>(
+    "generate-ideas"
+  );
 
+  if (error) throw error;
   return data;
 };
 
