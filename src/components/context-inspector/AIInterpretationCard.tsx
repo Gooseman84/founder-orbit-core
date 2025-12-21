@@ -22,11 +22,10 @@ export function AIInterpretationCard({ context, loading }: AIInterpretationCardP
 
     setGenerating(true);
     try {
-      const { data, error } = await invokeAuthedFunction<{ interpretation: string }>("generate-context-interpretation", {
+      const data = await invokeAuthedFunction<any, { interpretation: string }>({
+        functionName: "generate-context-interpretation",
         body: { context },
       });
-
-      if (error) throw error;
 
       setInterpretation(data.interpretation);
     } catch (err: any) {

@@ -81,14 +81,10 @@ export async function upsertFounderProfile(
 }
 
 export async function normalizeFounderProfile(raw: any): Promise<FounderProfile> {
-  const { data, error } = await invokeAuthedFunction<{ profile?: FounderProfile }>("normalize-founder-profile", {
+  const data = await invokeAuthedFunction<any, { profile?: FounderProfile }>({
+    functionName: "normalize-founder-profile",
     body: raw,
   });
-
-  if (error) {
-    console.error("Error normalizing founder profile:", error);
-    throw new Error(error.message || "Failed to normalize founder profile");
-  }
 
   if (!data || !data.profile) {
     throw new Error("Invalid response from normalize-founder-profile function");

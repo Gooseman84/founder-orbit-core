@@ -23,16 +23,10 @@ export function usePromoteIdeaToWorkspace() {
     setError(null);
 
     try {
-      const { data, error: fnError } = await invokeAuthedFunction<{ documentId: string; taskIds?: string[]; error?: string }>(
-        "promote-idea-to-workspace",
-        {
-          body: { idea, createTasks },
-        }
-      );
-
-      if (fnError) {
-        throw new Error(fnError.message || "Failed to promote idea");
-      }
+      const data = await invokeAuthedFunction<any, { documentId: string; taskIds?: string[]; error?: string }>({
+        functionName: "promote-idea-to-workspace",
+        body: { idea, createTasks },
+      });
 
       if (data?.error) {
         throw new Error(data.error);

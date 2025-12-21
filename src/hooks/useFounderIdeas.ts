@@ -67,7 +67,7 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
       setCurrentTone(tone);
       clearPlanError();
 
-      const { data, error } = await invokeAuthedFunction<{
+      const data = await invokeAuthedFunction<any, {
         ideas?: BusinessIdeaV6[];
         code?: string;
         mode?: string;
@@ -77,13 +77,15 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
         generation_version?: string;
         pass_a_raw_ideas?: any[];
         final_ranked_ideas?: any[];
-      }>("generate-founder-ideas", {
+      }>({
+        functionName: "generate-founder-ideas",
         body: {
           mode,
           focus_area: params.focus_area,
           tone,
         },
       });
+      const error = null;
 
       // Handle errors - supabase.functions.invoke returns error for non-2xx
       if (error) {

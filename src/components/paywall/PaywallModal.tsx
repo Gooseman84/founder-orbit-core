@@ -69,19 +69,14 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
 
     setLoading(true);
     try {
-      const { data, error } = await invokeAuthedFunction<{ url?: string }>("create-checkout-session", {
+      const data = await invokeAuthedFunction<any, { url?: string }>({
+        functionName: "create-checkout-session",
         body: {
           priceId,
           successUrl: `${window.location.origin}/billing?status=success`,
           cancelUrl: `${window.location.origin}/billing?status=cancelled`,
         },
       });
-
-      if (error) {
-        console.error("Error creating checkout session:", error);
-        toast.error("Failed to start checkout. Please try again.");
-        return;
-      }
 
       if (data?.url) {
         window.location.href = data.url;

@@ -37,20 +37,14 @@ export function useGenerateVenturePlan(): UseGenerateVenturePlanResult {
     setError(null);
 
     try {
-      const { data, error: functionError } = await invokeAuthedFunction<{ plan: VenturePlan; tasksCreated?: string[] }>(
-        "generate-venture-plan",
-        {
-          body: {
-            ventureId,
-            planType: opts?.planType ?? "30_day",
-            startDate: opts?.startDate,
-          },
-        }
-      );
-
-      if (functionError) {
-        throw new Error(functionError.message || "Failed to generate venture plan");
-      }
+      const data = await invokeAuthedFunction<any, { plan: VenturePlan; tasksCreated?: string[] }>({
+        functionName: "generate-venture-plan",
+        body: {
+          ventureId,
+          planType: opts?.planType ?? "30_day",
+          startDate: opts?.startDate,
+        },
+      });
 
       if (!data) {
         throw new Error("No data returned from function");
