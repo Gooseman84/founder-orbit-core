@@ -14,40 +14,37 @@ Deno.serve(async (req) => {
   try {
     console.log('record-xp-event: received');
 
-    // Extract authorization header for user verification
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
+    // ===== CANONICAL AUTH BLOCK =====
+    const authHeader = req.headers.get('authorization') ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: 'Authorization header required' }),
+        JSON.stringify({ error: 'Missing or invalid Authorization header', code: 'AUTH_SESSION_MISSING' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Initialize Supabase clients
+    const token = authHeader.slice(7).trim();
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Use anon key client to verify the user's JWT
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
 
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
-    
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
     if (authError || !user) {
       console.error('record-xp-event: auth error', authError);
       return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
+        JSON.stringify({ error: 'Unauthorized', code: 'AUTH_SESSION_MISSING' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    const userId = user.id;
+
     // Parse request body - userId is now ignored, we use authenticated user
     const { eventType, amount, metadata } = await req.json();
-
-    // Use authenticated user's ID
-    const userId = user.id;
 
     if (!eventType) {
       return new Response(
