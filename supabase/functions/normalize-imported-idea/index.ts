@@ -123,25 +123,25 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
-    // --- Security: derive userId from auth token ---
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    // ===== CANONICAL AUTH BLOCK =====
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Missing or invalid Authorization header" }),
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Verify user via Supabase auth (secure pattern - no manual JWT parsing)
+    const token = authHeader.slice(7).trim();
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
 
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
     if (authError || !user) {
       console.error("normalize-imported-idea: auth error", authError);
       return new Response(
-        JSON.stringify({ error: "Invalid or expired authentication" }),
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
