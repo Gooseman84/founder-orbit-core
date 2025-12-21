@@ -182,30 +182,35 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { userId: bodyUserId, documentId } = await req.json();
-
-    // Resolve userId (prefer from body, else from auth header)
-    let userId = bodyUserId;
-    if (!userId) {
-      const authHeader = req.headers.get('Authorization');
-      if (authHeader) {
-        const supabaseClient = createClient(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-          { global: { headers: { Authorization: authHeader } } }
-        );
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        userId = user?.id;
-      }
-    }
-
-    if (!userId) {
-      console.error('No userId provided');
+    // ===== CANONICAL AUTH BLOCK =====
+    const authHeader = req.headers.get('Authorization') ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: 'userId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Missing Authorization header', code: 'AUTH_SESSION_MISSING' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error('generate-workspace-doc: auth error', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', code: 'AUTH_SESSION_MISSING' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+    const { documentId } = await req.json();
 
     if (!documentId) {
       console.error('No documentId provided');
@@ -215,12 +220,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Resolved userId:', userId, 'documentId:', documentId);
+    console.log('generate-workspace-doc: resolved userId:', userId, 'documentId:', documentId);
 
     // Use service-role client to bypass RLS
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      }
     );
 
     // Load workspace document
