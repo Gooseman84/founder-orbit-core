@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { InputWithVoice } from "@/components/ui/input-with-voice";
+import { TextareaWithVoice } from "@/components/ui/textarea-with-voice";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
@@ -104,12 +104,13 @@ export function ImportIdeaModal({ open, onOpenChange, onSuccess }: ImportIdeaMod
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="idea-title">Title (optional)</Label>
-            <Input
+            <InputWithVoice
               id="idea-title"
               placeholder="e.g., AI-powered invoice automation"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={isLoading}
+              voiceDisabled={isLoading}
             />
           </div>
 
@@ -117,12 +118,13 @@ export function ImportIdeaModal({ open, onOpenChange, onSuccess }: ImportIdeaMod
             <Label htmlFor="idea-description">
               Describe your idea <span className="text-destructive">*</span>
             </Label>
-            <Textarea
+            <TextareaWithVoice
               id="idea-description"
               placeholder="Tell us about your business idea. What problem does it solve? Who is it for? What makes it unique? The more detail you provide, the better we can analyze and generate variants..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={isLoading}
+              voiceDisabled={isLoading}
               className="min-h-[150px] resize-y"
             />
             <p className="text-xs text-muted-foreground text-right">

@@ -1,6 +1,6 @@
 // src/components/onboarding/SkillsStep.tsx
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithVoice } from "@/components/ui/textarea-with-voice";
 import { TagInput } from "./TagInput";
 import { OnboardingData } from "@/types/onboarding";
 
@@ -22,7 +22,7 @@ export const SkillsStep = ({ data, onUpdate }: SkillsStepProps) => {
       <div className="space-y-4">
         <div>
           <Label htmlFor="skills_text">Your Skills & Experience</Label>
-          <Textarea
+          <TextareaWithVoice
             id="skills_text"
             value={data.skills_text}
             onChange={(e) => onUpdate({ skills_text: e.target.value })}

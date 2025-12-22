@@ -1,6 +1,6 @@
 // src/components/onboarding/PassionsStep.tsx
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithVoice } from "@/components/ui/textarea-with-voice";
 import { TagInput } from "./TagInput";
 import { OnboardingData } from "@/types/onboarding";
 
@@ -22,7 +22,7 @@ export const PassionsStep = ({ data, onUpdate }: PassionsStepProps) => {
       <div className="space-y-4">
         <div>
           <Label htmlFor="passions_text">Your Passions</Label>
-          <Textarea
+          <TextareaWithVoice
             id="passions_text"
             value={data.passions_text}
             onChange={(e) => onUpdate({ passions_text: e.target.value })}
