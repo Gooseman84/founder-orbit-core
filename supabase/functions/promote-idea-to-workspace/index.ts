@@ -129,19 +129,44 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { idea, createTasks = true, userId } = await req.json();
-
-    if (!userId) {
-      console.error("promote-idea-to-workspace: missing userId");
-      return new Response(JSON.stringify({ error: "userId is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // 1. Validate Authorization header
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    // 2. Extract token and verify user
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error("promote-idea-to-workspace: auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = user.id;
+    console.log("promote-idea-to-workspace: authenticated user", userId);
+
+    // 3. Create admin client for database operations
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
+
+    // Parse request body (userId already defined from auth above)
+    const { idea, createTasks = true } = await req.json();
 
     if (!idea || !idea.id || !idea.title) {
       return new Response(JSON.stringify({ error: "Invalid idea object" }), {
@@ -156,7 +181,7 @@ serve(async (req) => {
     const markdownContent = generateBlueprintMarkdown(idea);
 
     // Create the workspace document
-    const { data: doc, error: docError } = await supabase
+    const { data: doc, error: docError } = await supabaseAdmin
       .from("workspace_documents")
       .insert({
         user_id: userId,
@@ -193,7 +218,7 @@ serve(async (req) => {
         metadata: { source: "idea_promotion", idea_id: idea.id },
       }));
 
-      const { data: tasks, error: tasksError } = await supabase
+      const { data: tasks, error: tasksError } = await supabaseAdmin
         .from("tasks")
         .insert(tasksToInsert)
         .select("id");
