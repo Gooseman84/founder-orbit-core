@@ -79,14 +79,43 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, ideas } = await req.json();
-
-    if (!userId) {
+    // 1. Validate Authorization header
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: "userId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // 2. Extract token and verify user
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error("fuse-ideas: auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = user.id;
+    console.log("fuse-ideas: authenticated user", userId);
+
+    // 3. Create admin client for database operations
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
+
+    const { ideas } = await req.json();
 
     if (!ideas || !Array.isArray(ideas) || ideas.length < 2 || ideas.length > 3) {
       return new Response(
@@ -97,13 +126,8 @@ serve(async (req) => {
 
     console.log("fuse-ideas: fusing", ideas.length, "ideas for user", userId);
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-
     // Fetch founder profile for context
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from("founder_profiles")
       .select("*")
       .eq("user_id", userId)
@@ -274,7 +298,7 @@ Return only the JSON object.`;
     };
 
     // Insert the fused idea into the ideas table
-    const { data: insertedIdea, error: insertError } = await supabase
+    const { data: insertedIdea, error: insertError } = await supabaseAdmin
       .from("ideas")
       .insert({
         id: ideaId,
