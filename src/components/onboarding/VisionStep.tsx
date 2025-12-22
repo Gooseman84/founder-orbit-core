@@ -1,6 +1,6 @@
 // src/components/onboarding/VisionStep.tsx
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithVoice } from "@/components/ui/textarea-with-voice";
 import { OnboardingData } from "@/types/onboarding";
 
 interface VisionStepProps {
@@ -21,7 +21,7 @@ export const VisionStep = ({ data, onUpdate }: VisionStepProps) => {
       <div className="space-y-4">
         <div>
           <Label htmlFor="lifestyle_goals">Lifestyle Goals</Label>
-          <Textarea
+          <TextareaWithVoice
             id="lifestyle_goals"
             value={data.lifestyle_goals}
             onChange={(e) => onUpdate({ lifestyle_goals: e.target.value })}
@@ -36,7 +36,7 @@ export const VisionStep = ({ data, onUpdate }: VisionStepProps) => {
 
         <div>
           <Label htmlFor="success_vision">Vision of Success</Label>
-          <Textarea
+          <TextareaWithVoice
             id="success_vision"
             value={data.success_vision}
             onChange={(e) => onUpdate({ success_vision: e.target.value })}

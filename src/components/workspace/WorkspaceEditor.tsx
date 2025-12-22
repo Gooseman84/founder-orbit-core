@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
+import { TextareaWithVoice } from '@/components/ui/textarea-with-voice';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 
 interface WorkspaceEditorProps {
@@ -38,12 +38,12 @@ export function WorkspaceEditor({ document, onChange }: WorkspaceEditorProps) {
       </Card>
 
       <Card>
-        <CardContent className="p-0">
-          <Textarea
+        <CardContent className="p-0 relative">
+          <TextareaWithVoice
             value={content}
             onChange={handleChange}
-            placeholder="Start writing your content here..."
-            className="min-h-[500px] border-0 resize-y focus-visible:ring-0 font-mono text-sm p-6"
+            placeholder="Start writing or speaking your content here..."
+            className="min-h-[500px] border-0 resize-y focus-visible:ring-0 font-mono text-sm p-6 pr-12"
           />
         </CardContent>
       </Card>

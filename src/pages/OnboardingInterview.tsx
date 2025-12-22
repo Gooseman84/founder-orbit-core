@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithVoice } from "@/components/ui/textarea-with-voice";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -231,12 +231,13 @@ export default function OnboardingInterview() {
         </div>
 
         <div className="space-y-3">
-          <Textarea
+          <TextareaWithVoice
             rows={3}
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            placeholder="Type your answer here..."
+            placeholder="Type or speak your answer here..."
             disabled={asking || loading || finalizing}
+            voiceDisabled={asking || loading || finalizing}
           />
           <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
             <div className="flex gap-2">
