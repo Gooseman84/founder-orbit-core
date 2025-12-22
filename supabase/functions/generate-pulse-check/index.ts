@@ -48,44 +48,65 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, energy_level, stress_level, emotional_state, reflection } = await req.json();
-    
-    // Resolve userId
-    const resolvedUserId = userId;
-    if (!resolvedUserId) {
-      console.error("No userId provided");
+    // 1. Validate Authorization header
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: "userId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Processing pulse check for user:", resolvedUserId);
-
-    // Initialize Supabase client with service role
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    // 2. Extract token and verify user
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
     );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error("generate-pulse-check: auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = user.id;
+    console.log("generate-pulse-check: authenticated user", userId);
+
+    // 3. Create admin client for database operations
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
+
+    // Parse request body (userId already defined from auth above)
+    const { energy_level, stress_level, emotional_state, reflection } = await req.json();
+
+    console.log("Processing pulse check for user:", userId);
 
     // Build pulse input - fetch founder profile, chosen idea, and latest feed item
     const { data: profile } = await supabaseAdmin
       .from("founder_profiles")
       .select("*")
-      .eq("user_id", resolvedUserId)
+      .eq("user_id", userId)
       .maybeSingle();
 
     const { data: idea } = await supabaseAdmin
       .from("ideas")
       .select("*")
-      .eq("user_id", resolvedUserId)
+      .eq("user_id", userId)
       .eq("status", "chosen")
       .maybeSingle();
 
     const { data: feedItem } = await supabaseAdmin
       .from("feed_items")
       .select("*")
-      .eq("user_id", resolvedUserId)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -187,7 +208,7 @@ serve(async (req) => {
     const { data: pulseCheck, error: pulseError } = await supabaseAdmin
       .from("pulse_checks")
       .insert({
-        user_id: resolvedUserId,
+        user_id: userId,
         energy_level,
         stress_level,
         emotional_state,
@@ -210,7 +231,7 @@ serve(async (req) => {
     const { data: task, error: taskError } = await supabaseAdmin
       .from("tasks")
       .insert({
-        user_id: resolvedUserId,
+        user_id: userId,
         idea_id: idea?.id || null,
         type: "micro",
         title: result.micro_task.title,
