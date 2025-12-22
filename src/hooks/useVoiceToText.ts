@@ -85,27 +85,15 @@ export function useVoiceToText(): UseVoiceToTextReturn {
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = '';
-      let interimTranscript = '';
-
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
-          finalTranscript += result[0].transcript;
-        } else {
-          interimTranscript += result[0].transcript;
+          finalTranscript += result[0].transcript + ' ';
         }
       }
-
-      // Combine final and interim results
-      setTranscript(prev => {
-        const newTranscript = finalTranscript || interimTranscript;
-        // Only append final transcript to avoid duplicates
-        if (finalTranscript) {
-          return prev + finalTranscript;
-        }
-        // Show interim as temporary preview
-        return prev + interimTranscript;
-      });
+      if (finalTranscript) {
+        setTranscript(prev => prev + finalTranscript);
+      }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
