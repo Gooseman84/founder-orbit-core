@@ -39,7 +39,7 @@ serve(async (req) => {
     // Verify user via Supabase auth using getUser(token)
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader.trim();
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
 
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
@@ -67,7 +67,9 @@ serve(async (req) => {
     console.log("unset-north-star-idea: unsetting north star for idea", idea_id);
 
     // Use service role client for DB operations
-    const supabaseService = createClient(supabaseUrl, supabaseServiceRoleKey);
+    const supabaseService = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
 
     // Verify idea exists, belongs to user, and is currently north_star
     const { data: idea, error: ideaError } = await supabaseService
