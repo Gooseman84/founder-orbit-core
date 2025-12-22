@@ -53,10 +53,6 @@ const corsHeaders = {
 
 // --- Environment ------------------------------------------------
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-
 const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
 
 // --- Context Builder (embedded for edge function) ----------------
@@ -243,17 +239,53 @@ serve(async (req) => {
   }
 
   try {
-    const body = (await req.json()) as DailyReflectionRequest;
-
-    if (!body.userId || !body.reflectionDate) {
+    // 1. Validate Authorization header
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Missing userId or reflectionDate" }),
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 2. Extract token and verify user
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error("[generate-daily-reflection] auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = user.id;
+    console.log("[generate-daily-reflection] authenticated user", userId);
+
+    // 3. Create admin client for database operations
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
+
+    // Parse request body (userId already defined from auth above)
+    const body = (await req.json()) as Omit<DailyReflectionRequest, 'userId'>;
+
+    if (!body.reflectionDate) {
+      return new Response(
+        JSON.stringify({ error: "Missing reflectionDate" }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const {
-      userId,
       reflectionDate,
       energyLevel,
       stressLevel,
@@ -309,7 +341,7 @@ You MUST return ONLY valid JSON with this structure:
     // --- Fetch user context for richer, personalized reflections ---
     
     console.log('[generate-daily-reflection] Fetching user context...');
-    const userContext = await buildUserContext(userId, supabase);
+    const userContext = await buildUserContext(userId, supabaseAdmin);
     const docsSnippet = formatDocsForPrompt(userContext.recentDocs);
     const reflectionsSnippet = formatReflectionsForPrompt(userContext.recentReflections);
     
@@ -432,7 +464,7 @@ Remember: output ONLY JSON in the structure from the system message.
 
     // --- Upsert into daily_reflections -------------------------
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("daily_reflections")
       .upsert(
         {
