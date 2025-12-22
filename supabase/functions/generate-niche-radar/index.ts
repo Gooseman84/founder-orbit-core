@@ -161,21 +161,44 @@ serve(async (req) => {
   }
 
   try {
-    const { userId } = await req.json();
-
-    if (!userId) {
+    // 1. Validate Authorization header
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: "userId is required" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // 2. Extract token and verify user
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error("generate-niche-radar: auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = user.id;
+    console.log("generate-niche-radar: authenticated user", userId);
+
+    // 3. Create admin client for database operations
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
 
     // Server-side subscription validation
-    const { data: subscription, error: subError } = await supabase
+    const { data: subscription, error: subError } = await supabaseAdmin
       .from('user_subscriptions')
       .select('plan, status')
       .eq('user_id', userId)
@@ -198,7 +221,7 @@ serve(async (req) => {
       );
     }
 
-    const inputData = await buildRadarInput(supabase, userId);
+    const inputData = await buildRadarInput(supabaseAdmin, userId);
     if (!inputData) {
       return new Response(
         JSON.stringify({ error: "Could not build input" }),
@@ -323,7 +346,7 @@ Generate 5-8 market signals that:
     console.log("generate-niche-radar: formatted", formattedSignals.length, "signals");
 
     // Delete old signals and insert new ones
-    await supabase.from("niche_radar").delete().eq("user_id", userId);
+    await supabaseAdmin.from("niche_radar").delete().eq("user_id", userId);
     
     const signalsToInsert = formattedSignals.map(s => ({
       user_id: userId,
@@ -331,7 +354,7 @@ Generate 5-8 market signals that:
       ...s,
     }));
 
-    const { data, error } = await supabase.from("niche_radar").insert(signalsToInsert).select();
+    const { data, error } = await supabaseAdmin.from("niche_radar").insert(signalsToInsert).select();
 
     if (error) throw error;
 
