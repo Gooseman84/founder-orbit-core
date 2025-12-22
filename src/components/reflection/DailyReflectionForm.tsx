@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { TextareaWithVoice } from "@/components/ui/textarea-with-voice";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles } from "lucide-react";
@@ -152,52 +152,62 @@ export function DailyReflectionForm({ onSubmit, isLoading, initialValues }: Dail
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">What did you accomplish today?</label>
-              <Textarea
+              <TextareaWithVoice
                 value={whatDid}
                 onChange={(e) => setWhatDid(e.target.value)}
                 placeholder="List your wins, no matter how small..."
                 rows={2}
+                disabled={isLoading}
+                voiceDisabled={isLoading}
               />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">What did you learn?</label>
-              <Textarea
+              <TextareaWithVoice
                 value={whatLearned}
                 onChange={(e) => setWhatLearned(e.target.value)}
                 placeholder="Any insights, skills, or realizations..."
                 rows={2}
+                disabled={isLoading}
+                voiceDisabled={isLoading}
               />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">How did you feel about your progress?</label>
-              <Textarea
+              <TextareaWithVoice
                 value={whatFelt}
                 onChange={(e) => setWhatFelt(e.target.value)}
                 placeholder="Be honest about your emotional state..."
                 rows={2}
+                disabled={isLoading}
+                voiceDisabled={isLoading}
               />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Top priority for tomorrow?</label>
-                <Textarea
+                <TextareaWithVoice
                   value={topPriority}
                   onChange={(e) => setTopPriority(e.target.value)}
                   placeholder="The one thing that matters most..."
                   rows={2}
+                  disabled={isLoading}
+                  voiceDisabled={isLoading}
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Any blockers or challenges?</label>
-                <Textarea
+                <TextareaWithVoice
                   value={blockers}
                   onChange={(e) => setBlockers(e.target.value)}
                   placeholder="What's in your way..."
                   rows={2}
+                  disabled={isLoading}
+                  voiceDisabled={isLoading}
                 />
               </div>
             </div>
