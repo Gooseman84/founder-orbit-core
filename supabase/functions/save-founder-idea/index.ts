@@ -12,11 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    // ===== CANONICAL AUTH BLOCK =====
+    // 1. Validate Authorization header
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
@@ -25,10 +21,13 @@ serve(async (req) => {
       );
     }
 
+    // 2. Extract token and verify user
     const token = authHeader.slice(7).trim();
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    });
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
 
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
     if (authError || !user) {
@@ -42,9 +41,12 @@ serve(async (req) => {
     const userId = user.id;
     console.log("save-founder-idea: authenticated user", userId);
 
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    });
+    // 3. Create admin client for database operations
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
 
     const { idea, fitScores } = await req.json();
 
@@ -59,7 +61,7 @@ serve(async (req) => {
     console.log("save-founder-idea: fitScores received:", fitScores);
 
     // ===== PLAN CHECK: Get user subscription =====
-    const { data: subData } = await supabase
+    const { data: subData } = await supabaseAdmin
       .from("user_subscriptions")
       .select("plan, status")
       .eq("user_id", userId)
@@ -70,7 +72,7 @@ serve(async (req) => {
 
     // ===== PLAN CHECK: Library limit (FREE = 5 saved ideas) =====
     if (!isPro) {
-      const { count: savedCount } = await supabase
+      const { count: savedCount } = await supabaseAdmin
         .from("ideas")
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId);
@@ -93,7 +95,7 @@ serve(async (req) => {
     console.log("save-founder-idea: saving for user", userId, "idea", idea.title);
 
     // Check if already saved in ideas table
-    const { data: existingIdea } = await supabase
+    const { data: existingIdea } = await supabaseAdmin
       .from("ideas")
       .select("id")
       .eq("user_id", userId)
@@ -104,7 +106,7 @@ serve(async (req) => {
 
     if (!existingIdea) {
       // Insert into ideas table for IdeaDetail page compatibility
-      const { data: newIdea, error: insertError } = await supabase
+      const { data: newIdea, error: insertError } = await supabaseAdmin
         .from("ideas")
         .insert({
           user_id: userId,
@@ -155,7 +157,7 @@ serve(async (req) => {
     }
 
     // Also save to founder_generated_ideas for library tracking
-    const { data: existingGenerated } = await supabase
+    const { data: existingGenerated } = await supabaseAdmin
       .from("founder_generated_ideas")
       .select("id")
       .eq("user_id", userId)
@@ -163,7 +165,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (!existingGenerated) {
-      await supabase
+      await supabaseAdmin
         .from("founder_generated_ideas")
         .insert({
           user_id: userId,
