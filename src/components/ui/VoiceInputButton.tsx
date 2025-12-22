@@ -31,11 +31,11 @@ export function VoiceInputButton({
 
   // Send transcript to parent when listening stops and we have text
   useEffect(() => {
-    if (!isListening && transcript) {
-      onTranscript(transcript);
+    if (!isListening && transcript.trim()) {
+      onTranscript(transcript.trim());
       resetTranscript();
     }
-  }, [isListening, transcript, onTranscript, resetTranscript]);
+  }, [isListening, transcript]);
 
   // Show error toast
   useEffect(() => {

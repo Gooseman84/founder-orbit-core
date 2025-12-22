@@ -11,12 +11,13 @@ export interface TextareaWithVoiceProps extends React.ComponentProps<'textarea'>
 const TextareaWithVoice = React.forwardRef<HTMLTextAreaElement, TextareaWithVoiceProps>(
   ({ className, onVoiceInput, voiceDisabled, disabled, onChange, value, ...props }, ref) => {
     const handleVoiceTranscript = React.useCallback((text: string) => {
+      if (!text.trim()) return;
       if (onVoiceInput) {
         onVoiceInput(text);
       } else if (onChange) {
-        // Create a synthetic event to append text
         const currentValue = typeof value === 'string' ? value : '';
-        const newValue = currentValue ? `${currentValue} ${text}` : text;
+        const separator = currentValue.trim() ? ' ' : '';
+        const newValue = currentValue + separator + text.trim();
         const syntheticEvent = {
           target: { value: newValue },
           currentTarget: { value: newValue },
