@@ -4,7 +4,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // --- Types ---------------------------------------------------
 
 type WeeklySummaryRequest = {
-  userId: string;
   endDate?: string; // "YYYY-MM-DD", optional (defaults to today)
 };
 
@@ -36,9 +35,8 @@ const corsHeaders = {
 // --- Environment ---------------------------------------------
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-
 const openaiApiKey = Deno.env.get("OPENAI_API_KEY")!;
 
 // --- Helper: Safe JSON Parsing + Fallbacks -------------------
@@ -165,16 +163,39 @@ serve(async (req) => {
   }
 
   try {
-    const body = (await req.json()) as WeeklySummaryRequest;
-
-    if (!body.userId) {
+    // ===== CANONICAL AUTH BLOCK =====
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Missing userId" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const userId = body.userId;
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error("[generate-weekly-summary] Auth error:", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const userId = user.id;
+
+    // Create admin client for database operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+
+    // ===== END CANONICAL AUTH BLOCK =====
+
+    const body = (await req.json()) as WeeklySummaryRequest;
 
     // Determine endDate (defaults to today)
     let endDateStr: string;
@@ -200,7 +221,7 @@ serve(async (req) => {
 
     // --- Fetch reflections from DB ---------------------------
 
-    const { data: reflections, error } = await supabase
+    const { data: reflections, error } = await supabaseAdmin
       .from("daily_reflections")
       .select("*")
       .eq("user_id", userId)
