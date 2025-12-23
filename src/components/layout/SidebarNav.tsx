@@ -32,7 +32,7 @@ const nowSection = [
 const createSection = [
   { name: "Idea Lab", href: "/ideas", icon: Lightbulb },
   { name: "Fusion Lab", href: "/fusion-lab", icon: Combine },
-  { name: "Radar", href: "/radar", icon: Radar },
+  { name: "Niche Radar", href: "/radar", icon: Radar },
 ];
 
 const buildSection = [
