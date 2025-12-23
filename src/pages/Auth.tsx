@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 const authSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255),
@@ -173,8 +174,10 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">TrueBlazer.AI</CardTitle>
+        <CardHeader className="text-center flex flex-col items-center">
+          <Link to="/" className="mb-2">
+            <BrandLogo height={40} className="select-none drop-shadow-[0_2px_10px_rgba(255,106,61,0.22)]" />
+          </Link>
           <CardDescription>
             Your AI-powered operating system for founders
           </CardDescription>
