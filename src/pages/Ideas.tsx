@@ -273,7 +273,8 @@ const Ideas = () => {
   };
 
   const handleGenerateFounderIdeas = async () => {
-    // Venture state enforcement: check if ideation is allowed
+    // Venture state enforcement is handled by button disabled state
+    // Double-check guard for programmatic calls
     const guardError = guardIdeationAccess();
     if (guardError) {
       toast({ 
@@ -296,6 +297,12 @@ const Ideas = () => {
       toast({ title: "Error", description: error.message ?? "Failed to generate ideas.", variant: "destructive" });
     }
   };
+
+  // Determine if ideation controls should be disabled
+  const ideationDisabled = isGeneratingFounderIdeas || !canAccessIdeationTools;
+  const ideationDisabledReason = !canAccessIdeationTools 
+    ? "Focus on your current venture" 
+    : null;
 
   const handleClearSession = () => {
     clearGeneratedIdeas();
@@ -442,6 +449,8 @@ const Ideas = () => {
             variant="outline" 
             size="sm" 
             className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+            disabled={!canAccessIdeationTools}
+            title={ideationDisabledReason || undefined}
           >
             <TrendingUp className="w-4 h-4" />
             <span className="hidden sm:inline">Market Pain</span>
@@ -452,6 +461,8 @@ const Ideas = () => {
             variant="outline" 
             size="sm" 
             className="gap-2 border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10"
+            disabled={!canAccessIdeationTools}
+            title={ideationDisabledReason || undefined}
           >
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">Import My Idea</span>
@@ -530,8 +541,9 @@ const Ideas = () => {
               <div className="flex-1" />
               <Button 
                 onClick={handleGenerateFounderIdeas} 
-                disabled={isGeneratingFounderIdeas} 
+                disabled={ideationDisabled} 
                 className="gap-2"
+                title={ideationDisabledReason || undefined}
               >
                 {isGeneratingFounderIdeas ? (
                   <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />Generating...</>

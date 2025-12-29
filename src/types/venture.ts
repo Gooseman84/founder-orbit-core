@@ -123,6 +123,22 @@ export function canAccessIdeationTools(state: VentureState): boolean {
 }
 
 // Commitment validation
+
+// CommitmentDraft: Required for transitioning to 'committed' state
+// Contains the planning fields (window + metric) but not execution timestamps
+export interface CommitmentDraft {
+  commitment_window_days: CommitmentWindowDays;
+  success_metric: string;
+}
+
+// CommitmentFull: Required for transitioning to 'executing' state
+// Contains all fields including start/end timestamps
+export interface CommitmentFull extends CommitmentDraft {
+  commitment_start_at: string;
+  commitment_end_at: string;
+}
+
+// Legacy interface for backwards compatibility
 export interface CommitmentFields {
   commitment_window_days: CommitmentWindowDays | null;
   commitment_start_at: string | null;
@@ -130,6 +146,29 @@ export interface CommitmentFields {
   success_metric: string | null;
 }
 
+export function isValidCommitmentDraft(data: Partial<CommitmentDraft>): data is CommitmentDraft {
+  return (
+    data.commitment_window_days !== undefined &&
+    data.commitment_window_days !== null &&
+    data.success_metric !== undefined &&
+    data.success_metric !== null &&
+    data.success_metric.trim() !== ""
+  );
+}
+
+export function isValidCommitmentFull(data: Partial<CommitmentFull>): data is CommitmentFull {
+  return (
+    isValidCommitmentDraft(data) &&
+    'commitment_start_at' in data &&
+    data.commitment_start_at !== undefined &&
+    data.commitment_start_at !== null &&
+    'commitment_end_at' in data &&
+    data.commitment_end_at !== undefined &&
+    data.commitment_end_at !== null
+  );
+}
+
+// Legacy function for backwards compatibility
 export function hasValidCommitmentFields(fields: CommitmentFields): boolean {
   return (
     fields.commitment_window_days !== null &&
