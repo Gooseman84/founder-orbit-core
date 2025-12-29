@@ -132,7 +132,8 @@ const Tasks = () => {
   };
 
   const handleGenerateTasks = async () => {
-    // Venture state enforcement: check if task generation is allowed
+    // Venture state enforcement is handled by button disabled state
+    // Double-check guard for programmatic calls
     const guardError = guardTaskGeneration();
     if (guardError) {
       toast({ 
@@ -280,10 +281,12 @@ const Tasks = () => {
 
   // Determine if generate button should be disabled and why
   const generateDisabled = isGenerating || !chosenIdeaId || !canGenerateTasks;
-  const generateDisabledReason = !chosenIdeaId 
-    ? "Choose an idea first" 
-    : !canGenerateTasks 
-      ? "Commit to a venture first" 
+  const generateDisabledReason = !canGenerateTasks 
+    ? (activeVenture 
+        ? `Venture is in "${activeVenture.venture_state}" state` 
+        : "No active venture")
+    : !chosenIdeaId 
+      ? "Choose an idea first" 
       : null;
 
   return (

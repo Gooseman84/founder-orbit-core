@@ -5,6 +5,8 @@ import type {
   Venture, 
   VentureState, 
   CommitmentWindowDays,
+  CommitmentDraft,
+  CommitmentFull,
 } from "@/types/venture";
 import {
   canTransitionTo,
@@ -13,7 +15,8 @@ import {
   canGenerateExecutionAdvice,
   canEditIdeaFundamentals,
   canAccessIdeationTools,
-  hasValidCommitmentFields,
+  isValidCommitmentDraft,
+  isValidCommitmentFull,
 } from "@/types/venture";
 
 interface UseVentureStateResult {
@@ -29,7 +32,13 @@ interface UseVentureStateResult {
   canAccessIdeationTools: boolean;
 
   // State transition methods
-  transitionTo: (ventureId: string, targetState: VentureState, commitmentData?: CommitmentData) => Promise<boolean>;
+  // For 'committed': pass CommitmentDraft (window + metric)
+  // For 'executing': pass CommitmentFull (window + metric + start/end timestamps)
+  transitionTo: (
+    ventureId: string, 
+    targetState: VentureState, 
+    commitmentData?: CommitmentDraft | CommitmentFull
+  ) => Promise<boolean>;
   
   // Refresh active venture
   refresh: () => Promise<void>;
@@ -39,13 +48,6 @@ interface UseVentureStateResult {
   guardExecutionAdvice: () => string | null;
   guardIdeaEdit: () => string | null;
   guardIdeationAccess: () => string | null;
-}
-
-interface CommitmentData {
-  commitment_window_days: CommitmentWindowDays;
-  commitment_start_at: string;
-  commitment_end_at: string;
-  success_metric: string;
 }
 
 export function useVentureState(): UseVentureStateResult {
@@ -101,10 +103,12 @@ export function useVentureState(): UseVentureStateResult {
   }, [refresh]);
 
   // Transition a venture to a new state
+  // For 'committed': requires CommitmentDraft (window + metric)
+  // For 'executing': requires CommitmentFull (window + metric + timestamps)
   const transitionTo = useCallback(async (
     ventureId: string,
     targetState: VentureState,
-    commitmentData?: CommitmentData
+    commitmentData?: CommitmentDraft | CommitmentFull
   ): Promise<boolean> => {
     if (!user) {
       setError(new Error("Not authenticated"));
@@ -130,23 +134,32 @@ export function useVentureState(): UseVentureStateResult {
         throw new Error(`Invalid state transition: ${currentState} -> ${targetState}`);
       }
 
-      // If transitioning to executing, require commitment data
-      if (targetState === "executing") {
-        if (!commitmentData) {
-          throw new Error("Commitment data is required to enter executing state");
-        }
-        if (!hasValidCommitmentFields(commitmentData)) {
-          throw new Error("All commitment fields are required to enter executing state");
+      // Validate commitment data based on target state
+      if (targetState === "committed") {
+        if (!commitmentData || !isValidCommitmentDraft(commitmentData)) {
+          throw new Error("Commitment window and success metric are required to enter committed state");
         }
       }
 
-      // Perform the update
+      if (targetState === "executing") {
+        if (!commitmentData || !isValidCommitmentFull(commitmentData)) {
+          throw new Error("All commitment fields (window, metric, start/end dates) are required to enter executing state");
+        }
+      }
+
+      // Build the update payload
       const updateData: Record<string, unknown> = {
         venture_state: targetState,
       };
 
-      // Include commitment data if transitioning to executing
-      if (targetState === "executing" && commitmentData) {
+      // Include commitment data for committed state (window + metric only)
+      if (targetState === "committed" && commitmentData) {
+        updateData.commitment_window_days = commitmentData.commitment_window_days;
+        updateData.success_metric = commitmentData.success_metric;
+      }
+
+      // Include full commitment data for executing state
+      if (targetState === "executing" && commitmentData && isValidCommitmentFull(commitmentData)) {
         updateData.commitment_window_days = commitmentData.commitment_window_days;
         updateData.commitment_start_at = commitmentData.commitment_start_at;
         updateData.commitment_end_at = commitmentData.commitment_end_at;
