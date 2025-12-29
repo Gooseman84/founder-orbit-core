@@ -1140,31 +1140,46 @@ export type Database = {
       }
       ventures: {
         Row: {
+          commitment_end_at: string | null
+          commitment_start_at: string | null
+          commitment_window_days: number | null
           created_at: string
           id: string
           idea_id: string | null
           name: string
           status: string
+          success_metric: string | null
           updated_at: string
           user_id: string
+          venture_state: Database["public"]["Enums"]["venture_state"]
         }
         Insert: {
+          commitment_end_at?: string | null
+          commitment_start_at?: string | null
+          commitment_window_days?: number | null
           created_at?: string
           id?: string
           idea_id?: string | null
           name: string
           status?: string
+          success_metric?: string | null
           updated_at?: string
           user_id: string
+          venture_state?: Database["public"]["Enums"]["venture_state"]
         }
         Update: {
+          commitment_end_at?: string | null
+          commitment_start_at?: string | null
+          commitment_window_days?: number | null
           created_at?: string
           id?: string
           idea_id?: string | null
           name?: string
           status?: string
+          success_metric?: string | null
           updated_at?: string
           user_id?: string
+          venture_state?: Database["public"]["Enums"]["venture_state"]
         }
         Relationships: [
           {
@@ -1294,6 +1309,12 @@ export type Database = {
     }
     Enums: {
       idea_source_type: "generated" | "market_signal" | "imported" | "fused"
+      venture_state:
+        | "inactive"
+        | "committed"
+        | "executing"
+        | "reviewed"
+        | "killed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1422,6 +1443,13 @@ export const Constants = {
   public: {
     Enums: {
       idea_source_type: ["generated", "market_signal", "imported", "fused"],
+      venture_state: [
+        "inactive",
+        "committed",
+        "executing",
+        "reviewed",
+        "killed",
+      ],
     },
   },
 } as const
