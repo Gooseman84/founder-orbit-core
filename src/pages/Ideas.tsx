@@ -2,6 +2,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useIdeas } from "@/hooks/useIdeas";
 import { useScoredFounderIdeas } from "@/hooks/useScoredFounderIdeas";
@@ -10,6 +11,7 @@ import { usePromoteIdeaToWorkspace } from "@/hooks/usePromoteIdeaToWorkspace";
 import { useAuth } from "@/hooks/useAuth";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { useVentureState } from "@/hooks/useVentureState";
 import { useIdeaSessionStore } from "@/store/ideaSessionStore";
 import { IdeaScoredCard } from "@/components/ideas/IdeaScoredCard";
 import { LibraryIdeaCard } from "@/components/ideas/LibraryIdeaCard";
@@ -34,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2, Target, X, TrendingUp, Upload } from "lucide-react";
+import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2, Target, X, TrendingUp, Upload, AlertTriangle, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 
@@ -67,6 +69,13 @@ const Ideas = () => {
   const { user } = useAuth();
   const { track } = useAnalytics();
   const { hasPro } = useFeatureAccess();
+
+  // Venture state enforcement
+  const { 
+    canAccessIdeationTools, 
+    guardIdeationAccess, 
+    activeVenture 
+  } = useVentureState();
 
   // Plan error from session store
   const { planError: genPlanError, clearPlanError: clearGenPlanError } = useIdeaSessionStore();
@@ -264,6 +273,17 @@ const Ideas = () => {
   };
 
   const handleGenerateFounderIdeas = async () => {
+    // Venture state enforcement: check if ideation is allowed
+    const guardError = guardIdeationAccess();
+    if (guardError) {
+      toast({ 
+        title: "Ideation Locked", 
+        description: guardError, 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     try {
       setCurrentMode(selectedMode);
       await generateFounderIdeas({ mode: selectedMode, focus_area: focusArea || undefined });
@@ -398,6 +418,16 @@ const Ideas = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {/* Venture state warning - ideation locked during executing */}
+      {!canAccessIdeationTools && activeVenture && (
+        <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
+          <Lock className="h-4 w-4 text-amber-500" />
+          <AlertDescription className="text-amber-700 dark:text-amber-300">
+            Ideation tools are locked while your venture is in "executing" state. Focus on your current commitment.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header - stacks on mobile */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>

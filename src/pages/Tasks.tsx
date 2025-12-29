@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useVentureState } from "@/hooks/useVentureState";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { TaskList } from "@/components/tasks/TaskList";
@@ -17,7 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { ProBadge } from "@/components/billing/ProBadge";
-import { Loader2, Sparkles, ListTodo, CheckCircle2, Activity, ArrowRight, Filter, Lock } from "lucide-react";
+import { Loader2, Sparkles, ListTodo, CheckCircle2, Activity, ArrowRight, Filter, Lock, AlertTriangle } from "lucide-react";
 import type { PaywallReasonCode } from "@/config/paywallCopy";
 
 interface Task {
@@ -43,6 +44,14 @@ const Tasks = () => {
   const { plan } = useSubscription();
   const isPro = plan === "pro" || plan === "founder";
   const queryClient = useQueryClient();
+  
+  // Venture state enforcement
+  const { 
+    canGenerateTasks, 
+    guardTaskGeneration, 
+    activeVenture,
+    isLoading: ventureStateLoading 
+  } = useVentureState();
   
   const [tasks, setTasks] = useState<Task[]>([]);
   const [ventures, setVentures] = useState<{ id: string; name: string }[]>([]);
@@ -123,6 +132,17 @@ const Tasks = () => {
   };
 
   const handleGenerateTasks = async () => {
+    // Venture state enforcement: check if task generation is allowed
+    const guardError = guardTaskGeneration();
+    if (guardError) {
+      toast({ 
+        title: "Cannot Generate Tasks", 
+        description: guardError, 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     if (!user || !chosenIdeaId) return;
     setIsGenerating(true);
     try {
@@ -258,6 +278,14 @@ const Tasks = () => {
     );
   }
 
+  // Determine if generate button should be disabled and why
+  const generateDisabled = isGenerating || !chosenIdeaId || !canGenerateTasks;
+  const generateDisabledReason = !chosenIdeaId 
+    ? "Choose an idea first" 
+    : !canGenerateTasks 
+      ? "Commit to a venture first" 
+      : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -265,7 +293,12 @@ const Tasks = () => {
           <h1 className="text-4xl font-bold">Founder Quests</h1>
           <p className="text-muted-foreground mt-1">Complete micro-tasks to build momentum and earn XP</p>
         </div>
-        <Button onClick={handleGenerateTasks} disabled={isGenerating || !chosenIdeaId} size="lg">
+        <Button 
+          onClick={handleGenerateTasks} 
+          disabled={generateDisabled} 
+          size="lg"
+          title={generateDisabledReason || undefined}
+        >
           {isGenerating ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -279,6 +312,17 @@ const Tasks = () => {
           )}
         </Button>
       </div>
+
+      {/* Venture state warning */}
+      {!canGenerateTasks && activeVenture && (
+        <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertDescription className="text-amber-700 dark:text-amber-300">
+            Task generation is only available when your venture is in "executing" state. 
+            Current state: <span className="font-semibold">{activeVenture.venture_state}</span>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {!chosenIdeaId && (
         <Alert>
