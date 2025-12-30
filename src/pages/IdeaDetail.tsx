@@ -112,8 +112,11 @@ const IdeaDetail = () => {
         description: "This idea is now your primary focus.",
       });
 
-      // Invalidate queries to refresh ideas list and current idea
+      // Invalidate all related queries for immediate UI update
       queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
+      queryClient.invalidateQueries({ queryKey: ["north-star-venture"] });
+      queryClient.invalidateQueries({ queryKey: ["ventures"] });
+      queryClient.invalidateQueries({ queryKey: ["founder-blueprint"] });
       refetch();
 
     } catch (error: any) {
@@ -147,8 +150,11 @@ const IdeaDetail = () => {
         description: "You can choose a new North Star anytime.",
       });
 
-      // Invalidate queries to refresh ideas list and current idea
+      // Invalidate all related queries for immediate UI update
       queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
+      queryClient.invalidateQueries({ queryKey: ["north-star-venture"] });
+      queryClient.invalidateQueries({ queryKey: ["ventures"] });
+      queryClient.invalidateQueries({ queryKey: ["founder-blueprint"] });
       refetch();
 
     } catch (error: any) {

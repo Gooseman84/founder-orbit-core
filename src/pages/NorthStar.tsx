@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveVenture } from "@/hooks/useActiveVenture";
+import { useNorthStarVenture, NORTH_STAR_VENTURE_QUERY_KEY } from "@/hooks/useNorthStarVenture";
 import { useGenerateVenturePlan } from "@/hooks/useGenerateVenturePlan";
 import { useVenturePlans } from "@/hooks/useVenturePlans";
 import { useVentureTasks } from "@/hooks/useVentureTasks";
@@ -35,8 +37,12 @@ import {
 } from "@/types/masterPrompt";
 import { formatDistanceToNow } from "date-fns";
 
+const REPAIR_SESSION_KEY = "north_star_repair_attempted";
+const REPAIR_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
 export default function NorthStar() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -48,6 +54,10 @@ export default function NorthStar() {
   const [isOutdated, setIsOutdated] = useState(false);
   const [isEdited, setIsEdited] = useState(false);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+  const repairAttemptedRef = useRef(false);
+
+  // North Star venture hook (for auto-heal detection)
+  const { needsRepair, refresh: refreshNorthStarVenture } = useNorthStarVenture();
 
   // Venture hooks
   const { venture, ensureVentureForIdea } = useActiveVenture();
@@ -58,6 +68,50 @@ export default function NorthStar() {
   useEffect(() => {
     document.title = "North Star Master Prompt | TrueBlazer.AI";
   }, []);
+
+  // Auto-heal: repair data drift if detected (once per session/cooldown)
+  useEffect(() => {
+    const attemptRepair = async () => {
+      if (!user || !needsRepair || repairAttemptedRef.current) return;
+
+      // Check session storage for cooldown
+      const lastAttempt = sessionStorage.getItem(REPAIR_SESSION_KEY);
+      if (lastAttempt) {
+        const elapsed = Date.now() - parseInt(lastAttempt, 10);
+        if (elapsed < REPAIR_COOLDOWN_MS) {
+          console.log("NorthStar: repair on cooldown, skipping");
+          return;
+        }
+      }
+
+      repairAttemptedRef.current = true;
+      sessionStorage.setItem(REPAIR_SESSION_KEY, Date.now().toString());
+      console.log("NorthStar: detected data drift, attempting repair...");
+
+      try {
+        const { data, error } = await invokeAuthedFunction("repair-north-star-sync", {});
+        
+        if (error) {
+          console.error("NorthStar: repair failed", error);
+          return;
+        }
+
+        if (data?.repaired) {
+          console.log("NorthStar: repair successful", data);
+          // Invalidate all related queries
+          queryClient.invalidateQueries({ queryKey: [NORTH_STAR_VENTURE_QUERY_KEY] });
+          queryClient.invalidateQueries({ queryKey: ["ventures"] });
+          queryClient.invalidateQueries({ queryKey: ["founder-blueprint"] });
+          await refreshNorthStarVenture();
+          toast.success("Data synced successfully");
+        }
+      } catch (err) {
+        console.error("NorthStar: repair error", err);
+      }
+    };
+
+    attemptRepair();
+  }, [user, needsRepair, queryClient, refreshNorthStarVenture]);
 
   // Compute a stable context hash (same algorithm as edge function)
   const computeContextHash = useCallback((timestamps: (string | null | undefined)[]): string => {
