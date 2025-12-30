@@ -12,11 +12,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Sparkles, CheckCircle2, AlertTriangle, Inbox } from "lucide-react";
 
+type CheckinPayload = {
+  completionStatus: "yes" | "partial" | "no";
+  explanation?: string;
+  reflection: string;
+};
+
 const Tasks = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const { activeVenture, isLoading: ventureLoading } = useVentureState();
+  const [isSubmittingCheckin, setIsSubmittingCheckin] = useState(false);
+
+  const {
+    commitmentProgress,
+    dailyTasks,
+    isLoadingTasks,
+    isGeneratingTasks,
+    generateDailyTasksError,
+    todayCheckin,
+    hasCheckedInToday,
+    generateDailyTasks,
+    submitCheckin,
+    markTaskCompleted,
+  } = useDailyExecution(activeVenture);
 
   // Redirect if not in executing state - with specific messages per state
   useEffect(() => {
@@ -55,19 +75,6 @@ const Tasks = () => {
     }
   }, [activeVenture, ventureLoading, navigate, toast]);
 
-  const {
-    commitmentProgress,
-    dailyTasks,
-    isLoadingTasks,
-    isGeneratingTasks,
-    generateDailyTasksError,
-    todayCheckin,
-    hasCheckedInToday,
-    generateDailyTasks,
-    submitCheckin,
-    markTaskCompleted,
-  } = useDailyExecution(activeVenture);
-
   // Check if commitment window has ended
   const windowEnded = commitmentProgress?.isComplete;
 
@@ -88,6 +95,16 @@ const Tasks = () => {
     }
   }, [isLoadingTasks, dailyTasks.length, isGeneratingTasks, activeVenture, generateDailyTasks]);
 
+  const handleCheckinSubmit = async (data: CheckinPayload) => {
+    setIsSubmittingCheckin(true);
+    const success = await submitCheckin(data);
+    setIsSubmittingCheckin(false);
+    if (success) {
+      toast({ title: "Check-in submitted!", description: "Great work today." });
+    }
+    return success;
+  };
+
   // Show loading while venture state is being determined
   if (ventureLoading) {
     return (
@@ -107,17 +124,6 @@ const Tasks = () => {
   }
 
   const allTasksCompleted = dailyTasks.length > 0 && dailyTasks.every(t => t.completed);
-  const [isSubmittingCheckin, setIsSubmittingCheckin] = useState(false);
-
-  const handleCheckinSubmit = async (data: Parameters<typeof submitCheckin>[0]) => {
-    setIsSubmittingCheckin(true);
-    const success = await submitCheckin(data);
-    setIsSubmittingCheckin(false);
-    if (success) {
-      toast({ title: "Check-in submitted!", description: "Great work today." });
-    }
-    return success;
-  };
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
