@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
+import { useVentureState } from "@/hooks/useVentureState";
 import { 
   Home,
   Activity,
@@ -22,29 +23,26 @@ import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
+type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> };
+
 // Navigation structure organized by founder journey
-const nowSection = [
+const nowSection: NavItem[] = [
   { name: "Home", href: "/dashboard", icon: Home },
   { name: "Daily Pulse", href: "/daily-reflection", icon: Activity },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
 ];
 
-const createSection = [
+const createSection: NavItem[] = [
   { name: "Idea Lab", href: "/ideas", icon: Lightbulb },
   { name: "Fusion Lab", href: "/fusion-lab", icon: Combine },
   { name: "Niche Radar", href: "/radar", icon: Radar },
 ];
 
-const buildSection = [
-  { name: "Blueprint", href: "/blueprint", icon: Map },
-  { name: "Workspace", href: "/workspace", icon: FileText },
-];
-
-const alignSection = [
+const alignSection: NavItem[] = [
   { name: "North Star", href: "/north-star", icon: Target },
 ];
 
-const systemSection = [
+const systemSection: NavItem[] = [
   { name: "AI Co-Founder", href: "/context-inspector", icon: Eye },
   { name: "Profile", href: "/profile", icon: User },
   { name: "Billing", href: "/billing", icon: CreditCard },
@@ -56,7 +54,7 @@ interface SidebarNavProps {
 
 interface NavSectionProps {
   label: string;
-  items: typeof nowSection;
+  items: NavItem[];
   defaultOpen?: boolean;
   onNavigate?: () => void;
 }
@@ -99,6 +97,19 @@ function NavSection({ label, items, defaultOpen = false, onNavigate }: NavSectio
 
 export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const { signOut } = useAuth();
+  const { activeVenture } = useVentureState();
+
+  // Build section with dynamic Blueprint link based on active venture
+  const buildSection: NavItem[] = useMemo(() => {
+    const blueprintHref = activeVenture?.id 
+      ? `/blueprint?ventureId=${activeVenture.id}`
+      : "/blueprint";
+    
+    return [
+      { name: "Blueprint", href: blueprintHref, icon: Map },
+      { name: "Workspace", href: "/workspace", icon: FileText },
+    ];
+  }, [activeVenture?.id]);
 
   const handleSignOut = () => {
     signOut();
