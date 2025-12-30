@@ -55,16 +55,6 @@ const invokeAnalyzeIdea = async (ideaId: string) => {
   return data;
 };
 
-const invokeScoreIdeaFit = async (ideaId: string) => {
-  const { data, error } = await invokeAuthedFunction<any>(
-    "score-idea-fit",
-    { body: { ideaId } }
-  );
-
-  if (error) throw error;
-  return data;
-};
-
 const updateIdeaStatusInDb = async (ideaId: string, userId: string, status: string): Promise<Idea> => {
   // If setting to "chosen", first set all other ideas to "candidate"
   if (status === "chosen") {
@@ -122,7 +112,7 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
     enabled: !!ideaId && !!user,
   });
 
-  // Lazy scoring effect: trigger scoring when idea loads with missing scores
+  // Lazy scoring effect: trigger analyze-idea when idea loads with missing scores
   useEffect(() => {
     const triggerLazyScoring = async () => {
       // Only score once per idea open (avoid double calls)
@@ -134,16 +124,18 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
       setIsScoring(true);
       setScoringError(null);
       
-      console.log("useIdeaDetail: triggering lazy scoring for idea", ideaId);
+      console.log("useIdeaDetail: triggering lazy scoring via analyze-idea for", ideaId);
       
       try {
-        const result = await invokeScoreIdeaFit(ideaId);
+        const result = await invokeAnalyzeIdea(ideaId);
         
-        if (result.success) {
-          console.log("useIdeaDetail: scoring complete", result.scores);
+        if (result.analysis || result.fitScores) {
+          console.log("useIdeaDetail: scoring complete", result.fitScores);
           // Refresh the idea data to get updated scores
           await refetchIdea();
+          // Invalidate related queries
           queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["idea-analysis", ideaId] });
         }
       } catch (error: any) {
         console.error("useIdeaDetail: lazy scoring failed", error);

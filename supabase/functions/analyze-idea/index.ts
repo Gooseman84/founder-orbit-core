@@ -91,12 +91,28 @@ serve(async (req) => {
       );
     }
 
+    // Helper: safely convert to integer 0-100
+    const safeInt = (val: any): number | null => {
+      if (val === null || val === undefined) return null;
+      let num: number;
+      if (typeof val === "number") {
+        num = val;
+      } else if (typeof val === "string") {
+        const cleaned = val.replace(/%/g, "").trim();
+        num = parseFloat(cleaned);
+      } else {
+        return null;
+      }
+      if (isNaN(num)) return null;
+      return Math.max(0, Math.min(100, Math.round(num)));
+    };
+
     // AI prompt template (embedded)
     const systemPrompt = `You are an expert startup evaluator, market strategist, business model analyst, and product validation specialist.
 
 Given:
 1. A founder profile (passions, skills, constraints, lifestyle goals)
-2. A business idea (title, description, business model type, target customer, fit scores)
+2. A business idea (title, description, business model type, target customer)
 3. Constraints such as time availability, capital available, and risk tolerance
 
 Produce a JSON object ONLY with the following structure:
@@ -113,7 +129,12 @@ Produce a JSON object ONLY with the following structure:
   "recommendations": ["string"],
   "ideal_customer_profile": "string",
   "elevator_pitch": "string",
-  "brutal_honesty": "string"
+  "brutal_honesty": "string",
+  "passion_fit_score": number,    // 0–100 how well idea aligns with founder's passions
+  "skill_fit_score": number,      // 0–100 how well idea leverages founder's skills
+  "constraint_fit_score": number, // 0–100 how well idea fits founder's time/capital constraints
+  "lifestyle_fit_score": number,  // 0–100 how well idea matches founder's lifestyle goals
+  "overall_fit_score": number     // 0–100 weighted average of all fit scores
 }
 
 Rules:
@@ -175,7 +196,7 @@ Rules:
             type: "function",
             function: {
               name: "analyze_business_idea",
-              description: "Analyze a business idea and return structured evaluation",
+              description: "Analyze a business idea and return structured evaluation with fit scores",
               parameters: {
                 type: "object",
                 properties: {
@@ -191,6 +212,11 @@ Rules:
                   ideal_customer_profile: { type: "string" },
                   elevator_pitch: { type: "string" },
                   brutal_honesty: { type: "string" },
+                  passion_fit_score: { type: "number" },
+                  skill_fit_score: { type: "number" },
+                  constraint_fit_score: { type: "number" },
+                  lifestyle_fit_score: { type: "number" },
+                  overall_fit_score: { type: "number" },
                 },
                 required: [
                   "niche_score",
@@ -205,6 +231,11 @@ Rules:
                   "ideal_customer_profile",
                   "elevator_pitch",
                   "brutal_honesty",
+                  "passion_fit_score",
+                  "skill_fit_score",
+                  "constraint_fit_score",
+                  "lifestyle_fit_score",
+                  "overall_fit_score",
                 ],
               },
             },
@@ -253,6 +284,31 @@ Rules:
     }
 
     const analysis = JSON.parse(toolCall.function.arguments);
+
+    console.log("analyze-idea: parsed analysis", analysis);
+
+    // Extract and process fit scores
+    const fitScores = {
+      passion_fit_score: safeInt(analysis.passion_fit_score),
+      skill_fit_score: safeInt(analysis.skill_fit_score),
+      constraint_fit_score: safeInt(analysis.constraint_fit_score),
+      lifestyle_fit_score: safeInt(analysis.lifestyle_fit_score),
+      overall_fit_score: safeInt(analysis.overall_fit_score),
+    };
+
+    console.log("analyze-idea: updating idea fit scores", fitScores);
+
+    // Update the ideas table with fit scores
+    const { error: updateIdeaError } = await supabase
+      .from("ideas")
+      .update(fitScores)
+      .eq("id", ideaId)
+      .eq("user_id", resolvedUserId);
+
+    if (updateIdeaError) {
+      console.error("analyze-idea: failed to update idea scores", updateIdeaError);
+      // Continue anyway - analysis is still valuable
+    }
 
     console.log("analyze-idea: inserting analysis into database");
 
@@ -317,7 +373,7 @@ Rules:
       savedAnalysis = data;
     }
 
-    return new Response(JSON.stringify({ analysis: savedAnalysis }), {
+    return new Response(JSON.stringify({ analysis: savedAnalysis, fitScores }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
