@@ -120,21 +120,13 @@ serve(async (req) => {
       overall_fit_score: safeInt(fitScores?.overall),
     };
 
-    // Pre-insert validation: ensure all score values are either null or valid integers
-    const scoreValidationErrors: string[] = [];
-    for (const [key, value] of Object.entries(processedScores)) {
-      if (value !== null && !Number.isInteger(value)) {
-        scoreValidationErrors.push(`${key} must be a valid integer`);
-      }
-    }
-    
-    if (scoreValidationErrors.length > 0) {
-      console.error("save-founder-idea: Score validation failed:", scoreValidationErrors);
+    // Validate that overall_fit_score is present (required field)
+    if (processedScores.overall_fit_score === null) {
+      console.error("save-founder-idea: Missing required overall_fit_score");
       return new Response(
         JSON.stringify({ 
-          error: "Invalid score value", 
-          code: "VALIDATION_ERROR",
-          details: scoreValidationErrors 
+          error: "Missing required overall_fit_score", 
+          code: "VALIDATION_ERROR" 
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -173,6 +165,7 @@ serve(async (req) => {
     }
 
     console.log("save-founder-idea: saving for user", userId, "idea", idea.title);
+    console.log("save-founder-idea: insert payload scores:", processedScores);
 
     // Check if already saved in ideas table
     const { data: existingIdea } = await supabaseAdmin
