@@ -35,6 +35,7 @@ import DailyStreak from "./pages/DailyStreak";
 import Billing from "./pages/Billing";
 import Blueprint from "./pages/Blueprint";
 import ContextInspector from "./pages/ContextInspector";
+import VentureReview from "./pages/VentureReview";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -285,6 +286,16 @@ const App = () => (
                 <ProtectedRoute>
                   <MainLayout>
                     <ContextInspector />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/venture-review"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <VentureReview />
                   </MainLayout>
                 </ProtectedRoute>
               }
