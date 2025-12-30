@@ -46,7 +46,7 @@ const IdeaDetail = () => {
   const { user } = useAuth();
   const { gate } = useFeatureAccess();
   const queryClient = useQueryClient();
-  const { idea, analysis, isLoading, analyzeIdea, updateIdeaStatus, refetch } = useIdeaDetail(id);
+  const { idea, analysis, isLoading, isScoring, scoringError, analyzeIdea, updateIdeaStatus, refetch } = useIdeaDetail(id);
   
   const [opportunityScore, setOpportunityScore] = useState<any>(null);
   const [loadingScore, setLoadingScore] = useState(true);
@@ -426,51 +426,86 @@ const IdeaDetail = () => {
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-primary" />
               Fit Scores
+              {isScoring && (
+                <span className="text-xs text-muted-foreground font-normal flex items-center gap-1.5">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
+                  Scoring...
+                </span>
+              )}
             </h3>
 
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Overall Fit</span>
-                  <span className="text-sm font-bold">{idea.overall_fit_score || 0}%</span>
-                </div>
-                <Progress value={idea.overall_fit_score || 0} className="h-2" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            {isScoring ? (
+              <div className="space-y-4 animate-pulse">
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-muted-foreground">Passion Fit</span>
-                    <span className="text-xs font-semibold">{idea.passion_fit_score || 0}%</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Overall Fit</span>
+                    <div className="h-4 w-8 bg-muted rounded" />
                   </div>
-                  <Progress value={idea.passion_fit_score || 0} className="h-1.5" />
+                  <div className="h-2 bg-muted rounded" />
                 </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-muted-foreground">Skill Fit</span>
-                    <span className="text-xs font-semibold">{idea.skill_fit_score || 0}%</span>
-                  </div>
-                  <Progress value={idea.skill_fit_score || 0} className="h-1.5" />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-muted-foreground">Constraint Fit</span>
-                    <span className="text-xs font-semibold">{idea.constraint_fit_score || 0}%</span>
-                  </div>
-                  <Progress value={idea.constraint_fit_score || 0} className="h-1.5" />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-muted-foreground">Lifestyle Fit</span>
-                    <span className="text-xs font-semibold">{idea.lifestyle_fit_score || 0}%</span>
-                  </div>
-                  <Progress value={idea.lifestyle_fit_score || 0} className="h-1.5" />
+                <div className="grid grid-cols-2 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="h-3 w-16 bg-muted rounded" />
+                        <div className="h-3 w-6 bg-muted rounded" />
+                      </div>
+                      <div className="h-1.5 bg-muted rounded" />
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Overall Fit</span>
+                    <span className="text-sm font-bold">{idea.overall_fit_score || 0}%</span>
+                  </div>
+                  <Progress value={idea.overall_fit_score || 0} className="h-2" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">Passion Fit</span>
+                      <span className="text-xs font-semibold">{idea.passion_fit_score || 0}%</span>
+                    </div>
+                    <Progress value={idea.passion_fit_score || 0} className="h-1.5" />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">Skill Fit</span>
+                      <span className="text-xs font-semibold">{idea.skill_fit_score || 0}%</span>
+                    </div>
+                    <Progress value={idea.skill_fit_score || 0} className="h-1.5" />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">Constraint Fit</span>
+                      <span className="text-xs font-semibold">{idea.constraint_fit_score || 0}%</span>
+                    </div>
+                    <Progress value={idea.constraint_fit_score || 0} className="h-1.5" />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">Lifestyle Fit</span>
+                      <span className="text-xs font-semibold">{idea.lifestyle_fit_score || 0}%</span>
+                    </div>
+                    <Progress value={idea.lifestyle_fit_score || 0} className="h-1.5" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {scoringError && (
+              <p className="text-xs text-destructive mt-2">
+                Couldn't score this idea — try refreshing the page.
+              </p>
+            )}
           </div>
 
           {/* V6 Metrics Section */}
