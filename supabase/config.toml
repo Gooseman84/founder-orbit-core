@@ -110,3 +110,6 @@ verify_jwt = true
 
 [functions.unset-north-star-idea]
 verify_jwt = true
+
+[functions.repair-north-star-sync]
+verify_jwt = true

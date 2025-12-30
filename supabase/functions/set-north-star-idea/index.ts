@@ -163,10 +163,61 @@ serve(async (req) => {
       }
     }
 
-    console.log("set-north-star-idea: successfully set north star", idea_id, "venture:", ventureId);
+    // Step 4: Upsert founder_blueprints.north_star_idea_id
+    let blueprintUpdated = false;
+    try {
+      const { data: existingBlueprint, error: blueprintCheckError } = await supabaseService
+        .from("founder_blueprints")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (blueprintCheckError) {
+        console.error("set-north-star-idea: error checking blueprint", blueprintCheckError);
+      } else if (existingBlueprint) {
+        // Update existing blueprint
+        const { error: updateError } = await supabaseService
+          .from("founder_blueprints")
+          .update({ 
+            north_star_idea_id: idea_id,
+            north_star_one_liner: idea.title || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("user_id", userId);
+
+        if (updateError) {
+          console.error("set-north-star-idea: error updating blueprint", updateError);
+        } else {
+          blueprintUpdated = true;
+          console.log("set-north-star-idea: updated founder_blueprints.north_star_idea_id");
+        }
+      } else {
+        // Insert new blueprint
+        const { error: insertError } = await supabaseService
+          .from("founder_blueprints")
+          .insert({
+            user_id: userId,
+            north_star_idea_id: idea_id,
+            north_star_one_liner: idea.title || null,
+            status: "active"
+          });
+
+        if (insertError) {
+          console.error("set-north-star-idea: error inserting blueprint", insertError);
+        } else {
+          blueprintUpdated = true;
+          console.log("set-north-star-idea: inserted new founder_blueprints row");
+        }
+      }
+    } catch (blueprintError) {
+      console.error("set-north-star-idea: blueprint upsert error", blueprintError);
+      // Non-fatal, continue
+    }
+
+    console.log("set-north-star-idea: successfully set north star", idea_id, "venture:", ventureId, "blueprint:", blueprintUpdated);
 
     return new Response(
-      JSON.stringify({ success: true, northStarIdeaId: idea_id, ventureId }),
+      JSON.stringify({ success: true, northStarIdeaId: idea_id, ventureId, blueprintUpdated }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
