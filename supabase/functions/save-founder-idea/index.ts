@@ -85,12 +85,60 @@ serve(async (req) => {
 
     console.log("save-founder-idea: fitScores received:", fitScores);
 
-    // Convert fit scores to integers (DB columns are integer type)
-    const safeInt = (val: unknown): number | null => {
+    // Convert score values to integers (DB columns are integer type)
+    // Accepts: numbers, numeric strings, percentages ("81.2%"), etc.
+    // Clamps to [0, 100] for score fields
+    const safeInt = (val: unknown, clamp = true): number | null => {
       if (val === null || val === undefined) return null;
-      const num = Number(val);
-      return isNaN(num) ? null : Math.round(num);
+      
+      let strVal = String(val).trim();
+      
+      // Strip % suffix if present
+      if (strVal.endsWith('%')) {
+        strVal = strVal.slice(0, -1).trim();
+      }
+      
+      const num = Number(strVal);
+      if (isNaN(num)) return null;
+      
+      let result = Math.round(num);
+      
+      // Clamp to [0, 100] for score fields
+      if (clamp) {
+        result = Math.max(0, Math.min(100, result));
+      }
+      
+      return result;
     };
+
+    // Process all score values
+    const processedScores = {
+      passion_fit_score: safeInt(fitScores?.passion),
+      skill_fit_score: safeInt(fitScores?.skill),
+      constraint_fit_score: safeInt(fitScores?.constraints),
+      lifestyle_fit_score: safeInt(fitScores?.lifestyle),
+      overall_fit_score: safeInt(fitScores?.overall),
+    };
+
+    // Pre-insert validation: ensure all score values are either null or valid integers
+    const scoreValidationErrors: string[] = [];
+    for (const [key, value] of Object.entries(processedScores)) {
+      if (value !== null && !Number.isInteger(value)) {
+        scoreValidationErrors.push(`${key} must be a valid integer`);
+      }
+    }
+    
+    if (scoreValidationErrors.length > 0) {
+      console.error("save-founder-idea: Score validation failed:", scoreValidationErrors);
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid score value", 
+          code: "VALIDATION_ERROR",
+          details: scoreValidationErrors 
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // ===== PLAN CHECK: Get user subscription =====
     const { data: subData } = await supabaseAdmin
@@ -160,12 +208,8 @@ serve(async (req) => {
           culture_tailwind: idea.cultureTailwind ?? null,
           chaos_factor: idea.chaosFactor ?? null,
           status: "candidate",
-          // Persist fit scores as integers
-          passion_fit_score: safeInt(fitScores?.passion),
-          skill_fit_score: safeInt(fitScores?.skill),
-          constraint_fit_score: safeInt(fitScores?.constraints),
-          lifestyle_fit_score: safeInt(fitScores?.lifestyle),
-          overall_fit_score: safeInt(fitScores?.overall),
+          // Use pre-validated score integers
+          ...processedScores,
           fit_scores: fitScores ? JSON.stringify(fitScores) : null,
           // Multi-source idea fields
           source_type: idea.source_type || 'generated',
