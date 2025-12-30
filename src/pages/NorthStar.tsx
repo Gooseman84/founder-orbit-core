@@ -140,12 +140,12 @@ export default function NorthStar() {
         return;
       }
 
-      // Step 1: Fetch the chosen idea
+      // Step 1: Fetch the North Star idea (status = 'north_star')
       const { data: chosenIdea, error: ideaError } = await supabase
         .from("ideas")
         .select("*")
         .eq("user_id", user.id)
-        .eq("status", "chosen")
+        .eq("status", "north_star")
         .maybeSingle();
 
       if (ideaError) {
@@ -154,7 +154,7 @@ export default function NorthStar() {
       }
 
       if (!chosenIdea) {
-        setError("You must choose an idea before generating your Master Prompt");
+        setError("You must choose an idea as your North Star before generating your Master Prompt");
         setLoading(false);
         return;
       }
@@ -473,7 +473,7 @@ export default function NorthStar() {
     );
   }
 
-  if (error === "You must choose an idea before generating your Master Prompt") {
+  if (error === "You must choose an idea as your North Star before generating your Master Prompt") {
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-6">
         <div className="space-y-2">
@@ -485,13 +485,13 @@ export default function NorthStar() {
 
         <Card className="p-8 text-center space-y-4">
           <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground" />
-          <h2 className="text-xl font-semibold">No Chosen Idea Yet</h2>
+          <h2 className="text-xl font-semibold">No North Star Set</h2>
           <p className="text-muted-foreground max-w-md mx-auto">
-            You must choose an idea before generating your Master Prompt. The Master Prompt
-            provides personalized AI guidance based on your chosen business idea.
+            You must choose an idea as your North Star before generating your Master Prompt. The Master Prompt
+            provides personalized AI guidance based on your primary business focus.
           </p>
           <Button onClick={() => navigate("/ideas")} className="mt-4">
-            View Ideas
+            Choose North Star
           </Button>
         </Card>
       </div>
@@ -515,7 +515,7 @@ export default function NorthStar() {
             <li>Complete your founder profile</li>
             <li>Generate and select a business idea</li>
             <li>Analyze your chosen idea</li>
-            <li>Set it as your main idea</li>
+            <li>Set it as your North Star</li>
           </ol>
           <Button onClick={() => navigate("/ideas")} className="mt-4">
             Go to Ideas
