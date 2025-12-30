@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { VentureStateGuard } from "@/components/auth/VentureStateGuard";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { MainLayout } from "./components/layout/MainLayout";
 import Index from "./pages/Index";
@@ -48,7 +49,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-          <Routes>
+            <VentureStateGuard>
+              <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
@@ -301,9 +303,10 @@ const App = () => (
               }
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
+              <Route path="*" element={<NotFound />} />
+              </Routes>
+            </VentureStateGuard>
+          </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
