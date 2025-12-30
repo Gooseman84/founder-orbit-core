@@ -1091,6 +1091,85 @@ export type Database = {
         }
         Relationships: []
       }
+      venture_daily_checkins: {
+        Row: {
+          checkin_date: string
+          completion_status: string
+          created_at: string
+          explanation: string | null
+          id: string
+          reflection: string | null
+          user_id: string
+          venture_id: string
+        }
+        Insert: {
+          checkin_date?: string
+          completion_status: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          reflection?: string | null
+          user_id: string
+          venture_id: string
+        }
+        Update: {
+          checkin_date?: string
+          completion_status?: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          reflection?: string | null
+          user_id?: string
+          venture_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venture_daily_checkins_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venture_daily_tasks: {
+        Row: {
+          created_at: string
+          id: string
+          task_date: string
+          tasks: Json
+          updated_at: string
+          user_id: string
+          venture_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          task_date?: string
+          tasks?: Json
+          updated_at?: string
+          user_id: string
+          venture_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          task_date?: string
+          tasks?: Json
+          updated_at?: string
+          user_id?: string
+          venture_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venture_daily_tasks_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venture_plans: {
         Row: {
           ai_raw: Json | null
