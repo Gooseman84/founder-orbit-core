@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
+import { useNorthStarVenture } from "@/hooks/useNorthStarVenture";
 import { useVentureState } from "@/hooks/useVentureState";
 import { 
   Home,
@@ -97,19 +98,22 @@ function NavSection({ label, items, defaultOpen = false, onNavigate }: NavSectio
 
 export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const { signOut } = useAuth();
+  const { northStarVenture } = useNorthStarVenture();
   const { activeVenture } = useVentureState();
 
-  // Build section with dynamic Blueprint link based on active venture
+  // Build section with dynamic Blueprint link
+  // Priority: 1) North Star venture (any state), 2) Active venture, 3) No ventureId
   const buildSection: NavItem[] = useMemo(() => {
-    const blueprintHref = activeVenture?.id 
-      ? `/blueprint?ventureId=${activeVenture.id}`
+    const ventureId = northStarVenture?.id ?? activeVenture?.id;
+    const blueprintHref = ventureId
+      ? `/blueprint?ventureId=${ventureId}`
       : "/blueprint";
     
     return [
       { name: "Blueprint", href: blueprintHref, icon: Map },
       { name: "Workspace", href: "/workspace", icon: FileText },
     ];
-  }, [activeVenture?.id]);
+  }, [northStarVenture?.id, activeVenture?.id]);
 
   const handleSignOut = () => {
     signOut();

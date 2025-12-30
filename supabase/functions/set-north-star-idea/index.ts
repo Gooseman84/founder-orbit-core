@@ -68,11 +68,9 @@ serve(async (req) => {
     console.log("set-north-star-idea: setting north star for idea", idea_id);
 
     // Verify idea exists and belongs to the user
-
-    // Verify idea exists and belongs to the user
     const { data: idea, error: ideaError } = await supabaseService
       .from("ideas")
-      .select("id, user_id")
+      .select("id, user_id, title")
       .eq("id", idea_id)
       .eq("user_id", userId)
       .maybeSingle();
@@ -122,10 +120,53 @@ serve(async (req) => {
       );
     }
 
-    console.log("set-north-star-idea: successfully set north star", idea_id);
+    // Step 3: Ensure a venture exists for this idea (any state)
+    let ventureId: string | null = null;
+
+    // First check if venture already exists
+    const { data: existingVenture, error: ventureCheckError } = await supabaseService
+      .from("ventures")
+      .select("id, venture_state")
+      .eq("user_id", userId)
+      .eq("idea_id", idea_id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (ventureCheckError) {
+      console.error("set-north-star-idea: error checking venture", ventureCheckError);
+      // Non-fatal, continue without venture
+    } else if (existingVenture) {
+      ventureId = existingVenture.id;
+      console.log("set-north-star-idea: found existing venture", ventureId, "state:", existingVenture.venture_state);
+    } else {
+      // Create new venture with inactive state
+      const { data: newVenture, error: createVentureError } = await supabaseService
+        .from("ventures")
+        .insert({
+          user_id: userId,
+          idea_id: idea_id,
+          name: idea.title || "My Venture",
+          status: "active",
+          venture_state: "inactive",
+        })
+        .select("id")
+        .single();
+
+      if (createVentureError) {
+        console.error("set-north-star-idea: error creating venture", createVentureError);
+        // Non-fatal, continue without venture
+      } else {
+        ventureId = newVenture.id;
+        console.log("set-north-star-idea: created new venture", ventureId);
+      }
+    }
+
+    console.log("set-north-star-idea: successfully set north star", idea_id, "venture:", ventureId);
 
     return new Response(
-      JSON.stringify({ success: true, northStarIdeaId: idea_id }),
+      JSON.stringify({ success: true, northStarIdeaId: idea_id, ventureId }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
