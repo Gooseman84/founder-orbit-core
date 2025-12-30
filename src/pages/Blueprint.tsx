@@ -1,113 +1,180 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useBlueprint } from "@/hooks/useBlueprint";
 import { useAuth } from "@/hooks/useAuth";
-import { useAnalytics } from "@/hooks/useAnalytics";
-import { useSubscription } from "@/hooks/useSubscription";
-import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useVentureState } from "@/hooks/useVentureState";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { BlueprintSkeleton } from "@/components/shared/SkeletonLoaders";
-import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { toast } from "@/hooks/use-toast";
-import { Sparkles, Heart, Target, Briefcase, RefreshCw } from "lucide-react";
-import type { PaywallReasonCode } from "@/config/paywallCopy";
+import { 
+  Target, 
+  AlertTriangle, 
+  ArrowLeft, 
+  Rocket,
+  Clock,
+  Loader2
+} from "lucide-react";
+import type { CommitmentWindowDays, CommitmentDraft, CommitmentFull, Venture, VentureState } from "@/types/venture";
 
 const Blueprint = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { track } = useAnalytics();
-  const { plan } = useSubscription();
-  const isPro = plan === "pro" || plan === "founder";
-  const { blueprint, loading, error, saveUpdates, refresh } = useBlueprint();
+  const { blueprint, loading: blueprintLoading } = useBlueprint();
+  const { activeVenture, isLoading: ventureLoading, transitionTo } = useVentureState();
   
-  // A blueprint row may exist but contain no real data.
-  const isEmptyBlueprint =
-    blueprint &&
-    !blueprint.life_vision &&
-    !blueprint.north_star_one_liner &&
-    !blueprint.offer_model &&
-    !blueprint.distribution_channels &&
-    !blueprint.ai_summary;
-    
-  const [refreshing, setRefreshing] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [paywallReason, setPaywallReason] = useState<PaywallReasonCode>("BLUEPRINT_LIMIT_FREE");
+  // Local state to find inactive venture if no active one
+  const [inactiveVenture, setInactiveVenture] = useState<Venture | null>(null);
+  const [inactiveLoading, setInactiveLoading] = useState(true);
+  
+  // Form state
+  const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(30);
+  const [successMetric, setSuccessMetric] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [isCommitting, setIsCommitting] = useState(false);
 
-  const handleRefreshWithAI = async () => {
-    if (!user) return;
-
-    setRefreshing(true);
-    try {
-      const { error: fnError } = await invokeAuthedFunction("refresh-blueprint", {
-        body: {},
-      });
-
-      if (fnError) throw fnError;
-
-      await refresh();
-      track("blueprint_refreshed");
-      toast({ title: "Blueprint refreshed", description: "AI summary and recommendations updated." });
-    } catch (err) {
-      console.error("Failed to refresh blueprint:", err);
-      toast({ title: "Error", description: "Failed to refresh blueprint", variant: "destructive" });
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const handleGenerateBlueprint = async () => {
-    if (!user) {
-      toast({
-        title: "Sign-in required",
-        description: "Please log in to generate your Founder Blueprint.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setGenerating(true);
-    try {
-      const { data, error: fnError } = await invokeAuthedFunction<{ code?: string }>("generate-blueprint", {
-        body: {},
-      });
-
-      // Check for plan limit error
-      if (fnError || data?.code === "BLUEPRINT_LIMIT_FREE") {
-        if (data?.code === "BLUEPRINT_LIMIT_FREE") {
-          setPaywallReason("BLUEPRINT_LIMIT_FREE");
-          setShowPaywall(true);
-          track("paywall_shown", { reasonCode: "BLUEPRINT_LIMIT_FREE" });
-          return;
-        }
-        throw fnError;
-      }
-
-      await refresh();
-      track("blueprint_created");
-      toast({
-        title: "Blueprint generated",
-        description: "We used your profile and chosen idea to build your life + business blueprint.",
-      });
-    } catch (err: any) {
-      // Handle error response with code
-      if (err?.message?.includes("BLUEPRINT_LIMIT_FREE") || err?.code === "BLUEPRINT_LIMIT_FREE") {
-        setPaywallReason("BLUEPRINT_LIMIT_FREE");
-        setShowPaywall(true);
-        track("paywall_shown", { reasonCode: "BLUEPRINT_LIMIT_FREE" });
+  // Fetch inactive venture if no active venture exists
+  useEffect(() => {
+    async function fetchInactiveVenture() {
+      if (!user || activeVenture) {
+        setInactiveLoading(false);
         return;
       }
-      console.error("Failed to generate blueprint:", err);
+      
+      try {
+        const { data } = await supabase
+          .from("ventures")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("venture_state", "inactive")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (data) {
+          setInactiveVenture({
+            ...data,
+            venture_state: data.venture_state as VentureState,
+            commitment_window_days: data.commitment_window_days as CommitmentWindowDays | null,
+          } as Venture);
+        }
+      } catch (err) {
+        console.error("Failed to fetch inactive venture:", err);
+      } finally {
+        setInactiveLoading(false);
+      }
+    }
+    
+    if (!ventureLoading) {
+      fetchInactiveVenture();
+    }
+  }, [user, activeVenture, ventureLoading]);
+
+  // Get venture state - either from active venture or inactive one we're about to commit
+  const currentVenture = activeVenture ?? inactiveVenture;
+  const ventureState = currentVenture?.venture_state ?? "inactive";
+  const ventureId = currentVenture?.id;
+
+  // State-based redirects
+  useEffect(() => {
+    if (ventureLoading || inactiveLoading) return;
+    
+    if (ventureState === "executing") {
+      navigate("/tasks", { replace: true });
+    } else if (ventureState === "reviewed") {
+      navigate("/venture-review", { replace: true });
+    } else if (ventureState === "killed") {
+      navigate("/ideas", { replace: true });
+    }
+  }, [ventureState, ventureLoading, inactiveLoading, navigate]);
+
+  // Pre-fill form if venture already has commitment data
+  useEffect(() => {
+    if (activeVenture?.commitment_window_days) {
+      setWindowDays(activeVenture.commitment_window_days);
+    }
+    if (activeVenture?.success_metric) {
+      setSuccessMetric(activeVenture.success_metric);
+    }
+  }, [activeVenture]);
+
+  const isFormValid = windowDays && successMetric.trim().length > 0 && acknowledged;
+
+  const handleCommitAndStart = async () => {
+    if (!ventureId || !isFormValid) return;
+
+    setIsCommitting(true);
+    try {
+      const now = new Date();
+      const endDate = new Date(now);
+      endDate.setDate(endDate.getDate() + windowDays);
+
+      if (ventureState === "inactive") {
+        // Two-step: inactive → committed → executing
+        const draftData: CommitmentDraft = {
+          commitment_window_days: windowDays,
+          success_metric: successMetric.trim(),
+        };
+        
+        const committedSuccess = await transitionTo(ventureId, "committed", draftData);
+        if (!committedSuccess) {
+          throw new Error("Failed to transition to committed state");
+        }
+
+        // Now transition to executing
+        const fullData: CommitmentFull = {
+          ...draftData,
+          commitment_start_at: now.toISOString(),
+          commitment_end_at: endDate.toISOString(),
+        };
+
+        const executingSuccess = await transitionTo(ventureId, "executing", fullData);
+        if (!executingSuccess) {
+          throw new Error("Failed to start execution");
+        }
+      } else if (ventureState === "committed") {
+        // Single step: committed → executing
+        const fullData: CommitmentFull = {
+          commitment_window_days: windowDays,
+          success_metric: successMetric.trim(),
+          commitment_start_at: now.toISOString(),
+          commitment_end_at: endDate.toISOString(),
+        };
+
+        const success = await transitionTo(ventureId, "executing", fullData);
+        if (!success) {
+          throw new Error("Failed to start execution");
+        }
+      }
+
       toast({
-        title: "Error",
-        description: "Failed to generate blueprint from your profile.",
+        title: "Execution started!",
+        description: `Your ${windowDays}-day commitment begins now.`,
+      });
+
+      navigate("/tasks");
+    } catch (err) {
+      console.error("Commit error:", err);
+      toast({
+        title: "Failed to start execution",
+        description: err instanceof Error ? err.message : "Please try again.",
         variant: "destructive",
       });
     } finally {
-      setGenerating(false);
+      setIsCommitting(false);
     }
   };
 
-  if (loading) {
+  const handleNotReady = () => {
+    navigate("/ideas");
+  };
+
+  // Loading state
+  if (blueprintLoading || ventureLoading || inactiveLoading) {
     return (
       <div className="container mx-auto py-8 px-4">
         <BlueprintSkeleton />
@@ -115,222 +182,267 @@ const Blueprint = () => {
     );
   }
 
-  if (error) {
+  // No venture to commit to
+  if (!ventureId) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <Card className="border-destructive">
-          <CardHeader>
-            <CardTitle className="text-destructive">Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!blueprint || isEmptyBlueprint) {
-    return (
-      <div className="container mx-auto py-8 px-4 flex items-center justify-center min-h-[60vh]">
+      <div className="container mx-auto py-12 px-4 flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md w-full text-center">
           <CardHeader>
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Sparkles className="h-8 w-8 text-primary" />
-            </div>
-            <CardTitle className="text-2xl">Create your Founder Blueprint</CardTitle>
-            <CardDescription className="text-base">
-              Your blueprint combines your life vision with your business strategy into one unified plan.
+            <CardTitle>No Venture Selected</CardTitle>
+            <CardDescription>
+              Choose an idea and create a venture before accessing the Blueprint.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button size="lg" onClick={handleGenerateBlueprint} className="w-full" disabled={generating}>
-              {generating ? (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Generate from my profile
-                </>
-              )}
+            <Button onClick={() => navigate("/ideas")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Go to Ideas
             </Button>
           </CardContent>
         </Card>
-        
-        <ProUpgradeModal
-          open={showPaywall}
-          onClose={() => setShowPaywall(false)}
-          reasonCode={paywallReason}
-        />
       </div>
     );
   }
 
+  // Generate AI narrative from blueprint data
+  const narrativeSummary = generateNarrativeSummary(blueprint, currentVenture?.name);
+  const misalignmentCallouts = generateMisalignmentCallouts(blueprint);
+
   return (
-    <div className="space-y-4 md:space-y-6 overflow-hidden">
-      {/* Header - stacks on mobile */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl md:text-3xl font-bold truncate">Founder Blueprint</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Your unified life + business strategy
+    <div className="container mx-auto py-8 px-4 max-w-3xl">
+      {/* Header */}
+      <div className="mb-8 text-center">
+        <h1 className="text-3xl font-bold mb-2">Your Blueprint</h1>
+        <p className="text-muted-foreground">
+          This is where thinking ends and building begins.
+        </p>
+      </div>
+
+      {/* AI Narrative Summary */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">What you're building — and why it makes sense</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {narrativeSummary}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Misalignment Callouts */}
+      {misalignmentCallouts.length > 0 && (
+        <Card className="mb-6 border-amber-500/30 bg-amber-500/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-lg">What you need to be honest about</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {misalignmentCallouts.map((callout, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm">
+                  <span className="text-amber-500 mt-1">•</span>
+                  <span className="text-muted-foreground">{callout}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Commitment Inputs */}
+      <Card className="mb-6 border-primary/30">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Your Commitment</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Commitment Window */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Commitment Window</Label>
+            <div className="grid grid-cols-3 gap-3">
+              {([14, 30, 90] as CommitmentWindowDays[]).map((days) => (
+                <Button
+                  key={days}
+                  type="button"
+                  variant={windowDays === days ? "default" : "outline"}
+                  className="w-full"
+                  onClick={() => setWindowDays(days)}
+                >
+                  {days} days
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Success Metric */}
+          <div className="space-y-2">
+            <Label htmlFor="success-metric" className="text-sm font-medium">
+              Success Metric
+            </Label>
+            <Input
+              id="success-metric"
+              placeholder="e.g., 5 paying customers, $1000 revenue, 100 signups..."
+              value={successMetric}
+              onChange={(e) => setSuccessMetric(e.target.value)}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              How will you know this worked? Be specific.
+            </p>
+          </div>
+
+          {/* Acknowledgment */}
+          <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+            <Checkbox
+              id="acknowledge"
+              checked={acknowledged}
+              onCheckedChange={(checked) => setAcknowledged(checked === true)}
+            />
+            <label 
+              htmlFor="acknowledge" 
+              className="text-sm leading-relaxed cursor-pointer"
+            >
+              I understand that once execution starts, this plan locks. I'm committing 
+              to focus on this venture for the next {windowDays} days.
+            </label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
+      <div className="space-y-3">
+        <Button
+          size="lg"
+          className="w-full"
+          disabled={!isFormValid || isCommitting}
+          onClick={handleCommitAndStart}
+        >
+          {isCommitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Starting execution...
+            </>
+          ) : (
+            <>
+              <Rocket className="mr-2 h-4 w-4" />
+              Commit & Start Execution
+            </>
+          )}
+        </Button>
+
+        <Button
+          variant="ghost"
+          className="w-full text-muted-foreground"
+          onClick={handleNotReady}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          I'm not ready to commit yet
+        </Button>
+      </div>
+
+      {/* Validation hint */}
+      {!isFormValid && (
+        <div className="mt-4 text-center">
+          <p className="text-xs text-muted-foreground flex items-center justify-center gap-2">
+            {!successMetric.trim() && <span>• Enter a success metric</span>}
+            {!acknowledged && <span>• Acknowledge the commitment</span>}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Button
-            onClick={handleGenerateBlueprint}
-            disabled={generating}
-            size="sm"
-            className="flex items-center"
-          >
-            <Sparkles className={`mr-2 h-4 w-4 ${generating ? "animate-spin" : ""}`} />
-            {generating ? "Generating..." : "Generate"}
-          </Button>
-          <Button
-            onClick={handleRefreshWithAI}
-            disabled={refreshing}
-            variant="outline"
-            size="sm"
-            className="flex items-center"
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Refreshing..." : "Refresh"}
-          </Button>
-        </div>
-      </div>
-
-      {/* 3-column grid on desktop, single column on mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 min-w-0">
-        {/* Left Column: Life Blueprint */}
-        <Card className="min-w-0 overflow-hidden">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-rose-500 shrink-0" />
-              <CardTitle className="text-lg truncate">Life Blueprint</CardTitle>
-            </div>
-            <CardDescription>Your personal foundation</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 overflow-hidden">
-            <BlueprintField label="Life Vision" value={blueprint.life_vision} />
-            <BlueprintField label="Time Horizon" value={blueprint.life_time_horizon} />
-            <BlueprintField label="Income Target" value={blueprint.income_target?.toString()} prefix="$" />
-            <BlueprintField
-              label="Hours/Week Available"
-              value={blueprint.time_available_hours_per_week?.toString()}
-              suffix="hrs"
-            />
-            <BlueprintField label="Capital Available" value={blueprint.capital_available?.toString()} prefix="$" />
-            <BlueprintField label="Risk Profile" value={blueprint.risk_profile} />
-            <BlueprintField label="Non-Negotiables" value={blueprint.non_negotiables} />
-            <BlueprintField label="Current Commitments" value={blueprint.current_commitments} />
-            <BlueprintField label="Strengths" value={blueprint.strengths} />
-            <BlueprintField label="Weaknesses" value={blueprint.weaknesses} />
-            <BlueprintField label="Work Style" value={blueprint.preferred_work_style} />
-            <BlueprintField label="Energy Pattern" value={blueprint.energy_pattern} />
-          </CardContent>
-        </Card>
-
-        {/* Center Column: North Star Snapshot */}
-        <Card className="border-primary/30 bg-primary/5 min-w-0 overflow-hidden">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary shrink-0" />
-              <CardTitle className="text-lg truncate">North Star Snapshot</CardTitle>
-            </div>
-            <CardDescription>Your guiding direction</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 overflow-hidden">
-            <BlueprintField label="One-Liner" value={blueprint.north_star_one_liner} highlight />
-            <BlueprintField label="Target Audience" value={blueprint.target_audience} />
-            <BlueprintField label="Problem Statement" value={blueprint.problem_statement} />
-            <BlueprintField label="Promise Statement" value={blueprint.promise_statement} />
-            <BlueprintField label="Traction Definition" value={blueprint.traction_definition} />
-            <BlueprintField label="Validation Stage" value={blueprint.validation_stage} />
-
-            {blueprint.ai_summary && (
-              <div className="pt-4 border-t">
-                <p className="text-xs font-medium text-muted-foreground mb-1">AI Summary</p>
-                <p className="text-sm italic">{blueprint.ai_summary}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Right Column: Business Blueprint */}
-        <Card className="min-w-0 overflow-hidden">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-amber-500 shrink-0" />
-              <CardTitle className="text-lg truncate">Business Blueprint</CardTitle>
-            </div>
-            <CardDescription>Your execution strategy</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 overflow-hidden">
-            <BlueprintField label="Offer Model" value={blueprint.offer_model} />
-            <BlueprintField label="Monetization Strategy" value={blueprint.monetization_strategy} />
-            <BlueprintField label="Distribution Channels" value={blueprint.distribution_channels} />
-            <BlueprintField label="Unfair Advantage" value={blueprint.unfair_advantage} />
-            <BlueprintField label="Runway Notes" value={blueprint.runway_notes} />
-
-            {blueprint.success_metrics && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Success Metrics</p>
-                <pre className="text-xs bg-muted p-2 rounded overflow-auto">
-                  {JSON.stringify(blueprint.success_metrics, null, 2)}
-                </pre>
-              </div>
-            )}
-
-            {blueprint.focus_quarters && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Focus Quarters</p>
-                <pre className="text-xs bg-muted p-2 rounded overflow-auto">
-                  {JSON.stringify(blueprint.focus_quarters, null, 2)}
-                </pre>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      
-      <ProUpgradeModal
-        open={showPaywall}
-        onClose={() => setShowPaywall(false)}
-        reasonCode={paywallReason}
-      />
+      )}
     </div>
   );
 };
 
-interface BlueprintFieldProps {
-  label: string;
-  value: string | null | undefined;
-  prefix?: string;
-  suffix?: string;
-  highlight?: boolean;
+// Helper: Generate narrative summary from blueprint
+function generateNarrativeSummary(
+  blueprint: any,
+  ventureName?: string
+): string {
+  if (!blueprint) {
+    return "Your venture is ready for commitment. Define your success criteria and begin execution.";
+  }
+
+  const parts: string[] = [];
+
+  if (ventureName) {
+    parts.push(`You're building ${ventureName}.`);
+  }
+
+  if (blueprint.north_star_one_liner) {
+    parts.push(blueprint.north_star_one_liner);
+  }
+
+  if (blueprint.target_audience && blueprint.problem_statement) {
+    parts.push(`You're solving "${blueprint.problem_statement}" for ${blueprint.target_audience}.`);
+  } else if (blueprint.target_audience) {
+    parts.push(`Your target audience is ${blueprint.target_audience}.`);
+  }
+
+  if (blueprint.offer_model) {
+    parts.push(`Your offer model: ${blueprint.offer_model}.`);
+  }
+
+  if (blueprint.time_available_hours_per_week) {
+    parts.push(`You have ${blueprint.time_available_hours_per_week} hours/week to invest.`);
+  }
+
+  if (parts.length === 0) {
+    return "Complete your profile and choose an idea to see your personalized blueprint summary.";
+  }
+
+  return parts.join(" ");
 }
 
-const BlueprintField = ({ label, value, prefix, suffix, highlight }: BlueprintFieldProps) => {
-  if (!value) {
-    return (
-      <div>
-        <p className="text-xs font-medium text-muted-foreground mb-0.5">{label}</p>
-        <p className="text-sm text-muted-foreground/50 italic">Not set</p>
-      </div>
+// Helper: Generate misalignment callouts from blueprint
+function generateMisalignmentCallouts(blueprint: any): string[] {
+  const callouts: string[] = [];
+
+  if (!blueprint) return callouts;
+
+  // Time constraint warning
+  if (blueprint.time_available_hours_per_week && blueprint.time_available_hours_per_week < 10) {
+    callouts.push(
+      `You only have ${blueprint.time_available_hours_per_week} hours/week. Ambitious ventures need focused execution windows.`
     );
   }
 
-  return (
-    <div>
-      <p className="text-xs font-medium text-muted-foreground mb-0.5">{label}</p>
-      <p className={`text-sm ${highlight ? "font-semibold text-primary" : ""}`}>
-        {prefix}
-        {value}
-        {suffix}
-      </p>
-    </div>
-  );
-};
+  // Capital warning
+  if (blueprint.capital_available !== null && blueprint.capital_available < 500) {
+    callouts.push(
+      "Limited capital means you need to validate before building. Prioritize customer conversations."
+    );
+  }
+
+  // Risk profile warning
+  if (blueprint.risk_profile === "conservative") {
+    callouts.push(
+      "Your conservative risk profile may conflict with the experimentation needed for early ventures."
+    );
+  }
+
+  // Missing critical elements
+  if (!blueprint.target_audience) {
+    callouts.push("You haven't defined your target audience. This needs clarity before execution.");
+  }
+
+  if (!blueprint.problem_statement) {
+    callouts.push("No clear problem statement. What pain are you solving?");
+  }
+
+  // Weaknesses acknowledgment
+  if (blueprint.weaknesses) {
+    callouts.push(`Your self-identified weakness: "${blueprint.weaknesses}". Plan around it.`);
+  }
+
+  return callouts.slice(0, 5); // Max 5 callouts
+}
 
 export default Blueprint;
