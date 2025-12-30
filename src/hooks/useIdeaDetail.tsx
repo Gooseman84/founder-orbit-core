@@ -1,5 +1,5 @@
 // src/hooks/useIdeaDetail.ts
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -55,6 +55,16 @@ const invokeAnalyzeIdea = async (ideaId: string) => {
   return data;
 };
 
+const invokeScoreIdeaFit = async (ideaId: string, force = false) => {
+  const { data, error } = await invokeAuthedFunction<any>(
+    "score-idea-fit",
+    { body: { ideaId, force } }
+  );
+
+  if (error) throw error;
+  return data;
+};
+
 const updateIdeaStatusInDb = async (ideaId: string, userId: string, status: string): Promise<Idea> => {
   // If setting to "chosen", first set all other ideas to "candidate"
   if (status === "chosen") {
@@ -86,6 +96,24 @@ const needsScoring = (idea: Idea | undefined): boolean => {
   return idea.overall_fit_score === null || idea.overall_fit_score === undefined;
 };
 
+// Cooldown storage key
+const getCooldownKey = (ideaId: string) => `score_fit_last_${ideaId}`;
+const COOLDOWN_MS = 60 * 1000; // 60 seconds
+
+const checkCooldown = (ideaId: string): { canScore: boolean; remainingSeconds: number } => {
+  const lastTime = sessionStorage.getItem(getCooldownKey(ideaId));
+  if (!lastTime) return { canScore: true, remainingSeconds: 0 };
+  
+  const elapsed = Date.now() - parseInt(lastTime, 10);
+  if (elapsed >= COOLDOWN_MS) return { canScore: true, remainingSeconds: 0 };
+  
+  return { canScore: false, remainingSeconds: Math.ceil((COOLDOWN_MS - elapsed) / 1000) };
+};
+
+const setCooldown = (ideaId: string) => {
+  sessionStorage.setItem(getCooldownKey(ideaId), Date.now().toString());
+};
+
 export const useIdeaDetail = (ideaId: string | undefined) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -112,7 +140,7 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
     enabled: !!ideaId && !!user,
   });
 
-  // Lazy scoring effect: trigger analyze-idea when idea loads with missing scores
+  // Lazy scoring effect: trigger score-idea-fit when idea loads with missing scores
   useEffect(() => {
     const triggerLazyScoring = async () => {
       // Only score once per idea open (avoid double calls)
@@ -124,18 +152,21 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
       setIsScoring(true);
       setScoringError(null);
       
-      console.log("useIdeaDetail: triggering lazy scoring via analyze-idea for", ideaId);
+      console.log("useIdeaDetail: triggering lazy scoring via score-idea-fit for", ideaId);
       
       try {
-        const result = await invokeAnalyzeIdea(ideaId);
+        const result = await invokeScoreIdeaFit(ideaId);
         
-        if (result.analysis || result.fitScores) {
-          console.log("useIdeaDetail: scoring complete", result.fitScores);
+        if (result.success) {
+          console.log("useIdeaDetail: scoring complete", result.scores);
           // Refresh the idea data to get updated scores
           await refetchIdea();
           // Invalidate related queries
           queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
           queryClient.invalidateQueries({ queryKey: ["idea-analysis", ideaId] });
+          // Set cooldown after successful scoring
+          setCooldown(ideaId);
         }
       } catch (error: any) {
         console.error("useIdeaDetail: lazy scoring failed", error);
@@ -153,6 +184,46 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
     scoringTriggeredRef.current = false;
     setScoringError(null);
   }, [ideaId]);
+
+  // Re-score function (manual trigger with force)
+  const reScore = useCallback(async (): Promise<{ success: boolean; cooldownMessage?: string }> => {
+    if (!ideaId || !user) {
+      return { success: false };
+    }
+    
+    // Check cooldown
+    const { canScore, remainingSeconds } = checkCooldown(ideaId);
+    if (!canScore) {
+      return { 
+        success: false, 
+        cooldownMessage: `Please wait ${remainingSeconds} seconds before re-scoring.` 
+      };
+    }
+    
+    setIsScoring(true);
+    setScoringError(null);
+    
+    try {
+      const result = await invokeScoreIdeaFit(ideaId, true); // force=true
+      
+      if (result.success) {
+        console.log("useIdeaDetail: re-score complete", result.scores);
+        await refetchIdea();
+        queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
+        queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
+        queryClient.invalidateQueries({ queryKey: ["idea-analysis", ideaId] });
+        setCooldown(ideaId);
+        return { success: true };
+      }
+      return { success: false };
+    } catch (error: any) {
+      console.error("useIdeaDetail: re-score failed", error);
+      setScoringError(error.message || "Failed to re-score idea");
+      return { success: false };
+    } finally {
+      setIsScoring(false);
+    }
+  }, [ideaId, user, refetchIdea, queryClient]);
 
   const analyzeIdea = useMutation({
     mutationFn: () => {
@@ -197,5 +268,6 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
     analyzeIdea,
     updateIdeaStatus,
     refetch: refetchIdea,
+    reScore,
   };
 };
