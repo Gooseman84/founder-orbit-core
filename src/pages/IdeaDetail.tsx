@@ -57,6 +57,11 @@ const IdeaDetail = () => {
   const [settingNorthStar, setSettingNorthStar] = useState(false);
   const [unsettingNorthStar, setUnsettingNorthStar] = useState(false);
 
+  // Helpers for null-safe score rendering
+  const scoreValue = (v: number | null | undefined) => (typeof v === "number" ? v : 0);
+  const scoreLabel = (v: number | null | undefined) => (typeof v === "number" ? `${v}%` : "—");
+  const hasScores = (ideaObj: any) => typeof ideaObj?.overall_fit_score === "number";
+
   const handleVetIdea = async () => {
     try {
       await analyzeIdea.mutateAsync();
@@ -455,21 +460,15 @@ const IdeaDetail = () => {
                   ))}
                 </div>
               </div>
-            ) : (() => {
-              // Helpers for null-safe score rendering
-              const scoreValue = (v: number | null | undefined) => (typeof v === "number" ? v : 0);
-              const scoreLabel = (v: number | null | undefined) => (typeof v === "number" ? `${v}%` : "—");
-              const hasScores = typeof idea?.overall_fit_score === "number";
-
-              return hasScores ? (
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Overall Fit</span>
-                      <span className="text-sm font-bold">{scoreLabel(idea.overall_fit_score)}</span>
-                    </div>
-                    <Progress value={scoreValue(idea.overall_fit_score)} className="h-2" />
+            ) : hasScores(idea) ? (
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Overall Fit</span>
+                    <span className="text-sm font-bold">{scoreLabel(idea.overall_fit_score)}</span>
                   </div>
+                  <Progress value={scoreValue(idea.overall_fit_score)} className="h-2" />
+                </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -504,15 +503,14 @@ const IdeaDetail = () => {
                       <Progress value={scoreValue(idea.lifestyle_fit_score)} className="h-1.5" />
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="py-4">
-                  <p className="text-sm text-muted-foreground text-center">
-                    This idea hasn't been scored yet. It will score automatically when opened.
-                  </p>
-                </div>
-              );
-            })()}
+              </div>
+            ) : (
+              <div className="py-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  This idea hasn't been scored yet. It will score automatically when opened.
+                </p>
+              </div>
+            )}
 
             {scoringError && (
               <p className="text-xs text-destructive mt-2">
