@@ -24,7 +24,14 @@ import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { recordXpEvent } from "@/lib/xpEngine";
 import { PainThemesPanel } from "@/components/ideas/PainThemesPanel";
 import { NormalizationDetailsPanel } from "@/components/ideas/NormalizationDetailsPanel";
-import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload, MoreVertical, RefreshCw } from "lucide-react";
 
 const getComplexityVariant = (complexity: string | null) => {
   switch (complexity?.toLowerCase()) {
@@ -46,7 +53,7 @@ const IdeaDetail = () => {
   const { user } = useAuth();
   const { gate } = useFeatureAccess();
   const queryClient = useQueryClient();
-  const { idea, analysis, isLoading, isScoring, scoringError, analyzeIdea, updateIdeaStatus, refetch } = useIdeaDetail(id);
+  const { idea, analysis, isLoading, isScoring, scoringError, analyzeIdea, updateIdeaStatus, refetch, reScore } = useIdeaDetail(id);
   
   const [opportunityScore, setOpportunityScore] = useState<any>(null);
   const [loadingScore, setLoadingScore] = useState(true);
@@ -61,6 +68,33 @@ const IdeaDetail = () => {
   const scoreValue = (v: number | null | undefined) => (typeof v === "number" ? v : 0);
   const scoreLabel = (v: number | null | undefined) => (typeof v === "number" ? `${v}%` : "—");
   const hasScores = (ideaObj: any) => typeof ideaObj?.overall_fit_score === "number";
+
+  // Re-score handler with toast feedback
+  const handleReScore = async () => {
+    const result = await reScore();
+    
+    if (result.cooldownMessage) {
+      toast({
+        title: "Please wait",
+        description: result.cooldownMessage,
+        variant: "default",
+      });
+      return;
+    }
+    
+    if (result.success) {
+      toast({
+        title: "Fit scores updated",
+        description: "Scores have been recalculated based on your profile.",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to re-score idea. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleVetIdea = async () => {
     try {
@@ -428,16 +462,44 @@ const IdeaDetail = () => {
           <Separator />
 
           <div>
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-primary" />
-              Fit Scores
-              {isScoring && (
-                <span className="text-xs text-muted-foreground font-normal flex items-center gap-1.5">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
-                  Scoring...
-                </span>
-              )}
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                Fit Scores
+                {isScoring && (
+                  <span className="text-xs text-muted-foreground font-normal flex items-center gap-1.5">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
+                    Scoring...
+                  </span>
+                )}
+              </h3>
+              
+              {/* Kebab menu for re-scoring */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isScoring}>
+                    <MoreVertical className="h-4 w-4" />
+                    <span className="sr-only">Score options</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleReScore} disabled={isScoring}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Re-score fit
+                  </DropdownMenuItem>
+                  {scoringError && (
+                    <DropdownMenuItem onClick={handleReScore} disabled={isScoring}>
+                      <AlertCircle className="mr-2 h-4 w-4" />
+                      Retry scoring
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    Re-scoring is rate-limited.
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             {isScoring ? (
               <div className="space-y-4 animate-pulse">
