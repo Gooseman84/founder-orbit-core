@@ -11,6 +11,10 @@ interface VentureStateGuardProps {
 /**
  * Route guard that enforces venture state-based access control.
  * Redirects users to appropriate pages when accessing forbidden routes.
+ * 
+ * STRICT MODE:
+ * - When executing: blocks ideation routes + unknown routes
+ * - When reviewed: blocks most routes, forces review completion
  */
 export function VentureStateGuard({ children }: VentureStateGuardProps) {
   const navigate = useNavigate();
@@ -27,9 +31,13 @@ export function VentureStateGuard({ children }: VentureStateGuardProps) {
     const currentPath = location.pathname;
     
     // Check if current route is allowed
-    if (!isRouteAllowed(currentPath, ventureState)) {
+    const allowed = isRouteAllowed(currentPath, ventureState);
+    
+    if (!allowed) {
       const redirectTo = getRedirectPath(ventureState);
       const message = getLockedMessage(ventureState);
+      
+      console.log(`[VentureStateGuard] Blocking "${currentPath}" (state: ${ventureState}) -> redirecting to "${redirectTo}"`);
       
       toast({
         title: "Section Locked",
