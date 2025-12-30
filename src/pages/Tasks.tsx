@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useVentureState } from "@/hooks/useVentureState";
@@ -18,14 +18,40 @@ const Tasks = () => {
   const { toast } = useToast();
   const { activeVenture, isLoading: ventureLoading } = useVentureState();
 
-  // Redirect if not in executing state
+  // Redirect if not in executing state - with specific messages per state
   useEffect(() => {
-    if (!ventureLoading && (!activeVenture || activeVenture.venture_state !== "executing")) {
+    if (ventureLoading) return;
+    
+    // No active venture
+    if (!activeVenture) {
+      toast({
+        title: "No Active Venture",
+        description: "Set a North Star idea and start a commitment to access Tasks.",
+      });
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+
+    const state = activeVenture.venture_state;
+
+    // Reviewed state - commitment ended
+    if (state === "reviewed") {
+      toast({
+        title: "Commitment Ended",
+        description: "Complete your Venture Review to proceed.",
+      });
+      navigate("/venture-review", { replace: true });
+      return;
+    }
+
+    // Any other non-executing state
+    if (state !== "executing") {
       toast({
         title: "Section Locked",
         description: "Tasks are only available while executing a venture.",
       });
       navigate("/dashboard", { replace: true });
+      return;
     }
   }, [activeVenture, ventureLoading, navigate, toast]);
 
@@ -57,12 +83,22 @@ const Tasks = () => {
 
   // Auto-generate tasks if none exist for today
   useEffect(() => {
-    if (!isLoadingTasks && dailyTasks.length === 0 && !isGeneratingTasks && activeVenture) {
+    if (!isLoadingTasks && dailyTasks.length === 0 && !isGeneratingTasks && activeVenture && activeVenture.venture_state === "executing") {
       generateDailyTasks();
     }
   }, [isLoadingTasks, dailyTasks.length, isGeneratingTasks, activeVenture, generateDailyTasks]);
 
-  if (ventureLoading || !activeVenture) {
+  // Show loading while venture state is being determined
+  if (ventureLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // If not executing, show nothing (redirect will happen)
+  if (!activeVenture || activeVenture.venture_state !== "executing") {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -164,8 +200,5 @@ const Tasks = () => {
     </div>
   );
 };
-
-// Need to add useState import
-import { useState } from "react";
 
 export default Tasks;
