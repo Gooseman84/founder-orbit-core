@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useBlueprint } from "@/hooks/useBlueprint";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useVentureBlueprint } from "@/hooks/useVentureBlueprint";
 import { useAuth } from "@/hooks/useAuth";
-import { useVentureState } from "@/hooks/useVentureState";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BlueprintSkeleton } from "@/components/shared/SkeletonLoaders";
-import { toast } from "@/hooks/use-toast";
 import { 
   Target, 
   AlertTriangle, 
@@ -23,13 +22,19 @@ import type { CommitmentWindowDays, CommitmentDraft, CommitmentFull, Venture, Ve
 
 const Blueprint = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { blueprint, loading: blueprintLoading } = useBlueprint();
-  const { activeVenture, isLoading: ventureLoading, transitionTo } = useVentureState();
+  const [searchParams] = useSearchParams();
+  const ventureIdParam = searchParams.get("ventureId");
   
-  // Local state to find inactive venture if no active one
-  const [inactiveVenture, setInactiveVenture] = useState<Venture | null>(null);
-  const [inactiveLoading, setInactiveLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  // Venture state
+  const [venture, setVenture] = useState<Venture | null>(null);
+  const [ventureLoading, setVentureLoading] = useState(true);
+  const [ventureError, setVentureError] = useState<string | null>(null);
+  
+  // Blueprint scoped to venture's idea
+  const { blueprint, loading: blueprintLoading } = useVentureBlueprint(venture?.idea_id);
   
   // Form state
   const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(30);
@@ -37,51 +42,61 @@ const Blueprint = () => {
   const [acknowledged, setAcknowledged] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
 
-  // Fetch inactive venture if no active venture exists
+  // Fetch venture by ID from URL param
   useEffect(() => {
-    async function fetchInactiveVenture() {
-      if (!user || activeVenture) {
-        setInactiveLoading(false);
+    async function fetchVenture() {
+      if (!user) {
+        setVentureLoading(false);
+        return;
+      }
+      
+      if (!ventureIdParam) {
+        setVentureError("no_venture_id");
+        setVentureLoading(false);
         return;
       }
       
       try {
-        const { data } = await supabase
+        setVentureLoading(true);
+        setVentureError(null);
+        
+        const { data, error } = await supabase
           .from("ventures")
           .select("*")
+          .eq("id", ventureIdParam)
           .eq("user_id", user.id)
-          .eq("venture_state", "inactive")
-          .order("created_at", { ascending: false })
-          .limit(1)
           .maybeSingle();
         
-        if (data) {
-          setInactiveVenture({
-            ...data,
-            venture_state: data.venture_state as VentureState,
-            commitment_window_days: data.commitment_window_days as CommitmentWindowDays | null,
-          } as Venture);
+        if (error) {
+          throw error;
         }
+        
+        if (!data) {
+          setVentureError("venture_not_found");
+          return;
+        }
+        
+        setVenture({
+          ...data,
+          venture_state: data.venture_state as VentureState,
+          commitment_window_days: data.commitment_window_days as CommitmentWindowDays | null,
+        } as Venture);
       } catch (err) {
-        console.error("Failed to fetch inactive venture:", err);
+        console.error("Failed to fetch venture:", err);
+        setVentureError("fetch_error");
       } finally {
-        setInactiveLoading(false);
+        setVentureLoading(false);
       }
     }
     
-    if (!ventureLoading) {
-      fetchInactiveVenture();
-    }
-  }, [user, activeVenture, ventureLoading]);
-
-  // Get venture state - either from active venture or inactive one we're about to commit
-  const currentVenture = activeVenture ?? inactiveVenture;
-  const ventureState = currentVenture?.venture_state ?? "inactive";
-  const ventureId = currentVenture?.id;
+    fetchVenture();
+  }, [user, ventureIdParam]);
 
   // State-based redirects
   useEffect(() => {
-    if (ventureLoading || inactiveLoading) return;
+    if (ventureLoading || !venture) return;
+    
+    const ventureState = venture.venture_state;
     
     if (ventureState === "executing") {
       navigate("/tasks", { replace: true });
@@ -90,22 +105,65 @@ const Blueprint = () => {
     } else if (ventureState === "killed") {
       navigate("/ideas", { replace: true });
     }
-  }, [ventureState, ventureLoading, inactiveLoading, navigate]);
+  }, [venture, ventureLoading, navigate]);
 
   // Pre-fill form if venture already has commitment data
   useEffect(() => {
-    if (activeVenture?.commitment_window_days) {
-      setWindowDays(activeVenture.commitment_window_days);
+    if (venture?.commitment_window_days) {
+      setWindowDays(venture.commitment_window_days);
     }
-    if (activeVenture?.success_metric) {
-      setSuccessMetric(activeVenture.success_metric);
+    if (venture?.success_metric) {
+      setSuccessMetric(venture.success_metric);
     }
-  }, [activeVenture]);
+  }, [venture]);
 
   const isFormValid = windowDays && successMetric.trim().length > 0 && acknowledged;
+  const ventureState = venture?.venture_state ?? "inactive";
+
+  const transitionTo = async (
+    ventureId: string,
+    targetState: VentureState,
+    commitmentData?: CommitmentDraft | CommitmentFull
+  ): Promise<boolean> => {
+    try {
+      const updatePayload: Record<string, any> = {
+        venture_state: targetState,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (commitmentData) {
+        if ("commitment_window_days" in commitmentData) {
+          updatePayload.commitment_window_days = commitmentData.commitment_window_days;
+        }
+        if ("success_metric" in commitmentData) {
+          updatePayload.success_metric = commitmentData.success_metric;
+        }
+        if ("commitment_start_at" in commitmentData) {
+          updatePayload.commitment_start_at = commitmentData.commitment_start_at;
+        }
+        if ("commitment_end_at" in commitmentData) {
+          updatePayload.commitment_end_at = commitmentData.commitment_end_at;
+        }
+      }
+
+      const { error } = await supabase
+        .from("ventures")
+        .update(updatePayload)
+        .eq("id", ventureId);
+
+      if (error) {
+        throw error;
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Failed to transition venture:", err);
+      return false;
+    }
+  };
 
   const handleCommitAndStart = async () => {
-    if (!ventureId || !isFormValid) return;
+    if (!venture?.id || !isFormValid) return;
 
     setIsCommitting(true);
     try {
@@ -120,7 +178,7 @@ const Blueprint = () => {
           success_metric: successMetric.trim(),
         };
         
-        const committedSuccess = await transitionTo(ventureId, "committed", draftData);
+        const committedSuccess = await transitionTo(venture.id, "committed", draftData);
         if (!committedSuccess) {
           throw new Error("Failed to transition to committed state");
         }
@@ -132,7 +190,7 @@ const Blueprint = () => {
           commitment_end_at: endDate.toISOString(),
         };
 
-        const executingSuccess = await transitionTo(ventureId, "executing", fullData);
+        const executingSuccess = await transitionTo(venture.id, "executing", fullData);
         if (!executingSuccess) {
           throw new Error("Failed to start execution");
         }
@@ -145,7 +203,7 @@ const Blueprint = () => {
           commitment_end_at: endDate.toISOString(),
         };
 
-        const success = await transitionTo(ventureId, "executing", fullData);
+        const success = await transitionTo(venture.id, "executing", fullData);
         if (!success) {
           throw new Error("Failed to start execution");
         }
@@ -174,7 +232,7 @@ const Blueprint = () => {
   };
 
   // Loading state
-  if (blueprintLoading || ventureLoading || inactiveLoading) {
+  if (ventureLoading || blueprintLoading) {
     return (
       <div className="container mx-auto py-8 px-4">
         <BlueprintSkeleton />
@@ -182,15 +240,19 @@ const Blueprint = () => {
     );
   }
 
-  // No venture to commit to
-  if (!ventureId) {
+  // No venture ID provided or venture not found
+  if (ventureError || !venture) {
     return (
       <div className="container mx-auto py-12 px-4 flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md w-full text-center">
           <CardHeader>
             <CardTitle>No Venture Selected</CardTitle>
             <CardDescription>
-              Choose an idea and create a venture before accessing the Blueprint.
+              {ventureError === "no_venture_id" 
+                ? "Select an idea and create a venture to access the Blueprint."
+                : ventureError === "venture_not_found"
+                ? "This venture doesn't exist or you don't have access to it."
+                : "Choose an idea and create a venture before accessing the Blueprint."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -205,7 +267,7 @@ const Blueprint = () => {
   }
 
   // Generate AI narrative from blueprint data
-  const narrativeSummary = generateNarrativeSummary(blueprint, currentVenture?.name);
+  const narrativeSummary = generateNarrativeSummary(blueprint, venture.name);
   const misalignmentCallouts = generateMisalignmentCallouts(blueprint);
 
   return (
@@ -395,7 +457,7 @@ function generateNarrativeSummary(
   }
 
   if (parts.length === 0) {
-    return "Complete your profile and choose an idea to see your personalized blueprint summary.";
+    return "Your venture is ready for commitment. Define your success criteria and begin execution.";
   }
 
   return parts.join(" ");

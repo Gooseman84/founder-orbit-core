@@ -26,7 +26,7 @@ import { useVentureTasks } from "@/hooks/useVentureTasks";
 import { ThirtyDayPlanCard } from "@/components/venture/ThirtyDayPlanCard";
 import { EmptyPlanState } from "@/components/venture/EmptyPlanState";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Sparkles, RefreshCw, Calendar, Clock, Pencil } from "lucide-react";
+import { Loader2, AlertCircle, Sparkles, RefreshCw, Calendar, Clock, Pencil, Map } from "lucide-react";
 import { 
   PlatformMode, 
   MasterPromptData,
@@ -708,16 +708,24 @@ export default function NorthStar() {
 
       {/* Additional Actions */}
       <Card className="p-4 bg-muted/50">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="text-sm">
-            <p className="font-medium">Need to update your prompt?</p>
+            <p className="font-medium">Ready to commit?</p>
             <p className="text-muted-foreground text-xs">
-              Edit directly above, update your profile, or regenerate with AI
+              Go to your Blueprint to set a commitment window and start execution.
             </p>
           </div>
-          <Button variant="outline" onClick={() => navigate("/profile")}>
-            Edit Profile
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/profile")}>
+              Edit Profile
+            </Button>
+            {venture?.id && (
+              <Button onClick={() => navigate(`/blueprint?ventureId=${venture.id}`)} className="gap-2">
+                <Map className="h-4 w-4" />
+                Go to Blueprint
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
     </div>
