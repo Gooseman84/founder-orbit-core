@@ -455,82 +455,64 @@ const IdeaDetail = () => {
                   ))}
                 </div>
               </div>
-            ) : idea.overall_fit_score != null ? (
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Overall Fit</span>
-                    <span className="text-sm font-bold">{idea.overall_fit_score}%</span>
+            ) : (() => {
+              // Helpers for null-safe score rendering
+              const scoreValue = (v: number | null | undefined) => (typeof v === "number" ? v : 0);
+              const scoreLabel = (v: number | null | undefined) => (typeof v === "number" ? `${v}%` : "—");
+              const hasScores = typeof idea?.overall_fit_score === "number";
+
+              return hasScores ? (
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Overall Fit</span>
+                      <span className="text-sm font-bold">{scoreLabel(idea.overall_fit_score)}</span>
+                    </div>
+                    <Progress value={scoreValue(idea.overall_fit_score)} className="h-2" />
                   </div>
-                  <Progress value={idea.overall_fit_score} className="h-2" />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-muted-foreground">Passion Fit</span>
+                        <span className="text-xs font-semibold">{scoreLabel(idea.passion_fit_score)}</span>
+                      </div>
+                      <Progress value={scoreValue(idea.passion_fit_score)} className="h-1.5" />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-muted-foreground">Skill Fit</span>
+                        <span className="text-xs font-semibold">{scoreLabel(idea.skill_fit_score)}</span>
+                      </div>
+                      <Progress value={scoreValue(idea.skill_fit_score)} className="h-1.5" />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-muted-foreground">Constraint Fit</span>
+                        <span className="text-xs font-semibold">{scoreLabel(idea.constraint_fit_score)}</span>
+                      </div>
+                      <Progress value={scoreValue(idea.constraint_fit_score)} className="h-1.5" />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-muted-foreground">Lifestyle Fit</span>
+                        <span className="text-xs font-semibold">{scoreLabel(idea.lifestyle_fit_score)}</span>
+                      </div>
+                      <Progress value={scoreValue(idea.lifestyle_fit_score)} className="h-1.5" />
+                    </div>
+                  </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">Passion Fit</span>
-                      <span className="text-xs font-semibold">
-                        {idea.passion_fit_score != null ? `${idea.passion_fit_score}%` : "--"}
-                      </span>
-                    </div>
-                    <Progress value={idea.passion_fit_score ?? 0} className="h-1.5" />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">Skill Fit</span>
-                      <span className="text-xs font-semibold">
-                        {idea.skill_fit_score != null ? `${idea.skill_fit_score}%` : "--"}
-                      </span>
-                    </div>
-                    <Progress value={idea.skill_fit_score ?? 0} className="h-1.5" />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">Constraint Fit</span>
-                      <span className="text-xs font-semibold">
-                        {idea.constraint_fit_score != null ? `${idea.constraint_fit_score}%` : "--"}
-                      </span>
-                    </div>
-                    <Progress value={idea.constraint_fit_score ?? 0} className="h-1.5" />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">Lifestyle Fit</span>
-                      <span className="text-xs font-semibold">
-                        {idea.lifestyle_fit_score != null ? `${idea.lifestyle_fit_score}%` : "--"}
-                      </span>
-                    </div>
-                    <Progress value={idea.lifestyle_fit_score ?? 0} className="h-1.5" />
-                  </div>
+              ) : (
+                <div className="py-4">
+                  <p className="text-sm text-muted-foreground text-center">
+                    This idea hasn't been scored yet. It will score automatically when opened.
+                  </p>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-4 space-y-3">
-                <p className="text-sm text-muted-foreground">Not scored yet</p>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={handleVetIdea}
-                  disabled={analyzeIdea.isPending}
-                  className="gap-2"
-                >
-                  {analyzeIdea.isPending ? (
-                    <>
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
-                      Scoring...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3 h-3" />
-                      Score Now
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
+              );
+            })()}
 
             {scoringError && (
               <p className="text-xs text-destructive mt-2">
