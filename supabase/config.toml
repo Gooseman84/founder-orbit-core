@@ -119,3 +119,6 @@ verify_jwt = true
 
 [functions.generate-daily-execution-tasks]
 verify_jwt = true
+
+[functions.venture-review-decision]
+verify_jwt = true

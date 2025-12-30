@@ -1,0 +1,183 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+type DecisionAction = "continue" | "pivot" | "kill";
+
+interface RequestBody {
+  ventureId: string;
+  action: DecisionAction;
+  reason?: string;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Auth check
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.log("[venture-review-decision] Missing authorization header");
+      return new Response(
+        JSON.stringify({ error: "Missing authorization", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+
+    if (userError || !user) {
+      console.log("[venture-review-decision] Invalid token:", userError?.message);
+      return new Response(
+        JSON.stringify({ error: "Invalid token", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body: RequestBody = await req.json();
+    const { ventureId, action, reason } = body;
+
+    console.log("[venture-review-decision] userId:", user.id, "ventureId:", ventureId, "action:", action);
+
+    // Validate required fields
+    if (!ventureId || !action) {
+      return new Response(
+        JSON.stringify({ error: "Missing ventureId or action", code: "VALIDATION_ERROR" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!["continue", "pivot", "kill"].includes(action)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid action", code: "VALIDATION_ERROR" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Pivot and kill require a reason
+    if ((action === "pivot" || action === "kill") && (!reason || reason.trim().length === 0)) {
+      return new Response(
+        JSON.stringify({ error: "Reason required for pivot/kill", code: "VALIDATION_ERROR" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (reason && reason.length > 200) {
+      return new Response(
+        JSON.stringify({ error: "Reason must be 200 characters or less", code: "VALIDATION_ERROR" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Fetch venture with validation
+    const { data: venture, error: ventureError } = await supabaseService
+      .from("ventures")
+      .select("*")
+      .eq("id", ventureId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (ventureError || !venture) {
+      console.log("[venture-review-decision] Venture not found:", ventureError?.message);
+      return new Response(
+        JSON.stringify({ error: "Venture not found", code: "NOT_FOUND" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (venture.venture_state !== "reviewed") {
+      console.log("[venture-review-decision] Invalid state:", venture.venture_state);
+      return new Response(
+        JSON.stringify({ error: "Venture must be in reviewed state", code: "INVALID_STATE" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const now = new Date().toISOString();
+    let updateData: Record<string, any> = {};
+
+    if (action === "continue") {
+      // Start new commitment window
+      const windowDays = venture.commitment_window_days || 14;
+      const startAt = new Date();
+      const endAt = new Date(startAt.getTime() + windowDays * 24 * 60 * 60 * 1000);
+
+      updateData = {
+        venture_state: "executing",
+        commitment_start_at: startAt.toISOString(),
+        commitment_end_at: endAt.toISOString(),
+        updated_at: now,
+      };
+      console.log("[venture-review-decision] Continuing with new window:", windowDays, "days");
+
+    } else if (action === "pivot") {
+      // Set to inactive and store reason
+      const existingMetadata = (venture.metadata as Record<string, any>) || {};
+      updateData = {
+        venture_state: "inactive",
+        updated_at: now,
+        // Clear commitment dates since we're exiting execution
+        commitment_start_at: null,
+        commitment_end_at: null,
+      };
+      console.log("[venture-review-decision] Pivoting venture, reason:", reason);
+
+    } else if (action === "kill") {
+      // Set to killed (terminal state)
+      updateData = {
+        venture_state: "killed",
+        updated_at: now,
+      };
+      console.log("[venture-review-decision] Killing venture, reason:", reason);
+    }
+
+    // Update venture
+    const { data: updatedVenture, error: updateError } = await supabaseService
+      .from("ventures")
+      .update(updateData)
+      .eq("id", ventureId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("[venture-review-decision] Update error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to update venture", code: "INTERNAL_ERROR" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("[venture-review-decision] Success, new state:", updatedVenture.venture_state);
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        venture: updatedVenture,
+        action,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("[venture-review-decision] Error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return new Response(
+      JSON.stringify({ error: message, code: "INTERNAL_ERROR" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
