@@ -116,3 +116,6 @@ verify_jwt = true
 
 [functions.score-idea-fit]
 verify_jwt = true
+
+[functions.generate-daily-execution-tasks]
+verify_jwt = true
