@@ -48,17 +48,49 @@ serve(async (req) => {
       { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
     );
 
-    const { idea, fitScores } = await req.json();
-
-    // Light validation
-    if (!idea || typeof idea !== "object" || !idea.id || !idea.title) {
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      console.error("save-founder-idea: JSON parse error", parseError);
       return new Response(
-        JSON.stringify({ error: "Invalid idea format - must have id and title" }),
+        JSON.stringify({ error: "Invalid JSON body", code: "VALIDATION_ERROR" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { idea, fitScores } = body;
+
+    // Validate required fields
+    if (!idea || typeof idea !== "object") {
+      return new Response(
+        JSON.stringify({ error: "Missing idea object", code: "VALIDATION_ERROR" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!idea.id || typeof idea.id !== "string") {
+      return new Response(
+        JSON.stringify({ error: "Missing or invalid idea.id", code: "VALIDATION_ERROR" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!idea.title || typeof idea.title !== "string" || idea.title.trim() === "") {
+      return new Response(
+        JSON.stringify({ error: "Missing or empty idea.title", code: "VALIDATION_ERROR" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log("save-founder-idea: fitScores received:", fitScores);
+
+    // Convert fit scores to integers (DB columns are integer type)
+    const safeInt = (val: unknown): number | null => {
+      if (val === null || val === undefined) return null;
+      const num = Number(val);
+      return isNaN(num) ? null : Math.round(num);
+    };
 
     // ===== PLAN CHECK: Get user subscription =====
     const { data: subData } = await supabaseAdmin
@@ -128,14 +160,14 @@ serve(async (req) => {
           culture_tailwind: idea.cultureTailwind ?? null,
           chaos_factor: idea.chaosFactor ?? null,
           status: "candidate",
-          // Persist fit scores if provided
-          passion_fit_score: fitScores?.passion ?? null,
-          skill_fit_score: fitScores?.skill ?? null,
-          constraint_fit_score: fitScores?.constraints ?? null,
-          lifestyle_fit_score: fitScores?.lifestyle ?? null,
-          overall_fit_score: fitScores?.overall ?? null,
+          // Persist fit scores as integers
+          passion_fit_score: safeInt(fitScores?.passion),
+          skill_fit_score: safeInt(fitScores?.skill),
+          constraint_fit_score: safeInt(fitScores?.constraints),
+          lifestyle_fit_score: safeInt(fitScores?.lifestyle),
+          overall_fit_score: safeInt(fitScores?.overall),
           fit_scores: fitScores ? JSON.stringify(fitScores) : null,
-          // Multi-source idea fields (default to 'generated' for AI-generated ideas)
+          // Multi-source idea fields
           source_type: idea.source_type || 'generated',
           source_meta: idea.source_meta || {},
           normalized: idea.normalized || null,
@@ -145,9 +177,23 @@ serve(async (req) => {
         .single();
 
       if (insertError) {
-        console.error("Ideas table insert error:", insertError);
+        console.error("save-founder-idea: Ideas table insert error:", {
+          message: insertError.message,
+          code: insertError.code,
+          details: insertError.details,
+          hint: insertError.hint,
+        });
+        
+        // Check for duplicate/constraint errors
+        if (insertError.code === "23505") {
+          return new Response(
+            JSON.stringify({ error: "Idea already exists", code: "DUPLICATE_ERROR" }),
+            { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
         return new Response(
-          JSON.stringify({ error: "Failed to save idea" }),
+          JSON.stringify({ error: "Failed to save idea", code: "DB_WRITE_FAILED" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
