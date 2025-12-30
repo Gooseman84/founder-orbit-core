@@ -68,16 +68,21 @@ export function getNavVisibility(ventureState: VentureState | null): NavVisibili
     };
   }
 
-  // When reviewed: route to review page
+  // When reviewed: FORCE review completion before anything else
+  // Only review page + essential system pages allowed
   if (ventureState === "reviewed") {
     return {
       allowed: [
-        ...commonSections,
+        "home",
+        "daily-pulse",
         "venture-review",
-        "workspace",
+        "profile",
+        "billing",
+        "context-inspector",
       ],
       hidden: [
         "tasks",
+        "workspace",
         "idea-lab",
         "fusion-lab",
         "radar",
