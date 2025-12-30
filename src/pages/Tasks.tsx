@@ -1,277 +1,68 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useXP } from "@/hooks/useXP";
-import { useAnalytics } from "@/hooks/useAnalytics";
-import { useSubscription } from "@/hooks/useSubscription";
 import { useVentureState } from "@/hooks/useVentureState";
-import { supabase } from "@/integrations/supabase/client";
-import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
-import { TaskList } from "@/components/tasks/TaskList";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
+import { useDailyExecution } from "@/hooks/useDailyExecution";
 import { useToast } from "@/hooks/use-toast";
-import { recordXpEvent } from "@/lib/xpEngine";
-import { useQueryClient } from "@tanstack/react-query";
-import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
-import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
-import { ProBadge } from "@/components/billing/ProBadge";
-import { Loader2, Sparkles, ListTodo, CheckCircle2, Activity, ArrowRight, Filter, Lock, AlertTriangle } from "lucide-react";
-import type { PaywallReasonCode } from "@/config/paywallCopy";
-
-interface Task {
-  id: string;
-  title: string;
-  description: string | null;
-  category: string | null;
-  estimated_minutes: number | null;
-  xp_reward: number | null;
-  status: string;
-  completed_at: string | null;
-  created_at: string;
-  workspace_document_id?: string | null;
-  venture_id?: string | null;
-}
+import { VentureContextHeader } from "@/components/tasks/VentureContextHeader";
+import { ExecutionTaskCard } from "@/components/tasks/ExecutionTaskCard";
+import { DailyCheckinForm } from "@/components/tasks/DailyCheckinForm";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Sparkles, CheckCircle2, AlertTriangle, Inbox } from "lucide-react";
 
 const Tasks = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { refresh: refreshXp } = useXP();
-  const { track } = useAnalytics();
-  const { plan } = useSubscription();
-  const isPro = plan === "pro" || plan === "founder";
-  const queryClient = useQueryClient();
-  
-  // Venture state enforcement
-  const { 
-    canGenerateTasks, 
-    guardTaskGeneration, 
-    activeVenture,
-    isLoading: ventureStateLoading 
-  } = useVentureState();
-  
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [ventures, setVentures] = useState<{ id: string; name: string }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
-  const [chosenIdeaId, setChosenIdeaId] = useState<string | null>(null);
-  const [selectedVentureId, setSelectedVentureId] = useState<string | "all">("all");
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [paywallReason, setPaywallReason] = useState<PaywallReasonCode>("MULTI_BLUEPRINT_TASKS");
+  const { activeVenture, isLoading: ventureLoading } = useVentureState();
+
+  // Redirect if not in executing state
+  useEffect(() => {
+    if (!ventureLoading && (!activeVenture || activeVenture.venture_state !== "executing")) {
+      toast({
+        title: "Section Locked",
+        description: "Tasks are only available while executing a venture.",
+      });
+      navigate("/dashboard", { replace: true });
+    }
+  }, [activeVenture, ventureLoading, navigate, toast]);
+
+  const {
+    commitmentProgress,
+    dailyTasks,
+    isLoadingTasks,
+    isGeneratingTasks,
+    generateDailyTasksError,
+    todayCheckin,
+    hasCheckedInToday,
+    generateDailyTasks,
+    submitCheckin,
+    markTaskCompleted,
+  } = useDailyExecution(activeVenture);
+
+  // Check if commitment window has ended
+  const windowEnded = commitmentProgress?.isComplete;
 
   useEffect(() => {
-    if (user) {
-      fetchTasks();
-      fetchChosenIdea();
-      fetchVentures();
-    }
-  }, [user]);
-
-  const fetchVentures = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("ventures")
-      .select("id, name")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-    if (data) setVentures(data);
-  };
-
-  const fetchChosenIdea = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("ideas")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("status", "chosen")
-      .maybeSingle();
-    if (data) setChosenIdeaId(data.id);
-  };
-
-  const fetchTasks = async () => {
-    if (!user) return;
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      setTasks(data || []);
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-      toast({ title: "Error", description: "Failed to load tasks.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Filter tasks based on selected venture
-  const filteredTasks = useMemo(() => {
-    if (selectedVentureId === "all") return tasks;
-    return tasks.filter(t => t.venture_id === selectedVentureId);
-  }, [tasks, selectedVentureId]);
-
-  // Check if user has multiple ventures (multi-blueprint scenario)
-  const hasMultipleVentures = ventures.length > 1;
-
-  const handleVentureFilterChange = (ventureId: string) => {
-    // If FREE user tries to filter across ventures, show paywall
-    if (!isPro && ventureId === "all" && hasMultipleVentures) {
-      setPaywallReason("MULTI_BLUEPRINT_TASKS");
-      setShowPaywall(true);
-      track("paywall_shown", { reasonCode: "MULTI_BLUEPRINT_TASKS" });
-      return;
-    }
-    setSelectedVentureId(ventureId);
-  };
-
-  const handleGenerateTasks = async () => {
-    // Venture state enforcement is handled by button disabled state
-    // Double-check guard for programmatic calls
-    const guardError = guardTaskGeneration();
-    if (guardError) {
-      toast({ 
-        title: "Cannot Generate Tasks", 
-        description: guardError, 
-        variant: "destructive" 
-      });
-      return;
-    }
-    
-    if (!user || !chosenIdeaId) return;
-    setIsGenerating(true);
-    try {
-      const { data, error } = await invokeAuthedFunction<{ tasks?: any[] }>("generate-micro-tasks", {});
-      if (error) throw error;
-      track("task_generated", { count: data.tasks?.length || 0 });
-      toast({ title: "Tasks Generated!", description: `Created ${data.tasks?.length || 0} new tasks.` });
-      await fetchTasks();
-    } catch (error) {
-      console.error("Error generating tasks:", error);
-      toast({ title: "Error", description: "Failed to generate tasks.", variant: "destructive" });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleCompleteTask = async (taskId: string) => {
-    if (!user) return;
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    setCompletingTaskId(taskId);
-    try {
-      const { error } = await supabase
-        .from("tasks")
-        .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("id", taskId)
-        .eq("user_id", user.id);
-      if (error) throw error;
-      const xpAmount = task.xp_reward || 10;
-      await recordXpEvent(user.id, "task_completed", xpAmount, { taskId, task_title: task.title });
-      track("task_completed", { taskId, xpAmount, title: task.title });
-      queryClient.invalidateQueries({ queryKey: ["xp", user.id] });
-      await refreshXp();
-      toast({ title: "Task Completed! 🎉", description: `You earned ${xpAmount} XP!` });
-      await fetchTasks();
-    } catch (error) {
-      console.error("Error completing task:", error);
-      toast({ title: "Error", description: "Failed to complete task.", variant: "destructive" });
-    } finally {
-      setCompletingTaskId(null);
-    }
-  };
-
-  const handleOpenTaskInWorkspace = async (task: Task) => {
-    if (!user) return;
-
-    try {
-      let docId = task.workspace_document_id;
-
-      // 1) If no linked doc yet, create one from this task
-      if (!docId) {
-        const initialContent = [
-          `# Task: ${task.title}`,
-          "",
-          task.description ? `**Description:** ${task.description}` : "",
-          task.estimated_minutes ? `**Estimated Time:** ${task.estimated_minutes} minutes` : "",
-          task.category ? `**Category:** ${task.category}` : "",
-          "",
-          "---",
-          "",
-          "Use this space to think through this task:",
-          '- What does "done" look like for this?',
-          "- What decisions do I need to make?",
-          "- What drafts or experiments should I create?",
-        ]
-          .filter(Boolean)
-          .join("\n");
-
-        const { data: docInsert, error: docError } = await supabase
-          .from("workspace_documents")
-          .insert({
-            user_id: user.id,
-            title: task.title,
-            doc_type: task.category || "task",
-            source_type: "task",
-            content: initialContent,
-            linked_task_id: task.id,
-          })
-          .select("id")
-          .single();
-
-        if (docError) throw docError;
-        docId = docInsert.id;
-
-        // 2) Update task to reference this doc
-        const { error: taskUpdateError } = await supabase
-          .from("tasks")
-          .update({ workspace_document_id: docId })
-          .eq("id", task.id)
-          .eq("user_id", user.id);
-
-        if (taskUpdateError) throw taskUpdateError;
-
-        // Update local state so UI is in sync
-        setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, workspace_document_id: docId } : t)));
-      }
-
-      if (!docId) {
-        throw new Error("Failed to determine workspace document id");
-      }
-
-      // 3) Navigate to workspace with taskContext in state
-      navigate(`/workspace/${docId}`, {
-        state: {
-          taskContext: {
-            id: task.id,
-            title: task.title,
-            description: task.description,
-            estimated_minutes: task.estimated_minutes,
-            xp_reward: task.xp_reward,
-            category: task.category,
-          },
-        },
-      });
-    } catch (error) {
-      console.error("Error opening task in workspace:", error);
+    if (windowEnded && activeVenture) {
       toast({
-        title: "Error",
-        description: "Failed to open this task in the workspace.",
-        variant: "destructive",
+        title: "Commitment Window Complete",
+        description: "Your commitment period has ended. Time to review!",
       });
+      navigate("/venture-review", { replace: true });
     }
-  };
+  }, [windowEnded, activeVenture, navigate, toast]);
 
-  const openTasks = filteredTasks.filter((t) => t.status !== "completed");
-  const completedTasks = filteredTasks.filter((t) => t.status === "completed");
+  // Auto-generate tasks if none exist for today
+  useEffect(() => {
+    if (!isLoadingTasks && dailyTasks.length === 0 && !isGeneratingTasks && activeVenture) {
+      generateDailyTasks();
+    }
+  }, [isLoadingTasks, dailyTasks.length, isGeneratingTasks, activeVenture, generateDailyTasks]);
 
-  if (isLoading) {
+  if (ventureLoading || !activeVenture) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -279,159 +70,102 @@ const Tasks = () => {
     );
   }
 
-  // Determine if generate button should be disabled and why
-  const generateDisabled = isGenerating || !chosenIdeaId || !canGenerateTasks;
-  const generateDisabledReason = !canGenerateTasks 
-    ? (activeVenture 
-        ? `Venture is in "${activeVenture.venture_state}" state` 
-        : "No active venture")
-    : !chosenIdeaId 
-      ? "Choose an idea first" 
-      : null;
+  const allTasksCompleted = dailyTasks.length > 0 && dailyTasks.every(t => t.completed);
+  const [isSubmittingCheckin, setIsSubmittingCheckin] = useState(false);
+
+  const handleCheckinSubmit = async (data: Parameters<typeof submitCheckin>[0]) => {
+    setIsSubmittingCheckin(true);
+    const success = await submitCheckin(data);
+    setIsSubmittingCheckin(false);
+    if (success) {
+      toast({ title: "Check-in submitted!", description: "Great work today." });
+    }
+    return success;
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-4xl font-bold">Founder Quests</h1>
-          <p className="text-muted-foreground mt-1">Complete micro-tasks to build momentum and earn XP</p>
-        </div>
-        <Button 
-          onClick={handleGenerateTasks} 
-          disabled={generateDisabled} 
-          size="lg"
-          title={generateDisabledReason || undefined}
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Generate Today's Tasks
-            </>
+    <div className="space-y-6 max-w-3xl mx-auto">
+      {/* Venture Context Header */}
+      <VentureContextHeader venture={activeVenture} commitmentProgress={commitmentProgress} />
+
+      {/* Today's Tasks Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Today's Focus
+          </CardTitle>
+          {dailyTasks.length > 0 && (
+            <span className="text-sm text-muted-foreground">
+              {dailyTasks.filter(t => t.completed).length}/{dailyTasks.length} complete
+            </span>
           )}
-        </Button>
-      </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {isLoadingTasks || isGeneratingTasks ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
+              <span className="text-muted-foreground">
+                {isGeneratingTasks ? "Generating today's tasks..." : "Loading..."}
+              </span>
+            </div>
+          ) : generateDailyTasksError ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{generateDailyTasksError}</AlertDescription>
+            </Alert>
+          ) : dailyTasks.length === 0 ? (
+            <div className="flex flex-col items-center py-8 text-center">
+              <Inbox className="h-12 w-12 text-muted-foreground mb-3" />
+              <p className="text-muted-foreground">No tasks for today yet.</p>
+              <Button onClick={generateDailyTasks} className="mt-4" disabled={isGeneratingTasks}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Generate Tasks
+              </Button>
+            </div>
+          ) : (
+            dailyTasks.map((task) => (
+              <ExecutionTaskCard
+                key={task.id}
+                task={task}
+                onToggle={(completed) => markTaskCompleted(task.id, completed)}
+                disabled={hasCheckedInToday}
+              />
+            ))
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Venture state warning */}
-      {!canGenerateTasks && activeVenture && (
-        <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
-          <AlertDescription className="text-amber-700 dark:text-amber-300">
-            Task generation is only available when your venture is in "executing" state. 
-            Current state: <span className="font-semibold">{activeVenture.venture_state}</span>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {!chosenIdeaId && (
-        <Alert>
-          <AlertDescription>
-            You need to choose an idea first. Visit the{" "}
-            <a href="/ideas" className="underline font-medium">
-              Ideas page
-            </a>{" "}
-            to select one.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Multi-Blueprint Filter (Pro feature) */}
-      {hasMultipleVentures && (
-        <Card className="border-border/50">
-          <CardContent className="py-3 px-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Filter by Blueprint:</span>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  variant={selectedVentureId === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleVentureFilterChange("all")}
-                  className="gap-1"
-                >
-                  All Blueprints
-                  {!isPro && <ProBadge variant="icon" size="sm" locked />}
-                </Button>
-                {ventures.slice(0, isPro ? ventures.length : 1).map((venture) => (
-                  <Button
-                    key={venture.id}
-                    variant={selectedVentureId === venture.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedVentureId(venture.id)}
-                  >
-                    {venture.name}
-                  </Button>
-                ))}
-                {!isPro && ventures.length > 1 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setPaywallReason("MULTI_BLUEPRINT_TASKS");
-                      setShowPaywall(true);
-                      track("locked_feature_clicked", { feature: "multi_blueprint_tasks" });
-                    }}
-                    className="gap-1 opacity-60"
-                  >
-                    <Lock className="h-3 w-3" />
-                    +{ventures.length - 1} more
-                  </Button>
-                )}
+      {/* Daily Check-in Section */}
+      {hasCheckedInToday ? (
+        <Card className="border-green-500/30 bg-green-500/5">
+          <CardContent className="py-6">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="h-6 w-6 text-green-500" />
+              <div>
+                <p className="font-medium">Today's check-in complete</p>
+                <p className="text-sm text-muted-foreground">
+                  Status: {todayCheckin?.completion_status === "yes" ? "Completed" : 
+                          todayCheckin?.completion_status === "partial" ? "Partially completed" : "Not completed"}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
+      ) : allTasksCompleted ? (
+        <DailyCheckinForm onSubmit={handleCheckinSubmit} isSubmitting={isSubmittingCheckin} />
+      ) : (
+        <Card className="border-border/50">
+          <CardContent className="py-6 text-center text-muted-foreground">
+            <p>Complete all tasks to unlock today's check-in.</p>
+          </CardContent>
+        </Card>
       )}
-
-      {/* Daily Pulse Link */}
-      <Card className="border-primary/20 bg-gradient-to-r from-background to-primary/5">
-        <CardContent className="flex items-center justify-between py-4">
-          <div className="flex items-center gap-3">
-            <Activity className="h-5 w-5 text-primary" />
-            <div>
-              <p className="font-medium">Daily Pulse & Check-In</p>
-              <p className="text-sm text-muted-foreground">Reflect on your day and get AI insights</p>
-            </div>
-          </div>
-          <Button onClick={() => navigate("/daily-reflection")} variant="outline" className="gap-2">
-            Start Check-In <ArrowRight className="h-4 w-4" />
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="open" className="w-full">
-        <TabsList>
-          <TabsTrigger value="open" className="flex items-center gap-2">
-            <ListTodo className="h-4 w-4" />
-            Open Tasks ({openTasks.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Completed ({completedTasks.length})
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="open" className="mt-6">
-          <TaskList tasks={openTasks} onTaskCompleted={handleCompleteTask} />
-        </TabsContent>
-        <TabsContent value="completed" className="mt-6">
-          <TaskList tasks={completedTasks} onTaskCompleted={handleCompleteTask} />
-        </TabsContent>
-      </Tabs>
-
-      {/* Pro Upgrade Modal */}
-      <ProUpgradeModal
-        open={showPaywall}
-        onClose={() => setShowPaywall(false)}
-        reasonCode={paywallReason}
-      />
     </div>
   );
 };
+
+// Need to add useState import
+import { useState } from "react";
 
 export default Tasks;
