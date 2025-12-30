@@ -1,4 +1,5 @@
 // src/hooks/useIdeaDetail.ts
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -54,6 +55,16 @@ const invokeAnalyzeIdea = async (ideaId: string) => {
   return data;
 };
 
+const invokeScoreIdeaFit = async (ideaId: string) => {
+  const { data, error } = await invokeAuthedFunction<any>(
+    "score-idea-fit",
+    { body: { ideaId } }
+  );
+
+  if (error) throw error;
+  return data;
+};
+
 const updateIdeaStatusInDb = async (ideaId: string, userId: string, status: string): Promise<Idea> => {
   // If setting to "chosen", first set all other ideas to "candidate"
   if (status === "chosen") {
@@ -79,9 +90,20 @@ const updateIdeaStatusInDb = async (ideaId: string, userId: string, status: stri
   return data;
 };
 
+// Check if scores are missing (need lazy scoring)
+const needsScoring = (idea: Idea | undefined): boolean => {
+  if (!idea) return false;
+  return idea.overall_fit_score === null || idea.overall_fit_score === undefined;
+};
+
 export const useIdeaDetail = (ideaId: string | undefined) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  
+  // State for lazy scoring
+  const [isScoring, setIsScoring] = useState(false);
+  const [scoringError, setScoringError] = useState<string | null>(null);
+  const scoringTriggeredRef = useRef(false);
 
   const {
     data: idea,
@@ -99,6 +121,46 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
     queryFn: () => fetchIdeaAnalysis(ideaId!, user!.id),
     enabled: !!ideaId && !!user,
   });
+
+  // Lazy scoring effect: trigger scoring when idea loads with missing scores
+  useEffect(() => {
+    const triggerLazyScoring = async () => {
+      // Only score once per idea open (avoid double calls)
+      if (scoringTriggeredRef.current) return;
+      if (!idea || !ideaId || !user) return;
+      if (!needsScoring(idea)) return;
+      
+      scoringTriggeredRef.current = true;
+      setIsScoring(true);
+      setScoringError(null);
+      
+      console.log("useIdeaDetail: triggering lazy scoring for idea", ideaId);
+      
+      try {
+        const result = await invokeScoreIdeaFit(ideaId);
+        
+        if (result.success) {
+          console.log("useIdeaDetail: scoring complete", result.scores);
+          // Refresh the idea data to get updated scores
+          await refetchIdea();
+          queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
+        }
+      } catch (error: any) {
+        console.error("useIdeaDetail: lazy scoring failed", error);
+        setScoringError(error.message || "Failed to score idea");
+      } finally {
+        setIsScoring(false);
+      }
+    };
+    
+    triggerLazyScoring();
+  }, [idea, ideaId, user, refetchIdea, queryClient]);
+
+  // Reset scoring triggered flag when ideaId changes
+  useEffect(() => {
+    scoringTriggeredRef.current = false;
+    setScoringError(null);
+  }, [ideaId]);
 
   const analyzeIdea = useMutation({
     mutationFn: () => {
@@ -137,6 +199,8 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
     idea,
     analysis,
     isLoading: ideaLoading || analysisLoading,
+    isScoring,
+    scoringError,
     error: ideaError,
     analyzeIdea,
     updateIdeaStatus,
