@@ -12,6 +12,9 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_AI_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
+// Max append calls per day per venture to prevent abuse
+const MAX_APPEND_COUNT = 3;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -38,7 +41,8 @@ serve(async (req) => {
       );
     }
 
-    const { ventureId } = await req.json();
+    const body = await req.json();
+    const { ventureId, append = false } = body;
 
     if (!ventureId) {
       return new Response(
@@ -50,22 +54,45 @@ serve(async (req) => {
     const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const today = new Date().toISOString().split("T")[0];
 
-    console.log("[generate-daily-execution-tasks] userId:", user.id, "ventureId:", ventureId, "date:", today);
+    console.log("[generate-daily-execution-tasks] userId:", user.id, "ventureId:", ventureId, "date:", today, "append:", append);
 
     // Check if tasks already exist for today
-    const { data: existingTasks } = await supabaseService
+    const { data: existingTasksRow } = await supabaseService
       .from("venture_daily_tasks")
       .select("*")
       .eq("venture_id", ventureId)
       .eq("task_date", today)
       .maybeSingle();
 
-    if (existingTasks) {
-      console.log("[generate-daily-execution-tasks] Tasks already exist for today");
+    // If tasks exist and NOT in append mode, return existing
+    if (existingTasksRow && !append) {
+      console.log("[generate-daily-execution-tasks] Tasks already exist for today, returning existing");
       return new Response(
-        JSON.stringify({ success: true, alreadyGenerated: true, tasks: existingTasks.tasks }),
+        JSON.stringify({ success: true, alreadyGenerated: true, tasks: existingTasksRow.tasks }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // If append mode but no existing tasks, treat as initial generation
+    if (append && !existingTasksRow) {
+      console.log("[generate-daily-execution-tasks] Append mode but no existing tasks, switching to initial generation");
+    }
+
+    // Check append rate limit if appending
+    if (append && existingTasksRow) {
+      const currentAppendCount = existingTasksRow.append_count || 0;
+      if (currentAppendCount >= MAX_APPEND_COUNT) {
+        console.log("[generate-daily-execution-tasks] Append limit reached:", currentAppendCount);
+        return new Response(
+          JSON.stringify({ 
+            error: "You've generated enough tasks for today. Execute.", 
+            code: "APPEND_LIMIT_REACHED",
+            appendCount: currentAppendCount,
+            maxAppendCount: MAX_APPEND_COUNT
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Fetch venture with validation
@@ -119,6 +146,12 @@ serve(async (req) => {
       idea = data;
     }
 
+    // Get existing tasks for context in append mode
+    const existingTasks = existingTasksRow?.tasks || [];
+    const existingTaskTitles = Array.isArray(existingTasks) 
+      ? existingTasks.map((t: any) => t.title).join(", ")
+      : "";
+
     // Build context for AI
     const context = {
       ventureName: venture.name,
@@ -133,6 +166,12 @@ serve(async (req) => {
 
     console.log("[generate-daily-execution-tasks] Context:", JSON.stringify(context, null, 2));
 
+    // Adjust task count based on append mode
+    const taskCount = append ? "1-2" : "1-3";
+    const appendContext = append 
+      ? `\n\nIMPORTANT: The user has already completed these tasks today: ${existingTaskTitles}\nGenerate DIFFERENT tasks that build on or complement what they've done. Do NOT repeat similar tasks.`
+      : "";
+
     // Call Lovable AI to generate tasks
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -145,12 +184,13 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an execution-focused task generator for founders. Generate 1-3 concrete, actionable tasks for TODAY only.
+            content: `You are an execution-focused task generator for founders. Generate ${taskCount} concrete, actionable tasks for TODAY only.
 
 STRICT RULES:
 - Tasks MUST be derived from the venture's blueprint, plan, or success metric
 - NO brainstorming or ideation tasks
 - NO future planning tasks
+- NO pivoting or "explore new directions" tasks
 - Each task should be completable in one focused work session
 - Tasks should directly contribute to the stated success metric
 
@@ -178,7 +218,7 @@ ${context.blueprintSummary ? `Blueprint Summary: ${context.blueprintSummary}` : 
 ${context.planSummary ? `Plan Summary: ${context.planSummary}` : ""}
 ${context.ideaTitle ? `Idea: ${context.ideaTitle} - ${context.ideaDescription}` : ""}
 
-Generate 1-3 focused execution tasks for today.`
+Generate ${taskCount} focused execution tasks for today.${appendContext}`
           }
         ],
         temperature: 0.7,
@@ -207,38 +247,62 @@ Generate 1-3 focused execution tasks for today.`
     const content = aiData.choices?.[0]?.message?.content || "[]";
     
     // Parse tasks from AI response
-    let tasks = [];
+    let newTasks = [];
     try {
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        tasks = JSON.parse(jsonMatch[0]);
+        newTasks = JSON.parse(jsonMatch[0]);
       }
     } catch (parseError) {
       console.error("[generate-daily-execution-tasks] Parse error:", parseError);
-      tasks = [];
+      newTasks = [];
     }
 
     // Ensure tasks have valid IDs
-    tasks = tasks.map((task: any, index: number) => ({
+    newTasks = newTasks.map((task: any) => ({
       ...task,
       id: task.id || crypto.randomUUID(),
       completed: false,
     }));
 
-    console.log("[generate-daily-execution-tasks] Generated tasks:", tasks.length);
+    console.log("[generate-daily-execution-tasks] Generated tasks:", newTasks.length, "append:", append);
 
-    // Save to database
-    const { error: insertError } = await supabaseService
-      .from("venture_daily_tasks")
-      .insert({
-        user_id: user.id,
-        venture_id: ventureId,
-        task_date: today,
-        tasks: tasks,
-      });
+    let finalTasks;
+    let dbError;
 
-    if (insertError) {
-      console.error("[generate-daily-execution-tasks] Insert error:", insertError);
+    if (append && existingTasksRow) {
+      // Append mode: merge new tasks with existing
+      finalTasks = [...(existingTasks as any[]), ...newTasks];
+      const newAppendCount = (existingTasksRow.append_count || 0) + 1;
+      
+      const { error } = await supabaseService
+        .from("venture_daily_tasks")
+        .update({ 
+          tasks: finalTasks,
+          append_count: newAppendCount,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", existingTasksRow.id);
+      
+      dbError = error;
+      console.log("[generate-daily-execution-tasks] Appended tasks, new append_count:", newAppendCount);
+    } else {
+      // Initial generation
+      finalTasks = newTasks;
+      const { error } = await supabaseService
+        .from("venture_daily_tasks")
+        .insert({
+          user_id: user.id,
+          venture_id: ventureId,
+          task_date: today,
+          tasks: finalTasks,
+          append_count: 0,
+        });
+      dbError = error;
+    }
+
+    if (dbError) {
+      console.error("[generate-daily-execution-tasks] DB error:", dbError);
       return new Response(
         JSON.stringify({ error: "Failed to save tasks", code: "DB_WRITE_FAILED" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -246,7 +310,13 @@ Generate 1-3 focused execution tasks for today.`
     }
 
     return new Response(
-      JSON.stringify({ success: true, alreadyGenerated: false, tasks }),
+      JSON.stringify({ 
+        success: true, 
+        alreadyGenerated: false, 
+        tasks: finalTasks,
+        appended: append && !!existingTasksRow,
+        newTasksCount: newTasks.length
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

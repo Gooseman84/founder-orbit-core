@@ -10,7 +10,7 @@ import { DailyCheckinForm } from "@/components/tasks/DailyCheckinForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Sparkles, CheckCircle2, AlertTriangle, Inbox } from "lucide-react";
+import { Loader2, Sparkles, CheckCircle2, AlertTriangle, Inbox, Plus } from "lucide-react";
 
 type CheckinPayload = {
   completionStatus: "yes" | "partial" | "no";
@@ -33,6 +33,7 @@ const Tasks = () => {
     generateDailyTasksError,
     todayCheckin,
     hasCheckedInToday,
+    allTasksCompleted,
     generateDailyTasks,
     submitCheckin,
     markTaskCompleted,
@@ -105,6 +106,22 @@ const Tasks = () => {
     return success;
   };
 
+  // Handler for generating more tasks (append mode)
+  // Note: We allow generating more tasks even after check-in if all tasks are complete.
+  // This enables "power mode" where users can keep executing without being speed-limited.
+  const handleGenerateMoreTasks = async () => {
+    await generateDailyTasks({ append: true });
+    
+    // Show error toast if rate limited
+    if (generateDailyTasksError?.includes("enough tasks for today")) {
+      toast({
+        title: "Task Limit Reached",
+        description: generateDailyTasksError,
+        variant: "destructive",
+      });
+    }
+  };
+
   // Show loading while venture state is being determined
   if (ventureLoading) {
     return (
@@ -123,7 +140,14 @@ const Tasks = () => {
     );
   }
 
-  const allTasksCompleted = dailyTasks.length > 0 && dailyTasks.every(t => t.completed);
+  // Determine if "Generate more tasks" button should be shown
+  // Conditions: executing state + tasks exist + all completed
+  // We allow this even after check-in so users aren't speed-limited
+  const showGenerateMoreButton = 
+    activeVenture.venture_state === "executing" &&
+    dailyTasks.length > 0 &&
+    allTasksCompleted &&
+    !isGeneratingTasks;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -148,10 +172,10 @@ const Tasks = () => {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
               <span className="text-muted-foreground">
-                {isGeneratingTasks ? "Generating today's tasks..." : "Loading..."}
+                {isGeneratingTasks ? "Generating tasks..." : "Loading..."}
               </span>
             </div>
-          ) : generateDailyTasksError ? (
+          ) : generateDailyTasksError && dailyTasks.length === 0 ? (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>{generateDailyTasksError}</AlertDescription>
@@ -160,23 +184,57 @@ const Tasks = () => {
             <div className="flex flex-col items-center py-8 text-center">
               <Inbox className="h-12 w-12 text-muted-foreground mb-3" />
               <p className="text-muted-foreground">No tasks for today yet.</p>
-              <Button onClick={generateDailyTasks} className="mt-4" disabled={isGeneratingTasks}>
+              <Button onClick={() => generateDailyTasks()} className="mt-4" disabled={isGeneratingTasks}>
                 <Sparkles className="mr-2 h-4 w-4" />
                 Generate Tasks
               </Button>
             </div>
           ) : (
-            dailyTasks.map((task) => (
-              <ExecutionTaskCard
-                key={task.id}
-                task={task}
-                onToggle={(completed) => markTaskCompleted(task.id, completed)}
-                disabled={hasCheckedInToday}
-              />
-            ))
+            <>
+              {dailyTasks.map((task) => (
+                <ExecutionTaskCard
+                  key={task.id}
+                  task={task}
+                  onToggle={(completed) => markTaskCompleted(task.id, completed)}
+                  disabled={false} // Allow toggling even after check-in for corrections
+                />
+              ))}
+              
+              {/* Generate More Tasks Button - appears when all tasks are complete */}
+              {showGenerateMoreButton && (
+                <div className="pt-4 border-t border-border/50">
+                  <Button 
+                    onClick={handleGenerateMoreTasks} 
+                    variant="outline" 
+                    className="w-full"
+                    disabled={isGeneratingTasks}
+                  >
+                    {isGeneratingTasks ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-2 h-4 w-4" />
+                    )}
+                    Generate More Tasks
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    Keep executing — no need to wait for tomorrow
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
+
+      {/* Rate limit error toast display */}
+      {generateDailyTasksError && dailyTasks.length > 0 && (
+        <Alert variant="default" className="border-amber-500/30 bg-amber-500/5">
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertDescription className="text-amber-700 dark:text-amber-400">
+            {generateDailyTasksError}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Daily Check-in Section */}
       {hasCheckedInToday ? (
