@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useNorthStarVenture } from "@/hooks/useNorthStarVenture";
@@ -42,23 +42,28 @@ interface NavSectionProps {
 function NavSectionComponent({ label, items, defaultOpen = false, onNavigate }: NavSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
+  // Update open state when defaultOpen changes
+  useEffect(() => {
+    setIsOpen(defaultOpen);
+  }, [defaultOpen]);
+
   if (items.length === 0) return null;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
-        <button className="flex items-center justify-between w-full px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+        <button className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
           <span>{label}</span>
-          <ChevronRight className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-90")} />
+          <ChevronRight className={cn("h-3 w-3 transition-transform duration-200", isOpen && "rotate-90")} />
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="space-y-1">
+      <CollapsibleContent className="space-y-0.5">
         {items.map((item) => (
           <NavLink
             key={item.name}
             to={item.href}
             onClick={onNavigate}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg text-foreground/80 hover:bg-secondary hover:text-foreground transition-colors ml-2"
+            className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-md text-foreground/80 hover:bg-secondary hover:text-foreground transition-colors ml-1"
             activeClassName="bg-primary text-primary-foreground font-semibold ring-1 ring-primary/40 hover:bg-primary/90"
           >
             <item.icon className="w-4 h-4 shrink-0" />
@@ -135,18 +140,21 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
     onNavigate?.();
   };
 
+  // Determine if executing (to open Build section by default)
+  const isExecuting = ventureState === "executing";
+
   return (
-    <nav className="flex flex-col gap-1 p-4 h-full">
+    <nav className="flex flex-col gap-0.5 p-3 h-full">
       {/* NOW Section - Always visible */}
-      <div className="mb-2">
-        <span className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground block">Now</span>
-        <div className="space-y-1">
+      <div className="mb-1">
+        <span className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground block">Now</span>
+        <div className="space-y-0.5">
           {nowItems.map((item) => (
             <NavLink
               key={item.name}
               to={item.href}
               onClick={onNavigate}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg text-foreground/80 hover:bg-secondary hover:text-foreground transition-colors"
+              className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-md text-foreground/80 hover:bg-secondary hover:text-foreground transition-colors"
               activeClassName="bg-primary text-primary-foreground font-semibold ring-1 ring-primary/40 hover:bg-primary/90"
             >
               <item.icon className="w-4 h-4 shrink-0" />
@@ -157,13 +165,13 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
       </div>
 
       {createItems.length > 0 && <NavSectionComponent label="Create" items={createItems} defaultOpen={false} onNavigate={onNavigate} />}
-      {buildItems.length > 0 && <NavSectionComponent label="Build" items={buildItems} defaultOpen={false} onNavigate={onNavigate} />}
+      {buildItems.length > 0 && <NavSectionComponent label="Build" items={buildItems} defaultOpen={isExecuting} onNavigate={onNavigate} />}
       {alignItems.length > 0 && <NavSectionComponent label="Align" items={alignItems} defaultOpen={false} onNavigate={onNavigate} />}
       <NavSectionComponent label="System" items={systemItems} defaultOpen={false} onNavigate={onNavigate} />
       
-      <div className="mt-auto pt-4 border-t border-border space-y-2">
+      <div className="mt-auto pt-3 border-t border-border space-y-1">
         <UpgradeButton variant="sidebar" />
-        <Button variant="ghost" className="w-full justify-start gap-3 px-4 py-3 text-sm font-medium" onClick={handleSignOut}>
+        <Button variant="ghost" className="w-full justify-start gap-2.5 px-3 py-2 text-sm font-medium" onClick={handleSignOut}>
           <LogOut className="w-4 h-4 shrink-0" />
           Sign Out
         </Button>

@@ -46,7 +46,7 @@ const VentureReview = () => {
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirect if not in reviewed state
+  // Allow access during executing OR reviewed states (users can always review/pivot/kill)
   useEffect(() => {
     if (ventureLoading) return;
 
@@ -55,10 +55,12 @@ const VentureReview = () => {
       return;
     }
 
-    if (activeVenture.venture_state !== "reviewed") {
+    // Only allow access if in executing or reviewed state
+    const allowedStates = ["executing", "reviewed"];
+    if (!allowedStates.includes(activeVenture.venture_state)) {
       toast({
-        title: "Not in Review",
-        description: "This page is only available when your commitment window has ended.",
+        title: "No Active Venture",
+        description: "You need an active venture to access this page.",
       });
       navigate("/dashboard", { replace: true });
     }
@@ -159,12 +161,21 @@ const VentureReview = () => {
     ? differenceInDays(new Date(activeVenture.commitment_end_at), new Date(activeVenture.commitment_start_at))
     : 0;
 
+  // Show different header based on state
+  const isReviewRequired = activeVenture.venture_state === "reviewed";
+
   return (
-    <div className="space-y-6 max-w-3xl mx-auto py-8 px-4">
+    <div className="space-y-6 max-w-3xl mx-auto py-6 px-4">
       {/* Header */}
       <div className="text-center space-y-2">
-        <Badge variant="outline" className="border-amber-500 text-amber-600">
-          Review Required
+        <Badge 
+          variant="outline" 
+          className={isReviewRequired 
+            ? "border-amber-500 text-amber-600" 
+            : "border-primary text-primary"
+          }
+        >
+          {isReviewRequired ? "Review Required" : "Venture Controls"}
         </Badge>
         <h1 className="text-2xl font-bold">{activeVenture.name}</h1>
         <p className="text-muted-foreground">{activeVenture.success_metric}</p>

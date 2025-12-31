@@ -117,13 +117,13 @@ export function AppShell({ children }: AppShellProps) {
       </div>
 
       {/* Desktop Sidebar - visible on md+ */}
-      <aside className="fixed left-0 top-16 bottom-0 w-64 bg-card border-r border-border overflow-y-auto hidden md:block z-40">
+      <aside className="fixed left-0 top-16 bottom-0 w-56 bg-card border-r border-border overflow-y-auto hidden md:block z-40">
         <SidebarNav />
       </aside>
 
       {/* Main Content */}
-      <main className="pt-14 pb-16 md:pt-16 md:pb-0 md:pl-64 min-w-0 overflow-x-hidden">
-        <div className="container mx-auto py-4 px-3 md:py-8 md:px-8 max-w-7xl overflow-hidden">
+      <main className="pt-14 pb-16 md:pt-16 md:pb-0 md:pl-56 min-w-0 overflow-x-hidden">
+        <div className="container mx-auto py-4 px-3 md:py-6 md:px-6 max-w-7xl overflow-hidden">
           {children}
         </div>
       </main>
