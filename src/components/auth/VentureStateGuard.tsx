@@ -35,15 +35,21 @@ export function VentureStateGuard({ children }: VentureStateGuardProps) {
     
     if (!allowed) {
       const redirectTo = getRedirectPath(ventureState);
-      const message = getLockedMessage(ventureState);
       
       console.log(`[VentureStateGuard] Blocking "${currentPath}" (state: ${ventureState}) -> redirecting to "${redirectTo}"`);
       
-      toast({
-        title: "Section Locked",
-        description: message,
-        variant: "default",
-      });
+      // Show specific toast for reviewed state
+      if (ventureState === "reviewed") {
+        toast({
+          title: "Commitment Ended",
+          description: "Complete your Venture Review to proceed.",
+        });
+      } else {
+        toast({
+          title: "Section Locked",
+          description: getLockedMessage(ventureState),
+        });
+      }
       
       navigate(redirectTo, { replace: true });
     }
