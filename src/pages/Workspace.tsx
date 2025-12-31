@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { useVentureState } from '@/hooks/useVentureState';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useXP } from '@/hooks/useXP';
@@ -13,7 +14,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, CheckCircle2, Download, Copy } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { FileText, CheckCircle2, Download, Copy, Menu } from 'lucide-react';
 import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
@@ -22,6 +24,7 @@ import { ProBadge } from '@/components/billing/ProBadge';
 import { ProUpgradeModal } from '@/components/billing/ProUpgradeModal';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { PLAN_FEATURES } from '@/config/plans';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { PaywallReasonCode } from '@/config/paywallCopy';
 import type { TaskContext } from '@/types/tasks';
 
@@ -33,18 +36,27 @@ export default function Workspace() {
   const { user } = useAuth();
   const { refresh: refreshXp } = useXP();
   const { plan } = useSubscription();
+  const { activeVenture } = useVentureState();
+  const isMobile = useIsMobile();
   const isPro = plan === 'pro' || plan === 'founder';
+
+  // Initialize workspace with venture scoping
   const {
     documents,
     currentDocument,
     loading,
+    scope,
     loadDocument,
     createDocument,
     updateContent,
     renameDocument,
     requestAISuggestion,
     refreshList,
-  } = useWorkspace();
+    changeScope,
+  } = useWorkspace({
+    ventureId: activeVenture?.id,
+    scope: activeVenture ? 'current_venture' : 'all',
+  });
 
   const [isNewDocDialogOpen, setIsNewDocDialogOpen] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
@@ -54,6 +66,7 @@ export default function Workspace() {
   const [completingTask, setCompletingTask] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<PaywallReasonCode>("EXPORT_REQUIRES_PRO");
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const { track } = useAnalytics();
   
   // Get workspace doc limit for free users
@@ -104,17 +117,19 @@ export default function Workspace() {
     }
   };
 
-  // Load documents list on mount
+  // Load documents list on mount and when venture/scope changes
   useEffect(() => {
     refreshList();
-  }, [refreshList]);
+  }, [refreshList, activeVenture?.id, scope]);
 
   // Load document if ID is in URL
   useEffect(() => {
     if (documentId) {
       loadDocument(documentId);
+      // Close mobile drawer when selecting a doc
+      if (isMobile) setMobileDrawerOpen(false);
     }
-  }, [documentId, loadDocument]);
+  }, [documentId, loadDocument, isMobile]);
 
   // Debounced content update
   const debouncedUpdate = useCallback(
@@ -154,10 +169,12 @@ export default function Workspace() {
       return;
     }
 
+    // Associate document with active venture if executing
     const doc = await createDocument({
       doc_type: newDocType,
       title: newDocTitle.trim(),
       source_type: 'manual',
+      venture_id: activeVenture?.id || undefined,
     });
 
     if (doc) {
@@ -229,6 +246,7 @@ export default function Workspace() {
           title: `${currentDocument.title || 'Untitled'} (Copy)`,
           content: currentDocument.content || '',
           status: currentDocument.status || 'draft',
+          venture_id: currentDocument.venture_id || activeVenture?.id || null,
         })
         .select('id')
         .single();
@@ -251,144 +269,198 @@ export default function Workspace() {
     }
   };
 
+  const handleSelectDocument = (id: string) => {
+    navigate(`/workspace/${id}`);
+    if (isMobile) setMobileDrawerOpen(false);
+  };
+
+  // Sidebar component (reused in both desktop and mobile)
+  const sidebarContent = (
+    <WorkspaceSidebar
+      documents={documents}
+      currentId={currentDocument?.id}
+      loading={loading}
+      onSelect={handleSelectDocument}
+      onNewDocument={() => setIsNewDocDialogOpen(true)}
+      onRename={renameDocument}
+      scope={scope}
+      onScopeChange={changeScope}
+      ventureName={activeVenture?.name}
+    />
+  );
+
   return (
-    <div className="flex flex-col md:flex-row min-h-[calc(100vh-4rem)] gap-4 overflow-hidden">
-      {/* Left Sidebar - Documents List (hidden on mobile, shown as full-width section) */}
-      <aside className="w-full md:w-56 shrink-0 min-w-0 overflow-hidden">
-        <WorkspaceSidebar
-          documents={documents}
-          currentId={currentDocument?.id}
-          loading={loading}
-          onSelect={(id) => navigate(`/workspace/${id}`)}
-          onNewDocument={() => setIsNewDocDialogOpen(true)}
-          onRename={renameDocument}
-        />
-      </aside>
-
-      {/* Main Editor Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {currentDocument && (
-          <div className="flex items-center justify-between mb-2 gap-2">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm text-muted-foreground">Status:</Label>
-              <Select
-                value={currentDocument.status || 'draft'}
-                onValueChange={async (value) => {
-                  try {
-                    const { error } = await supabase
-                      .from('workspace_documents')
-                      .update({ status: value })
-                      .eq('id', currentDocument.id);
-                    if (error) throw error;
-                    await loadDocument(currentDocument.id);
-                    await refreshList();
-                    toast({ title: 'Status updated' });
-                  } catch (err) {
-                    console.error('Error updating status:', err);
-                    toast({
-                      title: 'Error',
-                      description: 'Failed to update status',
-                      variant: 'destructive',
-                    });
-                  }
-                }}
-              >
-                <SelectTrigger className="w-[120px] h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="final">Final</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDuplicateDocument}
-              >
-                <Copy className="w-4 h-4 mr-1" />
-                Duplicate
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+      <div className="flex flex-1 min-h-0 gap-3 p-2 md:p-3">
+        {/* Mobile: Drawer trigger + Sheet */}
+        {isMobile && (
+          <Sheet open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="absolute top-2 left-2 z-10 md:hidden">
+                <Menu className="w-4 h-4 mr-1.5" />
+                Docs
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (!isPro) {
-                    setPaywallReason("EXPORT_REQUIRES_PRO");
-                    setShowPaywall(true);
-                    track("paywall_shown", { reasonCode: "EXPORT_REQUIRES_PRO" });
-                    return;
-                  }
-                  exportWorkspaceDocToPdf({
-                    title: currentDocument.title || 'Workspace Document',
-                    content: currentDocument.content || '',
-                  });
-                }}
-                className="gap-1"
-              >
-                <Download className="w-4 h-4" />
-                Export as PDF
-                {!isPro && <ProBadge variant="pill" size="sm" locked />}
-              </Button>
-            </div>
-          </div>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0">
+              <div className="h-full pt-10">
+                {sidebarContent}
+              </div>
+            </SheetContent>
+          </Sheet>
         )}
-        {!currentDocument ? (
-          <Card className="h-full flex items-center justify-center">
-            <CardContent className="text-center">
-              <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-lg font-medium mb-2">Select a document or start a new one</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Choose from the sidebar or create a new workspace document
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <WorkspaceEditor document={currentDocument} onChange={handleEditorChange} />
-        )}
-      </div>
 
-      {/* Right Panel - AI Assistant (stacks below on mobile) */}
-      {currentDocument && (
-        <aside className="w-full md:w-96 shrink-0 min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Linked Task Card */}
-          {taskContext && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className={`w-5 h-5 mt-0.5 ${taskCompleted ? 'text-green-500' : 'text-primary'}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{taskContext.title}</p>
-                    {taskContext.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                        {taskContext.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                      {taskContext.estimated_minutes && (
-                        <span>{taskContext.estimated_minutes} min</span>
-                      )}
-                      {taskContext.xp_reward && (
-                        <span className="text-primary">+{taskContext.xp_reward} XP</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  className="w-full mt-3"
-                  onClick={handleCompleteLinkedTask}
-                  disabled={taskCompleted || completingTask}
+        {/* Desktop: Left Sidebar - Documents List */}
+        {!isMobile && (
+          <aside className="w-64 shrink-0 min-w-0 hidden md:block">
+            {sidebarContent}
+          </aside>
+        )}
+
+        {/* Main Editor Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {currentDocument && (
+            <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-muted-foreground hidden sm:inline">Status:</Label>
+                <Select
+                  value={currentDocument.status || 'draft'}
+                  onValueChange={async (value) => {
+                    try {
+                      const { error } = await supabase
+                        .from('workspace_documents')
+                        .update({ status: value })
+                        .eq('id', currentDocument.id);
+                      if (error) throw error;
+                      await loadDocument(currentDocument.id);
+                      await refreshList();
+                      toast({ title: 'Status updated' });
+                    } catch (err) {
+                      console.error('Error updating status:', err);
+                      toast({
+                        title: 'Error',
+                        description: 'Failed to update status',
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
                 >
-                  {taskCompleted ? 'Completed ✓' : completingTask ? 'Completing...' : 'Mark Task Complete'}
+                  <SelectTrigger className="w-[100px] sm:w-[120px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="final">Final</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDuplicateDocument}
+                  className="h-8"
+                >
+                  <Copy className="w-4 h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Duplicate</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!isPro) {
+                      setPaywallReason("EXPORT_REQUIRES_PRO");
+                      setShowPaywall(true);
+                      track("paywall_shown", { reasonCode: "EXPORT_REQUIRES_PRO" });
+                      return;
+                    }
+                    exportWorkspaceDocToPdf({
+                      title: currentDocument.title || 'Workspace Document',
+                      content: currentDocument.content || '',
+                    });
+                  }}
+                  className="h-8 gap-1"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Export</span>
+                  {!isPro && <ProBadge variant="pill" size="sm" locked />}
+                </Button>
+              </div>
+            </div>
+          )}
+          {!currentDocument ? (
+            <Card className="h-full flex items-center justify-center">
+              <CardContent className="text-center py-12">
+                <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-lg font-medium mb-2">Select a document or start a new one</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {isMobile ? 'Tap "Docs" to browse' : 'Choose from the sidebar or create a new workspace document'}
+                </p>
+                <Button onClick={() => setIsNewDocDialogOpen(true)} size="sm">
+                  <FileText className="w-4 h-4 mr-1.5" />
+                  New Document
                 </Button>
               </CardContent>
             </Card>
+          ) : (
+            <WorkspaceEditor document={currentDocument} onChange={handleEditorChange} />
           )}
-          
+        </div>
+
+        {/* Right Panel - AI Assistant (hidden on mobile, shown below editor) */}
+        {currentDocument && !isMobile && (
+          <aside className="w-80 shrink-0 min-w-0 flex flex-col gap-3 overflow-hidden">
+            {/* Linked Task Card */}
+            {taskContext && (
+              <Card className="border-primary/20 bg-primary/5 shrink-0">
+                <CardContent className="p-3">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className={`w-4 h-4 mt-0.5 ${taskCompleted ? 'text-green-500' : 'text-primary'}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{taskContext.title}</p>
+                      {taskContext.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                          {taskContext.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                        {taskContext.estimated_minutes && (
+                          <span>{taskContext.estimated_minutes} min</span>
+                        )}
+                        {taskContext.xp_reward && (
+                          <span className="text-primary">+{taskContext.xp_reward} XP</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full mt-2 h-7"
+                    onClick={handleCompleteLinkedTask}
+                    disabled={taskCompleted || completingTask}
+                  >
+                    {taskCompleted ? 'Completed ✓' : completingTask ? 'Completing...' : 'Mark Task Complete'}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+            
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <WorkspaceAssistantPanel
+                document={currentDocument}
+                loading={aiLoading}
+                onRequestSuggestion={handleRequestAI}
+                onApplySuggestion={handleApplySuggestion}
+                taskContext={taskContext}
+              />
+            </div>
+          </aside>
+        )}
+      </div>
+
+      {/* Mobile: AI Assistant below editor */}
+      {currentDocument && isMobile && (
+        <div className="p-2 pt-0">
           <WorkspaceAssistantPanel
             document={currentDocument}
             loading={aiLoading}
@@ -396,7 +468,7 @@ export default function Workspace() {
             onApplySuggestion={handleApplySuggestion}
             taskContext={taskContext}
           />
-        </aside>
+        </div>
       )}
 
       {/* New Document Dialog */}
@@ -404,7 +476,12 @@ export default function Workspace() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>New Document</DialogTitle>
-            <DialogDescription>Create a new workspace document</DialogDescription>
+            <DialogDescription>
+              {activeVenture 
+                ? `Create a document for "${activeVenture.name}"`
+                : 'Create a new workspace document'
+              }
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div>

@@ -12,14 +12,25 @@ interface CreateDocumentParams {
   source_type?: string;
   source_id?: string;
   idea_id?: string;
+  venture_id?: string; // Added: associate doc with a venture
 }
 
-export function useWorkspace() {
+export type WorkspaceScope = 'current_venture' | 'all';
+
+interface UseWorkspaceOptions {
+  ventureId?: string | null;
+  scope?: WorkspaceScope;
+}
+
+export function useWorkspace(options: UseWorkspaceOptions = {}) {
   const { user } = useAuth();
   const [documents, setDocuments] = useState<WorkspaceDocument[]>([]);
   const [currentDocument, setCurrentDocument] = useState<WorkspaceDocument | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scope, setScope] = useState<WorkspaceScope>(options.scope ?? 'current_venture');
+
+  const ventureId = options.ventureId;
 
   /**
    * Load a single document by ID
@@ -81,6 +92,7 @@ export function useWorkspace() {
           source_type: params.source_type || 'manual',
           source_id: params.source_id || null,
           idea_id: params.idea_id || null,
+          venture_id: params.venture_id || null, // Associate with venture
           content: '',
           status: 'draft',
         })
@@ -220,16 +232,8 @@ export function useWorkspace() {
           .eq('id', documentId);
       }
 
-      // Refresh documents list
-      const { data: docs } = await supabase
-        .from('workspace_documents')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
-      
-      if (docs) {
-        setDocuments(docs as WorkspaceDocument[]);
-      }
+      // Refresh documents list based on current scope
+      await refreshList();
 
       // Reload the current document to update state
       const { data: updatedDoc } = await supabase
@@ -284,23 +288,31 @@ export function useWorkspace() {
   }, [user, currentDocument?.id]);
 
   /**
-   * Refresh the list of documents
+   * Refresh the list of documents based on scope
    */
-  const refreshList = useCallback(async () => {
+  const refreshList = useCallback(async (overrideScope?: WorkspaceScope) => {
     if (!user) {
       setDocuments([]);
       return;
     }
 
+    const effectiveScope = overrideScope ?? scope;
     setLoading(true);
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('workspace_documents')
         .select('*')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
+
+      // Apply venture scoping if in current_venture mode and ventureId is provided
+      if (effectiveScope === 'current_venture' && ventureId) {
+        query = query.eq('venture_id', ventureId);
+      }
+
+      const { data, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
 
@@ -312,18 +324,28 @@ export function useWorkspace() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, scope, ventureId]);
+
+  /**
+   * Change the scope and refresh documents
+   */
+  const changeScope = useCallback((newScope: WorkspaceScope) => {
+    setScope(newScope);
+    refreshList(newScope);
+  }, [refreshList]);
 
   return {
     documents,
     currentDocument,
     loading,
     error,
+    scope,
     loadDocument,
     createDocument,
     updateContent,
     renameDocument,
     requestAISuggestion,
     refreshList,
+    changeScope,
   };
 }
