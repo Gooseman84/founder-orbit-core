@@ -1134,6 +1134,7 @@ export type Database = {
       }
       venture_daily_tasks: {
         Row: {
+          append_count: number
           created_at: string
           id: string
           task_date: string
@@ -1143,6 +1144,7 @@ export type Database = {
           venture_id: string
         }
         Insert: {
+          append_count?: number
           created_at?: string
           id?: string
           task_date?: string
@@ -1152,6 +1154,7 @@ export type Database = {
           venture_id: string
         }
         Update: {
+          append_count?: number
           created_at?: string
           id?: string
           task_date?: string

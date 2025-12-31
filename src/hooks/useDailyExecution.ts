@@ -24,6 +24,20 @@ export interface DailyCheckin {
   created_at: string;
 }
 
+interface GenerateTasksOptions {
+  append?: boolean;
+}
+
+interface GenerateTasksResponse {
+  success: boolean;
+  tasks: DailyTask[];
+  alreadyGenerated?: boolean;
+  appended?: boolean;
+  newTasksCount?: number;
+  error?: string;
+  code?: string;
+}
+
 interface UseDailyExecutionResult {
   // Active venture context
   venture: Venture | null;
@@ -47,8 +61,11 @@ interface UseDailyExecutionResult {
   todayCheckin: DailyCheckin | null;
   hasCheckedInToday: boolean;
   
+  // Whether all tasks are completed (useful for showing "Generate more" button)
+  allTasksCompleted: boolean;
+  
   // Actions
-  generateDailyTasks: () => Promise<void>;
+  generateDailyTasks: (options?: GenerateTasksOptions) => Promise<void>;
   submitCheckin: (data: {
     completionStatus: "yes" | "partial" | "no";
     explanation?: string;
@@ -124,19 +141,28 @@ export function useDailyExecution(venture: Venture | null): UseDailyExecutionRes
   }, [dailyTasksData]);
 
   // Generate daily tasks from blueprint/venture plan
-  const generateDailyTasks = useCallback(async () => {
+  // Options.append: if true, generates additional tasks instead of returning existing
+  const generateDailyTasks = useCallback(async (options: GenerateTasksOptions = {}) => {
     if (!user || !ventureId) return;
     
     setIsGenerating(true);
     setGenerateError(null);
     
     try {
-      const { data, error } = await invokeAuthedFunction<{ tasks: DailyTask[] }>(
+      const { data, error } = await invokeAuthedFunction<GenerateTasksResponse>(
         "generate-daily-execution-tasks",
-        { body: { ventureId } }
+        { body: { ventureId, append: options.append ?? false } }
       );
       
-      if (error) throw error;
+      if (error) {
+        // Handle append limit reached specifically
+        if (error.message?.includes("enough tasks for today")) {
+          setGenerateError("You've generated enough tasks for today. Execute.");
+        } else {
+          throw error;
+        }
+        return;
+      }
       
       // Refetch to get the saved tasks
       await refetchTasks();
@@ -209,6 +235,9 @@ export function useDailyExecution(venture: Venture | null): UseDailyExecutionRes
     refetchCheckin();
   }, [refetchTasks, refetchCheckin]);
 
+  // Compute whether all tasks are completed
+  const allTasksCompleted = localTasks.length > 0 && localTasks.every(t => t.completed);
+
   return {
     venture,
     commitmentProgress,
@@ -218,6 +247,7 @@ export function useDailyExecution(venture: Venture | null): UseDailyExecutionRes
     generateDailyTasksError: generateError,
     todayCheckin: todayCheckin ?? null,
     hasCheckedInToday: !!todayCheckin,
+    allTasksCompleted,
     generateDailyTasks,
     submitCheckin,
     markTaskCompleted,
