@@ -3,15 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 export interface WorkspaceDocument {
   id: string;
   user_id: string;
-  idea_id?: string;
-  source_type?: string;
-  source_id?: string;
-  doc_type?: string;
+  idea_id?: string | null;
+  venture_id?: string | null;
+  source_type?: string | null;
+  source_id?: string | null;
+  doc_type?: string | null;
   title: string;
-  content?: string;
-  ai_suggestions?: string;
-  status?: string;
+  content?: string | null;
+  ai_suggestions?: string | null;
+  status?: string | null;
   metadata?: any;
+  linked_task_id?: string | null;
   created_at: string;
   updated_at: string;
 }
