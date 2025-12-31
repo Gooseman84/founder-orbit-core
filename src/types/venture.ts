@@ -1,7 +1,8 @@
 // Type definitions for ventures and venture plans
 
 // Venture state machine states
-export type VentureState = "inactive" | "committed" | "executing" | "reviewed" | "killed";
+// Note: "committed" is deprecated - we transition directly from inactive to executing
+export type VentureState = "inactive" | "executing" | "reviewed" | "killed";
 
 // Commitment window options
 export type CommitmentWindowDays = 14 | 30 | 90;
@@ -83,10 +84,9 @@ export interface GenerateVenturePlanResponse {
 
 // State machine transition rules
 export const VALID_STATE_TRANSITIONS: Record<VentureState, VentureState[]> = {
-  inactive: ["committed"],
-  committed: ["executing", "inactive"],
+  inactive: ["executing"], // Direct start
   executing: ["reviewed"],
-  reviewed: ["committed", "inactive", "killed"],
+  reviewed: ["executing", "inactive", "killed"], // continue, pivot, kill
   killed: [], // Terminal state - no transitions allowed
 };
 
@@ -96,7 +96,7 @@ export function canTransitionTo(currentState: VentureState, targetState: Venture
 }
 
 export function isActiveVentureState(state: VentureState): boolean {
-  return state === "committed" || state === "executing" || state === "reviewed";
+  return state === "executing" || state === "reviewed";
 }
 
 export function isTerminalState(state: VentureState): boolean {
@@ -124,8 +124,8 @@ export function canAccessIdeationTools(state: VentureState): boolean {
 
 // Commitment validation
 
-// CommitmentDraft: Required for transitioning to 'committed' state
-// Contains the planning fields (window + metric) but not execution timestamps
+// CommitmentDraft: Contains planning fields (window + metric) but not execution timestamps
+// Used for intermediate validation before starting execution
 export interface CommitmentDraft {
   commitment_window_days: CommitmentWindowDays;
   success_metric: string;

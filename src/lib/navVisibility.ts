@@ -93,8 +93,8 @@ export function getNavVisibility(ventureState: VentureState | null): NavVisibili
     };
   }
 
-  // When inactive or committed: ideation/planning surfaces, NO tasks
-  // "inactive" | "committed" | "killed" | null
+  // When inactive or killed: ideation/planning surfaces, NO tasks
+  // "inactive" | "killed" | null
   return {
     allowed: [
       ...commonSections,
@@ -216,7 +216,7 @@ export function isRouteAllowed(path: string, ventureState: VentureState | null):
     return false;
   }
   
-  // For other states (inactive, committed, killed, null), allow unknown routes
+  // For other states (inactive, killed, null), allow unknown routes
   // These are typically exploration states where flexibility is okay
   return true;
 }

@@ -172,30 +172,7 @@ const Blueprint = () => {
       endDate.setDate(endDate.getDate() + windowDays);
 
       if (ventureState === "inactive") {
-        // Two-step: inactive → committed → executing
-        const draftData: CommitmentDraft = {
-          commitment_window_days: windowDays,
-          success_metric: successMetric.trim(),
-        };
-        
-        const committedSuccess = await transitionTo(venture.id, "committed", draftData);
-        if (!committedSuccess) {
-          throw new Error("Failed to transition to committed state");
-        }
-
-        // Now transition to executing
-        const fullData: CommitmentFull = {
-          ...draftData,
-          commitment_start_at: now.toISOString(),
-          commitment_end_at: endDate.toISOString(),
-        };
-
-        const executingSuccess = await transitionTo(venture.id, "executing", fullData);
-        if (!executingSuccess) {
-          throw new Error("Failed to start execution");
-        }
-      } else if (ventureState === "committed") {
-        // Single step: committed → executing
+        // Direct transition: inactive → executing
         const fullData: CommitmentFull = {
           commitment_window_days: windowDays,
           success_metric: successMetric.trim(),

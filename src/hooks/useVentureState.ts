@@ -32,7 +32,6 @@ interface UseVentureStateResult {
   canAccessIdeationTools: boolean;
 
   // State transition methods
-  // For 'committed': pass CommitmentDraft (window + metric)
   // For 'executing': pass CommitmentFull (window + metric + start/end timestamps)
   transitionTo: (
     ventureId: string, 
@@ -68,12 +67,12 @@ export function useVentureState(): UseVentureStateResult {
     setError(null);
 
     try {
-      // Find the active venture (committed, executing, or reviewed state)
+      // Find the active venture (executing or reviewed state)
       const { data, error: fetchError } = await supabase
         .from("ventures")
         .select("*")
         .eq("user_id", user.id)
-        .in("venture_state", ["committed", "executing", "reviewed"])
+        .in("venture_state", ["executing", "reviewed"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -103,7 +102,6 @@ export function useVentureState(): UseVentureStateResult {
   }, [refresh]);
 
   // Transition a venture to a new state
-  // For 'committed': requires CommitmentDraft (window + metric)
   // For 'executing': requires CommitmentFull (window + metric + timestamps)
   const transitionTo = useCallback(async (
     ventureId: string,
@@ -135,12 +133,6 @@ export function useVentureState(): UseVentureStateResult {
       }
 
       // Validate commitment data based on target state
-      if (targetState === "committed") {
-        if (!commitmentData || !isValidCommitmentDraft(commitmentData)) {
-          throw new Error("Commitment window and success metric are required to enter committed state");
-        }
-      }
-
       if (targetState === "executing") {
         if (!commitmentData || !isValidCommitmentFull(commitmentData)) {
           throw new Error("All commitment fields (window, metric, start/end dates) are required to enter executing state");
@@ -151,12 +143,6 @@ export function useVentureState(): UseVentureStateResult {
       const updateData: Record<string, unknown> = {
         venture_state: targetState,
       };
-
-      // Include commitment data for committed state (window + metric only)
-      if (targetState === "committed" && commitmentData) {
-        updateData.commitment_window_days = commitmentData.commitment_window_days;
-        updateData.success_metric = commitmentData.success_metric;
-      }
 
       // Include full commitment data for executing state
       if (targetState === "executing" && commitmentData && isValidCommitmentFull(commitmentData)) {
