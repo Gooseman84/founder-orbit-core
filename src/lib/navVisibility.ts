@@ -48,45 +48,47 @@ export function getNavVisibility(ventureState: VentureState | null): NavVisibili
     "context-inspector",
   ];
 
-  // When executing: ONLY execution surfaces
+  // When executing: focused on execution but flexible
+  // Allow contextual tools (blueprint, workspace, venture-review)
+  // Hide only ideation surfaces (idea generation, fusion, radar)
   if (ventureState === "executing") {
     return {
       allowed: [
         ...commonSections,
         "tasks",
         "workspace",
+        "blueprint",
+        "venture-review",
       ],
       hidden: [
         "idea-lab",
         "fusion-lab",
         "radar",
-        "blueprint",
         "north-star",
-        "venture-review",
       ],
       redirectTo: "/tasks",
     };
   }
 
-  // When reviewed: FORCE review completion before anything else
-  // Only review page + essential system pages allowed
+  // When reviewed: soft guidance toward review
+  // Allow reference tools (blueprint, workspace read-only)
   if (ventureState === "reviewed") {
     return {
       allowed: [
         "home",
         "daily-pulse",
         "venture-review",
+        "blueprint",
+        "workspace",
         "profile",
         "billing",
         "context-inspector",
       ],
       hidden: [
         "tasks",
-        "workspace",
         "idea-lab",
         "fusion-lab",
         "radar",
-        "blueprint",
         "north-star",
       ],
       redirectTo: "/venture-review",
@@ -183,10 +185,10 @@ function findSectionForPath(path: string): NavSection | null {
 /**
  * Check if a specific route is allowed for a given venture state.
  * 
- * STRICT MODE for executing state:
+ * SOFT GUIDANCE MODE:
  * - Public routes always allowed
  * - Known routes checked against allowed list
- * - UNKNOWN routes are BLOCKED (redirected to /tasks)
+ * - For executing/reviewed: only block ideation surfaces, allow contextual tools
  */
 export function isRouteAllowed(path: string, ventureState: VentureState | null): boolean {
   // Public routes are always allowed
@@ -203,22 +205,29 @@ export function isRouteAllowed(path: string, ventureState: VentureState | null):
   }
   
   // UNKNOWN ROUTE HANDLING:
-  // When executing, be STRICT - unknown routes are blocked
-  // This prevents bypass via obscure or new routes
+  // For executing state: allow unknown routes (soft guidance, not strict blocking)
+  // This prevents "locked room" feelings
   if (ventureState === "executing") {
-    console.warn(`[navVisibility] Unknown route "${path}" blocked in executing state`);
-    return false;
+    return true;
   }
   
-  // When reviewed, also be strict
+  // When reviewed, be slightly stricter but still allow navigation
   if (ventureState === "reviewed") {
-    console.warn(`[navVisibility] Unknown route "${path}" blocked in reviewed state`);
-    return false;
+    console.warn(`[navVisibility] Unknown route "${path}" in reviewed state - allowing with soft guidance`);
+    return true;
   }
   
   // For other states (inactive, killed, null), allow unknown routes
-  // These are typically exploration states where flexibility is okay
   return true;
+}
+
+/**
+ * Check if a route is an ideation surface that should be blocked during execution
+ */
+export function isIdeationRoute(path: string): boolean {
+  const section = findSectionForPath(path);
+  const ideationSections: NavSection[] = ["idea-lab", "fusion-lab", "radar", "north-star"];
+  return section !== null && ideationSections.includes(section);
 }
 
 /**
@@ -233,10 +242,10 @@ export function getRedirectPath(ventureState: VentureState | null): string {
  */
 export function getLockedMessage(ventureState: VentureState | null): string {
   if (ventureState === "executing") {
-    return "This section is locked while you're in execution mode. Focus on your current tasks.";
+    return "You're currently executing a venture. Finish or review it before exploring new ideas.";
   }
   if (ventureState === "reviewed") {
-    return "Complete your venture review before accessing this section.";
+    return "Complete your venture review before exploring new ideas.";
   }
   return "This section is not available in your current state.";
 }
