@@ -35,7 +35,9 @@ serve(async (req) => {
     }
 
     const token = authHeader.slice(7).trim();
-    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+    });
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
 
     if (userError || !user) {
@@ -81,7 +83,9 @@ serve(async (req) => {
       );
     }
 
-    const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+    });
 
     // Fetch venture with validation
     const { data: venture, error: ventureError } = await supabaseService
@@ -110,6 +114,10 @@ serve(async (req) => {
     const now = new Date().toISOString();
     let updateData: Record<string, any> = {};
 
+    // Merge review data into existing metadata safely
+    const existingMetadata = (venture.metadata as Record<string, any>) || {};
+    const reviewData = existingMetadata.review || {};
+
     if (action === "continue") {
       // Start new commitment window
       const windowDays = venture.commitment_window_days || 14;
@@ -121,18 +129,33 @@ serve(async (req) => {
         commitment_start_at: startAt.toISOString(),
         commitment_end_at: endAt.toISOString(),
         updated_at: now,
+        metadata: {
+          ...existingMetadata,
+          review: {
+            ...reviewData,
+            last_decision: "continue",
+            decided_at: now,
+          },
+        },
       };
       console.log("[venture-review-decision] Continuing with new window:", windowDays, "days");
 
     } else if (action === "pivot") {
-      // Set to inactive and store reason
-      const existingMetadata = (venture.metadata as Record<string, any>) || {};
+      // Set to inactive and store reason in metadata
       updateData = {
         venture_state: "inactive",
         updated_at: now,
-        // Clear commitment dates since we're exiting execution
         commitment_start_at: null,
         commitment_end_at: null,
+        metadata: {
+          ...existingMetadata,
+          review: {
+            ...reviewData,
+            last_decision: "pivot",
+            pivot_reason: reason?.trim(),
+            decided_at: now,
+          },
+        },
       };
       console.log("[venture-review-decision] Pivoting venture, reason:", reason);
 
@@ -141,6 +164,15 @@ serve(async (req) => {
       updateData = {
         venture_state: "killed",
         updated_at: now,
+        metadata: {
+          ...existingMetadata,
+          review: {
+            ...reviewData,
+            last_decision: "kill",
+            kill_reason: reason?.trim(),
+            decided_at: now,
+          },
+        },
       };
       console.log("[venture-review-decision] Killing venture, reason:", reason);
     }
