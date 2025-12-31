@@ -290,8 +290,8 @@ export default function Workspace() {
   );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
-      <div className="flex flex-1 min-h-0 gap-3 p-2 md:p-3">
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden -mt-2 md:-mt-4">
+      <div className="flex flex-1 min-h-0 gap-2 p-1 md:gap-3 md:p-2">
         {/* Mobile: Drawer trigger + Sheet */}
         {isMobile && (
           <Sheet open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
@@ -311,7 +311,7 @@ export default function Workspace() {
 
         {/* Desktop: Left Sidebar - Documents List */}
         {!isMobile && (
-          <aside className="w-64 shrink-0 min-w-0 hidden md:block">
+          <aside className="w-56 shrink-0 min-w-0 hidden md:block">
             {sidebarContent}
           </aside>
         )}
@@ -409,7 +409,7 @@ export default function Workspace() {
 
         {/* Right Panel - AI Assistant (hidden on mobile, shown below editor) */}
         {currentDocument && !isMobile && (
-          <aside className="w-80 shrink-0 min-w-0 flex flex-col gap-3 overflow-hidden">
+          <aside className="w-72 shrink-0 min-w-0 flex flex-col gap-2 overflow-hidden">
             {/* Linked Task Card */}
             {taskContext && (
               <Card className="border-primary/20 bg-primary/5 shrink-0">
