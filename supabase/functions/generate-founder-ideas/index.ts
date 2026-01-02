@@ -24,121 +24,189 @@ type IdeaGenerationMode =
 type GenerationTone = "standard" | "exciting";
 
 // ============================================
-// PASS A: CREATIVE DIVERGENCE PROMPT
+// PASS A: CREATIVE DIVERGENCE PROMPT (v7.1)
 // ============================================
-const PASS_A_SYSTEM_PROMPT = `You are TrueBlazer DIVERGENCE ENGINE v6.1 — UNHINGED CREATIVITY MODE.
+const PASS_A_SYSTEM_PROMPT = `You are TrueBlazer DIVERGENCE ENGINE — raw idea generator for founders.
 
-Your mission: Generate 12-20 RAW, WILD, BOLD business ideas with ZERO filtering.
+═══════════════════════════════════════════════════════════════════
+INTERNAL REASONING (do NOT output, just follow)
+═══════════════════════════════════════════════════════════════════
 
-RULES FOR PASS A:
------------------
-✓ ALLOW weird, bold, niche, unconventional ideas
-✓ OPTIMIZE for novelty, insight, emotional pull
-✓ IGNORE feasibility temporarily
-✓ ENCOURAGE asymmetric bets
-✓ INCLUDE surprising angles and contrarian takes
-✓ PUSH boundaries of what's possible
+Before generating, mentally run through:
 
-❌ NO scoring
-❌ NO filtering
-❌ NO rejection
-❌ NO "that won't work" thinking
-❌ NO corporate safe ideas
+1) FOUNDER ASSETS: What skills/platforms/unfair advantages jump out?
+2) ENERGY CLUES: What energizes vs drains them? Avoid drainers.
+3) CONSTRAINT REALITY: Time/capital limits → what's actually launchable?
+4) CONTRARIAN ANGLES: What's everyone else missing in their niches?
+5) PATTERN BREAKS: Combine 2 unrelated domains for surprise value.
 
-IDEA MODES TO USE:
-- "Standard": Solid, proven patterns with a twist
-- "Persona": AI characters, avatars, companions
-- "Chaos": Wild combinations, category mashups
-- "Memetic": Spreads like memes, humor-driven
-- "Fusion": Multiple concepts merged together
+═══════════════════════════════════════════════════════════════════
+OUTPUT SCHEMA (exactly this shape)
+═══════════════════════════════════════════════════════════════════
 
-OUTPUT SCHEMA (STRICT):
-Each idea must include:
 {
-  "raw_title": string,           // bold, punchy title
-  "raw_hook": string,            // 1 sentence that makes founders say "holy sh*t"
-  "novel_twist": string,         // why this is DIFFERENT
-  "target_persona": string,      // who desperately needs this
-  "why_this_is_interesting": string, // the insight that makes this special
-  "idea_mode": "Standard" | "Persona" | "Chaos" | "Memetic" | "Fusion"
-}
-
-TONE: Write like a sharp founder friend who just had 3 espressos. Not a consultant.
-
-RESPONSE FORMAT:
-- Return ONLY valid JSON: { "raw_ideas": [...] }
-- 12-20 ideas minimum
-- No markdown, no commentary
-`;
-
-// ============================================
-// PASS B: COMMERCIAL REFINEMENT PROMPT
-// ============================================
-function buildPassBSystemPrompt(wildcardMode: boolean): string {
-  const basePrompt = `You are TrueBlazer REFINEMENT ENGINE v2.0 — COMMERCIAL REALITY CHECK.
-
-Your mission: Take the best raw ideas and rewrite them as EXECUTABLE ventures while keeping the excitement.
-
-IMPORTANT: Keep output SMALL. Your #1 job is to obey the schema + length limits.
-If you exceed limits, shorten text. DO NOT add extra fields.
-
-OUTPUT SCHEMA (STRICT):
-Return ONLY valid JSON in this exact shape:
-{
-  "refined_ideas": [
+  "raw_ideas": [
     {
-      "id": string,
-      "title": string,
-      "one_liner_pitch": string,
-      "problem": string,          // max 240 chars
-      "solution": string,         // max 240 chars
-      "ideal_customer": string,   // max 160 chars
-      "business_model": string,   // short
-      "first_steps": [string, string, string], // exactly 3 items; each max 120 chars
-
-      // v6 metrics (numbers 0–100)
-      "shock_factor": number,
-      "virality_potential": number,
-      "leverage_score": number,
-      "automation_density": number,
-      "autonomy_level": number,
-      "culture_tailwind": number,
-      "chaos_factor": number
+      "title": "Short punchy name",
+      "hook": "One sentence that sparks 'I need to hear more'",
+      "twist": "What makes this non-obvious",
+      "who": "Specific person who'd pay",
+      "mode": "Standard" | "Persona" | "Chaos" | "Memetic" | "Fusion"
     }
   ]
 }
 
-CONSTRAINTS (HARD):
-- refined_ideas MUST contain exactly 6 ideas total.
-- NEVER include any additional keys.
-- NEVER use markdown.
-- NO commentary before/after JSON.
+═══════════════════════════════════════════════════════════════════
+FEW-SHOT EXAMPLES
+═══════════════════════════════════════════════════════════════════
 
-TONE:
-- Short, punchy sentences
-- No corporate jargon
-- No MBA-speak
-- Write like a sharp founder friend
+FOUNDER: Ex-teacher, loves fitness, 10hrs/week, $2k capital, writes well
+{
+  "title": "Gym Teacher OS",
+  "hook": "A Notion template + video series helping PE teachers monetize summer fitness camps.",
+  "twist": "Nobody is packaging this for teachers specifically—huge trust advantage.",
+  "who": "K-12 PE teachers wanting summer income",
+  "mode": "Standard"
+}
+
+FOUNDER: Software dev, hates meetings, loves automation, 15hrs/week
+{
+  "title": "The Meeting Killer",
+  "hook": "AI agent that joins your Zoom, takes notes, and auto-cancels meetings that could've been emails.",
+  "twist": "Positioned as a villain character—people share it for the meme value.",
+  "mode": "Memetic"
+}
+
+FOUNDER: Stay-at-home parent, crafty, TikTok audience, $500 budget
+{
+  "title": "Craft Chaos Club",
+  "hook": "Monthly mystery craft box with a 'disaster mode' tier—intentionally hard projects for comedy content.",
+  "twist": "Failure is the product. TikTok gold.",
+  "who": "Craft creators who need content hooks",
+  "mode": "Chaos"
+}
+
+═══════════════════════════════════════════════════════════════════
+RULES
+═══════════════════════════════════════════════════════════════════
+
+✓ Generate 12-20 ideas
+✓ Optimize for novelty + emotional pull
+✓ Include contrarian takes
+✓ Mix modes (at least 3 different modes)
+✓ Write like a sharp founder friend, not a consultant
+
+❌ No scoring or filtering
+❌ No "that won't work" self-censoring
+❌ No corporate safe ideas
+❌ No markdown or commentary
+
+Return ONLY: { "raw_ideas": [...] }
+`;
+
+// ============================================
+// PASS B: COMMERCIAL REFINEMENT PROMPT (v7.1)
+// ============================================
+function buildPassBSystemPrompt(wildcardMode: boolean): string {
+  const basePrompt = `You are TrueBlazer REFINEMENT ENGINE — commercial viability filter.
+
+═══════════════════════════════════════════════════════════════════
+INTERNAL REASONING (do NOT output)
+═══════════════════════════════════════════════════════════════════
+
+For each raw idea, evaluate:
+1) FOUNDER FIT: Does this match their skills, time, capital?
+2) FIRST DOLLAR: Can they make money in <30 days? How?
+3) MOAT POTENTIAL: What stops copycats?
+4) EXCITEMENT: Will they actually want to work on this?
+
+Keep the 6 best. Kill the rest.
+
+═══════════════════════════════════════════════════════════════════
+OUTPUT SCHEMA (exactly 6 ideas)
+═══════════════════════════════════════════════════════════════════
+
+{
+  "refined_ideas": [
+    {
+      "id": "unique-id",
+      "title": "Name (max 60 chars)",
+      "pitch": "One sentence that sells it (max 120 chars)",
+      "problem": "Pain point (max 200 chars)",
+      "solution": "How you solve it (max 200 chars)",
+      "customer": "Who pays (max 100 chars)",
+      "model": "subscription | one-time | usage | affiliate | ads",
+      "steps": ["Step 1", "Step 2", "Step 3"],
+      "scores": {
+        "shock": 0-100,
+        "viral": 0-100,
+        "leverage": 0-100,
+        "automation": 0-100,
+        "autonomy": 0-100,
+        "culture": 0-100,
+        "chaos": 0-100
+      }
+    }
+  ]
+}
+
+═══════════════════════════════════════════════════════════════════
+FEW-SHOT EXAMPLE
+═══════════════════════════════════════════════════════════════════
+
+RAW IDEA: "Gym Teacher OS - Notion template + videos for PE teachers to run summer camps"
+
+REFINED:
+{
+  "id": "gym-teacher-os",
+  "title": "Gym Teacher OS",
+  "pitch": "The plug-and-play system for PE teachers to launch profitable summer fitness camps.",
+  "problem": "PE teachers want summer income but don't know how to market or price camps.",
+  "solution": "Notion template + 5 video lessons + email scripts + liability waiver templates.",
+  "customer": "K-12 PE teachers in US/Canada",
+  "model": "one-time",
+  "steps": [
+    "Interview 3 PE teachers about summer camp pain points",
+    "Build MVP Notion template with camp schedule + pricing calculator",
+    "Pre-sell at $49 in PE teacher Facebook groups"
+  ],
+  "scores": {
+    "shock": 25,
+    "viral": 40,
+    "leverage": 75,
+    "automation": 60,
+    "autonomy": 80,
+    "culture": 55,
+    "chaos": 15
+  }
+}
+
+═══════════════════════════════════════════════════════════════════
+HARD CONSTRAINTS
+═══════════════════════════════════════════════════════════════════
+
+• Exactly 6 ideas in refined_ideas array
+• steps must have exactly 3 items
+• scores must have all 7 keys with 0-100 values
+• No markdown, no commentary
+• Return ONLY valid JSON
 `;
 
   const wildcardInstructions = wildcardMode ? `
 
-WILDCARD MODE ACTIVE:
-=====================
-- refined_ideas MUST contain exactly 6 ideas total.
-- EXACTLY ONE wildcard idea MUST be included as the LAST item.
-- The wildcard ignores founder constraints.
-- Mark it with: "idea_mode": "Wildcard" and "is_wildcard": true
-- For the wildcard, still obey all length limits and schema.
+═══════════════════════════════════════════════════════════════════
+WILDCARD MODE
+═══════════════════════════════════════════════════════════════════
 
-All other 5 ideas should respect founder constraints.
+• Include exactly ONE wildcard as the LAST idea
+• Wildcard IGNORES founder constraints—go wild
+• Add "is_wildcard": true and "idea_mode": "Wildcard" to that idea
+• Other 5 ideas must respect founder constraints
 ` : '';
 
   return basePrompt + wildcardInstructions + `
 
-RESPONSE FORMAT:
-- Return ONLY valid JSON: { "refined_ideas": [...] }
-- No markdown, no commentary
+Return ONLY: { "refined_ideas": [...] }
 `;
 }
 
@@ -679,11 +747,11 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
     // Reduce Pass B payload size: only pass minimal raw idea fields
     const rawIdeasSlim = rawIdeas.map((idea: any, idx: number) => ({
       id: idea?.id ?? `raw-${idx}`,
-      raw_title: idea?.raw_title ?? idea?.title ?? "",
-      raw_hook: idea?.raw_hook ?? idea?.hook ?? "",
-      novel_twist: idea?.novel_twist ?? "",
-      target_persona: idea?.target_persona ?? "",
-      idea_mode: idea?.idea_mode ?? "Standard",
+      title: idea?.title ?? idea?.raw_title ?? "",
+      hook: idea?.hook ?? idea?.raw_hook ?? "",
+      twist: idea?.twist ?? idea?.novel_twist ?? "",
+      who: idea?.who ?? idea?.target_persona ?? "",
+      mode: idea?.mode ?? idea?.idea_mode ?? "Standard",
     }));
 
     const buildPassBMessage = (retryWithStricterInstruction = false) => {
@@ -859,6 +927,7 @@ Return ONLY: { "refined_ideas": [...] }`;
     // ============================================
     const finalIdeas = refinedIdeas.map((idea: any, index: number) => {
       const isWildcard = idea.is_wildcard === true;
+      const scores = idea.scores || {};
       
       // Handle title prefix for wildcard
       let title = idea.title || "Untitled Idea";
@@ -869,13 +938,13 @@ Return ONLY: { "refined_ideas": [...] }`;
       return {
         id: idea.id || `v7-${mode}-${index}`,
         title,
-        oneLiner: idea.one_liner_pitch || "",
+        oneLiner: idea.pitch || idea.one_liner_pitch || "",
         description: `${idea.problem || ""} ${idea.solution || ""}`.trim(),
         
         // v7 specific
         problem: idea.problem || "",
         solution: idea.solution || "",
-        idealCustomer: idea.ideal_customer || "",
+        idealCustomer: idea.customer || idea.ideal_customer || "",
         pricingAnchor: idea.pricing_anchor || "",
         distributionWedge: idea.distribution_wedge || "",
         executionDifficulty: idea.execution_difficulty || "Medium",
@@ -886,7 +955,7 @@ Return ONLY: { "refined_ideas": [...] }`;
         // Classification
         category: isWildcard ? "wildcard" : inferCategory(idea),
         industry: "",
-        model: idea.business_model || "subscription",
+        model: idea.model || idea.business_model || "subscription",
         aiPattern: "",
         platform: null,
         difficulty: mapDifficulty(idea.execution_difficulty),
@@ -897,24 +966,24 @@ Return ONLY: { "refined_ideas": [...] }`;
         whyNow: idea.why_now || "",
         whyItFitsFounder: idea.why_now || "",
         problemStatement: idea.problem || "",
-        targetCustomer: idea.ideal_customer || "",
+        targetCustomer: idea.customer || idea.ideal_customer || "",
         mvpApproach: idea.solution || "",
         goToMarket: idea.distribution_wedge || "",
-        firstSteps: idea.first_dollar_path ? [idea.first_dollar_path] : [],
+        firstSteps: idea.steps || idea.first_steps || [],
         
-        // v6 scores
-        shockFactor: idea.shock_factor ?? 50,
-        viralityPotential: idea.virality_potential ?? 50,
-        leverageScore: idea.leverage_score ?? 60,
-        automationDensity: idea.automation_density ?? 50,
-        autonomyLevel: idea.autonomy_level ?? 50,
-        cultureTailwind: idea.culture_tailwind ?? 50,
-        chaosFactor: idea.chaos_factor ?? 30,
+        // v6 scores (support both nested and flat)
+        shockFactor: scores.shock ?? idea.shock_factor ?? 50,
+        viralityPotential: scores.viral ?? idea.virality_potential ?? 50,
+        leverageScore: scores.leverage ?? idea.leverage_score ?? 60,
+        automationDensity: scores.automation ?? idea.automation_density ?? 50,
+        autonomyLevel: scores.autonomy ?? idea.autonomy_level ?? 50,
+        cultureTailwind: scores.culture ?? idea.culture_tailwind ?? 50,
+        chaosFactor: scores.chaos ?? idea.chaos_factor ?? 30,
         
         // Metadata
-        engineVersion: "v7",
+        engineVersion: "v7.1",
         mode,
-        ideaModeV7: isWildcard ? "Wildcard" : (idea.idea_mode || "Standard"),
+        ideaModeV7: isWildcard ? "Wildcard" : (idea.idea_mode || idea.mode || "Standard"),
         tone,
         
         // Wildcard flag
