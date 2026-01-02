@@ -129,15 +129,52 @@ serve(async (req) => {
 
       const scoringPrompt = `You are an expert at evaluating founder-idea fit.
 
-Given a founder profile and a business idea, score how well this idea fits this specific founder on 5 dimensions (0-100 scale):
+═══════════════════════════════════════════════════════════════════
+INTERNAL REASONING (do NOT output, just follow)
+═══════════════════════════════════════════════════════════════════
 
-1. passion_fit_score: How well does this idea align with the founder's passions, interests, and what excites them?
-2. skill_fit_score: How well does this idea leverage the founder's existing skills and expertise?
-3. constraint_fit_score: How well does this idea fit within the founder's time and capital constraints?
-4. lifestyle_fit_score: How well does this idea match the founder's desired lifestyle and work preferences?
-5. overall_fit_score: A weighted average considering all factors above (this should be a balanced score, not just an average).
+Before scoring, mentally evaluate:
+1) PASSION: Does this idea touch what they genuinely care about?
+2) SKILLS: Can they execute with current abilities, or is there a gap?
+3) CONSTRAINTS: Does time/capital/risk match realistic requirements?
+4) LIFESTYLE: Will building this support or fight their desired life?
+5) OVERALL: Weight passion highest (40%), then skills (25%), constraints (20%), lifestyle (15%).
 
-Be realistic and honest. A score of 50 means neutral fit. Below 50 means poor fit. Above 70 means good fit. Above 85 means excellent fit.
+═══════════════════════════════════════════════════════════════════
+SCORING GUIDE
+═══════════════════════════════════════════════════════════════════
+
+• 0-30: Poor fit — significant misalignment, avoid
+• 31-50: Weak fit — some alignment but major gaps
+• 51-70: Moderate fit — workable with adjustments
+• 71-85: Good fit — strong alignment, recommended
+• 86-100: Excellent fit — near-perfect match
+
+═══════════════════════════════════════════════════════════════════
+FEW-SHOT EXAMPLES
+═══════════════════════════════════════════════════════════════════
+
+FOUNDER: Loves fitness, has marketing skills, 10hrs/week, $5k capital, wants location freedom
+IDEA: AI-powered personal training app
+
+Reasoning:
+- Passion: Fitness + tech = strong alignment → 82
+- Skills: Marketing yes, but no dev skills → 55
+- Constraints: 10hrs/week for app dev is tight, $5k low for app → 40
+- Lifestyle: App can be location-free once built → 75
+- Overall: Passion strong but constraints weak → 62
+
+FOUNDER: Software developer, hates meetings, loves automation, 20hrs/week, $2k capital
+IDEA: Productized consulting for startups
+
+Reasoning:
+- Passion: Consulting means meetings — drainer → 25
+- Skills: Dev skills don't help consulting directly → 45
+- Constraints: Time OK, low capital fine for services → 70
+- Lifestyle: Consulting = calls = hates this → 20
+- Overall: Major lifestyle/passion conflict → 35
+
+═══════════════════════════════════════════════════════════════════
 
 Return ONLY the 5 scores as integers 0-100.`;
 
@@ -293,34 +330,69 @@ Return ONLY the 5 scores as integers 0-100.`;
     // ===== STEP 2: Run business analysis =====
     console.log("analyze-idea: running business analysis");
 
-    const analysisSystemPrompt = `You are an expert startup evaluator, market strategist, business model analyst, and product validation specialist.
+    const analysisSystemPrompt = `You are an expert startup evaluator and market strategist.
 
-Given:
-1. A founder profile (passions, skills, constraints, lifestyle goals)
-2. A business idea (title, description, business model type, target customer, fit scores)
-3. Constraints such as time availability, capital available, and risk tolerance
+═══════════════════════════════════════════════════════════════════
+INTERNAL REASONING (do NOT output)
+═══════════════════════════════════════════════════════════════════
 
-Produce a JSON object ONLY with the following structure:
+Before analyzing, mentally work through:
+
+1) MARKET SIZE: Is this a $10M or $1B opportunity? Who's already paying for solutions?
+2) PROBLEM INTENSITY: Is this a vitamin (nice-to-have) or painkiller (must-have)?
+3) COMPETITION: Who else is doing this? What's their weakness?
+4) FOUNDER FIT: Given their scores, where are the gaps to address?
+5) FIRST DOLLAR PATH: How quickly can they validate and get paid?
+
+═══════════════════════════════════════════════════════════════════
+OUTPUT SCHEMA
+═══════════════════════════════════════════════════════════════════
 
 {
-  "niche_score": number,          // 0–100 overall viability score
-  "market_insight": "string",     // insight about the market
-  "problem_intensity": "string",  // how painful / urgent the problem is
-  "competition_snapshot": "string",
-  "pricing_power": "string",
-  "success_likelihood": "string",
-  "biggest_risks": ["string"],
-  "unfair_advantages": ["string"],
-  "recommendations": ["string"],
-  "ideal_customer_profile": "string",
-  "elevator_pitch": "string",
-  "brutal_honesty": "string"
+  "niche_score": 0-100,
+  "market_insight": "1-2 sentences on market opportunity",
+  "problem_intensity": "Low/Medium/High + why",
+  "competition_snapshot": "Who competes, their weakness",
+  "pricing_power": "Can they charge premium? Why?",
+  "success_likelihood": "Low/Medium/High + key factor",
+  "biggest_risks": ["Risk 1", "Risk 2", "Risk 3"],
+  "unfair_advantages": ["Advantage 1", "Advantage 2"],
+  "recommendations": ["Action 1", "Action 2", "Action 3"],
+  "ideal_customer_profile": "Specific person description",
+  "elevator_pitch": "One compelling sentence",
+  "brutal_honesty": "The hard truth they need to hear"
 }
 
-Rules:
-- DO NOT add extra fields
-- DO NOT output commentary or disclaimers
-- Respond with STRICT JSON only`;
+═══════════════════════════════════════════════════════════════════
+FEW-SHOT EXAMPLE
+═══════════════════════════════════════════════════════════════════
+
+IDEA: "Gym Teacher OS" — Notion template + videos for PE teachers to run summer camps
+FOUNDER: Ex-teacher, marketing skills, 10hrs/week, $2k capital
+
+{
+  "niche_score": 72,
+  "market_insight": "300K+ PE teachers in US alone. Summer income is a known pain point discussed in teacher forums. Low competition in this specific niche.",
+  "problem_intensity": "Medium — teachers want extra income but aren't desperate. Seasonally urgent (April-May buying window).",
+  "competition_snapshot": "Generic camp business courses exist ($500+), but nothing PE-teacher specific. Your specificity is the moat.",
+  "pricing_power": "Medium — can charge $49-99 for template bundle. Teachers are price-sensitive but will pay for niche solutions.",
+  "success_likelihood": "Medium-High — low capital needed, clear audience, founder has teacher credibility.",
+  "biggest_risks": ["Seasonal demand limits growth", "Teachers are notoriously price-sensitive", "May need to expand beyond summer camps"],
+  "unfair_advantages": ["Ex-teacher credibility", "Understands the audience deeply", "Low competition in niche"],
+  "recommendations": ["Interview 5 PE teachers this week about summer income pain", "Pre-sell in PE teacher Facebook groups before building", "Start at $49, raise price after 10 sales"],
+  "ideal_customer_profile": "K-12 PE teacher, 5-15 years experience, in suburban district, active in teacher Facebook groups, has considered summer camps but didn't know where to start.",
+  "elevator_pitch": "The complete system for PE teachers to launch profitable summer fitness camps—without figuring it out from scratch.",
+  "brutal_honesty": "This can make $5-15K/year as a side project, not a full-time business. That's fine if it matches your goals, but don't expect to quit your job from this alone."
+}
+
+═══════════════════════════════════════════════════════════════════
+RULES
+═══════════════════════════════════════════════════════════════════
+
+• Be specific, not generic. Reference the actual idea and founder.
+• Brutal honesty matters more than encouragement.
+• Keep each field concise (max 2 sentences except arrays).
+• Return ONLY valid JSON, no commentary.`;
 
     const analysisInputData = {
       idea: {
