@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useVentureBlueprint } from "@/hooks/useVentureBlueprint";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { useVentureState } from "@/hooks/useVentureState";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -29,6 +30,7 @@ const Blueprint = () => {
   
   const { user } = useAuth();
   const { hasPro } = useFeatureAccess();
+  const { transitionTo } = useVentureState();
   const { toast } = useToast();
   
   // Venture state
@@ -122,48 +124,6 @@ const Blueprint = () => {
 
   const isFormValid = windowDays && successMetric.trim().length > 0 && acknowledged;
   const ventureState = venture?.venture_state ?? "inactive";
-
-  const transitionTo = async (
-    ventureId: string,
-    targetState: VentureState,
-    commitmentData?: CommitmentDraft | CommitmentFull
-  ): Promise<boolean> => {
-    try {
-      const updatePayload: Record<string, any> = {
-        venture_state: targetState,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (commitmentData) {
-        if ("commitment_window_days" in commitmentData) {
-          updatePayload.commitment_window_days = commitmentData.commitment_window_days;
-        }
-        if ("success_metric" in commitmentData) {
-          updatePayload.success_metric = commitmentData.success_metric;
-        }
-        if ("commitment_start_at" in commitmentData) {
-          updatePayload.commitment_start_at = commitmentData.commitment_start_at;
-        }
-        if ("commitment_end_at" in commitmentData) {
-          updatePayload.commitment_end_at = commitmentData.commitment_end_at;
-        }
-      }
-
-      const { error } = await supabase
-        .from("ventures")
-        .update(updatePayload)
-        .eq("id", ventureId);
-
-      if (error) {
-        throw error;
-      }
-
-      return true;
-    } catch (err) {
-      console.error("Failed to transition venture:", err);
-      return false;
-    }
-  };
 
   const handleCommitAndStart = async () => {
     if (!venture?.id || !isFormValid) return;
