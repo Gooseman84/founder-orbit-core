@@ -67,10 +67,10 @@ serve(async (req) => {
 
     console.log("set-north-star-idea: setting north star for idea", idea_id);
 
-    // Verify idea exists and belongs to the user
+    // Verify idea exists and belongs to the user, fetch full details
     const { data: idea, error: ideaError } = await supabaseService
       .from("ideas")
-      .select("id, user_id, title")
+      .select("id, user_id, title, description, target_customer, business_model_type, category")
       .eq("id", idea_id)
       .eq("user_id", userId)
       .maybeSingle();
@@ -175,12 +175,15 @@ serve(async (req) => {
       if (blueprintCheckError) {
         console.error("set-north-star-idea: error checking blueprint", blueprintCheckError);
       } else if (existingBlueprint) {
-        // Update existing blueprint
+        // Update existing blueprint with idea data
         const { error: updateError } = await supabaseService
           .from("founder_blueprints")
           .update({ 
             north_star_idea_id: idea_id,
-            north_star_one_liner: idea.title || null,
+            north_star_one_liner: idea.description || idea.title || null,
+            target_audience: idea.target_customer || null,
+            problem_statement: idea.description || null,
+            offer_model: idea.business_model_type || idea.category || null,
             updated_at: new Date().toISOString()
           })
           .eq("user_id", userId);
@@ -189,16 +192,19 @@ serve(async (req) => {
           console.error("set-north-star-idea: error updating blueprint", updateError);
         } else {
           blueprintUpdated = true;
-          console.log("set-north-star-idea: updated founder_blueprints.north_star_idea_id");
+          console.log("set-north-star-idea: updated founder_blueprints with idea data");
         }
       } else {
-        // Insert new blueprint
+        // Insert new blueprint with idea data
         const { error: insertError } = await supabaseService
           .from("founder_blueprints")
           .insert({
             user_id: userId,
             north_star_idea_id: idea_id,
-            north_star_one_liner: idea.title || null,
+            north_star_one_liner: idea.description || idea.title || null,
+            target_audience: idea.target_customer || null,
+            problem_statement: idea.description || null,
+            offer_model: idea.business_model_type || idea.category || null,
             status: "active"
           });
 
@@ -206,7 +212,7 @@ serve(async (req) => {
           console.error("set-north-star-idea: error inserting blueprint", insertError);
         } else {
           blueprintUpdated = true;
-          console.log("set-north-star-idea: inserted new founder_blueprints row");
+          console.log("set-north-star-idea: inserted new founder_blueprints with idea data");
         }
       }
     } catch (blueprintError) {

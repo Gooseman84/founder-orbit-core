@@ -444,7 +444,31 @@ const Ideas = () => {
       
       if (updateError) throw updateError;
       
-      // 3. Ensure venture exists for this idea
+      // 3. Get the idea details
+      const idea = libraryIdeas.find(i => i.id === ideaId);
+      if (!idea) throw new Error("Idea not found");
+      
+      // 4. Create/update founder_blueprint with idea data
+      const { error: blueprintError } = await supabase
+        .from("founder_blueprints")
+        .upsert({
+          user_id: user.id,
+          north_star_idea_id: ideaId,
+          north_star_one_liner: idea.description || idea.title,
+          target_audience: idea.target_customer || null,
+          problem_statement: idea.description || null,
+          offer_model: idea.business_model_type || idea.category || null,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: "user_id"
+        });
+      
+      if (blueprintError) {
+        console.error("Blueprint update failed:", blueprintError);
+        // Don't fail the whole flow if blueprint update fails
+      }
+      
+      // 5. Ensure venture exists for this idea
       const { data: existingVenture } = await supabase
         .from("ventures")
         .select("id")
@@ -455,14 +479,12 @@ const Ideas = () => {
       let ventureId = existingVenture?.id;
       
       if (!ventureId) {
-        // Create venture in inactive state
-        const idea = libraryIdeas.find(i => i.id === ideaId);
         const { data: newVenture, error: ventureError } = await supabase
           .from("ventures")
           .insert({
             user_id: user.id,
             idea_id: ideaId,
-            name: idea?.title || "My Venture",
+            name: idea.title || "My Venture",
             venture_state: "inactive",
           })
           .select()
@@ -475,6 +497,7 @@ const Ideas = () => {
       // Refresh queries
       queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
       queryClient.invalidateQueries({ queryKey: ["ventures"] });
+      queryClient.invalidateQueries({ queryKey: ["founder-blueprint"] });
       
       toast({ 
         title: "North Star Set!", 
