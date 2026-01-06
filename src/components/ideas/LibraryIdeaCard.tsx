@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Eye, FileText, Trash2, AlertCircle, Lightbulb, ListChecks, Star } from "lucide-react";
+import { Zap, Eye, FileText, Trash2, AlertCircle, Lightbulb, ListChecks, Star, Map } from "lucide-react";
 import { V6MetricsInline } from "@/components/shared/V6MetricBadge";
 import { ModeBadge } from "@/components/shared/ModeBadge";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
@@ -17,6 +17,7 @@ interface LibraryIdeaCardProps {
   idea: Idea;
   onDelete?: (id: string) => void;
   onPromote?: (id: string) => void;
+  onSetNorthStar?: (id: string) => void;
 }
 
 interface IdeaPayload {
@@ -40,7 +41,7 @@ const getScoreColor = (score: number | null) => {
   return "text-orange-600 dark:text-orange-400";
 };
 
-export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardProps) {
+export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar }: LibraryIdeaCardProps) {
   const navigate = useNavigate();
   const isV6 = idea.engine_version === "v6";
   const isMarketSignal = (idea as any).source_type === "market_signal";
@@ -181,17 +182,43 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote }: LibraryIdeaCardPr
             <Eye className="w-3.5 h-3.5" />
             Open
           </Button>
+          
+          {!isNorthStar && onSetNorthStar && (
+            <Button
+              onClick={() => onSetNorthStar(idea.id)}
+              variant="outline"
+              size="sm"
+              className="flex-1 gap-1.5 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+            >
+              <Star className="w-3.5 h-3.5" />
+              North Star
+            </Button>
+          )}
+          
+          {isNorthStar && (
+            <Button
+              onClick={() => navigate("/north-star")}
+              variant="default"
+              size="sm"
+              className="flex-1 gap-1.5 bg-amber-500 hover:bg-amber-600"
+            >
+              <Map className="w-3.5 h-3.5" />
+              View North Star
+            </Button>
+          )}
+          
           {onPromote && (
             <Button
               onClick={() => onPromote(idea.id)}
               variant="outline"
               size="sm"
-              className="flex-1 gap-1.5"
+              className="gap-1.5"
             >
               <FileText className="w-3.5 h-3.5" />
               Workspace
             </Button>
           )}
+          
           {onDelete && (
             <Button
               onClick={() => onDelete(idea.id)}

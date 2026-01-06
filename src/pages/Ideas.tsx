@@ -410,6 +410,76 @@ const Ideas = () => {
     }
   };
 
+  const handleSetNorthStar = async (ideaId: string) => {
+    if (!user) return;
+    
+    try {
+      // 1. Clear any existing North Star
+      await supabase
+        .from("ideas")
+        .update({ status: "candidate" })
+        .eq("user_id", user.id)
+        .eq("status", "north_star");
+      
+      // 2. Set this idea as North Star
+      const { error: updateError } = await supabase
+        .from("ideas")
+        .update({ status: "north_star" })
+        .eq("id", ideaId)
+        .eq("user_id", user.id);
+      
+      if (updateError) throw updateError;
+      
+      // 3. Ensure venture exists for this idea
+      const { data: existingVenture } = await supabase
+        .from("ventures")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("idea_id", ideaId)
+        .maybeSingle();
+      
+      let ventureId = existingVenture?.id;
+      
+      if (!ventureId) {
+        // Create venture in inactive state
+        const idea = libraryIdeas.find(i => i.id === ideaId);
+        const { data: newVenture, error: ventureError } = await supabase
+          .from("ventures")
+          .insert({
+            user_id: user.id,
+            idea_id: ideaId,
+            name: idea?.title || "My Venture",
+            venture_state: "inactive",
+          })
+          .select()
+          .single();
+        
+        if (ventureError) throw ventureError;
+        ventureId = newVenture.id;
+      }
+      
+      // Refresh queries
+      queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
+      queryClient.invalidateQueries({ queryKey: ["ventures"] });
+      
+      toast({ 
+        title: "North Star Set!", 
+        description: "Navigate to North Star page to see your master prompt." 
+      });
+      
+      // Navigate to North Star page
+      navigate("/north-star");
+      
+    } catch (error: any) {
+      console.error("Failed to set North Star:", error);
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to set North Star", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -717,6 +787,7 @@ const Ideas = () => {
                     key={idea.id} 
                     idea={idea} 
                     onPromote={handlePromoteLibraryIdea}
+                    onSetNorthStar={handleSetNorthStar}
                   />
                 ))}
               </div>
