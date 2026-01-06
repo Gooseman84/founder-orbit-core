@@ -285,6 +285,13 @@ const Ideas = () => {
       return;
     }
     
+    // Free tier check: Only allow 1 generation session
+    if (!hasPro && sessionIdeas.length > 0) {
+      setPaywallReasonCode("IDEA_LIMIT_REACHED");
+      setShowPaywall(true);
+      return;
+    }
+    
     try {
       setCurrentMode(selectedMode);
       await generateFounderIdeas({ mode: selectedMode, focus_area: focusArea || undefined });
@@ -310,6 +317,13 @@ const Ideas = () => {
   };
 
   const handleSaveIdea = async (idea: BusinessIdea | BusinessIdeaV6): Promise<string | null> => {
+    // Free tier check: Max 10 ideas in library
+    if (!hasPro && libraryIdeas.length >= 10) {
+      setPaywallReasonCode("LIBRARY_FULL_FREE");
+      setShowPaywall(true);
+      return null;
+    }
+    
     setSavingIdeaId(idea.id);
     // Convert v6 idea to legacy format for saving
     const legacyIdea = isV6Idea(idea) ? convertV6ToLegacy(idea) : idea;
@@ -622,6 +636,13 @@ const Ideas = () => {
                 )}
               </Button>
             </div>
+            
+            {/* Free tier limit notice */}
+            {!hasPro && sessionIdeas.length > 0 && (
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Free tier: 1 session only. Upgrade to Pro for unlimited generations.
+              </p>
+            )}
           </div>
 
           {showFilters && (
@@ -712,6 +733,11 @@ const Ideas = () => {
                   <p className="text-sm text-muted-foreground">
                     Your saved ideas, variants, and fused concepts. Click to explore.
                   </p>
+                  {!hasPro && libraryIdeas.length >= 8 && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      {libraryIdeas.length}/10 ideas saved. Upgrade to Pro for unlimited storage.
+                    </p>
+                  )}
                 </div>
                 {showFilters && (
                   <IdeaFilters 
