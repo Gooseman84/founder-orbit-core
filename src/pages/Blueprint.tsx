@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useVentureBlueprint } from "@/hooks/useVentureBlueprint";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,7 +17,8 @@ import {
   ArrowLeft, 
   Rocket,
   Clock,
-  Loader2
+  Loader2,
+  Lock
 } from "lucide-react";
 import type { CommitmentWindowDays, CommitmentDraft, CommitmentFull, Venture, VentureState } from "@/types/venture";
 
@@ -26,6 +28,7 @@ const Blueprint = () => {
   const ventureIdParam = searchParams.get("ventureId");
   
   const { user } = useAuth();
+  const { hasPro } = useFeatureAccess();
   const { toast } = useToast();
   
   // Venture state
@@ -37,7 +40,7 @@ const Blueprint = () => {
   const { blueprint, loading: blueprintLoading } = useVentureBlueprint(venture?.idea_id);
   
   // Form state
-  const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(30);
+  const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(14);
   const [successMetric, setSuccessMetric] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
@@ -306,16 +309,23 @@ const Blueprint = () => {
           {/* Commitment Window */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Commitment Window</Label>
+            {!hasPro && (
+              <p className="text-xs text-amber-600">
+                Free tier: 14-day commitments only. Upgrade to Pro for 30 or 90-day windows.
+              </p>
+            )}
             <div className="grid grid-cols-3 gap-3">
               {([14, 30, 90] as CommitmentWindowDays[]).map((days) => (
                 <Button
                   key={days}
                   type="button"
                   variant={windowDays === days ? "default" : "outline"}
-                  className="w-full"
+                  className="w-full gap-1.5"
                   onClick={() => setWindowDays(days)}
+                  disabled={!hasPro && days !== 14}
                 >
                   {days} days
+                  {!hasPro && days !== 14 && <Lock className="w-3 h-3" />}
                 </Button>
               ))}
             </div>
