@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useIdeaSessionStore } from "@/store/ideaSessionStore";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
@@ -19,11 +20,17 @@ interface PlanLimitError {
   plan?: string;
 }
 
+interface RetryableError {
+  message: string;
+  retryable: boolean;
+}
+
 interface UseFounderIdeasResult {
   ideas: BusinessIdeaV6[];
   isPending: boolean;
   error: unknown;
   planError: PlanLimitError | null;
+  retryableError: RetryableError | null;
   currentMode: IdeaGenerationMode | null;
   currentTone: GenerationTone;
   // v7 two-pass data
@@ -36,6 +43,7 @@ interface UseFounderIdeasResult {
 
 export const useFounderIdeas = (): UseFounderIdeasResult => {
   const { user } = useAuth();
+  const [retryableError, setRetryableError] = useState<RetryableError | null>(null);
   
   const { 
     sessionIdeas, 
@@ -66,6 +74,7 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
       setCurrentMode(mode);
       setCurrentTone(tone);
       clearPlanError();
+      setRetryableError(null);
 
       const { data, error } = await invokeAuthedFunction<{
         ideas?: BusinessIdeaV6[];
@@ -74,6 +83,7 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
         limit?: number;
         plan?: string;
         error?: string;
+        retryable?: boolean;
         generation_version?: string;
         pass_a_raw_ideas?: any[];
         final_ranked_ideas?: any[];
@@ -90,8 +100,8 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
 
       // Handle errors - supabase.functions.invoke returns error for non-2xx
       if (error) {
-        // Try to parse error context for plan limit info
-        // The edge function returns JSON body even on 403
+        // Try to parse error context for plan limit info or retryable errors
+        // The edge function returns JSON body even on 403/500
         const errorContext = (error as any)?.context;
         let parsedError: any = null;
         
@@ -101,6 +111,15 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
           } catch {
             // Not JSON, ignore
           }
+        }
+        
+        // Check if this is a retryable error (truncated AI response)
+        if (parsedError?.retryable === true) {
+          setRetryableError({
+            message: parsedError.error || "The AI response was incomplete. Please try again.",
+            retryable: true,
+          });
+          throw new Error(parsedError.error || "AI response truncated");
         }
         
         // Check if this is a plan limit error
@@ -158,6 +177,7 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
     isPending: mutation.isPending,
     error: mutation.error ?? null,
     planError,
+    retryableError,
     currentMode,
     currentTone,
     rawIdeasCount: rawIdeas.length,
