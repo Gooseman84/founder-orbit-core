@@ -13,17 +13,23 @@ export interface ScoredIdea {
   isV6: boolean;
 }
 
+interface RetryableError {
+  message: string;
+  retryable: boolean;
+}
+
 interface UseScoredFounderIdeasResult {
   scoredIdeas: ScoredIdea[];
   isLoading: boolean;
   error: Error | null;
+  retryableError: RetryableError | null;
   generate: (params?: { mode?: string; focus_area?: string }) => Promise<void>;
   clearIdeas: () => void;
 }
 
 export const useScoredFounderIdeas = (): UseScoredFounderIdeasResult => {
   const { user } = useAuth();
-  const { ideas, isPending, error, generate, clearIdeas } = useFounderIdeas();
+  const { ideas, isPending, error, retryableError, generate, clearIdeas } = useFounderIdeas();
   const [profile, setProfile] = useState<FounderProfile | null>(null);
   const [profileError, setProfileError] = useState<Error | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
@@ -82,6 +88,7 @@ export const useScoredFounderIdeas = (): UseScoredFounderIdeasResult => {
     scoredIdeas,
     isLoading: isPending || isProfileLoading,
     error: combinedError instanceof Error ? combinedError : combinedError ? new Error(String(combinedError)) : null,
+    retryableError,
     generate,
     clearIdeas,
   };

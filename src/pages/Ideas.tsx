@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2, Target, X, TrendingUp, Upload, AlertTriangle, Lock } from "lucide-react";
+import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2, Target, X, TrendingUp, Upload, AlertTriangle, Lock, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 
@@ -59,6 +59,7 @@ const Ideas = () => {
   const {
     scoredIdeas: founderScoredIdeas,
     isLoading: isGeneratingFounderIdeas,
+    retryableError,
     generate: generateFounderIdeas,
     clearIdeas: clearGeneratedIdeas,
   } = useScoredFounderIdeas();
@@ -683,6 +684,33 @@ const Ideas = () => {
               </p>
             )}
           </div>
+
+          {/* Retry UI for truncated AI responses */}
+          {retryableError && (
+            <Alert className="border-amber-500/50 bg-amber-500/10">
+              <RotateCcw className="h-4 w-4 text-amber-500" />
+              <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <p className="font-medium text-foreground">Oops! The idea generation was interrupted.</p>
+                  <p className="text-sm text-muted-foreground">
+                    This sometimes happens when the AI response is incomplete. Click below to try again.
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleGenerateFounderIdeas} 
+                  disabled={isGeneratingFounderIdeas}
+                  variant="outline"
+                  className="gap-2 shrink-0 border-amber-500/50 hover:bg-amber-500/10"
+                >
+                  {isGeneratingFounderIdeas ? (
+                    <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />Retrying...</>
+                  ) : (
+                    <><RotateCcw className="w-4 h-4" />Try Again</>
+                  )}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {showFilters && (
             <IdeaFilters 
