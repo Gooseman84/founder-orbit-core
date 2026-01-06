@@ -1,8 +1,10 @@
 // Idea optimizer bar for IdeaDetail page
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { FlaskConical, Combine, RefreshCw, Beaker, Zap } from "lucide-react";
+import { FlaskConical, Combine, RefreshCw, Beaker, Zap, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { useToast } from "@/hooks/use-toast";
 
 interface IdeaOptimizerBarProps {
   ideaId: string;
@@ -24,6 +26,20 @@ export function IdeaOptimizerBar({
   className,
 }: IdeaOptimizerBarProps) {
   const navigate = useNavigate();
+  const { hasPro } = useFeatureAccess();
+  const { toast } = useToast();
+
+  const handleFusionClick = () => {
+    if (!hasPro) {
+      toast({
+        title: "Pro Feature",
+        description: "Idea Fusion requires a Pro subscription.",
+        variant: "destructive",
+      });
+      return;
+    }
+    navigate("/fusion-lab");
+  };
   
   return (
     <div className={cn(
@@ -60,9 +76,11 @@ export function IdeaOptimizerBar({
       <Button
         size="sm"
         variant="ghost"
-        onClick={() => navigate("/fusion-lab")}
+        onClick={handleFusionClick}
         className="gap-1.5 h-8 text-xs"
+        title={!hasPro ? "Pro feature" : undefined}
       >
+        {!hasPro && <Lock className="w-3 h-3" />}
         <Combine className="w-3.5 h-3.5" />
         Fuse with Others
       </Button>
@@ -92,9 +110,11 @@ export function IdeaOptimizerBar({
       <Button
         size="sm"
         variant="ghost"
-        onClick={() => navigate("/fusion-lab")}
+        onClick={handleFusionClick}
         className="gap-1.5 h-8 text-xs"
+        title={!hasPro ? "Pro feature" : undefined}
       >
+        {!hasPro && <Lock className="w-3 h-3" />}
         <Beaker className="w-3.5 h-3.5" />
         Fusion Lab
       </Button>
