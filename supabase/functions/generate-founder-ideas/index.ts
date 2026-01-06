@@ -229,6 +229,73 @@ function buildModeContext(mode: IdeaGenerationMode, focusArea?: string): string 
   return modeDescriptions[mode];
 }
 
+// Helper to extract individual complete idea objects from potentially truncated JSON
+// This is a last-resort salvage operation that looks for complete idea objects
+function extractPartialIdeas(content: string): any[] {
+  const ideas: any[] = [];
+  const cleaned = content.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
+  
+  // Pattern to find potential idea object starts
+  // Look for patterns like: { "title": "..." or {"title":"..."
+  const ideaStartPattern = /\{\s*"(?:title|id|raw_title)"\s*:/g;
+  let match;
+  
+  while ((match = ideaStartPattern.exec(cleaned)) !== null) {
+    const startIdx = match.index;
+    
+    // Try to find the matching closing brace for this object
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    let endIdx = -1;
+    
+    for (let i = startIdx; i < cleaned.length; i++) {
+      const ch = cleaned[i];
+      
+      if (inString) {
+        if (escape) {
+          escape = false;
+        } else if (ch === "\\") {
+          escape = true;
+        } else if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+      
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      
+      if (ch === "{") depth++;
+      if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          endIdx = i;
+          break;
+        }
+      }
+    }
+    
+    if (endIdx !== -1) {
+      const objStr = cleaned.slice(startIdx, endIdx + 1);
+      try {
+        const parsed = JSON.parse(objStr);
+        // Validate it looks like an idea (has title or hook)
+        if (parsed.title || parsed.hook || parsed.raw_title) {
+          ideas.push(parsed);
+        }
+      } catch {
+        // This object was incomplete or malformed, skip it
+      }
+    }
+  }
+  
+  console.log(`generate-founder-ideas: extractPartialIdeas found ${ideas.length} complete ideas from truncated response`);
+  return ideas;
+}
+
 // Helper to extract valid JSON from potentially messy AI response
 function extractJSON(content: string): any {
   // First try direct parse
@@ -268,6 +335,13 @@ function extractJSON(content: string): any {
         } catch {}
       }
     }
+    
+    // Last resort: try extracting partial ideas
+    const partialIdeas = extractPartialIdeas(content);
+    if (partialIdeas.length > 0) {
+      return { raw_ideas: partialIdeas, _partial: true };
+    }
+    
     throw new Error("No JSON object found in response");
   }
   
@@ -315,6 +389,13 @@ function extractJSON(content: string): any {
       console.log("generate-founder-ideas: Successfully repaired truncated JSON");
       return parsed;
     } catch {}
+  }
+  
+  // Final fallback: try extracting individual complete idea objects
+  const partialIdeas = extractPartialIdeas(content);
+  if (partialIdeas.length > 0) {
+    console.log(`generate-founder-ideas: Salvaged ${partialIdeas.length} ideas from severely truncated response`);
+    return { raw_ideas: partialIdeas, _partial: true };
   }
   
   throw new Error("No matching closing brace found and repair failed");
@@ -722,7 +803,11 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
     } catch (e) {
       console.error("generate-founder-ideas: Pass A JSON parse error", e, "Content preview:", passAContent.slice(0, 300));
       return new Response(
-        JSON.stringify({ error: "Failed to parse Pass A response" }),
+        JSON.stringify({ 
+          error: "The AI response was incomplete. Please try generating ideas again.",
+          code: "ai_response_truncated",
+          retryable: true
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
