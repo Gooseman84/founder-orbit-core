@@ -533,9 +533,10 @@ const Ideas = () => {
             variant="outline" 
             size="sm" 
             className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
-            disabled={!canAccessIdeationTools}
-            title={ideationDisabledReason || undefined}
+            disabled={!canAccessIdeationTools || !hasPro}
+            title={!hasPro ? "Pro feature" : ideationDisabledReason || undefined}
           >
+            {!hasPro && <Lock className="w-3 h-3" />}
             <TrendingUp className="w-4 h-4" />
             <span className="hidden sm:inline">Market Pain</span>
             <span className="sm:hidden">Market</span>
@@ -545,14 +546,23 @@ const Ideas = () => {
             variant="outline" 
             size="sm" 
             className="gap-2 border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10"
-            disabled={!canAccessIdeationTools}
-            title={ideationDisabledReason || undefined}
+            disabled={!canAccessIdeationTools || !hasPro}
+            title={!hasPro ? "Pro feature" : ideationDisabledReason || undefined}
           >
+            {!hasPro && <Lock className="w-3 h-3" />}
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">Import My Idea</span>
             <span className="sm:hidden">Import</span>
           </Button>
-          <Button onClick={() => navigate("/fusion-lab")} variant="outline" size="sm" className="gap-2">
+          <Button 
+            onClick={() => navigate("/fusion-lab")} 
+            variant="outline" 
+            size="sm" 
+            className="gap-2"
+            disabled={!hasPro}
+            title={!hasPro ? "Pro feature" : undefined}
+          >
+            {!hasPro && <Lock className="w-3 h-3" />}
             <Combine className="w-4 h-4" />
             <span className="hidden sm:inline">Fusion Lab</span>
             <span className="sm:hidden">Fusion</span>
@@ -696,8 +706,8 @@ const Ideas = () => {
             <EmptyIdeasState onGenerateIdeas={handleGenerateFounderIdeas} isGenerating={isGeneratingFounderIdeas} />
           )}
 
-          {/* Fusion Panel in Generated tab */}
-          {(libraryIdeas.length + sessionIdeas.length) >= 2 && (
+          {/* Fusion Panel in Generated tab - Pro only */}
+          {hasPro && (libraryIdeas.length + sessionIdeas.length) >= 2 && (
             <IdeaFusionPanel 
               ideas={libraryIdeas} 
               sessionIdeas={sessionIdeas}
@@ -707,7 +717,7 @@ const Ideas = () => {
                   title: "New Fused Idea!", 
                   description: `"${fusedIdea.title}" saved to Library.` 
                 });
-              }} 
+              }}
             />
           )}
         </TabsContent>
