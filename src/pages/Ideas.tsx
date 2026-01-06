@@ -578,11 +578,17 @@ const Ideas = () => {
             <span className="sm:hidden">Import</span>
           </Button>
           <Button 
-            onClick={() => navigate("/fusion-lab")} 
+            onClick={() => {
+              if (!hasPro) {
+                setPaywallReasonCode("MODE_REQUIRES_PRO");
+                setShowPaywall(true);
+                return;
+              }
+              navigate("/fusion-lab");
+            }} 
             variant="outline" 
             size="sm" 
             className="gap-2"
-            disabled={!hasPro}
             title={!hasPro ? "Pro feature" : undefined}
           >
             {!hasPro && <Lock className="w-3 h-3" />}

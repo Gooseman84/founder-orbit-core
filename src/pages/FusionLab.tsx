@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { Combine, Sparkles, ExternalLink, ArrowLeft, GitMerge, Zap, Info } from "lucide-react";
 
@@ -68,12 +69,25 @@ const FusionLab = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { hasPro } = useFeatureAccess();
   const [libraryIdeas, setLibraryIdeas] = useState<LibraryIdea[]>([]);
   const [fusionHistory, setFusionHistory] = useState<LibraryIdea[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isFusing, setIsFusing] = useState(false);
   const [fusedResult, setFusedResult] = useState<LibraryIdea | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Guard: redirect free users
+  useEffect(() => {
+    if (!hasPro) {
+      toast({
+        title: "Pro Feature",
+        description: "Idea Fusion requires a Pro subscription.",
+        variant: "destructive",
+      });
+      navigate("/ideas");
+    }
+  }, [hasPro, navigate, toast]);
 
   // Fetch library ideas and fusion history
   useEffect(() => {
