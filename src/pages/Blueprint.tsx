@@ -40,7 +40,7 @@ const Blueprint = () => {
   const { blueprint, loading: blueprintLoading } = useVentureBlueprint(venture?.idea_id);
   
   // Form state
-  const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(14);
+  const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(hasPro ? 14 : 7);
   const [successMetric, setSuccessMetric] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
@@ -310,22 +310,22 @@ const Blueprint = () => {
           <div className="space-y-3">
             <Label className="text-sm font-medium">Commitment Window</Label>
             {!hasPro && (
-              <p className="text-xs text-amber-600">
-                Free tier: 14-day commitments only. Upgrade to Pro for 30 or 90-day windows.
+              <p className="text-xs text-muted-foreground">
+                Free tier: 7-day commitments only. Upgrade to Pro for 14, 30, or 90-day windows.
               </p>
             )}
             <div className="grid grid-cols-3 gap-3">
-              {([14, 30, 90] as CommitmentWindowDays[]).map((days) => (
+              {(hasPro ? [14, 30, 90] : [7]).map((days) => (
                 <Button
                   key={days}
                   type="button"
                   variant={windowDays === days ? "default" : "outline"}
-                  className="w-full gap-1.5"
-                  onClick={() => setWindowDays(days)}
-                  disabled={!hasPro && days !== 14}
+                  className="w-full"
+                  onClick={() => setWindowDays(days as CommitmentWindowDays)}
+                  disabled={!hasPro && days !== 7}
                 >
                   {days} days
-                  {!hasPro && days !== 14 && <Lock className="w-3 h-3" />}
+                  {!hasPro && days !== 7 && <Lock className="ml-1 h-3 w-3" />}
                 </Button>
               ))}
             </div>

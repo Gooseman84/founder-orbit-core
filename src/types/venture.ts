@@ -5,7 +5,7 @@
 export type VentureState = "inactive" | "executing" | "reviewed" | "killed";
 
 // Commitment window options
-export type CommitmentWindowDays = 14 | 30 | 90;
+export type CommitmentWindowDays = 7 | 14 | 30 | 90;
 
 // Legacy status type (for backwards compatibility during migration)
 export type VentureStatus = "active" | "paused" | "archived";
