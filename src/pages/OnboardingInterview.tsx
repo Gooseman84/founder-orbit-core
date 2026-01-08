@@ -1,5 +1,5 @@
 // src/pages/OnboardingInterview.tsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { TextareaWithVoice } from "@/components/ui/textarea-with-voice";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { getOrCreateInterview } from "@/lib/founderProfileApi";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import type { FounderInterview, InterviewTurn } from "@/types/founderInterview";
@@ -15,6 +16,7 @@ export default function OnboardingInterview() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const hasTrackedStartRef = useRef(false);
 
   const [interview, setInterview] = useState<FounderInterview | null>(null);
   const [transcript, setTranscript] = useState<InterviewTurn[]>([]);
@@ -27,6 +29,19 @@ export default function OnboardingInterview() {
   useEffect(() => {
     document.title = "Founder Interview | TrueBlazer.AI";
   }, []);
+
+  // Track interview started
+  useEffect(() => {
+    if (user?.id && !hasTrackedStartRef.current) {
+      hasTrackedStartRef.current = true;
+      supabase.from('onboarding_analytics').insert({
+        user_id: user.id,
+        event_type: 'interview_started'
+      }).then(({ error }) => {
+        if (error) console.error('Failed to track interview_started:', error);
+      });
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -157,6 +172,13 @@ export default function OnboardingInterview() {
         throw new Error("No profile returned from finalize function");
       }
 
+      // Track interview completed
+      await supabase.from('onboarding_analytics').insert({
+        user_id: user.id,
+        event_type: 'interview_completed',
+        metadata: { question_count: aiQuestionCount }
+      });
+
       toast({
         title: "Profile enriched",
         description: "Mavrik has woven your interview into your founder profile.",
@@ -194,7 +216,17 @@ export default function OnboardingInterview() {
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => navigate('/ideas')}
+                  onClick={async () => {
+                    // Track interview skipped
+                    if (user?.id) {
+                      await supabase.from('onboarding_analytics').insert({
+                        user_id: user.id,
+                        event_type: 'interview_skipped',
+                        metadata: { question_count: aiQuestionCount }
+                      });
+                    }
+                    navigate('/ideas');
+                  }}
                   className="text-muted-foreground hover:text-foreground"
                 >
                   Skip to ideas →
@@ -260,7 +292,22 @@ export default function OnboardingInterview() {
               <Button onClick={handleSubmit} disabled={!answer.trim() || asking || loading || finalizing}>
                 {asking ? "Sending..." : "Send answer"}
               </Button>
-              <Button variant="outline" type="button" onClick={() => navigate("/ideas")} disabled={finalizing}>
+              <Button 
+                variant="outline" 
+                type="button" 
+                onClick={async () => {
+                  // Track interview skipped
+                  if (user?.id) {
+                    await supabase.from('onboarding_analytics').insert({
+                      user_id: user.id,
+                      event_type: 'interview_skipped',
+                      metadata: { question_count: aiQuestionCount }
+                    });
+                  }
+                  navigate("/ideas");
+                }} 
+                disabled={finalizing}
+              >
                 Skip for now
               </Button>
             </div>

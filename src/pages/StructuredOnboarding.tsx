@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -146,6 +146,8 @@ export default function StructuredOnboarding() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const startTimeRef = useRef<number>(Date.now());
+  const hasTrackedStartRef = useRef(false);
   
   const [formData, setFormData] = useState<StructuredOnboardingData>({
     entry_trigger: "",
@@ -157,6 +159,19 @@ export default function StructuredOnboarding() {
     learning_style: "",
     commitment_level: "",
   });
+
+  // Track structured onboarding started
+  useEffect(() => {
+    if (user?.id && !hasTrackedStartRef.current) {
+      hasTrackedStartRef.current = true;
+      supabase.from('onboarding_analytics').insert({
+        user_id: user.id,
+        event_type: 'structured_started'
+      }).then(({ error }) => {
+        if (error) console.error('Failed to track structured_started:', error);
+      });
+    }
+  }, [user?.id]);
 
   // Track scroll position for back-to-top button
   useEffect(() => {
@@ -207,6 +222,14 @@ export default function StructuredOnboarding() {
         });
 
       if (error) throw error;
+
+      // Track structured onboarding completed
+      const timeSpentSeconds = Math.round((Date.now() - startTimeRef.current) / 1000);
+      await supabase.from('onboarding_analytics').insert({
+        user_id: user.id,
+        event_type: 'structured_completed',
+        metadata: { time_spent_seconds: timeSpentSeconds }
+      });
 
       toast.success("Got it! Now let's get to know you better...");
       
