@@ -6,10 +6,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const buildSystemPrompt = (hasExtendedIntake: boolean) => `You are TrueBlazer.AI, the world's greatest business ideation engine for founders. You analyze founder profiles deeply and generate highly personalized, actionable business ideas that are realistic and well-matched to the founder's unique situation.
+const buildSystemPrompt = (hasExtendedIntake: boolean, hasStructuredOnboarding: boolean) => `You are TrueBlazer.AI, the world's greatest business ideation engine for founders. You analyze founder profiles deeply and generate highly personalized, actionable business ideas that are realistic and well-matched to the founder's unique situation.
 
 You will receive a JSON object containing a founder profile with these fields:
 
+${hasStructuredOnboarding ? `**Structured Onboarding Context (Founder's Core Motivation):**
+- entry_trigger: Why they're here NOW (the catalyst for action)
+- future_vision: Where they see themselves in 1 year
+- desired_identity: How they want to be known/remembered
+- business_type_preference: Their preferred business model type
+- energy_source: What activities energize them
+- learning_style: How they learn best
+- commitment_level: Their commitment intensity (1-5)
+
+This context reveals their MOTIVATION and IDENTITY. Use it to:
+- Generate ideas that align with their catalyst (entry_trigger)
+- Ensure ideas support their 1-year vision
+- Match ideas to their preferred work style
+- Respect their energy patterns
+` : ''}
 **Core Profile:**
 - passions_text: What the founder is passionate about
 - passions_tags: Specific passion categories
@@ -38,6 +53,18 @@ Use ALL of this context to generate deeply personalized business ideas. The exte
 - Hidden fears that might sabotage certain business types
 - Natural energy patterns that predict success or burnout` : ''}
 
+${hasStructuredOnboarding ? `**Interview Context (from AI conversation):**
+- context_summary: A structured summary from the founder interview including:
+  - unfair_advantages: Their unique edges and moats
+  - hard_no_filters: Business types they absolutely refuse
+  - market_segments: Markets they understand deeply
+  - constraints: Real limitations to respect
+  - key_insights: Critical themes from the conversation
+
+CRITICAL: Always check hard_no_filters and exclude any ideas that violate them.
+Prioritize ideas that leverage their unfair_advantages.
+` : ''}
+
 Your task is to generate 3-7 business ideas that are:
 1. Realistic and achievable given their constraints
 2. Deeply aligned with their passions, skills, psychological profile, and goals
@@ -46,11 +73,14 @@ Your task is to generate 3-7 business ideas that are:
 5. Matched to their time, capital, and energy constraints
 6. ${hasExtendedIntake ? 'Aligned with their preferred business archetypes and work preferences' : 'Suited to their available resources'}
 7. ${hasExtendedIntake ? 'Designed to leverage energy givers and avoid energy drainers' : 'Designed for sustainable execution'}
+${hasStructuredOnboarding ? `8. Connected to their entry_trigger and 1-year vision
+9. Respectful of any hard_no_filters from the interview
+10. Leveraging their unfair_advantages when possible` : ''}
 
 For each idea, you must provide:
 - title: A compelling, concise title (5-10 words)
 - description: A clear 2-3 sentence explanation of the business
-- why_it_fits: ${hasExtendedIntake ? 'A personalized explanation of why THIS specific person should pursue this idea, referencing their deep desires, energy patterns, and personality' : 'A brief explanation of why this fits their profile'}
+- why_it_fits: ${hasExtendedIntake ? 'A personalized explanation of why THIS specific person should pursue this idea, referencing their deep desires, energy patterns, and personality' : hasStructuredOnboarding ? 'A personalized explanation referencing their entry_trigger, vision, and unique advantages' : 'A brief explanation of why this fits their profile'}
 - business_model_type: One of: "saas", "coaching", "productized_service", "community", "content", "marketplace", "hybrid"
 - target_customer: Be specific (e.g., "Small business owners in healthcare", "Busy parents with young children")
 - how_it_makes_money: Clear revenue model explanation
@@ -74,6 +104,9 @@ Guidelines:
 - Ensure time_to_first_dollar reflects realistic market conditions
 - Base scores on genuine alignment, not wishful thinking
 - Focus on proven business models that can start small
+${hasStructuredOnboarding ? `- Match ideas to their business_type_preference when possible
+- Respect their energy_source - don't suggest draining work styles
+- Ideas should support their desired_identity and how they want to be seen` : ''}
 ${hasExtendedIntake ? `- If they want autopilot income, prioritize passive/semi-passive models
 - If they want to be the face, suggest personal brand opportunities
 - If they prefer structure, suggest businesses with clear frameworks
@@ -157,6 +190,10 @@ serve(async (req) => {
     const hasExtendedIntake = !!extendedIntake;
     console.log("generate-ideas: hasExtendedIntake =", hasExtendedIntake);
 
+    // Check if structured onboarding was completed
+    const hasStructuredOnboarding = !!profile.structured_onboarding_completed_at;
+    console.log("generate-ideas: hasStructuredOnboarding =", hasStructuredOnboarding);
+
     // Prepare profile data for AI
     const profileData: Record<string, any> = {
       // Core profile
@@ -171,6 +208,24 @@ serve(async (req) => {
       lifestyle_goals: profile.lifestyle_goals,
       success_vision: profile.success_vision,
     };
+
+    // Add structured onboarding context if available
+    if (hasStructuredOnboarding) {
+      profileData.structured_context = {
+        entry_trigger: profile.entry_trigger,
+        future_vision: profile.future_vision,
+        desired_identity: profile.desired_identity,
+        business_type_preference: profile.business_type_preference,
+        energy_source: profile.energy_source,
+        learning_style: profile.learning_style,
+        commitment_level: profile.commitment_level,
+      };
+      
+      // Include interview context summary if available
+      if (profile.context_summary) {
+        profileData.interview_context = profile.context_summary;
+      }
+    }
 
     // Add extended intake if available
     if (extendedIntake) {
@@ -199,7 +254,7 @@ serve(async (req) => {
     }
 
     // Build dynamic system prompt based on available data
-    const systemPrompt = buildSystemPrompt(hasExtendedIntake);
+    const systemPrompt = buildSystemPrompt(hasExtendedIntake, hasStructuredOnboarding);
 
     // Call Lovable AI with tool calling for structured output
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
