@@ -61,17 +61,17 @@ const App = () => (
               path="/onboarding"
               element={
                 <ProtectedRoute>
-                  <MainLayout>
-                    <Onboarding />
-                  </MainLayout>
+                  <StructuredOnboarding />
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/onboarding/structured"
+              path="/onboarding/legacy"
               element={
                 <ProtectedRoute>
-                  <StructuredOnboarding />
+                  <MainLayout>
+                    <Onboarding />
+                  </MainLayout>
                 </ProtectedRoute>
               }
             />
