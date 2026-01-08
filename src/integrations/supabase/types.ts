@@ -376,13 +376,22 @@ export type Database = {
       }
       founder_profiles: {
         Row: {
+          business_type_preference: string | null
           capital_available: number | null
           commitment_level: number | null
+          commitment_level_text: string | null
+          context_summary: Json | null
           created_at: string
           creator_platforms: string[] | null
+          desired_identity: string | null
           edgy_mode: string | null
+          energy_source: string | null
+          entry_trigger: string | null
+          future_vision: string | null
           hours_per_week: number | null
           id: string
+          interview_completed_at: string | null
+          learning_style: string | null
           lifestyle_goals: string | null
           open_to_memetic_ideas: boolean | null
           open_to_personas: boolean | null
@@ -392,6 +401,7 @@ export type Database = {
           risk_tolerance: string | null
           skills_tags: string[] | null
           skills_text: string | null
+          structured_onboarding_completed_at: string | null
           success_vision: string | null
           tech_level: string | null
           time_per_week: number | null
@@ -401,13 +411,22 @@ export type Database = {
           work_personality: string[] | null
         }
         Insert: {
+          business_type_preference?: string | null
           capital_available?: number | null
           commitment_level?: number | null
+          commitment_level_text?: string | null
+          context_summary?: Json | null
           created_at?: string
           creator_platforms?: string[] | null
+          desired_identity?: string | null
           edgy_mode?: string | null
+          energy_source?: string | null
+          entry_trigger?: string | null
+          future_vision?: string | null
           hours_per_week?: number | null
           id?: string
+          interview_completed_at?: string | null
+          learning_style?: string | null
           lifestyle_goals?: string | null
           open_to_memetic_ideas?: boolean | null
           open_to_personas?: boolean | null
@@ -417,6 +436,7 @@ export type Database = {
           risk_tolerance?: string | null
           skills_tags?: string[] | null
           skills_text?: string | null
+          structured_onboarding_completed_at?: string | null
           success_vision?: string | null
           tech_level?: string | null
           time_per_week?: number | null
@@ -426,13 +446,22 @@ export type Database = {
           work_personality?: string[] | null
         }
         Update: {
+          business_type_preference?: string | null
           capital_available?: number | null
           commitment_level?: number | null
+          commitment_level_text?: string | null
+          context_summary?: Json | null
           created_at?: string
           creator_platforms?: string[] | null
+          desired_identity?: string | null
           edgy_mode?: string | null
+          energy_source?: string | null
+          entry_trigger?: string | null
+          future_vision?: string | null
           hours_per_week?: number | null
           id?: string
+          interview_completed_at?: string | null
+          learning_style?: string | null
           lifestyle_goals?: string | null
           open_to_memetic_ideas?: boolean | null
           open_to_personas?: boolean | null
@@ -442,6 +471,7 @@ export type Database = {
           risk_tolerance?: string | null
           skills_tags?: string[] | null
           skills_text?: string | null
+          structured_onboarding_completed_at?: string | null
           success_vision?: string | null
           tech_level?: string | null
           time_per_week?: number | null
