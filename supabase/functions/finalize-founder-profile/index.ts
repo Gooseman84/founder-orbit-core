@@ -17,6 +17,21 @@ function mergeUnique(existing: any, inferred: any): string[] {
   return Array.from(new Set([...base, ...extra].filter((x) => typeof x === "string"))) as string[];
 }
 
+// Merge text fields intelligently - append new insights if they add value
+function mergeText(existing: string | null | undefined, inferred: string | null | undefined): string | null {
+  if (!existing && !inferred) return null;
+  if (!existing) return inferred || null;
+  if (!inferred) return existing;
+  
+  // If inferred content is already contained in existing, skip
+  if (existing.toLowerCase().includes(inferred.toLowerCase())) {
+    return existing;
+  }
+  
+  // Append with separator
+  return `${existing}\n\n[From interview]: ${inferred}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -73,10 +88,10 @@ serve(async (req) => {
       );
     }
 
-    // Load existing founder profile
-    const { data: profileRow, error: profileError } = await supabase
+    // Load existing founder profile with ALL fields (including structured onboarding)
+    const { data: existingProfile, error: profileError } = await supabase
       .from("founder_profiles")
-      .select("profile")
+      .select("*")
       .eq("user_id", resolvedUserId)
       .maybeSingle();
 
@@ -88,14 +103,14 @@ serve(async (req) => {
       );
     }
 
-    if (!profileRow || !profileRow.profile) {
+    if (!existingProfile) {
       return new Response(
-        JSON.stringify({ error: "Founder profile not found. Complete core onboarding first." }),
+        JSON.stringify({ error: "Founder profile not found. Complete structured onboarding first." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    let profile = profileRow.profile as any;
+    let profile = (existingProfile.profile as any) || {};
 
     // Load interview + context summary
     const { data: interviewRow, error: interviewError } = await supabase
@@ -139,25 +154,44 @@ serve(async (req) => {
       profile.createdAt = nowIso;
     }
 
-    const payload = {
+    // Build payload that PRESERVES structured onboarding data and ADDS interview insights
+    const payload: Record<string, any> = {
       user_id: resolvedUserId,
       profile,
-      hours_per_week: profile.hoursPerWeek ?? null,
-      risk_tolerance: profile.riskTolerance ?? null,
-      commitment_level: profile.commitmentLevel ?? null,
-      passions_text: profile.passionsText ?? null,
-      passions_tags: profile.passionDomains ?? null,
-      skills_text: profile.skillsText ?? null,
-      skills_tags: profile.skillTags ?? null,
-      time_per_week: profile.hoursPerWeek ?? null,
-      capital_available: profile.availableCapital ?? null,
-      lifestyle_goals: profile.lifestyleGoalsText ?? null,
-      success_vision: profile.visionOfSuccessText ?? null,
-    } as const;
+      
+      // Store the full interview context summary
+      context_summary: ctx,
+      interview_completed_at: nowIso,
+      
+      // Keep existing structured onboarding fields (don't overwrite with nulls)
+      // Only update if profile has values
+      hours_per_week: profile.hoursPerWeek ?? existingProfile.hours_per_week,
+      risk_tolerance: profile.riskTolerance ?? existingProfile.risk_tolerance,
+      commitment_level: profile.commitmentLevel ?? existingProfile.commitment_level,
+      time_per_week: profile.hoursPerWeek ?? existingProfile.time_per_week,
+      capital_available: profile.availableCapital ?? existingProfile.capital_available,
+      
+      // Merge text fields - append interview insights to structured data
+      passions_text: mergeText(existingProfile.passions_text, ctx.inferredPrimaryDesires?.join(', ')),
+      skills_text: mergeText(existingProfile.skills_text, ctx.inferredFounderRoles?.join(', ')),
+      lifestyle_goals: mergeText(existingProfile.lifestyle_goals, ctx.inferredWorkStyle?.join(', ')),
+      success_vision: mergeText(existingProfile.success_vision, profile.visionOfSuccessText),
+      
+      // Merge array fields
+      passions_tags: mergeUnique(existingProfile.passions_tags, profile.passionDomains),
+      skills_tags: mergeUnique(existingProfile.skills_tags, profile.skillTags),
+    };
+
+    console.log("finalize-founder-profile: merging structured + interview data", {
+      hasStructuredData: !!existingProfile.structured_onboarding_completed_at,
+      hasInterviewData: !!ctx,
+      entryTrigger: existingProfile.entry_trigger,
+      futureVision: existingProfile.future_vision,
+    });
 
     const { data: updated, error: updateError } = await supabase
       .from("founder_profiles")
-      .update(payload as any)
+      .update(payload)
       .eq("user_id", resolvedUserId)
       .select("id");
 
