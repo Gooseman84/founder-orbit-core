@@ -177,7 +177,7 @@ export default function OnboardingInterview() {
   };
 
   const aiQuestionCount = transcript.filter((t) => t.role === "ai").length;
-  const canFinalize = aiQuestionCount >= 8;
+  const canFinalize = aiQuestionCount >= 3;
 
   if (!user) {
     return null;
@@ -187,12 +187,28 @@ export default function OnboardingInterview() {
     <div className="max-w-3xl mx-auto py-12">
       <Card className="p-6 sm:p-8 space-y-4">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold">Founder Interview with Mavrik</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-semibold">Founder Interview with Mavrik</h1>
+            {aiQuestionCount >= 1 && (
+              <div className="flex flex-col items-end gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate('/ideas')}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Skip to ideas →
+                </Button>
+                <span className="text-[10px] text-muted-foreground">
+                  More context = better ideas
+                </span>
+              </div>
+            )}
+          </div>
           <p className="text-muted-foreground text-sm">
-            We'll ask around 12–18 short questions to understand your real constraints, energy, and edge. Take your
-            time—there are no perfect answers.
+            Based on what you shared, we'll ask 3-5 targeted questions to understand your unique advantages and constraints.
           </p>
-          <p className="text-xs text-muted-foreground">Progress: question {Math.max(aiQuestionCount, 1)} of about 15</p>
+          <p className="text-xs text-muted-foreground">Progress: question {Math.max(aiQuestionCount, 1)} of about 5</p>
         </div>
 
         {error && <p className="text-xs text-destructive">{error}</p>}
@@ -254,12 +270,12 @@ export default function OnboardingInterview() {
               onClick={handleFinalize}
               disabled={!canFinalize || finalizing || loading || asking}
             >
-              {finalizing ? "Generating profile..." : "I\'m done – generate my profile"}
+              {finalizing ? "Generating profile..." : "I'm done – generate my profile"}
             </Button>
           </div>
           {!canFinalize && (
             <p className="text-xs text-muted-foreground">
-              After a handful of questions (usually 8+), you can finalize and let Mavrik weave this into your profile.
+              After 3 questions, you can finalize and generate your personalized ideas.
             </p>
           )}
         </div>
