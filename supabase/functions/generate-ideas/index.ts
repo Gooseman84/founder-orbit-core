@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const buildSystemPrompt = (hasExtendedIntake: boolean) => `You are TrueBlazer.AI, the world's greatest business ideation engine for founders. You analyze founder profiles deeply and generate highly personalized, actionable business ideas that are realistic and well-matched to the founder's unique situation.
+const buildSystemPrompt = (hasExtendedIntake: boolean, businessTypeHint: string, difficultyGuidance: string) => `You are TrueBlazer.AI, the world's greatest business ideation engine for founders. You analyze founder profiles deeply and generate highly personalized, actionable business ideas that are realistic and well-matched to the founder's unique situation.
 
 You will receive a JSON object containing a founder profile with these fields:
 
@@ -21,6 +21,15 @@ You will receive a JSON object containing a founder profile with these fields:
 - risk_tolerance: Their comfort level with risk (low, medium, high)
 - lifestyle_goals: Their desired lifestyle and work-life balance
 - success_vision: What success looks like to them
+
+**Structured Onboarding Context:**
+- entry_trigger: Why they're exploring entrepreneurship right now
+- future_vision: What they want their life to look like in 1 year
+- desired_identity: How they want to be known
+- business_type_preference: Their preferred business type
+- energy_source: What type of work energizes them
+- learning_style: How they prefer to learn and grow
+- commitment_level: Their current commitment level (exploring, committed, ready)
 ${hasExtendedIntake ? `
 **Extended Profile (Deep Psychological & Preference Data):**
 - deep_desires: Their deepest motivations and dreams they rarely share
@@ -38,6 +47,9 @@ Use ALL of this context to generate deeply personalized business ideas. The exte
 - Hidden fears that might sabotage certain business types
 - Natural energy patterns that predict success or burnout` : ''}
 
+**BUSINESS TYPE GUIDANCE:** ${businessTypeHint}
+**DIFFICULTY GUIDANCE:** ${difficultyGuidance}
+
 Your task is to generate 3-7 business ideas that are:
 1. Realistic and achievable given their constraints
 2. Deeply aligned with their passions, skills, psychological profile, and goals
@@ -46,11 +58,12 @@ Your task is to generate 3-7 business ideas that are:
 5. Matched to their time, capital, and energy constraints
 6. ${hasExtendedIntake ? 'Aligned with their preferred business archetypes and work preferences' : 'Suited to their available resources'}
 7. ${hasExtendedIntake ? 'Designed to leverage energy givers and avoid energy drainers' : 'Designed for sustainable execution'}
+8. Matched to their energy_source (e.g., "solving problems" → technical ideas, "helping people" → service ideas)
 
 For each idea, you must provide:
 - title: A compelling, concise title (5-10 words)
 - description: A clear 2-3 sentence explanation of the business
-- why_it_fits: ${hasExtendedIntake ? 'A personalized explanation of why THIS specific person should pursue this idea, referencing their deep desires, energy patterns, and personality' : 'A brief explanation of why this fits their profile'}
+- why_it_fits: ${hasExtendedIntake ? 'A personalized explanation of why THIS specific person should pursue this idea, referencing their deep desires, energy patterns, and personality' : 'A brief explanation of why this fits their profile, referencing their vision and energy source'}
 - business_model_type: One of: "saas", "coaching", "productized_service", "community", "content", "marketplace", "hybrid"
 - target_customer: Be specific (e.g., "Small business owners in healthcare", "Busy parents with young children")
 - how_it_makes_money: Clear revenue model explanation
@@ -157,6 +170,17 @@ serve(async (req) => {
     const hasExtendedIntake = !!extendedIntake;
     console.log("generate-ideas: hasExtendedIntake =", hasExtendedIntake);
 
+    // Prepare structured onboarding context hints
+    const businessTypeHint = !profile.business_type_preference || profile.business_type_preference === 'not-sure' 
+      ? 'Show diverse business types'
+      : `Prioritize ${profile.business_type_preference} ideas but include 1-2 alternatives`;
+
+    const difficultyGuidance = profile.commitment_level === 'exploring'
+      ? 'Favor difficulty_level 1-2 (easy to start)'
+      : profile.commitment_level === 'ready'
+      ? 'Can include difficulty_level up to 4 (more ambitious)'
+      : 'Mix of difficulty_level 2-3 (moderate)';
+
     // Prepare profile data for AI
     const profileData: Record<string, any> = {
       // Core profile
@@ -170,6 +194,14 @@ serve(async (req) => {
       risk_tolerance: profile.risk_tolerance,
       lifestyle_goals: profile.lifestyle_goals,
       success_vision: profile.success_vision,
+      // Structured onboarding fields
+      entry_trigger: profile.entry_trigger,
+      future_vision: profile.future_vision,
+      desired_identity: profile.desired_identity,
+      business_type_preference: profile.business_type_preference,
+      energy_source: profile.energy_source,
+      learning_style: profile.learning_style,
+      commitment_level: profile.commitment_level,
     };
 
     // Add extended intake if available
@@ -199,7 +231,7 @@ serve(async (req) => {
     }
 
     // Build dynamic system prompt based on available data
-    const systemPrompt = buildSystemPrompt(hasExtendedIntake);
+    const systemPrompt = buildSystemPrompt(hasExtendedIntake, businessTypeHint, difficultyGuidance);
 
     // Call Lovable AI with tool calling for structured output
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
