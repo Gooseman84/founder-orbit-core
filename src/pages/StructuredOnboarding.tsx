@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Check, Loader2, ChevronUp } from "lucide-react";
+import { Check, Loader2, ChevronUp, Info, CheckCircle2, Sparkles } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +72,17 @@ const COMMITMENT_LEVEL_OPTIONS = [
   { value: "exploring", label: "I'm exploring to see if this fits" },
 ];
 
+// Tooltips explaining why we ask each question
+const QUESTION_TOOLTIPS: Record<number, string> = {
+  1: "Understanding why you're here helps us prioritize what matters most to you.",
+  2: "Your vision shapes everything—we'll use this to filter ideas that actually match your goals.",
+  3: "Your founder identity shapes which business models will feel natural vs draining.",
+  4: "This helps us show you relevant ideas first, but you can explore all types later.",
+  5: "Knowing what energizes you helps us suggest work that won't burn you out.",
+  6: "We'll tailor how we present information to match how you learn best.",
+  7: "Your commitment level helps us suggest appropriately scoped ideas—no judgment here.",
+};
+
 // Helper component for card-style radio options
 const CardRadioOption = ({ 
   value, 
@@ -116,6 +128,31 @@ const CardRadioOption = ({
   </div>
 );
 
+// Question title with tooltip
+const QuestionTitle = ({ 
+  children, 
+  questionNumber 
+}: { 
+  children: React.ReactNode; 
+  questionNumber: number; 
+}) => (
+  <div className="flex items-start gap-2">
+    <CardTitle className="text-xl flex-1">{children}</CardTitle>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Info className="w-4 h-4 text-muted-foreground cursor-help mt-1.5 shrink-0" />
+        </TooltipTrigger>
+        <TooltipContent side="left">
+          <p className="max-w-xs text-sm">
+            {QUESTION_TOOLTIPS[questionNumber]}
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  </div>
+);
+
 // Question section wrapper
 const QuestionSection = ({ 
   number, 
@@ -141,13 +178,25 @@ const QuestionSection = ({
   </Card>
 );
 
+// Simple debounce function
+function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): (...args: Parameters<T>) => void {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+}
+
 export default function StructuredOnboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showTransition, setShowTransition] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const startTimeRef = useRef<number>(Date.now());
   const hasTrackedStartRef = useRef(false);
+  const hasSavedProgressRef = useRef(false);
   
   const [formData, setFormData] = useState<StructuredOnboardingData>({
     entry_trigger: "",
@@ -172,6 +221,69 @@ export default function StructuredOnboarding() {
       });
     }
   }, [user?.id]);
+
+  // Load saved progress on mount
+  useEffect(() => {
+    const loadProgress = async () => {
+      if (!user?.id) return;
+      
+      const { data } = await supabase
+        .from('founder_profiles')
+        .select('entry_trigger, future_vision, desired_identity, business_type_preference, energy_source, learning_style, commitment_level_text')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (data) {
+        setFormData(prev => ({
+          ...prev,
+          entry_trigger: data.entry_trigger || "",
+          future_vision: data.future_vision || "",
+          desired_identity: data.desired_identity || "",
+          business_type_preference: data.business_type_preference || "",
+          energy_source: data.energy_source || "",
+          learning_style: data.learning_style || "",
+          commitment_level: data.commitment_level_text || "",
+        }));
+      }
+    };
+    
+    loadProgress();
+  }, [user?.id]);
+
+  // Debounced save progress
+  const saveProgress = useCallback(
+    debounce(async (data: StructuredOnboardingData, userId: string) => {
+      if (!userId) return;
+      
+      const entryTriggerValue = data.entry_trigger === "other" 
+        ? data.entry_trigger_other 
+        : data.entry_trigger;
+
+      await supabase
+        .from('founder_profiles')
+        .upsert({
+          user_id: userId,
+          entry_trigger: entryTriggerValue || null,
+          future_vision: data.future_vision || null,
+          desired_identity: data.desired_identity || null,
+          business_type_preference: data.business_type_preference || null,
+          energy_source: data.energy_source || null,
+          learning_style: data.learning_style || null,
+          commitment_level_text: data.commitment_level || null,
+        }, {
+          onConflict: "user_id",
+        });
+    }, 1500),
+    []
+  );
+
+  // Save progress as user types
+  useEffect(() => {
+    if (user?.id && hasSavedProgressRef.current) {
+      saveProgress(formData, user.id);
+    }
+    hasSavedProgressRef.current = true;
+  }, [formData, user?.id, saveProgress]);
 
   // Track scroll position for back-to-top button
   useEffect(() => {
@@ -231,16 +343,14 @@ export default function StructuredOnboarding() {
         metadata: { time_spent_seconds: timeSpentSeconds }
       });
 
-      toast.success("Got it! Now let's get to know you better...");
-      
-      // Redirect after 1 second
+      // Show celebration and transition
+      setShowConfetti(true);
       setTimeout(() => {
-        navigate("/onboarding/interview");
-      }, 1000);
+        setShowTransition(true);
+      }, 800);
     } catch (error) {
       console.error("Error saving onboarding data:", error);
       toast.error("Failed to save your answers. Please try again.");
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -249,8 +359,59 @@ export default function StructuredOnboarding() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Transition screen after Phase 1 completion
+  if (showTransition) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center space-y-6 max-w-md animate-fade-in">
+          <div className="relative">
+            <CheckCircle2 className="w-20 h-20 mx-auto text-primary animate-scale-in" />
+            <Sparkles className="w-6 h-6 text-yellow-500 absolute top-0 right-1/3 animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold">Great! Now let's get specific.</h2>
+            <p className="text-muted-foreground">
+              Mavrik will ask you 3-5 targeted questions to understand your unique advantages and constraints.
+              This is where the magic happens.
+            </p>
+          </div>
+          <Button 
+            onClick={() => navigate('/onboarding/interview')}
+            size="lg"
+            className="gap-2"
+          >
+            Continue to Mavrik
+            <span className="ml-1">→</span>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
+      {/* Confetti celebration overlay */}
+      {showConfetti && (
+        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+          {[...Array(50)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute animate-confetti"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `-5%`,
+                width: `${Math.random() * 10 + 5}px`,
+                height: `${Math.random() * 10 + 5}px`,
+                backgroundColor: ['hsl(var(--primary))', 'hsl(var(--secondary))', '#fbbf24', '#34d399', '#f472b6'][Math.floor(Math.random() * 5)],
+                borderRadius: Math.random() > 0.5 ? '50%' : '0',
+                animationDelay: `${Math.random() * 0.5}s`,
+                animationDuration: `${Math.random() * 2 + 2}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Progress Header */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         <div className="container max-w-2xl py-4">
@@ -283,7 +444,7 @@ export default function StructuredOnboarding() {
         {/* Question 1: Entry Trigger */}
         <QuestionSection number={1} isAnswered={!!formData.entry_trigger && (formData.entry_trigger !== "other" || !!formData.entry_trigger_other)}>
           <CardHeader>
-            <CardTitle className="text-xl">What brought you here today?</CardTitle>
+            <QuestionTitle questionNumber={1}>What brought you here today?</QuestionTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Select
@@ -316,7 +477,7 @@ export default function StructuredOnboarding() {
         {/* Question 2: Future Vision */}
         <QuestionSection number={2} isAnswered={!!formData.future_vision.trim()}>
           <CardHeader>
-            <CardTitle className="text-xl">Picture yourself one year from now. What would make you genuinely proud?</CardTitle>
+            <QuestionTitle questionNumber={2}>Picture yourself one year from now. What would make you genuinely proud?</QuestionTitle>
           </CardHeader>
           <CardContent>
             <Textarea
@@ -332,7 +493,7 @@ export default function StructuredOnboarding() {
         {/* Question 3: Desired Identity */}
         <QuestionSection number={3} isAnswered={!!formData.desired_identity}>
           <CardHeader>
-            <CardTitle className="text-xl">Which version of you are you ready to build?</CardTitle>
+            <QuestionTitle questionNumber={3}>Which version of you are you ready to build?</QuestionTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3">
@@ -353,7 +514,7 @@ export default function StructuredOnboarding() {
         {/* Question 4: Business Type Preference */}
         <QuestionSection number={4} isAnswered={!!formData.business_type_preference}>
           <CardHeader>
-            <CardTitle className="text-xl">If you could only pick one, which sounds most exciting?</CardTitle>
+            <QuestionTitle questionNumber={4}>If you could only pick one, which sounds most exciting?</QuestionTitle>
             <CardDescription>
               This helps us show you relevant ideas first. You can always explore other types later.
             </CardDescription>
@@ -377,7 +538,7 @@ export default function StructuredOnboarding() {
         {/* Question 5: Energy Source */}
         <QuestionSection number={5} isAnswered={!!formData.energy_source}>
           <CardHeader>
-            <CardTitle className="text-xl">What energizes you most when you're working?</CardTitle>
+            <QuestionTitle questionNumber={5}>What energizes you most when you're working?</QuestionTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3">
@@ -397,7 +558,7 @@ export default function StructuredOnboarding() {
         {/* Question 6: Learning Style */}
         <QuestionSection number={6} isAnswered={!!formData.learning_style}>
           <CardHeader>
-            <CardTitle className="text-xl">How do you prefer to learn?</CardTitle>
+            <QuestionTitle questionNumber={6}>How do you prefer to learn?</QuestionTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3">
@@ -417,7 +578,7 @@ export default function StructuredOnboarding() {
         {/* Question 7: Commitment Level */}
         <QuestionSection number={7} isAnswered={!!formData.commitment_level}>
           <CardHeader>
-            <CardTitle className="text-xl">What's your honest commitment level right now?</CardTitle>
+            <QuestionTitle questionNumber={7}>What's your honest commitment level right now?</QuestionTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3">
@@ -464,7 +625,7 @@ export default function StructuredOnboarding() {
         <Button
           variant="outline"
           size="icon"
-          className="fixed bottom-20 right-4 z-50 rounded-full shadow-lg"
+          className="fixed bottom-24 right-4 rounded-full shadow-lg z-40"
           onClick={scrollToTop}
         >
           <ChevronUp className="h-4 w-4" />
