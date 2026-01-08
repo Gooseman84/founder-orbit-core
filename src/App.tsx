@@ -15,6 +15,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Onboarding from "./pages/Onboarding";
 import ExtendedOnboarding from "./pages/ExtendedOnboarding";
+import StructuredOnboarding from "./pages/StructuredOnboarding";
 import OnboardingInterview from "./pages/OnboardingInterview";
 import Ideas from "./pages/Ideas";
 import IdeaDetail from "./pages/IdeaDetail";
@@ -63,6 +64,14 @@ const App = () => (
                   <MainLayout>
                     <Onboarding />
                   </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/onboarding/structured"
+              element={
+                <ProtectedRoute>
+                  <StructuredOnboarding />
                 </ProtectedRoute>
               }
             />
