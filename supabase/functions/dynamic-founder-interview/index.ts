@@ -13,6 +13,42 @@ Your job: interview the founder to extract actionable context for business idea 
 You are NOT a therapist. This is a business conversation. Be direct, warm, and practical.
 
 ═══════════════════════════════════════════════════════════════════════════════
+CONTEXT FROM STRUCTURED ONBOARDING
+═══════════════════════════════════════════════════════════════════════════════
+
+Before this interview begins, the founder has already answered 7 baseline questions.
+You will receive this context in the first message:
+- Why they're here (entry_trigger)
+- Their 1-year vision (future_vision)
+- How they see themselves (desired_identity)
+- Business type interest (business_type_preference)
+- What energizes them (energy_source)
+- Learning style (learning_style)
+- Commitment level (commitment_level)
+
+Use this context to ask TARGETED, EFFICIENT follow-up questions.
+
+YOUR NEW GOAL: Ask only 3-5 questions (not 12-18) that get:
+1. Specific unfair advantages (unique access, insider knowledge, rare skills)
+2. Real constraints (actual time available, family responsibilities, financial runway)
+3. Hard "no" filters (things they'll NEVER do in their business)
+4. Market segments they understand from the inside (not aspirationally, but truly)
+
+DO NOT ask about:
+- Why they're here (you already know)
+- What motivates them (you already know)
+- What kind of business they want (you already know)
+- How they like to work (you already know)
+
+DO ask about:
+- "You mentioned [business_type_preference] - what gives you an unfair advantage in that space?"
+- "Given your vision of [future_vision], what's the biggest constraint holding you back right now?"
+- "What would you absolutely NEVER want your business to require? What's a hard no for you?"
+- "Which customer groups or markets do you understand from the inside? Where are you a native, not a tourist?"
+
+Keep questions short, direct, and conversational. No preamble.
+
+═══════════════════════════════════════════════════════════════════════════════
 WHAT YOU'RE EXTRACTING (Internal Framework - Never Share)
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -51,25 +87,25 @@ INTERVIEW RULES
 • Adapt based on what they've already said.
 • Push for specifics when answers are vague.
 • Skip areas they've already covered well.
-• Aim for 8-12 questions total. Be efficient.
+• Aim for **3-5 questions** total since you already have baseline context from structured onboarding.
 
 ═══════════════════════════════════════════════════════════════════════════════
 QUESTION EXAMPLES (Few-Shot)
 ═══════════════════════════════════════════════════════════════════════════════
 
-GOOD OPENER:
-"What's the last thing you got paid to do that you were genuinely good at?"
+GOOD OPENER (use info from structured onboarding):
+"You mentioned you're interested in [business_type_preference] - what gives you an edge in that space that others don't have?"
 
 GOOD FOLLOW-UPS:
 After skills answer → "Who would pay you for that if you packaged it differently?"
-After vague passion → "Can you give me a specific example of that?"
+After vague answer → "Can you give me a specific example?"
 After constraint mention → "What's the hard ceiling on hours per week you can commit?"
 After market mention → "What's a problem in that space that frustrates you personally?"
 
 BAD QUESTIONS (Never Ask These):
-✗ "What are you passionate about?" (too broad)
+✗ "What are you passionate about?" (you already know from structured onboarding)
 ✗ "Tell me about yourself" (wastes time)
-✗ "What are your strengths and weaknesses?" (job interview cliché)
+✗ "What kind of business excites you?" (you already know)
 ✗ "How do you feel about that?" (therapy language)
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -305,15 +341,54 @@ serve(async (req) => {
         }
       }
 
-      const messages = [
+      // Build messages array
+      const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
         { role: "system" as const, content: SYSTEM_PROMPT },
-        ...mapTranscriptToMessages(transcript),
-        {
-          role: "user" as const,
-          content:
-            "Ask the next interview question now. Remember: respond with the question text only, no explanations.",
-        },
       ];
+
+      // If this is a NEW interview (empty transcript), fetch structured onboarding context
+      if (transcript.length === 0) {
+        console.log("dynamic-founder-interview: new interview, fetching structured onboarding context");
+        
+        const { data: profile, error: profileError } = await supabase
+          .from("founder_profiles")
+          .select("entry_trigger, future_vision, desired_identity, business_type_preference, energy_source, learning_style, commitment_level_text")
+          .eq("user_id", resolvedUserId)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("dynamic-founder-interview: error fetching founder profile", profileError);
+        }
+
+        if (profile) {
+          const contextMessage = `Before you begin the interview, here's what the founder already shared:
+
+- They're here because: ${profile.entry_trigger || 'Not specified'}
+- Their 1-year vision: ${profile.future_vision || 'Not specified'}
+- They see themselves as: ${profile.desired_identity || 'Not specified'}
+- Interested in: ${profile.business_type_preference || 'Not specified'}
+- Energized by: ${profile.energy_source || 'Not specified'}
+- Learns by: ${profile.learning_style || 'Not specified'}
+- Commitment level: ${profile.commitment_level_text || 'Not specified'}
+
+Now ask your first targeted question based on this context. Reference something specific they shared.`;
+
+          messages.push({ role: "system" as const, content: contextMessage });
+          console.log("dynamic-founder-interview: injected structured onboarding context");
+        } else {
+          console.log("dynamic-founder-interview: no structured onboarding profile found");
+        }
+      }
+
+      // Add transcript history
+      messages.push(...mapTranscriptToMessages(transcript));
+      
+      // Add instruction to generate next question
+      messages.push({
+        role: "user" as const,
+        content:
+          "Ask the next interview question now. Remember: respond with the question text only, no explanations.",
+      });
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -351,7 +426,7 @@ serve(async (req) => {
       const data = await response.json();
       const question: string =
         data.choices?.[0]?.message?.content?.trim?.() ||
-        "What is one thing you want your next business to change about your life?";
+        "What specific skill have people paid you for that you think gives you an edge?";
 
       transcript = [
         ...transcript,
@@ -371,8 +446,12 @@ serve(async (req) => {
         console.error("dynamic-founder-interview: error updating transcript", updateError);
       }
 
+      // Calculate question count for canFinalize (allow ending after 3+ questions)
+      const aiQuestionCount = transcript.filter(t => t.role === "ai").length;
+      const canFinalize = aiQuestionCount >= 3;
+
       return new Response(
-        JSON.stringify({ interviewId, question, transcript }),
+        JSON.stringify({ interviewId, question, transcript, canFinalize }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
