@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_decisions: {
+        Row: {
+          agent_name: string
+          approved: boolean | null
+          approved_at: string | null
+          confidence: number | null
+          created_at: string | null
+          decision_type: string
+          id: string
+          inputs: Json
+          outputs: Json
+          reasoning: string | null
+          requires_approval: boolean | null
+          risk_level: string | null
+          user_id: string
+        }
+        Insert: {
+          agent_name: string
+          approved?: boolean | null
+          approved_at?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          decision_type: string
+          id?: string
+          inputs: Json
+          outputs: Json
+          reasoning?: string | null
+          requires_approval?: boolean | null
+          risk_level?: string | null
+          user_id: string
+        }
+        Update: {
+          agent_name?: string
+          approved?: boolean | null
+          approved_at?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          decision_type?: string
+          id?: string
+          inputs?: Json
+          outputs?: Json
+          reasoning?: string | null
+          requires_approval?: boolean | null
+          risk_level?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_memory: {
+        Row: {
+          created_at: string | null
+          id: string
+          memory_data: Json
+          memory_path: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          memory_data: Json
+          memory_path: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          memory_data?: Json
+          memory_path?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           badge_code: string
