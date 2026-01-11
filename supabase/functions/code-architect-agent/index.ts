@@ -44,8 +44,171 @@ interface AnalysisResult {
   risk_level: "low" | "medium" | "high" | "critical";
 }
 
+// ============================================
+// FILE READING UTILITIES
+// ============================================
+
+// Helper function to read a single codebase file
+async function readCodeFile(filePath: string): Promise<string> {
+  try {
+    // Normalize path - remove leading slash if present
+    const normalizedPath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+    
+    // Try multiple possible locations for the file
+    const possiblePaths = [
+      `/var/task/${normalizedPath}`,
+      `./${normalizedPath}`,
+      normalizedPath,
+    ];
+    
+    for (const fullPath of possiblePaths) {
+      try {
+        const content = await Deno.readTextFile(fullPath);
+        console.log(`Successfully read file: ${filePath} from ${fullPath}`);
+        return content;
+      } catch {
+        // Try next path
+        continue;
+      }
+    }
+    
+    // If we couldn't read the file, return a message
+    console.warn(`Could not read file from any path: ${filePath}`);
+    return `// File not accessible: ${filePath}\n// Note: File reading may be limited in edge function environment`;
+  } catch (error) {
+    console.error(`Failed to read file: ${filePath}`, error);
+    return `// File not found or not accessible: ${filePath}`;
+  }
+}
+
+// Helper to read multiple files
+async function readCodeFiles(filePaths: string[]): Promise<Record<string, string>> {
+  const files: Record<string, string> = {};
+  
+  // Read files in parallel for efficiency
+  const results = await Promise.allSettled(
+    filePaths.map(async (path) => ({
+      path,
+      content: await readCodeFile(path),
+    }))
+  );
+  
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      files[result.value.path] = result.value.content;
+    }
+  }
+  
+  return files;
+}
+
+// ============================================
+// FILE INFERENCE UTILITIES
+// ============================================
+
+// Common TrueBlazer function-to-file mappings
+const FUNCTION_FILE_MAPPINGS: Record<string, string[]> = {
+  "generate-blueprint": ["supabase/functions/generate-blueprint/index.ts"],
+  "stripe-webhook": ["supabase/functions/stripe-webhook/index.ts"],
+  "generate-ideas": ["supabase/functions/generate-ideas/index.ts", "src/lib/ideaEngine.ts"],
+  "generate-venture-plan": ["supabase/functions/generate-venture-plan/index.ts"],
+  "generate-daily-execution-tasks": ["supabase/functions/generate-daily-execution-tasks/index.ts"],
+  "code-architect-agent": ["supabase/functions/code-architect-agent/index.ts"],
+  "analyze-idea": ["supabase/functions/analyze-idea/index.ts"],
+  "generate-pulse-check": ["supabase/functions/generate-pulse-check/index.ts"],
+  "generate-niche-radar": ["supabase/functions/generate-niche-radar/index.ts"],
+  "useBlueprint": ["src/hooks/useBlueprint.ts"],
+  "useVentureState": ["src/hooks/useVentureState.ts"],
+  "useAuth": ["src/hooks/useAuth.tsx"],
+  "useSubscription": ["src/hooks/useSubscription.ts"],
+  "useNorthStarVenture": ["src/hooks/useNorthStarVenture.ts"],
+  "useDailyExecution": ["src/hooks/useDailyExecution.ts"],
+  "Dashboard": ["src/pages/Dashboard.tsx", "src/components/dashboard/DiscoveryDashboard.tsx", "src/components/dashboard/ExecutionDashboard.tsx"],
+  "Blueprint": ["src/pages/Blueprint.tsx", "src/components/blueprint/BusinessBlueprint.tsx"],
+  "VentureReview": ["src/pages/VentureReview.tsx"],
+  "Tasks": ["src/pages/Tasks.tsx", "src/components/tasks/TaskList.tsx"],
+  "Workspace": ["src/pages/Workspace.tsx", "src/components/workspace/WorkspaceEditor.tsx"],
+};
+
+// Infer likely files from error logs
+function inferAffectedFiles(errorLogs: string[]): string[] {
+  const files: Set<string> = new Set();
+  
+  for (const log of errorLogs) {
+    // Extract file paths from error messages
+    // Pattern 1: "Error at /supabase/functions/generate-blueprint/index.ts:45"
+    // Pattern 2: "at Object.<anonymous> (src/hooks/useBlueprint.ts:123:45)"
+    // Pattern 3: "/src/components/dashboard/ExecutionDashboard.tsx:89"
+    
+    // Match paths starting with supabase/ or src/
+    const fileMatches = log.match(/(?:\/)?(?:supabase|src)\/[^:\s\)]+/g);
+    if (fileMatches) {
+      for (const match of fileMatches) {
+        // Clean up the path
+        const cleanPath = match.startsWith("/") ? match.slice(1) : match;
+        files.add(cleanPath);
+      }
+    }
+    
+    // Check for function name mappings
+    for (const [functionName, filePaths] of Object.entries(FUNCTION_FILE_MAPPINGS)) {
+      if (log.toLowerCase().includes(functionName.toLowerCase())) {
+        for (const filePath of filePaths) {
+          files.add(filePath);
+        }
+      }
+    }
+    
+    // Extract component names from React error stack traces
+    // Pattern: "at ComponentName (webpack...)"
+    const componentMatches = log.match(/at\s+([A-Z][a-zA-Z]+)\s+\(/g);
+    if (componentMatches) {
+      for (const match of componentMatches) {
+        const componentName = match.replace(/at\s+/, "").replace(/\s+\($/, "");
+        // Check if we have a mapping for this component
+        if (FUNCTION_FILE_MAPPINGS[componentName]) {
+          for (const filePath of FUNCTION_FILE_MAPPINGS[componentName]) {
+            files.add(filePath);
+          }
+        }
+      }
+    }
+  }
+  
+  // Remove duplicates and return
+  return [...files];
+}
+
+// Format file contents for the prompt
+function formatCodeContext(fileContents: Record<string, string>): string {
+  if (Object.keys(fileContents).length === 0) {
+    return "No code files were available for analysis.";
+  }
+  
+  return Object.entries(fileContents)
+    .map(([path, content]) => {
+      // Truncate very long files to avoid token limits
+      const maxLines = 500;
+      const lines = content.split("\n");
+      const truncated = lines.length > maxLines;
+      const displayContent = truncated 
+        ? lines.slice(0, maxLines).join("\n") + `\n\n// ... (${lines.length - maxLines} more lines truncated)`
+        : content;
+      
+      return `
+===== File: ${path} =====
+${displayContent}
+===== End of ${path} =====`;
+    })
+    .join("\n\n");
+}
+
+// ============================================
+// PROMPT BUILDING
+// ============================================
+
 // Build system prompt based on task type
-function buildSystemPrompt(taskType: string, context: TaskContext): string {
+function buildSystemPrompt(taskType: string, context: TaskContext, codeContext: string): string {
   const basePrompt = `You are the Code Architect Agent for TrueBlazer AI.
 
 Tech Stack:
@@ -62,16 +225,21 @@ Your mission: Analyze bugs and design production-ready fixes.
 Input:
 Issue: ${context.issue_description}
 Error Logs: ${context.error_logs.join('\n')}
-Affected Files: ${context.affected_files?.join(', ') || 'Unknown - infer from error logs'}
+Affected Files: ${context.affected_files?.join(', ') || 'Inferred from error logs'}
 Severity: ${context.severity}
-${context.user_reports ? `User Reports: ${context.user_reports.join('\n')}` : ''}`;
+${context.user_reports ? `User Reports: ${context.user_reports.join('\n')}` : ''}
+
+CODE CONTEXT:
+${codeContext}
+
+IMPORTANT: Use the code context above to provide specific, accurate analysis. Reference exact line numbers, function names, and variable names from the actual code.`;
 
   if (taskType === "analyze_bug") {
     return `${basePrompt}
 
 Your task:
-1. Identify the root cause (be specific, not vague)
-2. Explain why it's happening (technical details)
+1. Identify the root cause (be specific, reference exact line numbers and code from the context)
+2. Explain why it's happening (technical details with code references)
 3. Design a fix with step-by-step implementation
 4. Generate a complete Lovable prompt that implements the fix
 5. Include test cases to verify the fix works
@@ -79,16 +247,16 @@ Your task:
 
 Output format (JSON only, no markdown code blocks):
 {
-  "root_cause": "Single sentence explaining the core issue",
+  "root_cause": "Single sentence explaining the core issue with specific code reference",
   "affected_components": ["file1.ts", "file2.tsx"],
-  "explanation": "2-3 paragraph technical explanation",
+  "explanation": "2-3 paragraph technical explanation referencing specific code",
   "fix_plan": {
-    "steps": ["step 1", "step 2", "step 3"],
+    "steps": ["step 1 with specific changes", "step 2", "step 3"],
     "files_to_modify": ["exact/file/paths.ts"],
     "new_dependencies": ["npm-package-name or empty array"],
     "database_migrations": ["SQL if needed or empty array"]
   },
-  "lovable_prompt": "Complete Lovable.dev prompt that can be copy-pasted to fix the issue. Be detailed and specific.",
+  "lovable_prompt": "Complete Lovable.dev prompt that can be copy-pasted to fix the issue. Be detailed, reference specific files and line numbers.",
   "test_cases": ["test instruction 1", "test instruction 2"],
   "confidence": 85,
   "estimated_time": "30 minutes",
@@ -100,7 +268,7 @@ Output format (JSON only, no markdown code blocks):
     return `${basePrompt}
 
 Your task:
-1. Design a comprehensive fix plan
+1. Design a comprehensive fix plan using the actual code structure
 2. Consider edge cases and potential side effects
 3. Generate a detailed Lovable prompt for implementation
 4. Estimate time and risk
@@ -109,9 +277,9 @@ Output format (JSON only, no markdown code blocks):
 {
   "root_cause": "Single sentence explaining the core issue",
   "affected_components": ["file1.ts", "file2.tsx"],
-  "explanation": "Detailed technical explanation of the fix approach",
+  "explanation": "Detailed technical explanation of the fix approach with code references",
   "fix_plan": {
-    "steps": ["detailed step 1", "detailed step 2", "detailed step 3"],
+    "steps": ["detailed step 1 referencing specific code", "detailed step 2", "detailed step 3"],
     "files_to_modify": ["exact/file/paths.ts"],
     "new_dependencies": [],
     "database_migrations": []
@@ -128,23 +296,23 @@ Output format (JSON only, no markdown code blocks):
     return `${basePrompt}
 
 Your task:
-1. Review the proposed changes for correctness
+1. Review the code for correctness based on the actual implementation
 2. Identify potential bugs or security issues
 3. Suggest improvements
-4. Rate the quality of the proposed fix
+4. Rate the quality of the current implementation
 
 Output format (JSON only, no markdown code blocks):
 {
-  "root_cause": "Summary of what the proposed fix addresses",
+  "root_cause": "Summary of what issues exist in the current code",
   "affected_components": ["file1.ts", "file2.tsx"],
-  "explanation": "Review of the proposed changes - what's good, what needs improvement",
+  "explanation": "Review of the code - what's good, what needs improvement",
   "fix_plan": {
-    "steps": ["recommended changes or improvements"],
-    "files_to_modify": ["files that need additional changes"],
+    "steps": ["recommended changes with specific code references"],
+    "files_to_modify": ["files that need changes"],
     "new_dependencies": [],
     "database_migrations": []
   },
-  "lovable_prompt": "Updated Lovable prompt with improvements, or 'No changes needed' if fix is good",
+  "lovable_prompt": "Lovable prompt with improvements, referencing specific line numbers and code",
   "test_cases": ["additional tests to add"],
   "confidence": 90,
   "estimated_time": "15 minutes",
@@ -336,8 +504,33 @@ serve(async (req) => {
     console.log(`Processing ${task.type} task for user ${userId}`);
     console.log("Issue:", context.issue_description);
 
-    // Build prompt and call Claude
-    const systemPrompt = buildSystemPrompt(task.type, context);
+    // ============================================
+    // FILE READING AND INFERENCE
+    // ============================================
+    
+    // Get affected files - either from context or inferred from error logs
+    let affectedFiles = context.affected_files || [];
+    let filesWereInferred = false;
+    
+    if (affectedFiles.length === 0 && context.error_logs.length > 0) {
+      affectedFiles = inferAffectedFiles(context.error_logs);
+      filesWereInferred = true;
+      console.log("Inferred affected files from error logs:", affectedFiles);
+    }
+    
+    // Read the files
+    let fileContents: Record<string, string> = {};
+    let codeContext = "No code files specified or available.";
+    
+    if (affectedFiles.length > 0) {
+      console.log(`Reading ${affectedFiles.length} code files...`);
+      fileContents = await readCodeFiles(affectedFiles);
+      codeContext = formatCodeContext(fileContents);
+      console.log(`Successfully read ${Object.keys(fileContents).length} files`);
+    }
+
+    // Build prompt with code context and call Claude
+    const systemPrompt = buildSystemPrompt(task.type, context, codeContext);
     
     let analysisResult: AnalysisResult;
     try {
@@ -348,7 +541,8 @@ serve(async (req) => {
         JSON.stringify({ 
           error: "AI analysis failed",
           message: apiError instanceof Error ? apiError.message : "Unknown error",
-          requires_human_review: true
+          requires_human_review: true,
+          files_attempted: affectedFiles,
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -371,7 +565,11 @@ serve(async (req) => {
         user_id: userId,
         agent_name: "code_architect",
         decision_type: `${task.type}_proposed`,
-        inputs: context,
+        inputs: {
+          ...context,
+          files_analyzed: Object.keys(fileContents),
+          files_were_inferred: filesWereInferred,
+        },
         outputs: analysisResult,
         reasoning: analysisResult.explanation,
         confidence: analysisResult.confidence,
@@ -391,6 +589,7 @@ serve(async (req) => {
     const decisionId = decisionData?.id || null;
 
     console.log(`Analysis complete. Confidence: ${analysisResult.confidence}, Requires approval: ${requiresApproval}`);
+    console.log(`Files analyzed: ${Object.keys(fileContents).length}, Files inferred: ${filesWereInferred}`);
 
     // Return response
     return new Response(
@@ -410,6 +609,11 @@ serve(async (req) => {
         approval_status: approvalStatus,
         decision_id: decisionId,
         estimated_time: analysisResult.estimated_time,
+        code_analysis: {
+          files_analyzed: Object.keys(fileContents),
+          files_were_inferred: filesWereInferred,
+          total_files: Object.keys(fileContents).length,
+        },
       }),
       { 
         status: 200, 
