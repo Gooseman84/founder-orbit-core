@@ -185,32 +185,48 @@ export function MobileBottomNav() {
               <span className="text-[11px] font-medium mt-1">More</span>
             </button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="pb-[env(safe-area-inset-bottom)] rounded-t-xl max-h-[80vh] overflow-y-auto">
+          <SheetContent 
+            side="bottom" 
+            className="pb-[env(safe-area-inset-bottom)] rounded-t-xl max-h-[80vh] overflow-y-auto"
+          >
             <SheetHeader className="pb-2">
               <SheetTitle>More</SheetTitle>
             </SheetHeader>
             
             <div className="space-y-5 py-4">
               {moreGroups.map((group, groupIndex) => (
-                <div key={group.label}>
+                <div 
+                  key={group.label}
+                  className="motion-safe:animate-fade-in motion-reduce:opacity-100"
+                  style={{ 
+                    animationDelay: `${groupIndex * 50}ms`,
+                    animationFillMode: 'both'
+                  }}
+                >
                   {/* Section Header */}
-                  <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">
+                  <h3 
+                    className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1 motion-safe:animate-fade-in motion-reduce:opacity-100"
+                    style={{ 
+                      animationDelay: `${groupIndex * 50 + 25}ms`,
+                      animationFillMode: 'both'
+                    }}
+                  >
                     {group.label}
                   </h3>
                   
                   {/* Section Items */}
                   <div className="grid grid-cols-3 gap-2">
-                    {group.items.map(({ label, path, icon: Icon }) => {
+                    {group.items.map(({ label, path, icon: Icon }, itemIndex) => {
                       const isActive = isTabActive(path);
                       return (
                         <button
                           key={label}
                           onClick={() => handleMoreItemClick(path)}
                           className={cn(
-                            "flex flex-col items-center justify-center gap-2 p-3 rounded-lg transition-colors",
+                            "flex flex-col items-center justify-center gap-2 p-3 rounded-lg transition-colors motion-safe:transition-all motion-safe:duration-200",
                             isActive 
                               ? "bg-primary/10 text-primary" 
-                              : "bg-secondary/50 text-foreground hover:bg-secondary"
+                              : "bg-secondary/50 text-foreground hover:bg-secondary motion-safe:active:scale-95"
                           )}
                         >
                           <Icon className="w-5 h-5" />
@@ -229,13 +245,19 @@ export function MobileBottomNav() {
             </div>
             
             {/* Actions Section */}
-            <div className="border-t pt-3">
+            <div 
+              className="border-t pt-3 motion-safe:animate-fade-in motion-reduce:opacity-100"
+              style={{ 
+                animationDelay: `${moreGroups.length * 50}ms`,
+                animationFillMode: 'both'
+              }}
+            >
               <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">
                 ACTIONS
               </h3>
               <Button 
                 variant="ghost" 
-                className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+                className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground motion-safe:transition-colors"
                 onClick={handleSignOut}
               >
                 <LogOut className="w-5 h-5" />
