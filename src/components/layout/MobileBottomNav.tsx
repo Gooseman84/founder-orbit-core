@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useNorthStarVenture } from "@/hooks/useNorthStarVenture";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useAuth } from "@/hooks/useAuth";
+import { useDailyExecution } from "@/hooks/useDailyExecution";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -19,6 +20,15 @@ export function MobileBottomNav() {
   // Check if venture is in executing state
   const isExecuting = activeVenture?.venture_state === "executing";
 
+  // Get daily tasks for badge count (only in execution mode)
+  const { dailyTasks } = useDailyExecution(isExecuting ? activeVenture : null);
+  
+  // Count incomplete tasks
+  const incompleteTaskCount = useMemo(() => {
+    if (!isExecuting || !dailyTasks) return 0;
+    return dailyTasks.filter(task => !task.completed).length;
+  }, [isExecuting, dailyTasks]);
+
   // Compute blueprintHref same as SidebarNav
   const ventureId = northStarVenture?.id ?? activeVenture?.id;
   const blueprintHref = ventureId ? `/blueprint?ventureId=${ventureId}` : "/blueprint";
@@ -28,48 +38,58 @@ export function MobileBottomNav() {
     if (isExecuting) {
       // Execution mode: Home, Tasks, Blueprint, Workspace
       return [
-        { label: "Home", path: "/dashboard", icon: Home },
-        { label: "Tasks", path: "/tasks", icon: ListChecks },
-        { label: "Blueprint", path: blueprintHref, icon: Map },
-        { label: "Workspace", path: "/workspace", icon: FileText },
+        { label: "Home", path: "/dashboard", icon: Home, showBadge: false },
+        { label: "Tasks", path: "/tasks", icon: ListChecks, showBadge: true },
+        { label: "Blueprint", path: blueprintHref, icon: Map, showBadge: false },
+        { label: "Workspace", path: "/workspace", icon: FileText, showBadge: false },
       ];
     }
     // Default: Home, Idea Lab, Blueprint, Workspace
     return [
-      { label: "Home", path: "/dashboard", icon: Home },
-      { label: "Idea Lab", path: "/ideas", icon: Lightbulb },
-      { label: "Blueprint", path: blueprintHref, icon: Map },
-      { label: "Workspace", path: "/workspace", icon: FileText },
+      { label: "Home", path: "/dashboard", icon: Home, showBadge: false },
+      { label: "Idea Lab", path: "/ideas", icon: Lightbulb, showBadge: false },
+      { label: "Blueprint", path: blueprintHref, icon: Map, showBadge: false },
+      { label: "Workspace", path: "/workspace", icon: FileText, showBadge: false },
     ];
   }, [isExecuting, blueprintHref]);
 
-  // Grouped items for More sheet
-  const moreGroups = [
-    {
-      label: "CREATE",
-      items: [
-        { label: "Niche Radar", path: "/radar", icon: Radar },
-        { label: "Fusion Lab", path: "/fusion-lab", icon: Combine },
-      ],
-    },
-    {
-      label: "VISION",
-      items: [
-        { label: "North Star", path: "/north-star", icon: Target },
-      ],
-    },
-    {
-      label: "UTILITIES",
-      items: [
-        { label: "AI Co-Founder", path: "/context-inspector", icon: Eye },
-        { label: "Profile", path: "/profile", icon: User },
-        { label: "Billing", path: "/billing", icon: CreditCard },
-      ],
-    },
-  ];
+  // Grouped items for More sheet - conditionally include Idea Lab in execution mode
+  const moreGroups = useMemo(() => {
+    const createItems = isExecuting
+      ? [
+          { label: "Idea Lab", path: "/ideas", icon: Lightbulb },
+          { label: "Niche Radar", path: "/radar", icon: Radar },
+          { label: "Fusion Lab", path: "/fusion-lab", icon: Combine },
+        ]
+      : [
+          { label: "Niche Radar", path: "/radar", icon: Radar },
+          { label: "Fusion Lab", path: "/fusion-lab", icon: Combine },
+        ];
+
+    return [
+      {
+        label: "CREATE",
+        items: createItems,
+      },
+      {
+        label: "VISION",
+        items: [
+          { label: "North Star", path: "/north-star", icon: Target },
+        ],
+      },
+      {
+        label: "UTILITIES",
+        items: [
+          { label: "AI Co-Founder", path: "/context-inspector", icon: Eye },
+          { label: "Profile", path: "/profile", icon: User },
+          { label: "Billing", path: "/billing", icon: CreditCard },
+        ],
+      },
+    ];
+  }, [isExecuting]);
 
   // Flatten for isMoreActive check
-  const allMoreItems = moreGroups.flatMap(g => g.items);
+  const allMoreItems = useMemo(() => moreGroups.flatMap(g => g.items), [moreGroups]);
 
   const isTabActive = (path: string) => {
     // Handle blueprint with query params
@@ -106,7 +126,7 @@ export function MobileBottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 bg-background/90 backdrop-blur border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)] md:hidden">
       <div className="flex items-center justify-around h-14">
-        {primaryTabs.map(({ label, path, icon: Icon }) => {
+        {primaryTabs.map(({ label, path, icon: Icon, showBadge }) => {
           const isActive = isTabActive(path);
 
           return (
@@ -126,6 +146,12 @@ export function MobileBottomNav() {
                     isActive && "scale-110"
                   )}
                 />
+                {/* Task count badge */}
+                {showBadge && incompleteTaskCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[10px] font-semibold bg-primary text-primary-foreground rounded-full">
+                    {incompleteTaskCount > 99 ? "99+" : incompleteTaskCount}
+                  </span>
+                )}
                 {isActive && (
                   <span className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-primary" />
                 )}
