@@ -6,7 +6,6 @@ import { useVentureState } from "@/hooks/useVentureState";
 import { getNavVisibility, type NavSection } from "@/lib/navVisibility";
 import { 
   Home,
-  Activity,
   CheckSquare,
   Lightbulb,
   Combine,
@@ -89,11 +88,10 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const ventureId = northStarVenture?.id ?? activeVenture?.id;
   const blueprintHref = ventureId ? `/blueprint?ventureId=${ventureId}` : "/blueprint";
 
-  // Now section items - filtered by visibility
+  // Now section items - filtered by visibility (Daily Pulse removed - now part of Home)
   const nowItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [
       { name: "Home", href: "/dashboard", icon: Home, section: "home" },
-      { name: "Daily Pulse", href: "/daily-reflection", icon: Activity, section: "daily-pulse" },
     ];
     if (isAllowed("tasks")) {
       items.push({ name: "Tasks", href: "/tasks", icon: CheckSquare, section: "tasks" });
@@ -104,12 +102,12 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
     return items;
   }, [ventureState]);
 
-  // Create section items - filtered by visibility
+  // Create section items - filtered by visibility (reordered: Idea Lab, Niche Radar, Fusion Lab)
   const createItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [];
     if (isAllowed("idea-lab")) items.push({ name: "Idea Lab", href: "/ideas", icon: Lightbulb, section: "idea-lab" });
-    if (isAllowed("fusion-lab")) items.push({ name: "Fusion Lab", href: "/fusion-lab", icon: Combine, section: "fusion-lab" });
     if (isAllowed("radar")) items.push({ name: "Niche Radar", href: "/radar", icon: Radar, section: "radar" });
+    if (isAllowed("fusion-lab")) items.push({ name: "Fusion Lab", href: "/fusion-lab", icon: Combine, section: "fusion-lab" });
     return items;
   }, [ventureState]);
 
@@ -121,15 +119,15 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
     return items;
   }, [ventureState, blueprintHref]);
 
-  // Align section items - filtered by visibility
-  const alignItems: NavItem[] = useMemo(() => {
+  // Vision section items (renamed from Align) - filtered by visibility
+  const visionItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [];
     if (isAllowed("north-star")) items.push({ name: "North Star", href: "/north-star", icon: Target, section: "north-star" });
     return items;
   }, [ventureState]);
 
-  // System section items
-  const systemItems: NavItem[] = [
+  // Utilities section items (renamed from System)
+  const utilitiesItems: NavItem[] = [
     { name: "AI Co-Founder", href: "/context-inspector", icon: Eye, section: "context-inspector" },
     { name: "Profile", href: "/profile", icon: User, section: "profile" },
     { name: "Billing", href: "/billing", icon: CreditCard, section: "billing" },
@@ -166,8 +164,8 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
 
       {createItems.length > 0 && <NavSectionComponent label="Create" items={createItems} defaultOpen={false} onNavigate={onNavigate} />}
       {buildItems.length > 0 && <NavSectionComponent label="Build" items={buildItems} defaultOpen={isExecuting} onNavigate={onNavigate} />}
-      {alignItems.length > 0 && <NavSectionComponent label="Align" items={alignItems} defaultOpen={false} onNavigate={onNavigate} />}
-      <NavSectionComponent label="System" items={systemItems} defaultOpen={false} onNavigate={onNavigate} />
+      {visionItems.length > 0 && <NavSectionComponent label="Vision" items={visionItems} defaultOpen={false} onNavigate={onNavigate} />}
+      <NavSectionComponent label="Utilities" items={utilitiesItems} defaultOpen={false} onNavigate={onNavigate} />
       
       <div className="mt-auto pt-3 border-t border-border space-y-1">
         <UpgradeButton variant="sidebar" />
