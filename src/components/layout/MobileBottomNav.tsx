@@ -20,14 +20,17 @@ export function MobileBottomNav() {
   // Check if venture is in executing state
   const isExecuting = activeVenture?.venture_state === "executing";
 
-  // Get daily tasks for badge count (only in execution mode)
-  const { dailyTasks } = useDailyExecution(isExecuting ? activeVenture : null);
+  // Get daily tasks for badge count (for both execution mode Tasks badge and non-execution More indicator)
+  const { dailyTasks } = useDailyExecution(activeVenture);
   
   // Count incomplete tasks
   const incompleteTaskCount = useMemo(() => {
-    if (!isExecuting || !dailyTasks) return 0;
+    if (!dailyTasks) return 0;
     return dailyTasks.filter(task => !task.completed).length;
-  }, [isExecuting, dailyTasks]);
+  }, [dailyTasks]);
+
+  // Show dot on More tab only when NOT in execution mode (since Tasks tab has badge in execution mode)
+  const showMoreIndicator = !isExecuting && incompleteTaskCount > 0;
 
   // Compute blueprintHref same as SidebarNav
   const ventureId = northStarVenture?.id ?? activeVenture?.id;
@@ -178,6 +181,10 @@ export function MobileBottomNav() {
                     isMoreActive && "scale-110"
                   )}
                 />
+                {/* Notification indicator dot */}
+                {showMoreIndicator && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
+                )}
                 {isMoreActive && (
                   <span className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-primary" />
                 )}
