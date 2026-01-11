@@ -21,13 +21,13 @@ export function MobileBottomNav() {
   const isExecuting = activeVenture?.venture_state === "executing";
 
   // Get daily tasks for badge count (for both execution mode Tasks badge and non-execution More indicator)
-  const { dailyTasks } = useDailyExecution(activeVenture);
+  const { dailyTasks, isLoadingTasks } = useDailyExecution(activeVenture);
   
-  // Count incomplete tasks
+  // Count incomplete tasks (hide during loading to avoid flicker)
   const incompleteTaskCount = useMemo(() => {
-    if (!dailyTasks) return 0;
+    if (isLoadingTasks || !dailyTasks) return 0;
     return dailyTasks.filter(task => !task.completed).length;
-  }, [dailyTasks]);
+  }, [isLoadingTasks, dailyTasks]);
 
   // Show dot on More tab only when NOT in execution mode (since Tasks tab has badge in execution mode)
   const showMoreIndicator = !isExecuting && incompleteTaskCount > 0;
