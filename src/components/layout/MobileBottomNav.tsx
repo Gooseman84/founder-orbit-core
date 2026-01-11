@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
-import { Home, Lightbulb, Map, FileText, MoreHorizontal, Radar, Combine, Target, Eye, User, CreditCard, LogOut, X } from "lucide-react";
+import { Home, Lightbulb, Map, FileText, MoreHorizontal, Radar, Combine, Target, Eye, User, CreditCard, LogOut, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNorthStarVenture } from "@/hooks/useNorthStarVenture";
 import { useVentureState } from "@/hooks/useVentureState";
@@ -16,16 +16,32 @@ export function MobileBottomNav() {
   const { activeVenture } = useVentureState();
   const [moreOpen, setMoreOpen] = useState(false);
 
+  // Check if venture is in executing state
+  const isExecuting = activeVenture?.venture_state === "executing";
+
   // Compute blueprintHref same as SidebarNav
   const ventureId = northStarVenture?.id ?? activeVenture?.id;
   const blueprintHref = ventureId ? `/blueprint?ventureId=${ventureId}` : "/blueprint";
 
-  const primaryTabs = [
-    { label: "Home", path: "/dashboard", icon: Home },
-    { label: "Idea Lab", path: "/ideas", icon: Lightbulb },
-    { label: "Blueprint", path: blueprintHref, icon: Map },
-    { label: "Workspace", path: "/workspace", icon: FileText },
-  ];
+  // Build primary tabs based on execution state
+  const primaryTabs = useMemo(() => {
+    if (isExecuting) {
+      // Execution mode: Home, Tasks, Blueprint, Workspace
+      return [
+        { label: "Home", path: "/dashboard", icon: Home },
+        { label: "Tasks", path: "/tasks", icon: ListChecks },
+        { label: "Blueprint", path: blueprintHref, icon: Map },
+        { label: "Workspace", path: "/workspace", icon: FileText },
+      ];
+    }
+    // Default: Home, Idea Lab, Blueprint, Workspace
+    return [
+      { label: "Home", path: "/dashboard", icon: Home },
+      { label: "Idea Lab", path: "/ideas", icon: Lightbulb },
+      { label: "Blueprint", path: blueprintHref, icon: Map },
+      { label: "Workspace", path: "/workspace", icon: FileText },
+    ];
+  }, [isExecuting, blueprintHref]);
 
   const moreItems = [
     { label: "Niche Radar", path: "/radar", icon: Radar },
@@ -40,6 +56,10 @@ export function MobileBottomNav() {
     // Handle blueprint with query params
     if (path.startsWith("/blueprint")) {
       return location.pathname === "/blueprint";
+    }
+    // Handle tasks route
+    if (path === "/tasks") {
+      return location.pathname === "/tasks" || location.pathname.startsWith("/tasks/");
     }
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
