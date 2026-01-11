@@ -16,7 +16,8 @@ import {
   User,
   CreditCard,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
@@ -116,11 +117,18 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
   }, [ventureState]);
 
   // Utilities section items (renamed from System)
-  const utilitiesItems: NavItem[] = [
-    { name: "AI Co-Founder", href: "/context-inspector", icon: Eye, section: "context-inspector" },
-    { name: "Profile", href: "/profile", icon: User, section: "profile" },
-    { name: "Billing", href: "/billing", icon: CreditCard, section: "billing" },
-  ];
+  const utilitiesItems: NavItem[] = useMemo(() => {
+    const items: NavItem[] = [
+      { name: "AI Co-Founder", href: "/context-inspector", icon: Eye, section: "context-inspector" },
+      { name: "Profile", href: "/profile", icon: User, section: "profile" },
+      { name: "Billing", href: "/billing", icon: CreditCard, section: "billing" },
+    ];
+    // Add dev-only Code Architect link
+    if (import.meta.env.DEV) {
+      items.push({ name: "Code Architect", href: "/code-architect-test", icon: Wrench, section: "profile" });
+    }
+    return items;
+  }, []);
 
   const handleSignOut = () => {
     signOut();
