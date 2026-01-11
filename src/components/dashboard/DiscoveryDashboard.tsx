@@ -8,19 +8,12 @@ import { LevelBadge } from "@/components/shared/LevelBadge";
 import { XpProgressBar } from "@/components/shared/XpProgressBar";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { NorthStarCard } from "./NorthStarCard";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DailyPulseModule } from "./DailyPulseModule";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScoreGauge } from "@/components/opportunity/ScoreGauge";
 import { 
-  AlertCircle, 
-  Target, 
-  Zap, 
-  ListTodo, 
-  TrendingUp, 
-  Activity, 
   Radar, 
   FileText, 
   Flame, 
@@ -177,21 +170,11 @@ export function DiscoveryDashboard() {
         </CardContent>
       </Card>
 
-      {/* Pro Upgrade CTA */}
-      {isFree && (
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
-          <CardContent className="flex items-center justify-between gap-3 py-4">
-            <div className="flex items-center gap-2">
-              <Crown className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">Unlock TrueBlazer Pro</span>
-            </div>
-            <UpgradeButton variant="full" />
-          </CardContent>
-        </Card>
-      )}
-
       {/* North Star Card */}
       <NorthStarCard />
+
+      {/* Daily Pulse Module */}
+      <DailyPulseModule />
 
       {/* Quick Action Grid */}
       <div className="grid gap-3 grid-cols-2">
