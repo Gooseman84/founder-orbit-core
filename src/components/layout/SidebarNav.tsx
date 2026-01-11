@@ -6,6 +6,8 @@ import { useVentureState } from "@/hooks/useVentureState";
 import { getNavVisibility, type NavSection } from "@/lib/navVisibility";
 import { 
   Home,
+  Activity,
+  CheckSquare,
   Lightbulb,
   Combine,
   Radar,
@@ -17,7 +19,7 @@ import {
   CreditCard,
   LogOut,
   ChevronRight,
-  Wrench
+  ClipboardCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
@@ -87,17 +89,27 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const ventureId = northStarVenture?.id ?? activeVenture?.id;
   const blueprintHref = ventureId ? `/blueprint?ventureId=${ventureId}` : "/blueprint";
 
-  // Now section items - ONLY Home (Daily Pulse integrated into Home page)
-  const nowItems: NavItem[] = [
-    { name: "Home", href: "/dashboard", icon: Home, section: "home" },
-  ];
+  // Now section items - filtered by visibility
+  const nowItems: NavItem[] = useMemo(() => {
+    const items: NavItem[] = [
+      { name: "Home", href: "/dashboard", icon: Home, section: "home" },
+      { name: "Daily Pulse", href: "/daily-reflection", icon: Activity, section: "daily-pulse" },
+    ];
+    if (isAllowed("tasks")) {
+      items.push({ name: "Tasks", href: "/tasks", icon: CheckSquare, section: "tasks" });
+    }
+    if (isAllowed("venture-review")) {
+      items.push({ name: "Venture Review", href: "/venture-review", icon: ClipboardCheck, section: "venture-review" });
+    }
+    return items;
+  }, [ventureState]);
 
-  // Create section items - filtered by visibility (reordered: Idea Lab, Niche Radar, Fusion Lab)
+  // Create section items - filtered by visibility
   const createItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [];
     if (isAllowed("idea-lab")) items.push({ name: "Idea Lab", href: "/ideas", icon: Lightbulb, section: "idea-lab" });
-    if (isAllowed("radar")) items.push({ name: "Niche Radar", href: "/radar", icon: Radar, section: "radar" });
     if (isAllowed("fusion-lab")) items.push({ name: "Fusion Lab", href: "/fusion-lab", icon: Combine, section: "fusion-lab" });
+    if (isAllowed("radar")) items.push({ name: "Niche Radar", href: "/radar", icon: Radar, section: "radar" });
     return items;
   }, [ventureState]);
 
@@ -109,26 +121,19 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
     return items;
   }, [ventureState, blueprintHref]);
 
-  // Vision section items (renamed from Align) - filtered by visibility
-  const visionItems: NavItem[] = useMemo(() => {
+  // Align section items - filtered by visibility
+  const alignItems: NavItem[] = useMemo(() => {
     const items: NavItem[] = [];
     if (isAllowed("north-star")) items.push({ name: "North Star", href: "/north-star", icon: Target, section: "north-star" });
     return items;
   }, [ventureState]);
 
-  // Utilities section items (renamed from System)
-  const utilitiesItems: NavItem[] = useMemo(() => {
-    const items: NavItem[] = [
-      { name: "AI Co-Founder", href: "/context-inspector", icon: Eye, section: "context-inspector" },
-      { name: "Profile", href: "/profile", icon: User, section: "profile" },
-      { name: "Billing", href: "/billing", icon: CreditCard, section: "billing" },
-    ];
-    // Add dev-only Code Architect link
-    if (import.meta.env.DEV) {
-      items.push({ name: "Code Architect", href: "/code-architect-test", icon: Wrench, section: "profile" });
-    }
-    return items;
-  }, []);
+  // System section items
+  const systemItems: NavItem[] = [
+    { name: "AI Co-Founder", href: "/context-inspector", icon: Eye, section: "context-inspector" },
+    { name: "Profile", href: "/profile", icon: User, section: "profile" },
+    { name: "Billing", href: "/billing", icon: CreditCard, section: "billing" },
+  ];
 
   const handleSignOut = () => {
     signOut();
@@ -161,8 +166,8 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
 
       {createItems.length > 0 && <NavSectionComponent label="Create" items={createItems} defaultOpen={false} onNavigate={onNavigate} />}
       {buildItems.length > 0 && <NavSectionComponent label="Build" items={buildItems} defaultOpen={isExecuting} onNavigate={onNavigate} />}
-      {visionItems.length > 0 && <NavSectionComponent label="Vision" items={visionItems} defaultOpen={false} onNavigate={onNavigate} />}
-      <NavSectionComponent label="Utilities" items={utilitiesItems} defaultOpen={false} onNavigate={onNavigate} />
+      {alignItems.length > 0 && <NavSectionComponent label="Align" items={alignItems} defaultOpen={false} onNavigate={onNavigate} />}
+      <NavSectionComponent label="System" items={systemItems} defaultOpen={false} onNavigate={onNavigate} />
       
       <div className="mt-auto pt-3 border-t border-border space-y-1">
         <UpgradeButton variant="sidebar" />

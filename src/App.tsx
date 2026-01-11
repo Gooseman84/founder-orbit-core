@@ -38,7 +38,6 @@ import Billing from "./pages/Billing";
 import Blueprint from "./pages/Blueprint";
 import ContextInspector from "./pages/ContextInspector";
 import VentureReview from "./pages/VentureReview";
-import CodeArchitectTest from "./pages/CodeArchitectTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -312,19 +311,6 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            {/* Dev-only route for testing Code Architect Agent */}
-            {import.meta.env.DEV && (
-              <Route
-                path="/code-architect-test"
-                element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <CodeArchitectTest />
-                    </MainLayout>
-                  </ProtectedRoute>
-                }
-              />
-            )}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
               </Routes>
