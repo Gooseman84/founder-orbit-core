@@ -43,14 +43,33 @@ export function MobileBottomNav() {
     ];
   }, [isExecuting, blueprintHref]);
 
-  const moreItems = [
-    { label: "Niche Radar", path: "/radar", icon: Radar },
-    { label: "Fusion Lab", path: "/fusion-lab", icon: Combine },
-    { label: "North Star", path: "/north-star", icon: Target },
-    { label: "AI Co-Founder", path: "/context-inspector", icon: Eye },
-    { label: "Profile", path: "/profile", icon: User },
-    { label: "Billing", path: "/billing", icon: CreditCard },
+  // Grouped items for More sheet
+  const moreGroups = [
+    {
+      label: "CREATE",
+      items: [
+        { label: "Niche Radar", path: "/radar", icon: Radar },
+        { label: "Fusion Lab", path: "/fusion-lab", icon: Combine },
+      ],
+    },
+    {
+      label: "VISION",
+      items: [
+        { label: "North Star", path: "/north-star", icon: Target },
+      ],
+    },
+    {
+      label: "UTILITIES",
+      items: [
+        { label: "AI Co-Founder", path: "/context-inspector", icon: Eye },
+        { label: "Profile", path: "/profile", icon: User },
+        { label: "Billing", path: "/billing", icon: CreditCard },
+      ],
+    },
   ];
+
+  // Flatten for isMoreActive check
+  const allMoreItems = moreGroups.flatMap(g => g.items);
 
   const isTabActive = (path: string) => {
     // Handle blueprint with query params
@@ -64,7 +83,7 @@ export function MobileBottomNav() {
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
-  const isMoreActive = moreItems.some(item => isTabActive(item.path));
+  const isMoreActive = allMoreItems.some(item => isTabActive(item.path));
 
   const handleTap = () => {
     if (navigator.vibrate) {
@@ -140,34 +159,57 @@ export function MobileBottomNav() {
               <span className="text-[11px] font-medium mt-1">More</span>
             </button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="pb-[env(safe-area-inset-bottom)] rounded-t-xl">
+          <SheetContent side="bottom" className="pb-[env(safe-area-inset-bottom)] rounded-t-xl max-h-[80vh] overflow-y-auto">
             <SheetHeader className="pb-2">
               <SheetTitle>More</SheetTitle>
             </SheetHeader>
-            <div className="grid grid-cols-3 gap-3 py-4">
-              {moreItems.map(({ label, path, icon: Icon }) => {
-                const isActive = isTabActive(path);
-                return (
-                  <button
-                    key={label}
-                    onClick={() => handleMoreItemClick(path)}
-                    className={cn(
-                      "flex flex-col items-center justify-center gap-2 p-4 rounded-lg transition-colors",
-                      isActive 
-                        ? "bg-primary/10 text-primary" 
-                        : "bg-secondary/50 text-foreground hover:bg-secondary"
-                    )}
-                  >
-                    <Icon className="w-6 h-6" />
-                    <span className="text-xs font-medium text-center leading-tight">{label}</span>
-                  </button>
-                );
-              })}
+            
+            <div className="space-y-5 py-4">
+              {moreGroups.map((group, groupIndex) => (
+                <div key={group.label}>
+                  {/* Section Header */}
+                  <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">
+                    {group.label}
+                  </h3>
+                  
+                  {/* Section Items */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {group.items.map(({ label, path, icon: Icon }) => {
+                      const isActive = isTabActive(path);
+                      return (
+                        <button
+                          key={label}
+                          onClick={() => handleMoreItemClick(path)}
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-2 p-3 rounded-lg transition-colors",
+                            isActive 
+                              ? "bg-primary/10 text-primary" 
+                              : "bg-secondary/50 text-foreground hover:bg-secondary"
+                          )}
+                        >
+                          <Icon className="w-5 h-5" />
+                          <span className="text-[11px] font-medium text-center leading-tight">{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Divider between groups (not after last group) */}
+                  {groupIndex < moreGroups.length - 1 && (
+                    <div className="border-b border-border/50 mt-4" />
+                  )}
+                </div>
+              ))}
             </div>
-            <div className="border-t pt-4">
+            
+            {/* Actions Section */}
+            <div className="border-t pt-3">
+              <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">
+                ACTIONS
+              </h3>
               <Button 
                 variant="ghost" 
-                className="w-full justify-start gap-3 text-muted-foreground"
+                className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
                 onClick={handleSignOut}
               >
                 <LogOut className="w-5 h-5" />
