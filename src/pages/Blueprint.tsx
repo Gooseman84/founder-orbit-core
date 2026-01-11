@@ -126,7 +126,52 @@ const Blueprint = () => {
   const ventureState = venture?.venture_state ?? "inactive";
 
   const handleCommitAndStart = async () => {
-    if (!venture?.id || !isFormValid) return;
+    console.log('[Blueprint] Starting commitment process...');
+    console.log('[Blueprint] Current commitment data:', {
+      windowDays,
+      successMetric,
+      hasVenture: !!venture,
+      ventureId: venture?.id,
+      ventureState: venture?.venture_state
+    });
+
+    // Validate required fields
+    if (!windowDays) {
+      toast({
+        title: "Missing Commitment Window",
+        description: "Please select a commitment window (7, 14, 30, or 90 days)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!successMetric || successMetric.trim().length === 0) {
+      toast({
+        title: "Missing Success Metric",
+        description: "Please describe how you'll measure success",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!venture?.id) {
+      console.error('[Blueprint] No venture found');
+      toast({
+        title: "Error",
+        description: "No venture found. Please refresh and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isFormValid) {
+      toast({
+        title: "Please complete the form",
+        description: "Check that you've acknowledged the commitment",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsCommitting(true);
     try {
@@ -134,32 +179,53 @@ const Blueprint = () => {
       const endDate = new Date(now);
       endDate.setDate(endDate.getDate() + windowDays);
 
-      if (ventureState === "inactive") {
-        // Direct transition: inactive → executing
-        const fullData: CommitmentFull = {
+      console.log('[Blueprint] Attempting transition to executing...');
+      console.log('[Blueprint] Transition data:', {
+        ventureId: venture.id,
+        targetState: 'executing',
+        commitmentData: {
           commitment_window_days: windowDays,
           success_metric: successMetric.trim(),
           commitment_start_at: now.toISOString(),
           commitment_end_at: endDate.toISOString(),
-        };
-
-        const success = await transitionTo(venture.id, "executing", fullData);
-        if (!success) {
-          throw new Error("Failed to start execution");
         }
+      });
+
+      // Direct transition: inactive → executing
+      const fullData: CommitmentFull = {
+        commitment_window_days: windowDays,
+        success_metric: successMetric.trim(),
+        commitment_start_at: now.toISOString(),
+        commitment_end_at: endDate.toISOString(),
+      };
+
+      const success = await transitionTo(venture.id, "executing", fullData);
+      console.log('[Blueprint] Transition result:', success);
+
+      if (!success) {
+        throw new Error("Failed to start execution - transition returned false");
       }
 
+      console.log('[Blueprint] Transition successful!');
+      
       toast({
-        title: "Execution started!",
+        title: "Execution Started! 🚀",
         description: `Your ${windowDays}-day commitment begins now.`,
       });
 
       navigate("/tasks");
     } catch (err) {
-      console.error("Commit error:", err);
+      console.error('[Blueprint] Commit error:', err);
+      
+      // Log detailed error info
+      if (err instanceof Error) {
+        console.error('[Blueprint] Error message:', err.message);
+        console.error('[Blueprint] Error stack:', err.stack);
+      }
+
       toast({
-        title: "Failed to start execution",
-        description: err instanceof Error ? err.message : "Please try again.",
+        title: "Failed to Start Execution",
+        description: err instanceof Error ? err.message : "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
