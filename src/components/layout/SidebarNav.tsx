@@ -6,7 +6,6 @@ import { useVentureState } from "@/hooks/useVentureState";
 import { getNavVisibility, type NavSection } from "@/lib/navVisibility";
 import { 
   Home,
-  CheckSquare,
   Lightbulb,
   Combine,
   Radar,
@@ -17,8 +16,7 @@ import {
   User,
   CreditCard,
   LogOut,
-  ChevronRight,
-  ClipboardCheck
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
@@ -88,19 +86,10 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const ventureId = northStarVenture?.id ?? activeVenture?.id;
   const blueprintHref = ventureId ? `/blueprint?ventureId=${ventureId}` : "/blueprint";
 
-  // Now section items - filtered by visibility (Daily Pulse removed - now part of Home)
-  const nowItems: NavItem[] = useMemo(() => {
-    const items: NavItem[] = [
-      { name: "Home", href: "/dashboard", icon: Home, section: "home" },
-    ];
-    if (isAllowed("tasks")) {
-      items.push({ name: "Tasks", href: "/tasks", icon: CheckSquare, section: "tasks" });
-    }
-    if (isAllowed("venture-review")) {
-      items.push({ name: "Venture Review", href: "/venture-review", icon: ClipboardCheck, section: "venture-review" });
-    }
-    return items;
-  }, [ventureState]);
+  // Now section items - ONLY Home (Daily Pulse integrated into Home page)
+  const nowItems: NavItem[] = [
+    { name: "Home", href: "/dashboard", icon: Home, section: "home" },
+  ];
 
   // Create section items - filtered by visibility (reordered: Idea Lab, Niche Radar, Fusion Lab)
   const createItems: NavItem[] = useMemo(() => {
