@@ -26,6 +26,10 @@ export function useVentureBlueprint(ideaId?: string | null): UseVentureBlueprint
     // Increment fetch ID to invalidate any in-flight requests
     const currentFetchId = ++fetchIdRef.current;
     
+    // Reset state when dependencies change to prevent stale data
+    setBlueprint(null);
+    setError(null);
+    
     async function fetchBlueprint() {
       // Early exit if no user
       if (!user) {
