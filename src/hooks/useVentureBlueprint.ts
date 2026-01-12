@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "./useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { FounderBlueprint } from "@/types/blueprint";
@@ -18,18 +18,28 @@ export function useVentureBlueprint(ideaId?: string | null): UseVentureBlueprint
   const [blueprint, setBlueprint] = useState<FounderBlueprint | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Track current fetch to prevent race conditions
+  const fetchIdRef = useRef(0);
 
   useEffect(() => {
+    // Increment fetch ID to invalidate any in-flight requests
+    const currentFetchId = ++fetchIdRef.current;
+    
     async function fetchBlueprint() {
+      // Early exit if no user
       if (!user) {
         setBlueprint(null);
         setLoading(false);
+        setError(null);
         return;
       }
 
       try {
         setLoading(true);
         setError(null);
+
+        let fetchedBlueprint: FounderBlueprint | null = null;
 
         // First try to fetch blueprint with matching north_star_idea_id
         if (ideaId) {
@@ -40,31 +50,50 @@ export function useVentureBlueprint(ideaId?: string | null): UseVentureBlueprint
             .eq("north_star_idea_id", ideaId)
             .maybeSingle();
 
-          if (!ideaError && ideaBlueprint) {
-            setBlueprint(ideaBlueprint as unknown as FounderBlueprint);
-            setLoading(false);
-            return;
+          // Check if this fetch is still current
+          if (currentFetchId !== fetchIdRef.current) return;
+
+          if (ideaError) {
+            console.warn("Error fetching idea-specific blueprint:", ideaError.message);
+            // Continue to fallback instead of throwing
+          } else if (ideaBlueprint) {
+            fetchedBlueprint = ideaBlueprint as unknown as FounderBlueprint;
           }
         }
 
-        // Fall back to user's general blueprint
-        const { data, error: fetchError } = await supabase
-          .from("founder_blueprints")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
+        // Fall back to user's most recent blueprint if no idea-specific one found
+        if (!fetchedBlueprint) {
+          const { data, error: fetchError } = await supabase
+            .from("founder_blueprints")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        if (fetchError) {
-          throw fetchError;
+          // Check if this fetch is still current
+          if (currentFetchId !== fetchIdRef.current) return;
+
+          if (fetchError) {
+            throw fetchError;
+          }
+
+          fetchedBlueprint = data as unknown as FounderBlueprint | null;
         }
 
-        setBlueprint(data as unknown as FounderBlueprint | null);
+        setBlueprint(fetchedBlueprint);
       } catch (err) {
+        // Only update state if this fetch is still current
+        if (currentFetchId !== fetchIdRef.current) return;
+        
         console.error("Error fetching venture blueprint:", err);
         setError(err instanceof Error ? err.message : "Failed to load blueprint");
         setBlueprint(null);
       } finally {
-        setLoading(false);
+        // Only update loading state if this fetch is still current
+        if (currentFetchId === fetchIdRef.current) {
+          setLoading(false);
+        }
       }
     }
 
