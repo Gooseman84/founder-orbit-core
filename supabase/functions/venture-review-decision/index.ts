@@ -127,12 +127,21 @@ serve(async (req) => {
       ventureId,
       action,
       currentState: venture.venture_state,
+      commitmentWindowDays: venture.commitment_window_days,
+      successMetric: venture.success_metric,
     });
 
-    // State machine: executing can only go to reviewed first
-    // If in executing state and action is pivot/kill, transition through reviewed first
-    if (venture.venture_state === "executing" && (action === "pivot" || action === "kill")) {
-      console.log("[venture-review-decision] Transitioning from executing to reviewed first");
+    // State machine transitions:
+    // - executing → reviewed (only valid direct transition from executing)
+    // - committed → executing (via commitment start) OR committed → reviewed
+    // - reviewed → executing (continue), inactive (pivot), killed (kill)
+    //
+    // For any action from 'executing' or 'committed', we need to transition through 'reviewed' first
+    const needsReviewedTransition = 
+      (venture.venture_state === "executing" || venture.venture_state === "committed");
+
+    if (needsReviewedTransition) {
+      console.log("[venture-review-decision] Transitioning from", venture.venture_state, "to reviewed first");
       
       const { error: transitionError } = await supabaseService
         .from("ventures")
@@ -153,18 +162,23 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      
+      console.log("[venture-review-decision] Successfully transitioned to reviewed state");
     }
 
+    // Now process the action from 'reviewed' state
     if (action === "continue") {
-      // Start new commitment window
+      // Start new commitment window - need all required fields for executing state
       const windowDays = venture.commitment_window_days || 14;
       const startAt = new Date();
       const endAt = new Date(startAt.getTime() + windowDays * 24 * 60 * 60 * 1000);
 
       updateData = {
         venture_state: "executing",
+        commitment_window_days: windowDays,
         commitment_start_at: startAt.toISOString(),
         commitment_end_at: endAt.toISOString(),
+        success_metric: venture.success_metric || "Continue making progress",
         updated_at: now,
         metadata: {
           ...existingMetadata,
@@ -214,7 +228,13 @@ serve(async (req) => {
       console.log("[venture-review-decision] Killing venture, reason:", reason);
     }
 
-    // Update venture
+    // Update venture with final state
+    console.log("[venture-review-decision] Applying final update:", {
+      newState: updateData.venture_state,
+      hasCommitmentWindow: !!updateData.commitment_window_days,
+      hasSuccessMetric: !!updateData.success_metric,
+    });
+
     const { data: updatedVenture, error: updateError } = await supabaseService
       .from("ventures")
       .update(updateData)
@@ -225,7 +245,11 @@ serve(async (req) => {
     if (updateError) {
       console.error("[venture-review-decision] Update error:", updateError);
       return new Response(
-        JSON.stringify({ error: "Failed to update venture", code: "INTERNAL_ERROR" }),
+        JSON.stringify({ 
+          error: "Failed to update venture", 
+          code: "INTERNAL_ERROR",
+          details: updateError.message 
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
