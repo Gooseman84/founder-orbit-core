@@ -38,6 +38,7 @@ import Billing from "./pages/Billing";
 import Blueprint from "./pages/Blueprint";
 import ContextInspector from "./pages/ContextInspector";
 import VentureReview from "./pages/VentureReview";
+import CodeArchitectTest from "./pages/CodeArchitectTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -307,6 +308,16 @@ const App = () => (
                 <ProtectedRoute>
                   <MainLayout>
                     <VentureReview />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/code-architect-test"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <CodeArchitectTest />
                   </MainLayout>
                 </ProtectedRoute>
               }
