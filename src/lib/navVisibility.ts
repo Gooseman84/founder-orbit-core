@@ -95,8 +95,9 @@ export function getNavVisibility(ventureState: VentureState | null): NavVisibili
     };
   }
 
-  // When inactive or killed: ideation/planning surfaces, NO tasks
-  // "inactive" | "killed" | null
+  // When inactive, committed, or killed: ideation/planning surfaces + tasks (for viewing)
+  // Allow tasks so users can view existing tasks even without an active executing venture
+  // "inactive" | "committed" | "killed" | null
   return {
     allowed: [
       ...commonSections,
@@ -106,10 +107,10 @@ export function getNavVisibility(ventureState: VentureState | null): NavVisibili
       "blueprint",
       "workspace",
       "north-star",
+      "tasks", // Allow viewing tasks in discovery mode
     ],
     hidden: [
-      "tasks",
-      "venture-review",
+      "venture-review", // Only hide venture review when not executing/reviewed
     ],
     redirectTo: "/dashboard",
   };
