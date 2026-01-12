@@ -32,20 +32,22 @@ export const useSubscription = (): UseSubscriptionReturn => {
       setError(null);
 
       // Use secure RPC function that excludes Stripe IDs
+      // Note: Don't use .maybeSingle() on RPC calls as it causes 406 errors when no rows returned
       const { data, error: queryError } = await supabase
-        .rpc("get_user_subscription", { p_user_id: user.id })
-        .maybeSingle();
+        .rpc("get_user_subscription", { p_user_id: user.id });
 
       if (queryError) {
         console.error("Error loading subscription:", queryError);
         setError(queryError.message);
         setPlan("free");
         setStatus("active");
-      } else if (data) {
-        setPlan(data.plan as Plan);
-        setStatus(data.status || "active");
+      } else if (data && Array.isArray(data) && data.length > 0) {
+        // RPC returns an array, take first result
+        const subscription = data[0] as { plan: string; status: string | null };
+        setPlan((subscription.plan || "free") as Plan);
+        setStatus(subscription.status || "active");
       } else {
-        // No row found, keep defaults
+        // No subscription found, use defaults
         setPlan("free");
         setStatus("active");
       }
