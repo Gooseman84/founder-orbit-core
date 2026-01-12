@@ -123,6 +123,38 @@ serve(async (req) => {
     const existingMetadata = (venture.metadata as Record<string, any>) || {};
     const reviewData = existingMetadata.review || {};
 
+    console.log("[venture-review-decision] Processing:", {
+      ventureId,
+      action,
+      currentState: venture.venture_state,
+    });
+
+    // State machine: executing can only go to reviewed first
+    // If in executing state and action is pivot/kill, transition through reviewed first
+    if (venture.venture_state === "executing" && (action === "pivot" || action === "kill")) {
+      console.log("[venture-review-decision] Transitioning from executing to reviewed first");
+      
+      const { error: transitionError } = await supabaseService
+        .from("ventures")
+        .update({ 
+          venture_state: "reviewed",
+          updated_at: now,
+        })
+        .eq("id", ventureId);
+
+      if (transitionError) {
+        console.error("[venture-review-decision] Failed to transition to reviewed:", transitionError);
+        return new Response(
+          JSON.stringify({ 
+            error: "Failed to transition venture state", 
+            code: "STATE_TRANSITION_ERROR",
+            details: transitionError.message
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     if (action === "continue") {
       // Start new commitment window
       const windowDays = venture.commitment_window_days || 14;
