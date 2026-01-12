@@ -119,10 +119,6 @@ serve(async (req) => {
     const now = new Date().toISOString();
     let updateData: Record<string, any> = {};
 
-    // Merge review data into existing metadata safely
-    const existingMetadata = (venture.metadata as Record<string, any>) || {};
-    const reviewData = existingMetadata.review || {};
-
     console.log("[venture-review-decision] Processing:", {
       ventureId,
       action,
@@ -131,21 +127,24 @@ serve(async (req) => {
       successMetric: venture.success_metric,
     });
 
+    // NOTE: The `ventures` table does not currently have a `metadata` column.
+    // Keep this function compatible with the schema by not reading/writing metadata.
+
     // State machine transitions:
     // - executing → reviewed (only valid direct transition from executing)
-    // - committed → executing (via commitment start) OR committed → reviewed
+    // - committed → reviewed (so we can apply decisions)
     // - reviewed → executing (continue), inactive (pivot), killed (kill)
     //
     // For any action from 'executing' or 'committed', we need to transition through 'reviewed' first
-    const needsReviewedTransition = 
+    const needsReviewedTransition =
       (venture.venture_state === "executing" || venture.venture_state === "committed");
 
     if (needsReviewedTransition) {
       console.log("[venture-review-decision] Transitioning from", venture.venture_state, "to reviewed first");
-      
+
       const { error: transitionError } = await supabaseService
         .from("ventures")
-        .update({ 
+        .update({
           venture_state: "reviewed",
           updated_at: now,
         })
@@ -154,15 +153,15 @@ serve(async (req) => {
       if (transitionError) {
         console.error("[venture-review-decision] Failed to transition to reviewed:", transitionError);
         return new Response(
-          JSON.stringify({ 
-            error: "Failed to transition venture state", 
+          JSON.stringify({
+            error: "Failed to transition venture state",
             code: "STATE_TRANSITION_ERROR",
-            details: transitionError.message
+            details: transitionError.message,
           }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      
+
       console.log("[venture-review-decision] Successfully transitioned to reviewed state");
     }
 
@@ -180,50 +179,22 @@ serve(async (req) => {
         commitment_end_at: endAt.toISOString(),
         success_metric: venture.success_metric || "Continue making progress",
         updated_at: now,
-        metadata: {
-          ...existingMetadata,
-          review: {
-            ...reviewData,
-            last_decision: "continue",
-            decided_at: now,
-          },
-        },
       };
       console.log("[venture-review-decision] Continuing with new window:", windowDays, "days");
-
     } else if (action === "pivot") {
-      // Set to inactive and store reason in metadata
+      // Set to inactive
       updateData = {
         venture_state: "inactive",
         updated_at: now,
         commitment_start_at: null,
         commitment_end_at: null,
-        metadata: {
-          ...existingMetadata,
-          review: {
-            ...reviewData,
-            last_decision: "pivot",
-            pivot_reason: reason?.trim(),
-            decided_at: now,
-          },
-        },
       };
       console.log("[venture-review-decision] Pivoting venture, reason:", reason);
-
     } else if (action === "kill") {
       // Set to killed (terminal state)
       updateData = {
         venture_state: "killed",
         updated_at: now,
-        metadata: {
-          ...existingMetadata,
-          review: {
-            ...reviewData,
-            last_decision: "kill",
-            kill_reason: reason?.trim(),
-            decided_at: now,
-          },
-        },
       };
       console.log("[venture-review-decision] Killing venture, reason:", reason);
     }
