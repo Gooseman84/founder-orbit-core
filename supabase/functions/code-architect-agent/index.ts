@@ -6,207 +6,144 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Types
-interface TaskContext {
-  issue_description: string;
-  error_logs: string[];
-  affected_files?: string[];
-  severity: "critical" | "high" | "medium" | "low";
-  user_reports?: string[];
-}
-
-interface Task {
-  type: "analyze_bug" | "design_fix" | "code_review";
-  context: TaskContext;
-}
-
 interface RequestBody {
   userId: string;
-  task: Task;
-}
-
-interface FixPlan {
-  steps: string[];
-  files_to_modify: string[];
-  new_dependencies: string[];
-  database_migrations: string[];
+  bugDescription: string;
+  errorMessage?: string;
+  affectedFiles?: string;
+  severity?: "high" | "medium" | "low";
 }
 
 interface AnalysisResult {
-  root_cause: string;
-  affected_components: string[];
-  explanation: string;
-  fix_plan: FixPlan;
-  lovable_prompt: string;
-  test_cases: string[];
+  rootCause: string;
   confidence: number;
-  estimated_time: string;
-  risk_level: "low" | "medium" | "high" | "critical";
+  riskLevel: "low" | "medium" | "high";
+  affectedFiles: string[];
+  fixPrompt: string;
+  estimatedFixTime: string;
+  testingSteps: string[];
 }
 
-// Build system prompt based on task type
-function buildSystemPrompt(taskType: string, context: TaskContext): string {
-  const basePrompt = `You are the Code Architect Agent for TrueBlazer AI.
+const systemPrompt = `You are the Code Architect Agent for TrueBlazer AI, a React/TypeScript application built with Lovable.dev, Supabase backend, and 42 edge functions for AI-powered operations.
 
-Tech Stack:
-- React + TypeScript + Vite (frontend)
-- Supabase (PostgreSQL + Edge Functions + Auth)
-- Stripe (payments)
-- Anthropic Claude API (via Lovable AI Gateway)
-- Tailwind CSS + shadcn/ui components
-- TanStack Query for data fetching
-- Zustand for state management
+Your mission: Analyze bugs and generate production-ready Lovable prompts to fix them.
 
-Your mission: Analyze bugs and design production-ready fixes.
+## TrueBlazer Tech Stack
+- Frontend: React 18, TypeScript, Vite, shadcn/ui components
+- Backend: Supabase (PostgreSQL + Edge Functions + Realtime + Auth)
+- State Management: React Query (TanStack Query)
+- Routing: React Router v6
+- Styling: Tailwind CSS
+- AI: Anthropic Claude (via edge functions)
+- Payments: Stripe
 
-Input:
-Issue: ${context.issue_description}
-Error Logs: ${context.error_logs.join('\n')}
-Affected Files: ${context.affected_files?.join(', ') || 'Unknown - infer from error logs'}
-Severity: ${context.severity}
-${context.user_reports ? `User Reports: ${context.user_reports.join('\n')}` : ''}`;
+## Your Analysis Framework
 
-  if (taskType === "analyze_bug") {
-    return `${basePrompt}
+1. **Understand the Bug**
+   - What is the user trying to do?
+   - What is the expected behavior?
+   - What is the actual behavior?
+   - What error message appears?
 
-Your task:
-1. Identify the root cause (be specific, not vague)
-2. Explain why it's happening (technical details)
-3. Design a fix with step-by-step implementation
-4. Generate a complete Lovable prompt that implements the fix
-5. Include test cases to verify the fix works
-6. Rate your confidence (0-100)
+2. **Identify Root Cause**
+   - Don't fix symptoms, find the real issue
+   - Check for: null/undefined values, async timing issues, missing error handling, incorrect state management, broken API calls
 
-Output format (JSON only, no markdown code blocks):
+3. **Design the Fix**
+   - Minimal changes (surgical fix, not refactor)
+   - Maintain existing patterns
+   - Add error handling
+   - Consider edge cases
+
+4. **Generate Lovable Prompt**
+   - Complete, copy-paste ready
+   - Includes file path, exact code changes
+   - Explains what changed and why
+   - Includes testing steps
+
+## Output Format (JSON only)
+
 {
-  "root_cause": "Single sentence explaining the core issue",
-  "affected_components": ["file1.ts", "file2.tsx"],
-  "explanation": "2-3 paragraph technical explanation",
-  "fix_plan": {
-    "steps": ["step 1", "step 2", "step 3"],
-    "files_to_modify": ["exact/file/paths.ts"],
-    "new_dependencies": ["npm-package-name or empty array"],
-    "database_migrations": ["SQL if needed or empty array"]
-  },
-  "lovable_prompt": "Complete Lovable.dev prompt that can be copy-pasted to fix the issue. Be detailed and specific.",
-  "test_cases": ["test instruction 1", "test instruction 2"],
+  "rootCause": "Brief explanation of what's actually broken",
   "confidence": 85,
-  "estimated_time": "30 minutes",
-  "risk_level": "low"
-}`;
-  }
-
-  if (taskType === "design_fix") {
-    return `${basePrompt}
-
-Your task:
-1. Design a comprehensive fix plan
-2. Consider edge cases and potential side effects
-3. Generate a detailed Lovable prompt for implementation
-4. Estimate time and risk
-
-Output format (JSON only, no markdown code blocks):
-{
-  "root_cause": "Single sentence explaining the core issue",
-  "affected_components": ["file1.ts", "file2.tsx"],
-  "explanation": "Detailed technical explanation of the fix approach",
-  "fix_plan": {
-    "steps": ["detailed step 1", "detailed step 2", "detailed step 3"],
-    "files_to_modify": ["exact/file/paths.ts"],
-    "new_dependencies": [],
-    "database_migrations": []
-  },
-  "lovable_prompt": "Complete Lovable.dev prompt with phase-by-phase implementation instructions",
-  "test_cases": ["test instruction 1", "test instruction 2"],
-  "confidence": 85,
-  "estimated_time": "30 minutes",
-  "risk_level": "low"
-}`;
-  }
-
-  if (taskType === "code_review") {
-    return `${basePrompt}
-
-Your task:
-1. Review the proposed changes for correctness
-2. Identify potential bugs or security issues
-3. Suggest improvements
-4. Rate the quality of the proposed fix
-
-Output format (JSON only, no markdown code blocks):
-{
-  "root_cause": "Summary of what the proposed fix addresses",
-  "affected_components": ["file1.ts", "file2.tsx"],
-  "explanation": "Review of the proposed changes - what's good, what needs improvement",
-  "fix_plan": {
-    "steps": ["recommended changes or improvements"],
-    "files_to_modify": ["files that need additional changes"],
-    "new_dependencies": [],
-    "database_migrations": []
-  },
-  "lovable_prompt": "Updated Lovable prompt with improvements, or 'No changes needed' if fix is good",
-  "test_cases": ["additional tests to add"],
-  "confidence": 90,
-  "estimated_time": "15 minutes",
-  "risk_level": "low"
-}`;
-  }
-
-  return basePrompt;
+  "riskLevel": "low" | "medium" | "high",
+  "affectedFiles": ["file1.ts", "file2.tsx"],
+  "fixPrompt": "Complete Lovable prompt to paste...",
+  "estimatedFixTime": "10 minutes",
+  "testingSteps": [
+    "Navigate to Ideas page",
+    "Click Save Idea",
+    "Verify idea saves successfully"
+  ]
 }
 
-// Call Claude API
-async function callClaudeAPI(systemPrompt: string, retryCount = 0): Promise<AnalysisResult> {
+## Self-Critique Checklist
+
+Before outputting, verify:
+- Root cause is specific, not vague
+- Fix is minimal and surgical
+- Lovable prompt is complete and copy-paste ready
+- Risk level is accurate
+- Confidence score is justified`;
+
+async function callAnthropicAPI(
+  bugDescription: string,
+  errorMessage: string,
+  affectedFiles: string,
+  severity: string,
+  retryCount = 0
+): Promise<AnalysisResult> {
   const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-  
+
   if (!ANTHROPIC_API_KEY) {
     throw new Error("ANTHROPIC_API_KEY is not configured");
   }
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
-      messages: [
-        {
-          role: "user",
-          content: systemPrompt,
-        },
-      ],
-    }),
-  });
+  const userMessage = `Analyze this bug and generate a fix prompt:
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Claude API error:", response.status, errorText);
-    
-    // Retry once on failure
-    if (retryCount === 0) {
-      console.log("Retrying Claude API call...");
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return callClaudeAPI(systemPrompt, 1);
-    }
-    
-    throw new Error(`Claude API failed: ${response.status} - ${errorText}`);
-  }
+**Bug Description:** ${bugDescription}
 
-  const data = await response.json();
-  const content = data.content?.[0]?.text;
-  
-  if (!content) {
-    throw new Error("No content in Claude response");
-  }
+**Error Message:** ${errorMessage || "None provided"}
 
-  // Parse JSON response
+**Affected Files:** ${affectedFiles || "Unknown"}
+
+**Severity:** ${severity || "medium"}
+
+Generate a production-ready Lovable prompt to fix this bug.`;
+
   try {
-    // Remove potential markdown code blocks
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4000,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userMessage }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Anthropic API error:", response.status, errorText);
+      throw new Error(`Anthropic API failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.content?.[0]?.text;
+
+    if (!content) {
+      throw new Error("No text content in Claude response");
+    }
+
+    // Parse JSON response
     let jsonStr = content.trim();
+
+    // Remove potential markdown code blocks
     if (jsonStr.startsWith("```json")) {
       jsonStr = jsonStr.slice(7);
     } else if (jsonStr.startsWith("```")) {
@@ -216,213 +153,173 @@ async function callClaudeAPI(systemPrompt: string, retryCount = 0): Promise<Anal
       jsonStr = jsonStr.slice(0, -3);
     }
     jsonStr = jsonStr.trim();
-    
+
     const result = JSON.parse(jsonStr) as AnalysisResult;
-    
+
     // Validate required fields
-    if (!result.root_cause || !result.fix_plan || typeof result.confidence !== "number") {
+    if (!result.rootCause || typeof result.confidence !== "number" || !result.fixPrompt) {
       throw new Error("Missing required fields in response");
     }
-    
+
     // Ensure confidence is within bounds
     result.confidence = Math.max(0, Math.min(100, result.confidence));
-    
-    // Ensure risk_level is valid
-    if (!["low", "medium", "high", "critical"].includes(result.risk_level)) {
-      result.risk_level = "medium";
+
+    // Ensure riskLevel is valid
+    if (!["low", "medium", "high"].includes(result.riskLevel)) {
+      result.riskLevel = "medium";
     }
-    
+
     return result;
-  } catch (parseError) {
-    console.error("JSON parse error:", parseError);
-    console.error("Raw content:", content);
-    
-    // Return partial analysis with flag for human review
-    return {
-      root_cause: "Unable to parse AI response - requires human review",
-      affected_components: [],
-      explanation: content,
-      fix_plan: {
-        steps: ["Review raw AI output below"],
-        files_to_modify: [],
-        new_dependencies: [],
-        database_migrations: [],
-      },
-      lovable_prompt: "Parse error - see raw explanation for details",
-      test_cases: [],
-      confidence: 0,
-      estimated_time: "Unknown",
-      risk_level: "high",
-    };
+  } catch (error) {
+    console.error("Claude API error:", error);
+
+    // Retry once on failure
+    if (retryCount === 0) {
+      console.log("Retrying Claude API call...");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return callAnthropicAPI(bugDescription, errorMessage, affectedFiles, severity, 1);
+    }
+
+    throw error;
   }
 }
 
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     // Verify authentication
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized - missing or invalid token" }),
+        JSON.stringify({ error: "Missing authorization header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabase = createClient(
+    const token = authHeader.slice(7).trim(); // Remove 'Bearer '
+
+    const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Verify JWT
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    
-    if (claimsError || !claimsData?.claims) {
-      console.error("JWT verification failed:", claimsError);
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error("Auth error:", authError);
       return new Response(
-        JSON.stringify({ error: "Unauthorized - invalid token" }),
+        JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const authenticatedUserId = claimsData.claims.sub;
-
     // Parse request body
     const body: RequestBody = await req.json();
-    const { userId, task } = body;
+    const { userId, bugDescription, errorMessage, affectedFiles, severity } = body;
 
-    // Validate request
-    if (!userId || !task?.type || !task?.context) {
+    // Validate required fields
+    if (!userId || !bugDescription) {
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: "Bad Request - missing required fields",
-          required: ["userId", "task.type", "task.context.issue_description", "task.context.error_logs", "task.context.severity"]
+          required: ["userId", "bugDescription"],
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Verify userId matches authenticated user
-    if (userId !== authenticatedUserId) {
+    if (userId !== user.id) {
       return new Response(
         JSON.stringify({ error: "Unauthorized - userId mismatch" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate task type
-    if (!["analyze_bug", "design_fix", "code_review"].includes(task.type)) {
-      return new Response(
-        JSON.stringify({ error: "Bad Request - invalid task type", valid_types: ["analyze_bug", "design_fix", "code_review"] }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    console.log(`Processing bug analysis for user ${userId}`);
+    console.log("Bug:", bugDescription);
 
-    // Validate context
-    const { context } = task;
-    if (!context.issue_description || !Array.isArray(context.error_logs) || !context.severity) {
-      return new Response(
-        JSON.stringify({ error: "Bad Request - missing context fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`Processing ${task.type} task for user ${userId}`);
-    console.log("Issue:", context.issue_description);
-
-    // Build prompt and call Claude
-    const systemPrompt = buildSystemPrompt(task.type, context);
-    
-    let analysisResult: AnalysisResult;
+    // Call Anthropic API
+    let analysis: AnalysisResult;
     try {
-      analysisResult = await callClaudeAPI(systemPrompt);
+      analysis = await callAnthropicAPI(
+        bugDescription,
+        errorMessage || "",
+        affectedFiles || "",
+        severity || "medium"
+      );
     } catch (apiError) {
-      console.error("Claude API error:", apiError);
+      console.error("Anthropic API error:", apiError);
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: "AI analysis failed",
           message: apiError instanceof Error ? apiError.message : "Unknown error",
-          requires_human_review: true
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Determine if approval is required
-    const requiresApproval = analysisResult.confidence < 80 || analysisResult.risk_level !== "low";
-    const approvalStatus = requiresApproval ? "pending" : "approved";
-
-    // Create admin client for logging to agent_decisions
+    // Create admin client for database operations
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Log decision to agent_decisions table
-    const { data: decisionData, error: decisionError } = await adminClient
+    // Store analysis in agent_memory
+    const { error: memoryError } = await adminClient
+      .from("agent_memory")
+      .upsert({
+        user_id: userId,
+        memory_path: `engineering/bug_analysis/${Date.now()}`,
+        memory_data: analysis,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (memoryError) {
+      console.error("Failed to store in agent_memory:", memoryError);
+    }
+
+    // Log decision in agent_decisions
+    const { error: decisionError } = await adminClient
       .from("agent_decisions")
       .insert({
         user_id: userId,
         agent_name: "code_architect",
-        decision_type: `${task.type}_proposed`,
-        inputs: context,
-        outputs: analysisResult,
-        reasoning: analysisResult.explanation,
-        confidence: analysisResult.confidence,
-        risk_level: analysisResult.risk_level,
-        requires_approval: requiresApproval,
-        approved: requiresApproval ? null : true,
-        approved_at: requiresApproval ? null : new Date().toISOString(),
-      })
-      .select("id")
-      .single();
+        decision_type: "bug_analysis",
+        inputs: { bugDescription, errorMessage, affectedFiles, severity },
+        outputs: analysis,
+        reasoning: analysis.rootCause,
+        confidence: analysis.confidence,
+        risk_level: analysis.riskLevel,
+        requires_approval: true,
+        created_at: new Date().toISOString(),
+      });
 
     if (decisionError) {
       console.error("Failed to log decision:", decisionError);
-      // Continue anyway - logging failure shouldn't block the response
     }
 
-    const decisionId = decisionData?.id || null;
-
-    console.log(`Analysis complete. Confidence: ${analysisResult.confidence}, Requires approval: ${requiresApproval}`);
+    console.log(`Analysis complete. Confidence: ${analysis.confidence}, Risk: ${analysis.riskLevel}`);
 
     // Return response
     return new Response(
       JSON.stringify({
         success: true,
-        analysis: {
-          root_cause: analysisResult.root_cause,
-          affected_components: analysisResult.affected_components,
-          explanation: analysisResult.explanation,
-          fix_plan: analysisResult.fix_plan,
-          test_cases: analysisResult.test_cases,
-          confidence: analysisResult.confidence,
-          risk_level: analysisResult.risk_level,
-        },
-        lovable_prompt: analysisResult.lovable_prompt,
-        requires_approval: requiresApproval,
-        approval_status: approvalStatus,
-        decision_id: decisionId,
-        estimated_time: analysisResult.estimated_time,
+        analysis,
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error) {
     console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: "Internal server error",
-        message: error instanceof Error ? error.message : "Unknown error"
+        message: error instanceof Error ? error.message : "Unknown error",
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
