@@ -103,10 +103,15 @@ serve(async (req) => {
       );
     }
 
-    if (venture.venture_state !== "reviewed") {
+    // Allow decisions from executing, reviewed, or committed states
+    const allowedStates = ["executing", "reviewed", "committed"];
+    if (!allowedStates.includes(venture.venture_state)) {
       console.log("[venture-review-decision] Invalid state:", venture.venture_state);
       return new Response(
-        JSON.stringify({ error: "Venture must be in reviewed state", code: "INVALID_STATE" }),
+        JSON.stringify({ 
+          error: `Venture must be in executing, reviewed, or committed state. Current state: ${venture.venture_state}`, 
+          code: "INVALID_STATE" 
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -34,37 +34,23 @@ import { format, differenceInDays } from "date-fns";
 
 type DecisionAction = "continue" | "pivot" | "kill";
 
+// Allowed states for accessing review page
+const ALLOWED_REVIEW_STATES = ["executing", "reviewed", "committed"];
+
 const VentureReview = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { activeVenture, isLoading: ventureLoading } = useVentureState();
-  const { data: stats, isLoading: statsLoading } = useVentureReviewStats(activeVenture);
+  
+  // Only fetch stats if venture exists and is in an allowed state
+  const shouldFetchStats = activeVenture && ALLOWED_REVIEW_STATES.includes(activeVenture.venture_state);
+  const { data: stats, isLoading: statsLoading } = useVentureReviewStats(shouldFetchStats ? activeVenture : null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<DecisionAction | null>(null);
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Allow access during executing OR reviewed states (users can always review/pivot/kill)
-  useEffect(() => {
-    if (ventureLoading) return;
-
-    if (!activeVenture) {
-      navigate("/dashboard", { replace: true });
-      return;
-    }
-
-    // Only allow access if in executing or reviewed state
-    const allowedStates = ["executing", "reviewed"];
-    if (!allowedStates.includes(activeVenture.venture_state)) {
-      toast({
-        title: "No Active Venture",
-        description: "You need an active venture to access this page.",
-      });
-      navigate("/dashboard", { replace: true });
-    }
-  }, [activeVenture, ventureLoading, navigate, toast]);
 
   const invalidateQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["ventures"] });
@@ -72,6 +58,65 @@ const VentureReview = () => {
     queryClient.invalidateQueries({ queryKey: ["active-venture"] });
     queryClient.invalidateQueries({ queryKey: ["venture-state"] });
   };
+
+  // Show loading state
+  if (ventureLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <p className="text-muted-foreground">Loading venture...</p>
+      </div>
+    );
+  }
+
+  // No active venture
+  if (!activeVenture) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 px-4">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">No Active Venture Found</h2>
+        <p className="text-muted-foreground text-center max-w-md">
+          You need an active venture to access the review page. Start by selecting or creating a venture.
+        </p>
+        <Button onClick={() => navigate("/dashboard")}>
+          Go to Dashboard
+        </Button>
+      </div>
+    );
+  }
+
+  // Venture not in allowed state
+  if (!ALLOWED_REVIEW_STATES.includes(activeVenture.venture_state)) {
+    const stateMessages: Record<string, { title: string; description: string }> = {
+      inactive: {
+        title: "Venture Not Started",
+        description: "This venture hasn't been started yet. Commit to the venture first to begin execution.",
+      },
+      killed: {
+        title: "Venture Archived",
+        description: "This venture has been killed and archived. You can start a new venture from the North Star page.",
+      },
+    };
+
+    const message = stateMessages[activeVenture.venture_state] || {
+      title: "Venture Not Ready for Review",
+      description: `Current state: ${activeVenture.venture_state}. The venture must be executing or completed before review.`,
+    };
+
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 px-4">
+        <AlertCircle className="h-12 w-12 text-amber-500" />
+        <h2 className="text-xl font-semibold">{message.title}</h2>
+        <p className="text-muted-foreground text-center max-w-md">{message.description}</p>
+        <Badge variant="outline" className="text-muted-foreground">
+          State: {activeVenture.venture_state}
+        </Badge>
+        <Button onClick={() => navigate("/dashboard")}>
+          Back to Dashboard
+        </Button>
+      </div>
+    );
+  }
 
   const handleContinue = async () => {
     if (!activeVenture) return;
@@ -143,13 +188,7 @@ const VentureReview = () => {
     setModalOpen(true);
   };
 
-  if (ventureLoading || !activeVenture) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  // These checks are now handled above with proper UI states
 
   const startDate = activeVenture.commitment_start_at
     ? format(new Date(activeVenture.commitment_start_at), "MMM d, yyyy")
