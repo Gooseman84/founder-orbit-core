@@ -39,7 +39,7 @@ const PUBLIC_ROUTES = [
  * This controls which nav items are shown and which routes are accessible.
  */
 export function getNavVisibility(ventureState: VentureState | null): NavVisibility {
-  // Default sections available to all states
+// Default sections available to all states
   const commonSections: NavSection[] = [
     "home",
     "daily-pulse",
@@ -48,69 +48,65 @@ export function getNavVisibility(ventureState: VentureState | null): NavVisibili
     "context-inspector",
   ];
 
+  // ALWAYS accessible sections - these are needed to select/create ventures
+  // Users must NEVER be blocked from these pages
+  const alwaysAccessible: NavSection[] = [
+    "idea-lab",
+    "fusion-lab", 
+    "radar",
+    "north-star",
+  ];
+
   // When executing: focused on execution but flexible
   // Allow contextual tools (blueprint, workspace, venture-review)
-  // Hide only ideation surfaces (idea generation, fusion, radar)
+  // Ideation surfaces are accessible but softly discouraged
   if (ventureState === "executing") {
     return {
       allowed: [
         ...commonSections,
+        ...alwaysAccessible, // Always allow ideation access
         "tasks",
         "workspace",
         "blueprint",
         "venture-review",
       ],
-      hidden: [
-        "idea-lab",
-        "fusion-lab",
-        "radar",
-        "north-star",
-      ],
+      hidden: [], // Nothing is hidden, just not emphasized
       redirectTo: "/tasks",
     };
   }
 
   // When reviewed: soft guidance toward review
   // Allow reference tools (blueprint, workspace read-only)
+  // Ideation surfaces are accessible for planning next moves
   if (ventureState === "reviewed") {
     return {
       allowed: [
-        "home",
-        "daily-pulse",
+        ...commonSections,
+        ...alwaysAccessible, // Always allow ideation access
         "venture-review",
         "blueprint",
         "workspace",
-        "profile",
-        "billing",
-        "context-inspector",
+        "tasks", // Allow viewing past tasks
       ],
-      hidden: [
-        "tasks",
-        "idea-lab",
-        "fusion-lab",
-        "radar",
-        "north-star",
-      ],
+      hidden: [], // Nothing is hidden
       redirectTo: "/venture-review",
     };
   }
 
-  // When inactive, committed, or killed: ideation/planning surfaces + tasks (for viewing)
-  // Allow tasks so users can view existing tasks even without an active executing venture
+  // When inactive, committed, killed, or null: full access to ideation/planning surfaces
+  // This is the default state for users without an active venture
+  // They need access to Idea Lab, North Star, etc. to SELECT/CREATE ventures
   // "inactive" | "committed" | "killed" | null
   return {
     allowed: [
       ...commonSections,
-      "idea-lab",
-      "fusion-lab",
-      "radar",
+      ...alwaysAccessible, // Always allow ideation access - CRITICAL
       "blueprint",
       "workspace",
-      "north-star",
       "tasks", // Allow viewing tasks in discovery mode
     ],
     hidden: [
-      "venture-review", // Only hide venture review when not executing/reviewed
+      "venture-review", // Only show venture review when executing/reviewed
     ],
     redirectTo: "/dashboard",
   };
