@@ -39,6 +39,7 @@ import Blueprint from "./pages/Blueprint";
 import ContextInspector from "./pages/ContextInspector";
 import VentureReview from "./pages/VentureReview";
 import CodeArchitectTest from "./pages/CodeArchitectTest";
+import FeaturePlanner from "./pages/FeaturePlanner";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -318,6 +319,16 @@ const App = () => (
                 <ProtectedRoute>
                   <MainLayout>
                     <CodeArchitectTest />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/feature-planner"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <FeaturePlanner />
                   </MainLayout>
                 </ProtectedRoute>
               }
