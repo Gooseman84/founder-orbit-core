@@ -125,3 +125,6 @@ verify_jwt = false
 
 [functions.code-architect-agent]
 verify_jwt = false
+
+[functions.feature-implementation-agent]
+verify_jwt = false
