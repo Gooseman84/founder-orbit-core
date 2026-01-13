@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Rocket, CheckCircle2, Clock, AlertCircle, Copy } from 'lucide-react';
+import { Loader2, Rocket, CheckCircle2, Clock, AlertCircle, Copy, History, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Phase {
@@ -47,6 +47,13 @@ interface ImplementationPlan {
   risks: Risk[];
 }
 
+interface SavedPlan {
+  id: string;
+  memory_path: string;
+  memory_data: ImplementationPlan;
+  updated_at: string;
+}
+
 type Priority = 'critical' | 'high' | 'medium' | 'low';
 
 export default function FeaturePlanner() {
@@ -65,6 +72,93 @@ export default function FeaturePlanner() {
   const [planning, setPlanning] = useState(false);
   const [plan, setPlan] = useState<ImplementationPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Persistence state
+  const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+
+  // Load saved plans on mount
+  const loadSavedPlans = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('agent_memory')
+        .select('*')
+        .eq('user_id', user.id)
+        .like('memory_path', 'features/%/implementation_plan')
+        .order('updated_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+      
+      const parsedPlans: SavedPlan[] = (data || []).map(item => ({
+        id: item.id,
+        memory_path: item.memory_path,
+        memory_data: item.memory_data as unknown as ImplementationPlan,
+        updated_at: item.updated_at || ''
+      }));
+      
+      setSavedPlans(parsedPlans);
+      
+      // Auto-load most recent plan if no plan is currently loaded
+      if (parsedPlans.length > 0 && !plan) {
+        setPlan(parsedPlans[0].memory_data);
+      }
+    } catch (err) {
+      console.error('Error loading saved plans:', err);
+    } finally {
+      setLoadingPlans(false);
+    }
+  }, [user, plan]);
+
+  useEffect(() => {
+    loadSavedPlans();
+  }, [loadSavedPlans]);
+
+  const savePlanToMemory = async (planData: ImplementationPlan) => {
+    if (!user) return;
+
+    try {
+      // Check if plan already exists
+      const { data: existing } = await supabase
+        .from('agent_memory')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('memory_path', `features/${planData.feature_id}/implementation_plan`)
+        .maybeSingle();
+
+      const jsonData = JSON.parse(JSON.stringify(planData));
+
+      if (existing) {
+        // Update existing
+        const { error: updateError } = await supabase
+          .from('agent_memory')
+          .update({
+            memory_data: jsonData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Insert new
+        const { error: insertError } = await supabase
+          .from('agent_memory')
+          .insert([{
+            user_id: user.id,
+            memory_path: `features/${planData.feature_id}/implementation_plan`,
+            memory_data: jsonData
+          }]);
+
+        if (insertError) throw insertError;
+      }
+      
+      // Refresh saved plans list
+      await loadSavedPlans();
+    } catch (err) {
+      console.error('Error saving plan to memory:', err);
+    }
+  };
 
   const handlePlan = async () => {
     if (!user) {
@@ -107,6 +201,10 @@ export default function FeaturePlanner() {
       if (apiError) throw apiError;
 
       setPlan(data.plan);
+      
+      // Save to agent_memory for persistence
+      await savePlanToMemory(data.plan);
+      
       toast({
         title: 'Implementation Plan Generated!',
         description: `Created ${data.plan.phases?.length || 0}-phase plan`
@@ -124,6 +222,27 @@ export default function FeaturePlanner() {
     } finally {
       setPlanning(false);
     }
+  };
+
+  const handleLoadPlan = (planId: string) => {
+    const selected = savedPlans.find(p => p.id === planId);
+    if (selected) {
+      setPlan(selected.memory_data);
+      toast({
+        title: 'Plan Loaded',
+        description: `Loaded ${selected.memory_data.feature_id}`
+      });
+    }
+  };
+
+  const handleClearPlan = () => {
+    setPlan(null);
+    setTitle('');
+    setDescription('');
+    setUserStories('');
+    setSuccessMetrics('');
+    setConstraints('');
+    setPriority('high');
   };
 
   const handleCopyPrompt = (prompt: string, phaseNum: number) => {
@@ -272,6 +391,40 @@ Must support retry logic"
 
         {/* Results Panel */}
         <div className="space-y-4">
+          {/* Plan History Dropdown */}
+          {savedPlans.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <History className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-base">Saved Plans</CardTitle>
+                  </div>
+                  {plan && (
+                    <Button variant="outline" size="sm" onClick={handleClearPlan}>
+                      <Plus className="h-3 w-3 mr-1" />
+                      New Plan
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Select onValueChange={handleLoadPlan}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Load a saved plan..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {savedPlans.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.memory_data.feature_id} — {new Date(p.updated_at).toLocaleDateString()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Implementation Plan</CardTitle>
