@@ -37,30 +37,36 @@ export function VentureStateGuard({ children }: VentureStateGuardProps) {
       const redirectTo = getRedirectPath(ventureState);
       const isIdeation = isIdeationRoute(currentPath);
       
-      console.log(`[VentureStateGuard] Blocking "${currentPath}" (state: ${ventureState}, ideation: ${isIdeation}) -> redirecting to "${redirectTo}"`);
+      console.log(`[VentureStateGuard] Route "${currentPath}" not in allowed list (state: ${ventureState}, ideation: ${isIdeation})`);
       
-      // Only show toast for ideation attempts during execution
-      // This is "soft guidance" not "locked room" messaging
-      if (ventureState === "executing" && isIdeation) {
+      // SOFT GUIDANCE: Only redirect for truly blocked routes (like venture-review when not executing)
+      // For ideation routes, show toast but DON'T block - let users access them
+      if (isIdeation && ventureState === "executing") {
+        // Show soft guidance toast but still allow navigation
         toast({
-          title: "Focus Mode",
-          description: getLockedMessage(ventureState),
+          title: "Focus Mode Active",
+          description: "You have an active venture. Consider focusing on execution, but feel free to explore.",
         });
-        navigate(redirectTo, { replace: true });
+        // Don't redirect - let them through
         return;
       }
       
-      // For reviewed state, show gentle guidance
+      // For reviewed state, gentle guidance to complete review
       if (ventureState === "reviewed") {
         toast({
           title: "Review Pending",
-          description: "Complete your Venture Review to proceed.",
+          description: "Complete your Venture Review when you're ready.",
         });
-        navigate(redirectTo, { replace: true });
+        // Only redirect if trying to access venture-specific routes like tasks
+        if (currentPath === "/tasks") {
+          navigate(redirectTo, { replace: true });
+          return;
+        }
+        // Otherwise, let them through
         return;
       }
       
-      // For other blocked routes, soft redirect without aggressive messaging
+      // For truly blocked routes (like venture-review when not executing), redirect
       navigate(redirectTo, { replace: true });
     }
   }, [location.pathname, ventureState, isLoading, navigate, toast]);
