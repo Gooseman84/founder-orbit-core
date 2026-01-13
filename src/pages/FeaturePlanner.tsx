@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, Rocket, CheckCircle2, Clock, AlertCircle, Copy } from 'lucide-react';
@@ -153,7 +154,8 @@ export default function FeaturePlanner() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-6xl">
+    <TooltipProvider>
+      <div className="container mx-auto py-8 px-4 max-w-6xl">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -443,7 +445,8 @@ Must support retry logic"
             </CardContent>
           </Card>
         </div>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
