@@ -61,7 +61,7 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const handleUpgrade = async (priceId: string) => {
+  const handleUpgrade = async (plan: "monthly" | "yearly") => {
     if (!user) {
       toast.error("Please sign in to upgrade your account.");
       return;
@@ -69,11 +69,11 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
 
     setLoading(true);
     try {
-      const { data, error } = await invokeAuthedFunction<{ url?: string }>(
+      const { data, error } = await invokeAuthedFunction<{ url?: string; error?: string }>(
         "create-checkout-session",
         {
           body: {
-            priceId,
+            plan, // "monthly" or "yearly" - edge function reads price ID from secrets
             successUrl: `${window.location.origin}/billing?status=success`,
             cancelUrl: `${window.location.origin}/billing?status=cancelled`,
           },
@@ -82,6 +82,11 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
 
       if (error) throw error;
 
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
       if (data?.url) {
         window.location.href = data.url;
       } else {
@@ -89,14 +94,15 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
       }
     } catch (err) {
       console.error("Error in handleUpgrade:", err);
-      toast.error("Something went wrong. Please try again.");
+      if (err instanceof AuthSessionMissingError) {
+        toast.error("Session expired. Please sign in again.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
-
-  const priceMonthly = import.meta.env.VITE_STRIPE_PRICE_PRO_MONTHLY;
-  const priceYearly = import.meta.env.VITE_STRIPE_PRICE_PRO_YEARLY;
 
   // Get message based on error code or use default
   const message = errorCode ? LIMIT_MESSAGES[errorCode] : null;
@@ -145,8 +151,8 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
             <>
               <div className="space-y-3">
                 <Button
-                  onClick={() => handleUpgrade(priceMonthly)}
-                  disabled={loading || !priceMonthly}
+                  onClick={() => handleUpgrade("monthly")}
+                  disabled={loading}
                   className="w-full"
                   size="lg"
                 >
@@ -161,8 +167,8 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
                 </Button>
 
                 <Button
-                  onClick={() => handleUpgrade(priceYearly)}
-                  disabled={loading || !priceYearly}
+                  onClick={() => handleUpgrade("yearly")}
+                  disabled={loading}
                   className="w-full"
                   size="lg"
                   variant="secondary"
