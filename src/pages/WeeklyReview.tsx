@@ -29,7 +29,13 @@ export default function WeeklyReview() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await invokeAuthedFunction<{ error?: string; message?: string; summary?: any }>(
+      const { data, error } = await invokeAuthedFunction<{ 
+        error?: string; 
+        message?: string; 
+        summary?: any;
+        details?: string;
+        requiresCheckIns?: boolean;
+      }>(
         "generate-weekly-summary",
         {}
       );
@@ -40,11 +46,19 @@ export default function WeeklyReview() {
       }
 
       if (data?.error) {
-        toast({
-          title: "Not enough data",
-          description: data.message || data.error,
-          variant: "destructive",
-        });
+        // Handle specific error cases
+        if (data.requiresCheckIns) {
+          toast({
+            title: "Not enough data",
+            description: data.message || "You need at least one daily check-in from the past week to generate a summary.",
+          });
+        } else {
+          toast({
+            title: "Generation failed",
+            description: data.details || data.message || data.error,
+            variant: "destructive",
+          });
+        }
         return;
       }
 
@@ -61,9 +75,20 @@ export default function WeeklyReview() {
 
     } catch (error) {
       console.error("Error:", error);
+      
+      // Handle AuthSessionMissingError specifically
+      if (error instanceof AuthSessionMissingError) {
+        toast({
+          title: "Session expired",
+          description: "Please log in again to generate your weekly review.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate weekly review.",
+        description: error instanceof Error ? error.message : "Failed to generate weekly review. Please try again.",
         variant: "destructive",
       });
     } finally {

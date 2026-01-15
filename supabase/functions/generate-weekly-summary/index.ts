@@ -166,6 +166,7 @@ serve(async (req) => {
     // ===== CANONICAL AUTH BLOCK =====
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.toLowerCase().startsWith("bearer ")) {
+      console.error("[generate-weekly-summary] Missing Authorization header");
       return new Response(
         JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -187,6 +188,7 @@ serve(async (req) => {
     }
 
     const userId = user.id;
+    console.log("[generate-weekly-summary] Authenticated user:", userId);
 
     // Create admin client for database operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
@@ -195,7 +197,17 @@ serve(async (req) => {
 
     // ===== END CANONICAL AUTH BLOCK =====
 
-    const body = (await req.json()) as WeeklySummaryRequest;
+    // Parse request body safely
+    let body: WeeklySummaryRequest = {};
+    try {
+      const rawBody = await req.text();
+      if (rawBody && rawBody.trim()) {
+        body = JSON.parse(rawBody) as WeeklySummaryRequest;
+      }
+    } catch (parseError) {
+      console.error("[generate-weekly-summary] Body parse error:", parseError);
+      // Continue with empty body - defaults will be used
+    }
 
     // Determine endDate (defaults to today)
     let endDateStr: string;
@@ -403,9 +415,19 @@ Remember: output ONLY JSON in the structure from the system message.
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
-    console.error("[generate-weekly-summary] Unhandled error:", err);
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+    const errorStack = err instanceof Error ? err.stack : undefined;
+    console.error("[generate-weekly-summary] Unhandled error:", {
+      message: errorMessage,
+      stack: errorStack,
+      error: err,
+    });
     return new Response(
-      JSON.stringify({ error: "Internal error generating weekly summary" }),
+      JSON.stringify({ 
+        error: "Internal error generating weekly summary",
+        details: errorMessage,
+        timestamp: new Date().toISOString()
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
