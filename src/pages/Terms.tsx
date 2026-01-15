@@ -21,7 +21,7 @@ const Terms = () => {
 
       <div className="container mx-auto px-6 py-24 max-w-4xl">
         <h1 className="text-4xl font-bold mb-6">Terms of Service</h1>
-        <p className="text-muted-foreground mb-8">Last updated: {new Date().toLocaleDateString()}</p>
+        <p className="text-muted-foreground mb-8" suppressHydrationWarning>Last updated: January 2025</p>
 
         <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
           <section>

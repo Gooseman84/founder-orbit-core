@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,7 +83,41 @@ const QUESTION_TOOLTIPS: Record<number, string> = {
   7: "Your commitment level helps us suggest appropriately scoped ideas—no judgment here.",
 };
 
-// Helper component for card-style radio options
+// Pre-generate stable confetti data to avoid hydration mismatches
+const CONFETTI_COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', '#fbbf24', '#34d399', '#f472b6'];
+const CONFETTI_DATA = Array.from({ length: 50 }, (_, i) => ({
+  id: i,
+  left: `${(i * 2.1 + 7) % 100}%`,
+  width: `${(i % 10) + 5}px`,
+  height: `${((i * 3) % 10) + 5}px`,
+  backgroundColor: CONFETTI_COLORS[i % 5],
+  borderRadius: i % 2 === 0 ? '50%' : '0',
+  animationDelay: `${(i * 0.01) % 0.5}s`,
+  animationDuration: `${((i * 0.04) % 2) + 2}s`,
+}));
+
+// Confetti overlay component with stable values
+const ConfettiOverlay = () => (
+  <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+    {CONFETTI_DATA.map((confetti) => (
+      <div
+        key={confetti.id}
+        className="absolute animate-confetti"
+        style={{
+          left: confetti.left,
+          top: '-5%',
+          width: confetti.width,
+          height: confetti.height,
+          backgroundColor: confetti.backgroundColor,
+          borderRadius: confetti.borderRadius,
+          animationDelay: confetti.animationDelay,
+          animationDuration: confetti.animationDuration,
+        }}
+      />
+    ))}
+  </div>
+);
+
 const CardRadioOption = ({ 
   value, 
   label, 
@@ -390,27 +424,8 @@ export default function StructuredOnboarding() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Confetti celebration overlay */}
-      {showConfetti && (
-        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
-          {[...Array(50)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute animate-confetti"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `-5%`,
-                width: `${Math.random() * 10 + 5}px`,
-                height: `${Math.random() * 10 + 5}px`,
-                backgroundColor: ['hsl(var(--primary))', 'hsl(var(--secondary))', '#fbbf24', '#34d399', '#f472b6'][Math.floor(Math.random() * 5)],
-                borderRadius: Math.random() > 0.5 ? '50%' : '0',
-                animationDelay: `${Math.random() * 0.5}s`,
-                animationDuration: `${Math.random() * 2 + 2}s`,
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {/* Confetti celebration overlay - uses stable pre-generated values */}
+      {showConfetti && <ConfettiOverlay />}
 
       {/* Progress Header */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
