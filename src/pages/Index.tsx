@@ -40,8 +40,8 @@ const Index = () => {
 
       <footer className="py-12 px-6 border-t border-border/30">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} TrueBlazer.AI — Find your path. Build with purpose.
+          <p className="text-sm text-muted-foreground" suppressHydrationWarning>
+            © 2025 TrueBlazer.AI — Find your path. Build with purpose.
           </p>
           <div className="flex gap-6 text-sm text-muted-foreground">
             <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
