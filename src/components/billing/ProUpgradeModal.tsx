@@ -51,22 +51,13 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
       return;
     }
 
-    const priceId = selectedPlan === "yearly" 
-      ? import.meta.env.VITE_STRIPE_PRICE_PRO_YEARLY
-      : import.meta.env.VITE_STRIPE_PRICE_PRO_MONTHLY;
-
-    if (!priceId) {
-      toast.error("Pricing not configured. Please try again later.");
-      return;
-    }
-
     setLoading(true);
     track("upgrade_clicked", { reasonCode, plan: selectedPlan, ...context });
 
     try {
-      const { data, error } = await invokeAuthedFunction<{ url?: string }>("create-checkout-session", {
+      const { data, error } = await invokeAuthedFunction<{ url?: string; error?: string }>("create-checkout-session", {
         body: {
-          priceId,
+          plan: selectedPlan, // "monthly" or "yearly" - edge function reads price ID from secrets
           successUrl: `${window.location.origin}/billing?status=success`,
           cancelUrl: `${window.location.origin}/billing?status=cancelled`,
         },
@@ -78,6 +69,11 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
         return;
       }
 
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
       if (data?.url) {
         track("checkout_started", { reasonCode, plan: selectedPlan });
         window.location.href = data.url;
@@ -86,7 +82,11 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
       }
     } catch (err) {
       console.error("Error in handleUpgrade:", err);
-      toast.error("Something went wrong. Please try again.");
+      if (err instanceof AuthSessionMissingError) {
+        toast.error("Session expired. Please sign in again.");
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

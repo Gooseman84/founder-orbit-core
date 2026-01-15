@@ -20,12 +20,14 @@ serve(async (req) => {
 
   try {
     if (!sig) {
+      console.error("[stripe-webhook] Missing signature");
       return new Response("Missing signature", { status: 400 });
     }
 
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    console.log("[stripe-webhook] Event received:", event.type, "ID:", event.id);
   } catch (err) {
-    console.error("Webhook signature verification failed", err);
+    console.error("[stripe-webhook] Signature verification failed:", err);
     return new Response("Invalid signature", { status: 400 });
   }
 
@@ -39,39 +41,87 @@ serve(async (req) => {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const customerId = session.customer as string;
+        const subscriptionId = session.subscription as string;
 
-        // Mark plan as pro after checkout completes
-        await supabase
-          .from("user_subscriptions")
-          .update({
-            plan: "pro",
-            status: "active",
-          })
-          .eq("stripe_customer_id", customerId);
+        console.log("[stripe-webhook] Checkout completed for customer:", customerId);
 
+        // Get subscription details
+        if (subscriptionId) {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          
+          const { error } = await supabase
+            .from("user_subscriptions")
+            .update({
+              stripe_subscription_id: subscriptionId,
+              plan: "pro",
+              status: subscription.status,
+              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              cancel_at: subscription.cancel_at 
+                ? new Date(subscription.cancel_at * 1000).toISOString() 
+                : null,
+            })
+            .eq("stripe_customer_id", customerId);
+
+          if (error) {
+            console.error("[stripe-webhook] Error updating subscription after checkout:", error);
+          } else {
+            console.log("[stripe-webhook] Subscription activated for customer:", customerId);
+          }
+        }
         break;
       }
 
-      case "customer.subscription.created":
+      case "customer.subscription.created": {
+        const sub = event.data.object as Stripe.Subscription;
+        const customerId = sub.customer as string;
+
+        console.log("[stripe-webhook] Subscription created:", sub.id, "Status:", sub.status);
+
+        const { error } = await supabase
+          .from("user_subscriptions")
+          .update({
+            stripe_subscription_id: sub.id,
+            plan: "pro",
+            status: sub.status,
+            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+            cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
+            renewal_period: sub.items.data[0]?.plan?.interval || null,
+          })
+          .eq("stripe_customer_id", customerId);
+
+        if (error) {
+          console.error("[stripe-webhook] Error on subscription.created:", error);
+        }
+        break;
+      }
+
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
         const customerId = sub.customer as string;
 
-        await supabase
+        console.log("[stripe-webhook] Subscription updated:", sub.id, "Status:", sub.status);
+
+        // Determine plan based on status
+        let plan = "pro";
+        if (sub.status === "canceled" || sub.status === "unpaid") {
+          plan = "free";
+        }
+
+        const { error } = await supabase
           .from("user_subscriptions")
           .update({
             stripe_subscription_id: sub.id,
-            plan: "pro", // later you can map different prices → different plans
+            plan,
             status: sub.status,
-            current_period_end: new Date(
-              sub.current_period_end * 1000
-            ).toISOString(),
-            cancel_at: sub.cancel_at
-              ? new Date(sub.cancel_at * 1000).toISOString()
-              : null,
+            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+            cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
+            renewal_period: sub.items.data[0]?.plan?.interval || null,
           })
           .eq("stripe_customer_id", customerId);
 
+        if (error) {
+          console.error("[stripe-webhook] Error on subscription.updated:", error);
+        }
         break;
       }
 
@@ -79,25 +129,72 @@ serve(async (req) => {
         const sub = event.data.object as Stripe.Subscription;
         const customerId = sub.customer as string;
 
-        await supabase
+        console.log("[stripe-webhook] Subscription deleted/canceled:", sub.id);
+
+        const { error } = await supabase
           .from("user_subscriptions")
           .update({
             plan: "free",
             status: "canceled",
+            stripe_subscription_id: null,
+            cancel_at: null,
           })
           .eq("stripe_customer_id", customerId);
 
+        if (error) {
+          console.error("[stripe-webhook] Error on subscription.deleted:", error);
+        } else {
+          console.log("[stripe-webhook] User downgraded to free:", customerId);
+        }
+        break;
+      }
+
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = invoice.customer as string;
+        console.log("[stripe-webhook] Payment succeeded for customer:", customerId, "Amount:", invoice.amount_paid);
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = invoice.customer as string;
+        console.log("[stripe-webhook] Payment FAILED for customer:", customerId, "Amount:", invoice.amount_due);
+        
+        // Update status to past_due
+        const { error } = await supabase
+          .from("user_subscriptions")
+          .update({ status: "past_due" })
+          .eq("stripe_customer_id", customerId);
+
+        if (error) {
+          console.error("[stripe-webhook] Error updating to past_due:", error);
+        }
+        break;
+      }
+
+      case "customer.subscription.trial_will_end": {
+        const sub = event.data.object as Stripe.Subscription;
+        const customerId = sub.customer as string;
+        console.log("[stripe-webhook] Trial ending soon for customer:", customerId, "Ends:", new Date(sub.trial_end! * 1000));
+        // Future: Send notification email here
         break;
       }
 
       default: {
-        console.log(`Unhandled Stripe event type: ${event.type}`);
+        console.log("[stripe-webhook] Unhandled event type:", event.type);
       }
     }
 
-    return new Response("OK", { status: 200 });
+    return new Response(JSON.stringify({ received: true }), { 
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
   } catch (err) {
-    console.error("Error handling Stripe webhook", err);
-    return new Response("Webhook error", { status: 500 });
+    console.error("[stripe-webhook] Error handling event:", err);
+    return new Response(
+      JSON.stringify({ error: "Webhook handler error" }), 
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 });
