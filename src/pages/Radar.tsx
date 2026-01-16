@@ -4,7 +4,7 @@ import { useXP } from "@/hooks/useXP";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { RadarCard } from "@/components/radar/RadarCard";
-import { UpgradeModal } from "@/components/upgrade/UpgradeModal";
+import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { Button } from "@/components/ui/button";
 import { Loader2, Radar as RadarIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -198,12 +198,11 @@ export default function Radar() {
         </div>
       )}
 
-      {/* Upgrade Modal */}
-      <UpgradeModal
-        isOpen={showUpgradeModal}
+      {/* Pro Upgrade Modal */}
+      <ProUpgradeModal
+        open={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        feature="Niche Radar"
-        reason="Discover emerging market opportunities with AI-powered trend analysis. Upgrade to Pro to unlock Niche Radar!"
+        reasonCode="MODE_REQUIRES_PRO"
       />
     </div>
   );

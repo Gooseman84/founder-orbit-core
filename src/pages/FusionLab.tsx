@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
-import { UpgradeModal } from "@/components/upgrade/UpgradeModal";
+import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { Combine, Sparkles, ExternalLink, ArrowLeft, GitMerge, Zap, Info, Lock } from "lucide-react";
 
@@ -519,9 +519,9 @@ const FusionLab = () => {
         )}
       </section>
 
-      {/* Upgrade Modal */}
-      <UpgradeModal
-        isOpen={showUpgradeModal}
+      {/* Pro Upgrade Modal */}
+      <ProUpgradeModal
+        open={showUpgradeModal}
         onClose={() => {
           setShowUpgradeModal(false);
           // Navigate back if user is not Pro
@@ -529,8 +529,7 @@ const FusionLab = () => {
             navigate("/ideas");
           }
         }}
-        feature="Fusion Lab"
-        reason="Combine your best ideas into innovative hybrid concepts. Upgrade to Pro to unlock Idea Fusion!"
+        reasonCode="MODE_REQUIRES_PRO"
       />
     </div>
   );
