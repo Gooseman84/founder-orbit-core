@@ -126,8 +126,18 @@ serve(async (req) => {
       sub = newSub;
     }
 
-    // Ensure Stripe customer exists
+    // Ensure Stripe customer exists and is valid
     let customerId = sub.stripe_customer_id;
+
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+        console.log("[create-checkout-session] Verified existing Stripe customer:", customerId);
+      } catch (error) {
+        console.log("[create-checkout-session] Stored customer not found in Stripe, will create new one");
+        customerId = null;
+      }
+    }
 
     if (!customerId) {
       console.log("[create-checkout-session] Creating Stripe customer for:", email);
