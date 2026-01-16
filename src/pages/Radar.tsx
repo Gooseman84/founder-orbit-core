@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { RadarCard } from "@/components/radar/RadarCard";
+import { UpgradeModal } from "@/components/upgrade/UpgradeModal";
 import { Button } from "@/components/ui/button";
 import { Loader2, Radar as RadarIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -25,10 +27,12 @@ interface RadarSignal {
 export default function Radar() {
   const { user } = useAuth();
   const { refresh: refreshXp } = useXP();
+  const { hasPro, loading: featureLoading } = useFeatureAccess();
   const [signals, setSignals] = useState<RadarSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [viewedSignals, setViewedSignals] = useState<Set<string>>(new Set());
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -60,11 +64,24 @@ export default function Radar() {
   const handleGenerateSignals = async () => {
     if (!user) return;
 
+    // Check Pro access before generating
+    if (!hasPro) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     try {
       setGenerating(true);
       const { data, error } = await invokeAuthedFunction<{ signals?: any[] }>("generate-niche-radar", {});
 
-      if (error) throw error;
+      if (error) {
+        // Check if it's a subscription-related error
+        if (error.message?.includes("upgrade") || error.message?.includes("Pro subscription")) {
+          setShowUpgradeModal(true);
+          return;
+        }
+        throw error;
+      }
 
       toast.success(`Generated ${data.signals?.length || 0} new radar signals!`);
       await fetchSignals();
@@ -101,7 +118,7 @@ export default function Radar() {
     }
   };
 
-  if (loading) {
+  if (loading || featureLoading) {
     return (
       <div className="container max-w-6xl mx-auto py-8">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -110,6 +127,9 @@ export default function Radar() {
       </div>
     );
   }
+
+  // Show upgrade modal for non-Pro users with no signals
+  const showProGate = !hasPro && signals.length === 0;
 
   return (
     <div className="container max-w-6xl mx-auto py-8 space-y-6">
@@ -177,6 +197,14 @@ export default function Radar() {
           ))}
         </div>
       )}
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature="Niche Radar"
+        reason="Discover emerging market opportunities with AI-powered trend analysis. Upgrade to Pro to unlock Niche Radar!"
+      />
     </div>
   );
 }
