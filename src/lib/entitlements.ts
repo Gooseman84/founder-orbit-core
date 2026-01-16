@@ -33,7 +33,8 @@ export async function getUserPlan(userId: string): Promise<PlanId> {
       return "free";
     }
     
-    if (!data || data.status !== "active") {
+    // Support both active and trialing statuses
+    if (!data || (data.status !== "active" && data.status !== "trialing")) {
       return "free";
     }
     
@@ -136,7 +137,8 @@ export async function validateServerSidePlan(
     .eq("user_id", userId)
     .maybeSingle();
   
-  if (error || !data || data.status !== "active") {
+  // Support both active and trialing statuses
+  if (error || !data || (data.status !== "active" && data.status !== "trialing")) {
     return { plan: "free", isPro: false, isFounder: false };
   }
   

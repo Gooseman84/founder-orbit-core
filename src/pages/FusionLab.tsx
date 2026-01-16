@@ -8,8 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { UpgradeModal } from "@/components/upgrade/UpgradeModal";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
-import { Combine, Sparkles, ExternalLink, ArrowLeft, GitMerge, Zap, Info } from "lucide-react";
+import { Combine, Sparkles, ExternalLink, ArrowLeft, GitMerge, Zap, Info, Lock } from "lucide-react";
 
 interface FusionMetadata {
   source_idea_ids?: string[];
@@ -69,25 +70,21 @@ const FusionLab = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { hasPro } = useFeatureAccess();
+  const { hasPro, loading: featureLoading } = useFeatureAccess();
   const [libraryIdeas, setLibraryIdeas] = useState<LibraryIdea[]>([]);
   const [fusionHistory, setFusionHistory] = useState<LibraryIdea[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isFusing, setIsFusing] = useState(false);
   const [fusedResult, setFusedResult] = useState<LibraryIdea | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  // Guard: redirect free users
+  // Show upgrade modal for free users instead of redirecting
   useEffect(() => {
-    if (!hasPro) {
-      toast({
-        title: "Pro Feature",
-        description: "Idea Fusion requires a Pro subscription.",
-        variant: "destructive",
-      });
-      navigate("/ideas");
+    if (!featureLoading && !hasPro) {
+      setShowUpgradeModal(true);
     }
-  }, [hasPro, navigate, toast]);
+  }, [hasPro, featureLoading]);
 
   // Fetch library ideas and fusion history
   useEffect(() => {
@@ -135,6 +132,12 @@ const FusionLab = () => {
   };
 
   const handleFuseIdeas = async () => {
+    // Check Pro access first
+    if (!hasPro) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     if (selectedIds.size < 2) {
       toast({ title: "Select at least 2 ideas", variant: "destructive" });
       return;
@@ -515,6 +518,20 @@ const FusionLab = () => {
           </div>
         )}
       </section>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => {
+          setShowUpgradeModal(false);
+          // Navigate back if user is not Pro
+          if (!hasPro) {
+            navigate("/ideas");
+          }
+        }}
+        feature="Fusion Lab"
+        reason="Combine your best ideas into innovative hybrid concepts. Upgrade to Pro to unlock Idea Fusion!"
+      />
     </div>
   );
 };
