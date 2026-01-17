@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CreditCard, Calendar, CheckCircle, ArrowUpRight, Clock, AlertTriangle, Loader2 } from "lucide-react";
+import { CreditCard, Calendar, CheckCircle, ArrowUpRight, Clock, AlertTriangle, Loader2, XCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { useToast } from "@/hooks/use-toast";
@@ -104,27 +104,40 @@ const Billing = () => {
     );
   }
 
-  const isPro = plan === "pro" || plan === "founder";
-  const isFree = plan === "free";
+  // Determine subscription states
+  const isPaidAndActive = (plan === "pro" || plan === "founder") && status === "active" && !isTrialing;
   const isCancelling = cancelAt !== null;
+  const isTrialExpired = status === "canceled" || status === "expired" || 
+    (plan === "free" && currentPeriodEnd !== null && currentPeriodEnd < new Date());
+  const hasNeverTrialed = plan === "free" && !currentPeriodEnd && status !== "trialing";
 
-  const getPlanDisplayName = (planName: string) => {
-    switch (planName) {
-      case "founder":
-        return "TrueBlazer Founder";
-      case "pro":
-        return "TrueBlazer Pro";
-      default:
-        return "Free";
+  const getPlanDisplayName = () => {
+    if (isTrialing) {
+      return "TrueBlazer Pro Trial";
     }
+    if (isTrialExpired) {
+      return "Trial Ended";
+    }
+    if (isPaidAndActive) {
+      return plan === "founder" ? "TrueBlazer Founder" : "TrueBlazer Pro";
+    }
+    return "Free Plan";
   };
 
-  const getStatusBadge = (statusText: string) => {
-    if (isTrialing) {
+  const getStatusBadge = () => {
+    if (isTrialing && daysUntilTrialEnd !== null) {
       return (
-        <Badge variant="secondary" className="gap-1">
+        <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
           <Clock className="w-3 h-3" />
-          Trial ({daysUntilTrialEnd} days left)
+          {daysUntilTrialEnd} {daysUntilTrialEnd === 1 ? 'day' : 'days'} remaining
+        </Badge>
+      );
+    }
+    if (isTrialExpired) {
+      return (
+        <Badge variant="destructive" className="gap-1">
+          <XCircle className="w-3 h-3" />
+          Expired
         </Badge>
       );
     }
@@ -136,17 +149,43 @@ const Billing = () => {
         </Badge>
       );
     }
-    switch (statusText) {
-      case "active":
-        return <Badge variant="default" className="gap-1"><CheckCircle className="w-3 h-3" />Active</Badge>;
-      case "past_due":
-        return <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-3 h-3" />Past Due</Badge>;
-      case "canceled":
-        return <Badge variant="destructive">Canceled</Badge>;
-      default:
-        return <Badge variant="outline">{statusText}</Badge>;
+    if (isPaidAndActive) {
+      return (
+        <Badge variant="default" className="gap-1">
+          <CheckCircle className="w-3 h-3" />
+          Active
+        </Badge>
+      );
     }
+    if (status === "past_due") {
+      return (
+        <Badge variant="destructive" className="gap-1">
+          <AlertTriangle className="w-3 h-3" />
+          Past Due
+        </Badge>
+      );
+    }
+    // Free plan - no badge needed
+    return null;
   };
+
+  const getDescription = () => {
+    if (isTrialing) {
+      return "You're enjoying a 7-day free trial of TrueBlazer Pro. All premium features are unlocked!";
+    }
+    if (isTrialExpired) {
+      return "Your trial has ended. Subscribe to Pro to continue using premium features.";
+    }
+    if (isPaidAndActive) {
+      return "You have full access to all premium features.";
+    }
+    return "You're on the free plan with basic features.";
+  };
+
+  // Show upgrade section for: free users who never trialed, or expired trials
+  const showUpgradeSection = hasNeverTrialed || isTrialExpired;
+  // Show pro features for: active trial, paid active, or cancelling
+  const showProSection = isTrialing || isPaidAndActive || isCancelling;
 
   return (
     <div className="space-y-6">
@@ -155,13 +194,23 @@ const Billing = () => {
         <p className="text-muted-foreground">Manage your subscription and billing settings</p>
       </div>
 
-      {/* Trial warning */}
+      {/* Trial ending warning */}
       {isTrialing && daysUntilTrialEnd !== null && daysUntilTrialEnd <= 2 && (
         <Alert className="border-amber-500 bg-amber-500/10">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           <AlertDescription className="text-amber-700 dark:text-amber-400">
             Your trial ends in {daysUntilTrialEnd} day{daysUntilTrialEnd !== 1 ? 's' : ''}! 
             Add a payment method to continue enjoying Pro features.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Trial expired alert */}
+      {isTrialExpired && (
+        <Alert className="border-destructive bg-destructive/10">
+          <XCircle className="h-4 w-4 text-destructive" />
+          <AlertDescription className="text-destructive">
+            Your trial has ended. Subscribe now to regain access to Pro features.
           </AlertDescription>
         </Alert>
       )}
@@ -182,49 +231,49 @@ const Billing = () => {
             <div>
               <CardTitle className="text-2xl flex items-center gap-3">
                 <CreditCard className="w-6 h-6 text-primary" />
-                {getPlanDisplayName(plan)}
+                {getPlanDisplayName()}
               </CardTitle>
               <CardDescription className="mt-2">
-                {isFree 
-                  ? "You're on the free plan with basic features" 
-                  : isTrialing 
-                    ? "You're on a 7-day free trial of TrueBlazer Pro"
-                    : "You have access to all premium features"}
+                {getDescription()}
               </CardDescription>
             </div>
-            {getStatusBadge(status)}
+            {getStatusBadge()}
           </div>
         </CardHeader>
 
         <CardContent className="space-y-6">
           <Separator />
 
-          {isFree ? (
+          {showUpgradeSection && (
             <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold mb-3">Free Plan Features</h3>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                    <span>2 idea generations per day</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                    <span>AI-powered idea vetting</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                    <span>Basic task management</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                    <span>Daily pulse checks</span>
-                  </li>
-                </ul>
-              </div>
+              {hasNeverTrialed && (
+                <div>
+                  <h3 className="font-semibold mb-3">Free Plan Features</h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                      <span>2 idea generations per day</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                      <span>AI-powered idea vetting</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                      <span>Basic task management</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                      <span>Daily pulse checks</span>
+                    </li>
+                  </ul>
+                </div>
+              )}
 
               <div>
-                <h3 className="font-semibold mb-3">Unlock Pro Features</h3>
+                <h3 className="font-semibold mb-3">
+                  {isTrialExpired ? "Regain Pro Features" : "Unlock Pro Features"}
+                </h3>
                 <ul className="space-y-2 text-sm text-muted-foreground mb-4">
                   <li className="flex items-start gap-2">
                     <ArrowUpRight className="w-4 h-4 text-primary mt-0.5 shrink-0" />
@@ -244,17 +293,23 @@ const Billing = () => {
                   </li>
                 </ul>
                 <Button size="lg" onClick={() => setShowPaywall(true)} className="w-full">
-                  Start 7-Day Free Trial
+                  {isTrialExpired ? "Subscribe to Pro" : "Start 7-Day Free Trial"}
                 </Button>
-                <p className="text-xs text-center text-muted-foreground mt-2">
-                  No charge until trial ends. Cancel anytime.
-                </p>
+                {!isTrialExpired && (
+                  <p className="text-xs text-center text-muted-foreground mt-2">
+                    No charge until trial ends. Cancel anytime.
+                  </p>
+                )}
               </div>
             </div>
-          ) : (
+          )}
+
+          {showProSection && (
             <div className="space-y-6">
               <div>
-                <h3 className="font-semibold mb-3">Pro Plan Features</h3>
+                <h3 className="font-semibold mb-3">
+                  {isTrialing ? "Your Trial Includes" : "Pro Plan Features"}
+                </h3>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
@@ -283,8 +338,8 @@ const Billing = () => {
                 </ul>
               </div>
 
-              {/* Billing details */}
-              {currentPeriodEnd && !isTrialing && (
+              {/* Billing details - only show for paid subscriptions, not trials */}
+              {currentPeriodEnd && !isTrialing && isPaidAndActive && (
                 <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -301,12 +356,26 @@ const Billing = () => {
                 </div>
               )}
 
+              {/* Trial end date info */}
+              {isTrialing && currentPeriodEnd && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span className="text-muted-foreground">Trial ends:</span>
+                    <span className="font-medium text-primary">{format(currentPeriodEnd, "MMMM d, yyyy")}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Add a payment method before your trial ends to keep Pro access.
+                  </p>
+                </div>
+              )}
+
               <Separator />
 
               <div className="space-y-3">
                 <Button 
                   size="lg" 
-                  variant="outline" 
+                  variant={isTrialing ? "default" : "outline"} 
                   className="w-full gap-2"
                   onClick={openCustomerPortal}
                   disabled={portalLoading}
@@ -319,12 +388,14 @@ const Billing = () => {
                   ) : (
                     <>
                       <CreditCard className="w-4 h-4" />
-                      Manage Subscription
+                      {isTrialing ? "Add Payment Method" : "Manage Subscription"}
                     </>
                   )}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
-                  Update payment methods, view invoices, or cancel your subscription
+                  {isTrialing 
+                    ? "Add a payment method to continue after your trial ends"
+                    : "Update payment methods, view invoices, or cancel your subscription"}
                 </p>
               </div>
             </div>
