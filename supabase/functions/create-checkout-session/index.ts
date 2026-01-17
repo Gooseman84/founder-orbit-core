@@ -84,8 +84,10 @@ serve(async (req) => {
       );
     }
 
-    const finalSuccessUrl = successUrl || `${req.headers.get("origin")}/billing?status=success`;
-    const finalCancelUrl = cancelUrl || `${req.headers.get("origin")}/billing?status=cancelled`;
+    // Get origin with fallback to production URL
+    const origin = req.headers.get("origin") || "https://founder-orbit-core.lovable.app";
+    const finalSuccessUrl = successUrl || `${origin}/billing?status=success`;
+    const finalCancelUrl = cancelUrl || `${origin}/billing?status=cancelled`;
 
     // Create Supabase admin client
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
