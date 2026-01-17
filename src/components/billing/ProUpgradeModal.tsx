@@ -44,6 +44,9 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
 
   // Get dynamic copy based on reasonCode
   const copy = getPaywallCopy(reasonCode);
+  
+  // Determine if this is for an expired trial
+  const isExpiredTrial = reasonCode === "TRIAL_EXPIRED";
 
   const handleUpgrade = async () => {
     if (!user) {
@@ -98,6 +101,9 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
       track("paywall_shown", { reasonCode, ...context });
     }
   });
+  
+  // Dynamic CTA based on trial status
+  const ctaText = isExpiredTrial ? "Subscribe to Pro" : copy.cta;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -211,7 +217,7 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
                 ) : (
                   <>
                     <Rocket className="mr-2 h-5 w-5" />
-                    {copy.cta}
+                    {ctaText}
                   </>
                 )}
               </Button>
