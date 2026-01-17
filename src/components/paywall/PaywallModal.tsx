@@ -16,8 +16,8 @@ import { PLAN_ERROR_CODES, type PlanErrorCode } from "@/config/plans";
 // Messages for different limit scenarios
 const LIMIT_MESSAGES: Record<PlanErrorCode, { title: string; description: string }> = {
   [PLAN_ERROR_CODES.IDEA_LIMIT_REACHED]: {
-    title: "Daily idea limit reached",
-    description: "You've used your 2 free idea generations for today. Upgrade to Pro for unlimited ideas.",
+    title: "Idea limit reached",
+    description: "You've used your 3 trial idea generations. Upgrade to Pro for unlimited ideas.",
   },
   [PLAN_ERROR_CODES.MODE_REQUIRES_PRO]: {
     title: "Pro mode required",
@@ -25,11 +25,11 @@ const LIMIT_MESSAGES: Record<PlanErrorCode, { title: string; description: string
   },
   [PLAN_ERROR_CODES.LIBRARY_FULL]: {
     title: "Library full",
-    description: "You've saved 5 ideas, the maximum for Free users. Upgrade to Pro for unlimited saved ideas.",
+    description: "You've saved the maximum trial ideas. Upgrade to Pro for unlimited saved ideas.",
   },
   [PLAN_ERROR_CODES.BLUEPRINT_LIMIT]: {
     title: "Blueprint limit reached",
-    description: "Free accounts can create 1 blueprint. Upgrade to Pro for unlimited blueprints.",
+    description: "Trial accounts can create 1 blueprint. Upgrade to Pro for unlimited blueprints.",
   },
   [PLAN_ERROR_CODES.FEATURE_REQUIRES_PRO]: {
     title: "Pro feature",
@@ -46,6 +46,10 @@ const LIMIT_MESSAGES: Record<PlanErrorCode, { title: string; description: string
   [PLAN_ERROR_CODES.MULTI_BLUEPRINT_TASKS]: {
     title: "Multi-blueprint tasks require Pro",
     description: "Track tasks across multiple blueprints with TrueBlazer Pro.",
+  },
+  [PLAN_ERROR_CODES.TRIAL_EXPIRED]: {
+    title: "Trial expired",
+    description: "Your 7-day trial has ended. Subscribe to TrueBlazer Pro to continue your founder journey.",
   },
 };
 

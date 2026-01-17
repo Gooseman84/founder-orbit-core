@@ -2,11 +2,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useCallback } from "react";
-
-type Plan = "free" | "pro" | "founder";
+import type { PlanId } from "@/config/plans";
 
 interface SubscriptionData {
-  plan: Plan;
+  plan: PlanId;
   status: string;
   currentPeriodEnd: string | null;
   cancelAt: string | null;
@@ -14,7 +13,7 @@ interface SubscriptionData {
 }
 
 interface UseSubscriptionReturn {
-  plan: Plan;
+  plan: PlanId;
   status: string;
   currentPeriodEnd: Date | null;
   cancelAt: Date | null;
@@ -24,6 +23,15 @@ interface UseSubscriptionReturn {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+}
+
+// Helper to normalize plan values (handles "free" from old data)
+function normalizePlan(rawPlan: string | null | undefined): PlanId {
+  if (rawPlan === "pro" || rawPlan === "founder") {
+    return rawPlan;
+  }
+  // "free" or null/undefined maps to "trial"
+  return "trial";
 }
 
 export const useSubscription = (): UseSubscriptionReturn => {
@@ -38,7 +46,7 @@ export const useSubscription = (): UseSubscriptionReturn => {
     queryKey: ["user-subscription", user?.id],
     queryFn: async (): Promise<SubscriptionData> => {
       if (!user) {
-        return { plan: "free", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
+        return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
       }
 
       try {
@@ -50,7 +58,7 @@ export const useSubscription = (): UseSubscriptionReturn => {
 
         if (queryError) {
           console.error("[useSubscription] RPC error:", queryError);
-          return { plan: "free", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
+          return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
         }
 
         // RPC returns an array, take first result
@@ -63,7 +71,7 @@ export const useSubscription = (): UseSubscriptionReturn => {
             renewal_period: string | null;
           };
           return {
-            plan: (sub.plan || "free") as Plan,
+            plan: normalizePlan(sub.plan),
             status: sub.status || "active",
             currentPeriodEnd: sub.current_period_end || null,
             cancelAt: sub.cancel_at || null,
@@ -72,10 +80,10 @@ export const useSubscription = (): UseSubscriptionReturn => {
         }
 
         // No subscription found, use defaults
-        return { plan: "free", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
+        return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
       } catch (err) {
         console.error("[useSubscription] Unexpected error:", err);
-        return { plan: "free", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
+        return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
       }
     },
     enabled: !!user,
@@ -110,7 +118,7 @@ export const useSubscription = (): UseSubscriptionReturn => {
   }
 
   return {
-    plan: subscription?.plan || "free",
+    plan: subscription?.plan || "trial",
     status: subscription?.status || "active",
     currentPeriodEnd,
     cancelAt,

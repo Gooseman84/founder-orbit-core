@@ -108,8 +108,8 @@ const Billing = () => {
   const isPaidAndActive = (plan === "pro" || plan === "founder") && status === "active" && !isTrialing;
   const isCancelling = cancelAt !== null;
   const isTrialExpired = status === "canceled" || status === "expired" || 
-    (plan === "free" && currentPeriodEnd !== null && currentPeriodEnd < new Date());
-  const hasNeverTrialed = plan === "free" && !currentPeriodEnd && status !== "trialing";
+    (plan === "trial" && currentPeriodEnd !== null && currentPeriodEnd < new Date());
+  const hasNeverTrialed = plan === "trial" && !currentPeriodEnd && status !== "trialing";
 
   const getPlanDisplayName = () => {
     if (isTrialing) {
@@ -121,7 +121,7 @@ const Billing = () => {
     if (isPaidAndActive) {
       return plan === "founder" ? "TrueBlazer Founder" : "TrueBlazer Pro";
     }
-    return "Free Plan";
+    return "Trial";
   };
 
   const getStatusBadge = () => {
@@ -165,13 +165,20 @@ const Billing = () => {
         </Badge>
       );
     }
-    // Free plan - no badge needed
+    // Trial plan - show start trial badge
+    if (hasNeverTrialed) {
+      return (
+        <Badge variant="outline" className="gap-1">
+          Start your 7-day trial
+        </Badge>
+      );
+    }
     return null;
   };
 
   const getDescription = () => {
     if (isTrialing) {
-      return "You're enjoying a 7-day free trial of TrueBlazer Pro. All premium features are unlocked!";
+      return "You're enjoying a 7-day trial of TrueBlazer Pro. All premium features are unlocked!";
     }
     if (isTrialExpired) {
       return "Your trial has ended. Subscribe to Pro to continue using premium features.";
@@ -179,7 +186,7 @@ const Billing = () => {
     if (isPaidAndActive) {
       return "You have full access to all premium features.";
     }
-    return "You're on the free plan with basic features.";
+    return "Start your 7-day trial to unlock all features.";
   };
 
   // Show upgrade section for: free users who never trialed, or expired trials

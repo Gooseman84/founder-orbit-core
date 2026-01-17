@@ -70,7 +70,7 @@ export default function Workspace() {
   const { track } = useAnalytics();
   
   // Get workspace doc limit for free users
-  const maxWorkspaceDocs = isPro ? Infinity : PLAN_FEATURES.free.maxWorkspaceDocs;
+  const maxWorkspaceDocs = isPro ? Infinity : PLAN_FEATURES.trial.maxWorkspaceDocs;
 
   // Extract taskContext from navigation state
   const taskContext = (location.state as { taskContext?: TaskContext } | null)?.taskContext;

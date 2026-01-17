@@ -122,7 +122,7 @@ const Ideas = () => {
       const reasonMap: Record<string, PaywallReasonCode> = {
         [PLAN_ERROR_CODES.IDEA_LIMIT_REACHED]: "IDEA_LIMIT_REACHED",
         [PLAN_ERROR_CODES.MODE_REQUIRES_PRO]: "MODE_REQUIRES_PRO",
-        [PLAN_ERROR_CODES.LIBRARY_FULL]: "LIBRARY_FULL_FREE",
+        [PLAN_ERROR_CODES.LIBRARY_FULL]: "LIBRARY_FULL_TRIAL",
       };
       setPaywallReasonCode(reasonMap[errorCode as string] || "IDEA_LIMIT_REACHED");
       setShowPaywall(true);
@@ -320,7 +320,7 @@ const Ideas = () => {
   const handleSaveIdea = async (idea: BusinessIdea | BusinessIdeaV6): Promise<string | null> => {
     // Free tier check: Max 10 ideas in library
     if (!hasPro && libraryIdeas.length >= 10) {
-      setPaywallReasonCode("LIBRARY_FULL_FREE");
+      setPaywallReasonCode("LIBRARY_FULL_TRIAL");
       setShowPaywall(true);
       return null;
     }

@@ -2,10 +2,32 @@
 // These functions check current usage against plan limits
 
 import { supabase } from "@/integrations/supabase/client";
-import { PLAN_FEATURES, type PlanId, type IdeaMode, FREE_MODES } from "@/config/plans";
+import { PLAN_FEATURES, type PlanId, type IdeaMode, TRIAL_MODES, TRIAL_DURATION_DAYS, isPaidPlan } from "@/config/plans";
 
 /**
- * Count idea generations for today
+ * Count total idea generations during trial period
+ */
+export async function countTotalTrialGenerations(userId: string, trialStartDate: Date): Promise<number> {
+  const trialEndDate = new Date(trialStartDate);
+  trialEndDate.setDate(trialEndDate.getDate() + TRIAL_DURATION_DAYS);
+  
+  const { count, error } = await supabase
+    .from("founder_generated_ideas")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", trialStartDate.toISOString())
+    .lte("created_at", trialEndDate.toISOString());
+  
+  if (error) {
+    console.error("Error counting trial generations:", error);
+    return 0;
+  }
+  
+  return count || 0;
+}
+
+/**
+ * Count idea generations for today (legacy, used for display)
  */
 export async function countTodayGenerations(userId: string): Promise<number> {
   const today = new Date().toISOString().split("T")[0];
@@ -25,19 +47,37 @@ export async function countTodayGenerations(userId: string): Promise<number> {
 }
 
 /**
- * Check if user can generate more ideas today
+ * Check if user can generate more ideas
+ * - Trial users: limited to maxIdeaGenerationsTotal during trial period
+ * - Pro/Founder users: unlimited
  */
-export async function canGenerateIdeas(userId: string, plan: PlanId): Promise<{ allowed: boolean; remaining: number; limit: number }> {
-  const limit = PLAN_FEATURES[plan].maxIdeaGenerationsPerDay;
+export async function canGenerateIdeas(
+  userId: string, 
+  plan: PlanId, 
+  trialStartDate?: Date
+): Promise<{ allowed: boolean; remaining: number; limit: number; reason?: string }> {
+  const limit = PLAN_FEATURES[plan].maxIdeaGenerationsTotal;
   
-  if (limit === Infinity) {
+  // Paid plans have unlimited generations
+  if (isPaidPlan(plan) || limit === Infinity) {
     return { allowed: true, remaining: Infinity, limit };
   }
   
-  const count = await countTodayGenerations(userId);
+  // Trial users - check total generations during trial
+  if (!trialStartDate) {
+    // No trial start date means they haven't started trial yet
+    return { allowed: true, remaining: limit, limit };
+  }
+  
+  const count = await countTotalTrialGenerations(userId, trialStartDate);
   const remaining = Math.max(0, limit - count);
   
-  return { allowed: remaining > 0, remaining, limit };
+  return { 
+    allowed: remaining > 0, 
+    remaining, 
+    limit,
+    reason: remaining <= 0 ? "You've used all your trial idea generations" : undefined
+  };
 }
 
 /**
@@ -150,4 +190,32 @@ export async function canCreateWorkspaceDoc(userId: string, plan: PlanId): Promi
   const remaining = Math.max(0, limit - count);
   
   return { allowed: remaining > 0, remaining, limit };
+}
+
+/**
+ * Check if trial has expired
+ */
+export function isTrialExpired(trialStartDate: Date | null | undefined): boolean {
+  if (!trialStartDate) return false;
+  
+  const trialEndDate = new Date(trialStartDate);
+  trialEndDate.setDate(trialEndDate.getDate() + TRIAL_DURATION_DAYS);
+  
+  return new Date() > trialEndDate;
+}
+
+/**
+ * Calculate days remaining in trial
+ */
+export function getDaysRemainingInTrial(trialStartDate: Date | null | undefined): number {
+  if (!trialStartDate) return TRIAL_DURATION_DAYS;
+  
+  const trialEndDate = new Date(trialStartDate);
+  trialEndDate.setDate(trialEndDate.getDate() + TRIAL_DURATION_DAYS);
+  
+  const now = new Date();
+  const diffMs = trialEndDate.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  
+  return Math.max(0, diffDays);
 }
