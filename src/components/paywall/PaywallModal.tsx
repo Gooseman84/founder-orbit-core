@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import {
   Dialog,
@@ -63,6 +64,7 @@ interface PaywallModalProps {
 
 export const PaywallModal = ({ featureName, open, onClose, errorCode, customMessage }: PaywallModalProps) => {
   const { user } = useAuth();
+  const { isTrialExpired } = useFeatureAccess();
   const [loading, setLoading] = useState(false);
 
   const handleUpgrade = async (plan: "monthly" | "yearly") => {
@@ -108,6 +110,9 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
     }
   };
 
+  // Determine if trial is expired to adjust CTA text
+  const isExpired = isTrialExpired || errorCode === PLAN_ERROR_CODES.TRIAL_EXPIRED;
+
   // Get message based on error code or use default
   const message = errorCode ? LIMIT_MESSAGES[errorCode] : null;
   const title = message?.title || "Upgrade to TrueBlazer Pro";
@@ -120,6 +125,10 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
     { icon: Target, text: "Opportunity scoring & comparison" },
     { icon: TrendingUp, text: "Market radar & insights" },
   ];
+
+  // CTA text based on trial status
+  const monthlyCTA = isExpired ? "Subscribe – $29/month" : "Upgrade to Pro – $29/month";
+  const yearlyCTA = isExpired ? "Subscribe – $199/year (save 43%)" : "Upgrade to Pro – $199/year (save 43%)";
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -166,7 +175,7 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
                       Processing...
                     </>
                   ) : (
-                    "Pro – $29/month"
+                    monthlyCTA
                   )}
                 </Button>
 
@@ -183,7 +192,7 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
                       Processing...
                     </>
                   ) : (
-                    "Pro – $199/year (save 43%)"
+                    yearlyCTA
                   )}
                 </Button>
               </div>
