@@ -408,16 +408,43 @@ serve(async (req) => {
     // Check user subscription for blueprint limit
     const { data: subscription } = await supabase
       .from("user_subscriptions")
-      .select("plan, status")
+      .select("plan, status, created_at")
       .eq("user_id", userId)
       .eq("status", "active")
       .maybeSingle();
 
-    const userPlan = subscription?.plan || "free";
+    // Normalize plan: "free" -> "trial" for backwards compatibility
+    let userPlan = subscription?.plan || "trial";
+    if (userPlan === "free") userPlan = "trial";
+    
     const isPro = userPlan === "pro" || userPlan === "founder";
+    const isTrialUser = userPlan === "trial";
 
-    // Check existing blueprint count for Free users
-    if (!isPro) {
+    // Check if trial has expired (7 days from subscription creation)
+    let isTrialExpired = false;
+    if (isTrialUser && subscription?.created_at) {
+      const trialStartDate = new Date(subscription.created_at);
+      const trialEndDate = new Date(trialStartDate);
+      trialEndDate.setDate(trialEndDate.getDate() + 7);
+      isTrialExpired = new Date() > trialEndDate;
+    }
+
+    // Check existing blueprint count for Trial users
+    if (isTrialUser) {
+      if (isTrialExpired) {
+        console.log("[generate-blueprint] TRIAL user trial expired");
+        return new Response(
+          JSON.stringify({ 
+            error: "Your trial has expired. Subscribe to continue using blueprints.",
+            code: "TRIAL_EXPIRED" 
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
       const { count: blueprintCount } = await supabase
         .from("founder_blueprints")
         .select("id", { count: "exact", head: true })
@@ -433,11 +460,11 @@ serve(async (req) => {
 
         // If a non-empty blueprint exists, block creation
         if (existingBlueprint && (existingBlueprint.life_vision || existingBlueprint.north_star_one_liner)) {
-          console.log("[generate-blueprint] FREE user at blueprint limit");
+          console.log("[generate-blueprint] TRIAL user at blueprint limit");
           return new Response(
             JSON.stringify({ 
-              error: "Blueprint limit reached", 
-              code: "BLUEPRINT_LIMIT_FREE" 
+              error: "Blueprint limit reached during trial. Subscribe for unlimited blueprints.", 
+              code: "BLUEPRINT_LIMIT_TRIAL" 
             }),
             {
               status: 403,

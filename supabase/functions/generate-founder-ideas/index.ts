@@ -594,47 +594,73 @@ serve(async (req) => {
     // ===== PLAN CHECK: Get user subscription =====
     const { data: subData } = await supabaseAdmin
       .from("user_subscriptions")
-      .select("plan, status")
+      .select("plan, status, current_period_end, created_at")
       .eq("user_id", userId)
       .maybeSingle();
 
-    const plan = (subData?.status === "active" && subData?.plan) || "free";
+    // Normalize plan: "free" -> "trial" for backwards compatibility
+    let plan = (subData?.status === "active" && subData?.plan) || "trial";
+    if (plan === "free") plan = "trial";
+    
     const isPro = plan === "pro" || plan === "founder";
+    
+    // Check if trial has expired (7 days from account creation or subscription creation)
+    const isTrialUser = plan === "trial";
+    let isTrialExpired = false;
+    if (isTrialUser) {
+      const trialStartDate = subData?.created_at ? new Date(subData.created_at) : new Date();
+      const trialEndDate = new Date(trialStartDate);
+      trialEndDate.setDate(trialEndDate.getDate() + 7);
+      isTrialExpired = new Date() > trialEndDate;
+    }
 
-    // ===== PLAN CHECK: Daily generation limit (FREE = 2/day) =====
-    if (!isPro) {
-      const today = new Date().toISOString().split("T")[0];
-      const { count: todayCount } = await supabaseAdmin
+    // ===== PLAN CHECK: Trial total generation limit (TRIAL = 3 total) =====
+    if (isTrialUser) {
+      if (isTrialExpired) {
+        console.log(`generate-founder-ideas: TRIAL user ${userId} trial expired`);
+        return new Response(
+          JSON.stringify({ 
+            error: "Your trial has expired. Subscribe to continue generating ideas.",
+            code: "TRIAL_EXPIRED",
+            plan: "trial"
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      
+      // Count total generations during trial period (not per-day)
+      const trialStartDate = subData?.created_at ? new Date(subData.created_at).toISOString() : new Date().toISOString();
+      const { count: totalGenerations } = await supabaseAdmin
         .from("founder_generated_ideas")
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId)
-        .gte("created_at", `${today}T00:00:00.000Z`);
+        .gte("created_at", trialStartDate);
 
-      const MAX_FREE_GENERATIONS = 2;
-      if ((todayCount || 0) >= MAX_FREE_GENERATIONS) {
-        console.log(`generate-founder-ideas: FREE user ${userId} hit daily limit`);
+      const MAX_TRIAL_GENERATIONS = 3;
+      if ((totalGenerations || 0) >= MAX_TRIAL_GENERATIONS) {
+        console.log(`generate-founder-ideas: TRIAL user ${userId} hit generation limit`);
         return new Response(
           JSON.stringify({ 
-            error: "Daily idea generation limit reached",
+            error: "Trial idea generation limit reached. Subscribe for unlimited access.",
             code: "IDEA_LIMIT_REACHED",
-            plan: "free",
-            limit: MAX_FREE_GENERATIONS
+            plan: "trial",
+            limit: MAX_TRIAL_GENERATIONS
           }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
     }
 
-    // ===== PLAN CHECK: Mode restrictions (FREE = breadth, focus, creator only) =====
-    const FREE_MODES = ["breadth", "focus", "creator"];
-    if (!isPro && !FREE_MODES.includes(mode)) {
-      console.log(`generate-founder-ideas: FREE user ${userId} tried Pro mode ${mode}`);
+    // ===== PLAN CHECK: Mode restrictions (TRIAL = breadth, focus, creator only) =====
+    const TRIAL_MODES = ["breadth", "focus", "creator"];
+    if (isTrialUser && !TRIAL_MODES.includes(mode)) {
+      console.log(`generate-founder-ideas: TRIAL user ${userId} tried Pro mode ${mode}`);
       return new Response(
         JSON.stringify({ 
           error: `The "${mode}" mode requires TrueBlazer Pro`,
           code: "MODE_REQUIRES_PRO",
           mode,
-          plan: "free"
+          plan: "trial"
         }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
