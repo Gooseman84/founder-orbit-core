@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { LevelBadge } from "@/components/shared/LevelBadge";
 import { XpProgressBar } from "@/components/shared/XpProgressBar";
@@ -10,7 +11,7 @@ import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { NorthStarCard } from "./NorthStarCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScoreGauge } from "@/components/opportunity/ScoreGauge";
@@ -27,7 +28,9 @@ import {
   BarChart3, 
   Scale, 
   Crown, 
-  Sparkles 
+  Sparkles,
+  AlertTriangle,
+  XCircle
 } from "lucide-react";
 import { calculateReflectionStreak } from "@/lib/streakEngine";
 
@@ -35,6 +38,7 @@ export function DiscoveryDashboard() {
   const { user } = useAuth();
   const { xpSummary, loading, error } = useXP();
   const { plan } = useSubscription();
+  const { isTrialing, isTrialExpired, isLockedOut, daysRemaining, hasPro, hasFounder } = useFeatureAccess();
   const navigate = useNavigate();
   const isFree = plan === "trial";
   
@@ -46,6 +50,13 @@ export function DiscoveryDashboard() {
   const [loadingScore, setLoadingScore] = useState(true);
   const [reflectionStreak, setReflectionStreak] = useState(0);
   const [loadingReflectionStreak, setLoadingReflectionStreak] = useState(true);
+
+  // Determine if we should show urgent trial warning
+  const showTrialWarning = !hasPro && !hasFounder && (
+    isTrialExpired || 
+    isLockedOut || 
+    (isTrialing && daysRemaining !== null && daysRemaining <= 2)
+  );
 
   useEffect(() => {
     if (user) {
@@ -147,6 +158,43 @@ export function DiscoveryDashboard() {
 
   return (
     <div className="space-y-4">
+      {/* Urgent Trial Warning Alert */}
+      {showTrialWarning && (
+        <Alert 
+          variant={isTrialExpired || isLockedOut ? "destructive" : "default"}
+          className={isTrialExpired || isLockedOut 
+            ? "border-destructive/50 bg-destructive/10" 
+            : "border-amber-500/50 bg-amber-500/10"
+          }
+        >
+          {isTrialExpired || isLockedOut ? (
+            <XCircle className="h-4 w-4" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          )}
+          <AlertTitle className={isTrialExpired || isLockedOut ? "" : "text-amber-700 dark:text-amber-400"}>
+            {isTrialExpired || isLockedOut 
+              ? "Your trial has ended" 
+              : `Your trial ends in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}!`
+            }
+          </AlertTitle>
+          <AlertDescription className={isTrialExpired || isLockedOut ? "" : "text-amber-600 dark:text-amber-300"}>
+            {isTrialExpired || isLockedOut 
+              ? "Subscribe to continue your founder journey with full access to all features."
+              : "Upgrade now to keep full access to unlimited ideas, workspace, and more."
+            }
+            <Button 
+              size="sm" 
+              variant={isTrialExpired || isLockedOut ? "destructive" : "default"}
+              className="ml-3"
+              onClick={() => navigate("/billing")}
+            >
+              {isTrialExpired || isLockedOut ? "Subscribe to Pro" : "Upgrade Now"}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-sm text-muted-foreground">
