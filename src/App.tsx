@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { VentureStateGuard } from "@/components/auth/VentureStateGuard";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { MainLayout } from "./components/layout/MainLayout";
+import { TrialExpiredGuard } from "@/components/billing/TrialExpiredGuard";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -52,6 +53,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <TrialExpiredGuard />
             <VentureStateGuard>
               <Routes>
             <Route path="/" element={<Index />} />
