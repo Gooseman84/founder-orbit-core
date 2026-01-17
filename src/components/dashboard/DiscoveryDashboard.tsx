@@ -36,7 +36,7 @@ export function DiscoveryDashboard() {
   const { xpSummary, loading, error } = useXP();
   const { plan } = useSubscription();
   const navigate = useNavigate();
-  const isFree = plan === "free";
+  const isFree = plan === "trial";
   
   const [radarStats, setRadarStats] = useState({ recentCount: 0, topSignal: null as any });
   const [loadingRadar, setLoadingRadar] = useState(true);

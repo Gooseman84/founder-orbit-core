@@ -1,12 +1,13 @@
 export type PaywallReasonCode =
   | "IDEA_LIMIT_REACHED"
-  | "LIBRARY_FULL_FREE"
-  | "BLUEPRINT_LIMIT_FREE"
+  | "LIBRARY_FULL_TRIAL"
+  | "BLUEPRINT_LIMIT_TRIAL"
   | "MODE_REQUIRES_PRO"
   | "IDEA_DETAIL_PRO"
   | "WORKSPACE_LIMIT"
   | "EXPORT_REQUIRES_PRO"
-  | "MULTI_BLUEPRINT_TASKS";
+  | "MULTI_BLUEPRINT_TASKS"
+  | "TRIAL_EXPIRED";
 
 export interface PaywallCopy {
   headline: string;
@@ -17,23 +18,23 @@ export interface PaywallCopy {
 
 export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
   IDEA_LIMIT_REACHED: {
-    headline: "You're not out of ideas—just out of Free runs.",
+    headline: "You've used your trial idea generations.",
     subhead:
-      "You've hit today's limit. Unlock unlimited idea generations and explore every possibility your future could hold.",
+      "You've generated 3 ideas during your trial. Unlock unlimited idea generations and explore every possibility your future could hold.",
     cta: "Go Pro — Generate Without Limits",
     microcopy: "Upgrade anytime. Cancel anytime.",
   },
-  LIBRARY_FULL_FREE: {
-    headline: "Your Library is full because your potential is bigger than Free.",
+  LIBRARY_FULL_TRIAL: {
+    headline: "Your Library is full because your potential is bigger than the trial.",
     subhead:
-      "You've saved your top 5 ideas. Now unlock unlimited saves so you can collect, refine, and build out your entire vision.",
+      "You've saved your trial limit of ideas. Now unlock unlimited saves so you can collect, refine, and build out your entire vision.",
     cta: "Unlock Unlimited Ideas",
     microcopy: "Your best idea might be the next one you save.",
   },
-  BLUEPRINT_LIMIT_FREE: {
+  BLUEPRINT_LIMIT_TRIAL: {
     headline: "You've built your first Blueprint. Ready to build your future?",
     subhead:
-      "Free lets you create one Blueprint. Pro lets you turn every idea into a real plan — offers, audiences, validation, content, and step-by-step execution.",
+      "Trial lets you create one Blueprint. Pro lets you turn every idea into a real plan — offers, audiences, validation, content, and step-by-step execution.",
     cta: "Go Pro — Build Every Idea",
     microcopy: "Blueprints are where dreams become plans.",
   },
@@ -72,6 +73,13 @@ export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
     cta: "Go Pro — Unlock Multi-Blueprint Tasks",
     microcopy:
       "Your next breakthrough is waiting in the Blueprint you haven't created yet.",
+  },
+  TRIAL_EXPIRED: {
+    headline: "Your 7-day trial has ended.",
+    subhead:
+      "You've explored TrueBlazer's potential. Now unlock the full experience with Pro to continue your founder journey.",
+    cta: "Subscribe to Pro",
+    microcopy: "Don't let your momentum stop here.",
   },
 };
 

@@ -14,7 +14,7 @@ const CACHE_TTL_MS = 60 * 1000; // 1 minute cache
 
 /**
  * Get the user's current plan from the database
- * Returns "free" if no subscription found or subscription is inactive
+ * Returns "trial" if no subscription found or subscription is inactive
  */
 export async function getUserPlan(userId: string): Promise<PlanId> {
   // Check cache first
@@ -30,15 +30,17 @@ export async function getUserPlan(userId: string): Promise<PlanId> {
     
     if (error) {
       console.error("Error fetching user subscription:", error);
-      return "free";
+      return "trial";
     }
     
     // Support both active and trialing statuses
     if (!data || (data.status !== "active" && data.status !== "trialing")) {
-      return "free";
+      return "trial";
     }
     
-    const plan = (data.plan as PlanId) || "free";
+    // Normalize "free" from old data to "trial"
+    const rawPlan = data.plan;
+    const plan: PlanId = (rawPlan === "pro" || rawPlan === "founder") ? rawPlan : "trial";
     
     // Cache the result
     planCache.set(userId, { plan, timestamp: Date.now() });
@@ -46,7 +48,7 @@ export async function getUserPlan(userId: string): Promise<PlanId> {
     return plan;
   } catch (err) {
     console.error("Error in getUserPlan:", err);
-    return "free";
+    return "trial";
   }
 }
 
@@ -54,7 +56,7 @@ export async function getUserPlan(userId: string): Promise<PlanId> {
  * Get all features for a given plan
  */
 export function getPlanFeatures(plan: PlanId): PlanFeatures {
-  return PLAN_FEATURES[plan] || PLAN_FEATURES.free;
+  return PLAN_FEATURES[plan] || PLAN_FEATURES.trial;
 }
 
 /**
@@ -139,10 +141,12 @@ export async function validateServerSidePlan(
   
   // Support both active and trialing statuses
   if (error || !data || (data.status !== "active" && data.status !== "trialing")) {
-    return { plan: "free", isPro: false, isFounder: false };
+    return { plan: "trial", isPro: false, isFounder: false };
   }
   
-  const plan = (data.plan as PlanId) || "free";
+  // Normalize "free" from old data to "trial"
+  const rawPlan = data.plan;
+  const plan: PlanId = (rawPlan === "pro" || rawPlan === "founder") ? rawPlan : "trial";
   
   return {
     plan,

@@ -1,7 +1,7 @@
 // Centralized plan definitions and feature entitlements for TrueBlazer.AI
 // This is the single source of truth for what each plan includes.
 
-export type PlanId = "free" | "pro" | "founder";
+export type PlanId = "trial" | "pro" | "founder";
 
 // Standardized error codes for plan limit enforcement
 export const PLAN_ERROR_CODES = {
@@ -13,6 +13,7 @@ export const PLAN_ERROR_CODES = {
   EXPORT_REQUIRES_PRO: "EXPORT_REQUIRES_PRO",
   WORKSPACE_LIMIT: "WORKSPACE_LIMIT",
   MULTI_BLUEPRINT_TASKS: "MULTI_BLUEPRINT_TASKS",
+  TRIAL_EXPIRED: "TRIAL_EXPIRED",
 } as const;
 
 export type PlanErrorCode = typeof PLAN_ERROR_CODES[keyof typeof PLAN_ERROR_CODES];
@@ -51,12 +52,12 @@ export const IDEA_MODES: ModeConfig[] = [
   { mode: "locker_room", label: "Locker Room", description: "Bold, culture-first, 'shouldn't exist but could'", requiresPro: true },
 ];
 
-// Free modes for quick lookup
-export const FREE_MODES: IdeaMode[] = ["breadth", "focus", "creator"];
+// Trial modes for quick lookup
+export const TRIAL_MODES: IdeaMode[] = ["breadth", "focus", "creator"];
 
 export interface PlanFeatures {
   // Idea Generation
-  maxIdeaGenerationsPerDay: number;
+  maxIdeaGenerationsTotal: number; // Total for trial, Infinity for paid
   allowedIdeaModes: IdeaMode[] | "all";
   maxSavedIdeas: number;
   
@@ -68,7 +69,7 @@ export interface PlanFeatures {
   // Advanced Features
   canSeeOpportunityScore: boolean;
   canCompareIdeas: boolean;
-  canUseRadar: boolean;
+  canUseRadar: "none" | "basic" | "full";
   canExport: boolean;
   canSeeFullIdeaDetails: boolean;
   
@@ -84,21 +85,21 @@ export interface PlanFeatures {
 }
 
 export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
-  free: {
-    // Idea Generation - 2 per day, limited modes
-    maxIdeaGenerationsPerDay: 2,
-    allowedIdeaModes: FREE_MODES,
-    maxSavedIdeas: 5,
+  trial: {
+    // Idea Generation - 3 total during trial
+    maxIdeaGenerationsTotal: 3,
+    allowedIdeaModes: TRIAL_MODES,
+    maxSavedIdeas: 3,
     
-    // Blueprints & Workspace - 1 blueprint only
+    // Blueprints & Workspace - Very limited
     maxBlueprints: 1,
     canUseWorkspace: "limited",
-    maxWorkspaceDocs: 3,
+    maxWorkspaceDocs: 2,
     
-    // Advanced Features - These are Pro gates
+    // Advanced Features - Limited access
     canSeeOpportunityScore: false,
     canCompareIdeas: false,
-    canUseRadar: false,
+    canUseRadar: "basic",
     canExport: false,
     canSeeFullIdeaDetails: false,
     
@@ -107,14 +108,14 @@ export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
     canUseFusionLab: false,
     
     // Display
-    displayName: "Free",
-    description: "Get started with the essentials",
+    displayName: "Trial",
+    description: "7-day trial with limited features",
     monthlyPrice: null,
     yearlyPrice: null,
   },
   pro: {
     // Idea Generation - Unlimited
-    maxIdeaGenerationsPerDay: Infinity,
+    maxIdeaGenerationsTotal: Infinity,
     allowedIdeaModes: "all",
     maxSavedIdeas: Infinity,
     
@@ -126,7 +127,7 @@ export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
     // Advanced Features - All unlocked
     canSeeOpportunityScore: true,
     canCompareIdeas: true,
-    canUseRadar: true,
+    canUseRadar: "full",
     canExport: true,
     canSeeFullIdeaDetails: true,
     
@@ -142,7 +143,7 @@ export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
   },
   founder: {
     // Same as Pro
-    maxIdeaGenerationsPerDay: Infinity,
+    maxIdeaGenerationsTotal: Infinity,
     allowedIdeaModes: "all",
     maxSavedIdeas: Infinity,
     maxBlueprints: Infinity,
@@ -150,7 +151,7 @@ export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
     maxWorkspaceDocs: Infinity,
     canSeeOpportunityScore: true,
     canCompareIdeas: true,
-    canUseRadar: true,
+    canUseRadar: "full",
     canExport: true,
     canSeeFullIdeaDetails: true,
     canUseAdvancedAI: true,
@@ -164,7 +165,7 @@ export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
 
 // Feature keys that can be gated (maps to old FEATURE_MATRIX keys for compatibility)
 export const FEATURE_GATE_MAP: Record<string, keyof PlanFeatures> = {
-  "idea_generation": "maxIdeaGenerationsPerDay",
+  "idea_generation": "maxIdeaGenerationsTotal",
   "idea_vetting": "canUseAdvancedAI",
   "opportunity_score": "canSeeOpportunityScore",
   "compare_engine": "canCompareIdeas",
@@ -181,7 +182,7 @@ export function isPaidPlan(plan: PlanId): boolean {
 
 // Check if a mode requires Pro
 export function modeRequiresPro(mode: IdeaMode): boolean {
-  return !FREE_MODES.includes(mode);
+  return !TRIAL_MODES.includes(mode);
 }
 
 // Get allowed modes for a plan
@@ -205,3 +206,6 @@ export function getProOnlyFeatures(): (keyof PlanFeatures)[] {
     "canSeeFullIdeaDetails",
   ];
 }
+
+// Trial duration in days
+export const TRIAL_DURATION_DAYS = 7;
