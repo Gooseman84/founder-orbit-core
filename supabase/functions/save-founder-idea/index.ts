@@ -135,29 +135,54 @@ serve(async (req) => {
     // ===== PLAN CHECK: Get user subscription =====
     const { data: subData } = await supabaseAdmin
       .from("user_subscriptions")
-      .select("plan, status")
+      .select("plan, status, created_at")
       .eq("user_id", userId)
       .maybeSingle();
 
-    const plan = (subData?.status === "active" && subData?.plan) || "free";
+    // Normalize plan: "free" -> "trial" for backwards compatibility
+    let plan = (subData?.status === "active" && subData?.plan) || "trial";
+    if (plan === "free") plan = "trial";
+    
     const isPro = plan === "pro" || plan === "founder";
+    
+    // Check if trial has expired (7 days from subscription creation)
+    const isTrialUser = plan === "trial";
+    let isTrialExpired = false;
+    if (isTrialUser && subData?.created_at) {
+      const trialStartDate = new Date(subData.created_at);
+      const trialEndDate = new Date(trialStartDate);
+      trialEndDate.setDate(trialEndDate.getDate() + 7);
+      isTrialExpired = new Date() > trialEndDate;
+    }
 
-    // ===== PLAN CHECK: Library limit (FREE = 5 saved ideas) =====
-    if (!isPro) {
+    // ===== PLAN CHECK: Library limit (TRIAL = 3 saved ideas) =====
+    if (isTrialUser) {
+      if (isTrialExpired) {
+        console.log(`save-founder-idea: TRIAL user ${userId} trial expired`);
+        return new Response(
+          JSON.stringify({ 
+            error: "Your trial has expired. Subscribe to save more ideas.",
+            code: "TRIAL_EXPIRED",
+            plan: "trial"
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
       const { count: savedCount } = await supabaseAdmin
         .from("ideas")
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId);
 
-      const MAX_FREE_SAVED = 5;
-      if ((savedCount || 0) >= MAX_FREE_SAVED) {
-        console.log(`save-founder-idea: FREE user ${userId} hit library limit`);
+      const MAX_TRIAL_SAVED = 3;
+      if ((savedCount || 0) >= MAX_TRIAL_SAVED) {
+        console.log(`save-founder-idea: TRIAL user ${userId} hit library limit`);
         return new Response(
           JSON.stringify({ 
-            error: "Library full on Free plan",
+            error: "Library full during trial. Subscribe for unlimited storage.",
             code: "LIBRARY_FULL",
-            plan: "free",
-            limit: MAX_FREE_SAVED
+            plan: "trial",
+            limit: MAX_TRIAL_SAVED
           }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );

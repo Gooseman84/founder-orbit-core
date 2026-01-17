@@ -102,9 +102,12 @@ serve(async (req) => {
         console.log("[stripe-webhook] Subscription updated:", sub.id, "Status:", sub.status);
 
         // Determine plan based on status
+        // "trialing" status = user is in Stripe trial, keep plan as "pro" with trialing status
+        // "active" = paid subscription, plan = "pro"
+        // "canceled" or "unpaid" = downgrade to "trial" (not "free")
         let plan = "pro";
         if (sub.status === "canceled" || sub.status === "unpaid") {
-          plan = "free";
+          plan = "trial";
         }
 
         const { error } = await supabase
@@ -131,10 +134,11 @@ serve(async (req) => {
 
         console.log("[stripe-webhook] Subscription deleted/canceled:", sub.id);
 
+        // Downgrade to "trial" instead of "free"
         const { error } = await supabase
           .from("user_subscriptions")
           .update({
-            plan: "free",
+            plan: "trial",
             status: "canceled",
             stripe_subscription_id: null,
             cancel_at: null,
@@ -144,7 +148,7 @@ serve(async (req) => {
         if (error) {
           console.error("[stripe-webhook] Error on subscription.deleted:", error);
         } else {
-          console.log("[stripe-webhook] User downgraded to free:", customerId);
+          console.log("[stripe-webhook] User downgraded to trial:", customerId);
         }
         break;
       }

@@ -111,9 +111,10 @@ serve(async (req) => {
 
     if (!sub) {
       console.log("[create-checkout-session] Creating new subscription row for user:", userId);
+      // Use "trial" instead of "free" for new users
       const { data: newSub, error: insertError } = await supabase
         .from("user_subscriptions")
-        .insert({ user_id: userId, plan: "free", status: "active" })
+        .insert({ user_id: userId, plan: "trial", status: "active" })
         .select("*")
         .single();
 
