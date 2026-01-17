@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNorthStarVenture } from "@/hooks/useNorthStarVenture";
 import { useVentureState } from "@/hooks/useVentureState";
 import { getNavVisibility, type NavSection } from "@/lib/navVisibility";
+import { TrialStatusBadge } from "@/components/shared/TrialStatusBadge";
 import { 
   Home,
   Activity,
@@ -145,6 +146,11 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
 
   return (
     <nav className="flex flex-col gap-0.5 p-3 h-full">
+      {/* Trial Status Badge */}
+      <div className="px-1 mb-2">
+        <TrialStatusBadge />
+      </div>
+
       {/* NOW Section - Always visible */}
       <div className="mb-1">
         <span className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground block">Now</span>
