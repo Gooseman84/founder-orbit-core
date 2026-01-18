@@ -202,7 +202,7 @@ export default function Radar() {
       <ProUpgradeModal
         open={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        reasonCode="MODE_REQUIRES_PRO"
+        reasonCode="RADAR_REQUIRES_PRO"
       />
     </div>
   );

@@ -842,7 +842,7 @@ const IdeaDetail = () => {
       <ProUpgradeModal 
         open={showPaywall} 
         onClose={() => setShowPaywall(false)}
-        reasonCode="IDEA_DETAIL_PRO"
+        reasonCode="OPPORTUNITY_SCORE_REQUIRES_PRO"
       />
     </div>
   );

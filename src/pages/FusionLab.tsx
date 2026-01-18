@@ -529,7 +529,7 @@ const FusionLab = () => {
             navigate("/ideas");
           }
         }}
-        reasonCode="MODE_REQUIRES_PRO"
+        reasonCode="FUSION_REQUIRES_PRO"
       />
     </div>
   );
