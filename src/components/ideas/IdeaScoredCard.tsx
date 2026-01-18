@@ -49,7 +49,7 @@ export function IdeaScoredCard({
   const isV6 = isV6Idea(idea);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between gap-3">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm flex flex-col justify-between gap-3 overflow-hidden">
       <div className="space-y-2">
         {/* Header: Title + Fit Badge */}
         <div className="flex items-center justify-between gap-2">
@@ -175,20 +175,20 @@ export function IdeaScoredCard({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-2 mt-2 flex-wrap">
+      <div className="grid grid-cols-3 sm:flex gap-2 mt-2">
         <Button
           onClick={onSave}
           disabled={isSaved || isSaving}
           variant={isSaved ? "secondary" : "default"}
           size="sm"
-          className="flex-1 gap-2 min-w-[80px]"
+          className="gap-1.5 sm:flex-1"
         >
           {isSaved ? (
-            <><Check className="w-4 h-4" />Saved</>
+            <><Check className="w-4 h-4 flex-shrink-0" /><span className="hidden sm:inline">Saved</span></>
           ) : isSaving ? (
-            <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />Saving...</>
+            <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current flex-shrink-0" /><span className="hidden sm:inline">Saving</span></>
           ) : (
-            <><Save className="w-4 h-4" />Save</>
+            <><Save className="w-4 h-4 flex-shrink-0" /><span className="hidden sm:inline">Save</span></>
           )}
         </Button>
         {onViewDetails && (
@@ -197,12 +197,12 @@ export function IdeaScoredCard({
             disabled={isOpening}
             variant="outline"
             size="sm"
-            className="flex-1 gap-2 min-w-[80px]"
+            className="gap-1.5 sm:flex-1"
           >
             {isOpening ? (
-              <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />Opening...</>
+              <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current flex-shrink-0" /><span className="hidden sm:inline">Opening</span></>
             ) : (
-              <><Eye className="w-4 h-4" />View Details</>
+              <><Eye className="w-4 h-4 flex-shrink-0" /><span className="hidden sm:inline">Details</span></>
             )}
           </Button>
         )}
@@ -211,12 +211,12 @@ export function IdeaScoredCard({
           disabled={isPromoting}
           variant="outline"
           size="sm"
-          className="flex-1 gap-2 min-w-[80px]"
+          className="gap-1.5 sm:flex-1"
         >
           {isPromoting ? (
-            <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />Creating...</>
+            <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current flex-shrink-0" /><span className="hidden sm:inline">Creating</span></>
           ) : (
-            <><FileText className="w-4 h-4" />Workspace</>
+            <><FileText className="w-4 h-4 flex-shrink-0" /><span className="hidden sm:inline">Workspace</span></>
           )}
         </Button>
       </div>
