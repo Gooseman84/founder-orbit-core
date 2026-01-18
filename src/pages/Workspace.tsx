@@ -67,6 +67,7 @@ export default function Workspace() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<PaywallReasonCode>("EXPORT_REQUIRES_PRO");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [aiPanelCollapsed, setAiPanelCollapsed] = useState(true);
   const { track } = useAnalytics();
   
   // Get workspace doc limit for free users
@@ -458,7 +459,7 @@ export default function Workspace() {
         )}
       </div>
 
-      {/* Mobile: AI Assistant below editor */}
+      {/* Mobile: AI Assistant below editor - collapsible */}
       {currentDocument && isMobile && (
         <div className="p-2 pt-0">
           <WorkspaceAssistantPanel
@@ -467,6 +468,8 @@ export default function Workspace() {
             onRequestSuggestion={handleRequestAI}
             onApplySuggestion={handleApplySuggestion}
             taskContext={taskContext}
+            isCollapsed={aiPanelCollapsed}
+            onToggleCollapse={() => setAiPanelCollapsed(!aiPanelCollapsed)}
           />
         </div>
       )}
