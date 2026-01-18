@@ -187,15 +187,15 @@ export function WorkspaceSidebar({
                   <button
                     key={doc.id}
                     onClick={() => !isRenaming && onSelect(doc.id)}
-                    className={`w-full py-2 px-2.5 text-left rounded-md transition-colors group ${
+                    className={`w-full py-2.5 px-3 text-left rounded-md transition-colors group min-h-[56px] ${
                       isSelected 
                         ? 'bg-primary text-primary-foreground ring-1 ring-primary/40 hover:bg-primary/90' 
                         : 'hover:bg-secondary'
                     }`}
                   >
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-start gap-2.5">
                       <FileText className={`w-4 h-4 mt-0.5 shrink-0 ${isSelected ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
-                      <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex-1 min-w-0">
                         {isRenaming ? (
                           <Input
                             ref={inputRef}
@@ -207,21 +207,21 @@ export function WorkspaceSidebar({
                             className="h-6 text-sm py-0 px-1"
                           />
                         ) : (
-                          <div className="flex items-center gap-1 min-w-0">
+                          <div className="flex items-start gap-1 min-w-0">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <p className="font-medium text-sm truncate flex-1 text-left">
+                                <p className="font-medium text-sm line-clamp-2 flex-1 text-left leading-snug break-words">
                                   {doc.title}
                                 </p>
                               </TooltipTrigger>
-                              <TooltipContent side="right" align="start">
-                                <p>{doc.title}</p>
+                              <TooltipContent side="right" align="start" className="max-w-[250px]">
+                                <p className="whitespace-normal break-words">{doc.title}</p>
                               </TooltipContent>
                             </Tooltip>
                             {isSelected && onRename && (
                               <button
                                 onClick={(e) => startRenaming(doc, e)}
-                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-background/20 rounded transition-opacity shrink-0"
+                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-background/20 rounded transition-opacity shrink-0 mt-0.5"
                                 title="Rename"
                               >
                                 <Pencil className="w-3 h-3" />
@@ -229,7 +229,7 @@ export function WorkspaceSidebar({
                             )}
                           </div>
                         )}
-                        <p className={`text-xs capitalize truncate ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                        <p className={`text-xs capitalize mt-1 ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                           {doc.doc_type?.replace('_', ' ')} · {format(new Date(doc.updated_at), 'MMM d')}
                         </p>
                       </div>
