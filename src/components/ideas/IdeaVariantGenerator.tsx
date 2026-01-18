@@ -191,24 +191,27 @@ Generate a ${mode.replace("_", " ")} variant that transforms or evolves this con
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {/* Variant generation buttons - stack on mobile, 2 cols on tablet+ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
           {VARIANT_OPTIONS.map(({ mode, label, icon: Icon, description }) => (
             <Button
               key={mode}
               variant="outline"
-              className="h-auto flex-col items-start p-3 text-left"
+              className="h-auto flex-col items-start p-3 text-left w-full min-w-0"
               disabled={generatingMode !== null}
               onClick={() => handleGenerateVariant(mode)}
             >
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 w-full min-w-0">
                 {generatingMode === mode ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary shrink-0" />
                 ) : (
-                  <Icon className="h-4 w-4 text-primary" />
+                  <Icon className="h-4 w-4 text-primary shrink-0" />
                 )}
-                <span className="font-medium text-sm">{label}</span>
+                <span className="font-medium text-sm truncate">{label}</span>
               </div>
-              <span className="text-xs text-muted-foreground">{description}</span>
+              <span className="text-xs text-muted-foreground line-clamp-2 break-words hidden sm:block">
+                {description}
+              </span>
             </Button>
           ))}
         </div>
@@ -216,58 +219,58 @@ Generate a ${mode.replace("_", " ")} variant that transforms or evolves this con
         {variants.length > 0 && (
           <div className="mt-6 space-y-3">
             <h4 className="font-semibold flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              Generated Variants ({variants.length})
+              <Sparkles className="h-4 w-4 text-primary shrink-0" />
+              <span>Generated Variants ({variants.length})</span>
             </h4>
             <div className="space-y-3">
               {variants.map((variant, index) => (
                 <div
                   key={variant.id || index}
-                  className="p-4 border border-border rounded-lg bg-muted/30"
+                  className="p-3 sm:p-4 border border-border rounded-lg bg-muted/30 overflow-hidden"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="font-medium">{variant.title}</p>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <p className="font-medium truncate sm:whitespace-normal">{variant.title}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2 break-words">
                         {variant.description || variant.oneLiner}
                       </p>
                     </div>
-                    <Badge variant="secondary" className="text-xs shrink-0">
+                    <Badge variant="secondary" className="text-xs shrink-0 whitespace-nowrap">
                       {variant.sourceMode?.replace("_", " ") || variant.category || variant.mode}
                     </Badge>
                   </div>
                   
                   {variant.viralityPotential !== undefined && (
-                    <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
-                      <span>🔥 Virality: {variant.viralityPotential}</span>
-                      <span>⚡ Leverage: {variant.leverageScore}</span>
-                      <span>🤖 Automation: {variant.automationDensity}</span>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
+                      <span className="whitespace-nowrap">🔥 {variant.viralityPotential}</span>
+                      <span className="whitespace-nowrap">⚡ {variant.leverageScore}</span>
+                      <span className="whitespace-nowrap">🤖 {variant.automationDensity}</span>
                     </div>
                   )}
 
-                  {/* Action buttons */}
-                  <div className="flex gap-2 mt-3">
+                  {/* Action buttons - stack on very small screens */}
+                  <div className="flex flex-col xs:flex-row gap-2 mt-3">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="gap-1"
+                      className="gap-1 min-w-0 flex-1 xs:flex-initial"
                       disabled={savingId === variant.id || !!variant.savedId}
                       onClick={() => handleSaveVariant(variant)}
                     >
                       {savingId === variant.id ? (
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary shrink-0" />
                       ) : (
-                        <Library className="h-3 w-3" />
+                        <Library className="h-3 w-3 shrink-0" />
                       )}
-                      {variant.savedId ? "Saved" : "Save to Library"}
+                      <span className="truncate">{variant.savedId ? "Saved" : "Save"}</span>
                     </Button>
                     <Button
                       size="sm"
-                      className="gap-1"
+                      className="gap-1 min-w-0 flex-1 xs:flex-initial"
                       onClick={() => handleOpenVariant(variant)}
                     >
-                      <ExternalLink className="h-3 w-3" />
-                      Open as Full Idea
+                      <ExternalLink className="h-3 w-3 shrink-0" />
+                      <span className="truncate">Open Idea</span>
                     </Button>
                   </div>
                 </div>
