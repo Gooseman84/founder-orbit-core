@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { format, subDays, parseISO } from "https://esm.sh/date-fns@3.6.0";
 
 const corsHeaders = {
