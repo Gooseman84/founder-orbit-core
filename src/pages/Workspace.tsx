@@ -336,9 +336,9 @@ export default function Workspace() {
         )}
 
         {/* Main Editor Area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden pt-10 md:pt-0">
           {currentDocument && (
-            <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+            <div className="flex items-center justify-between mb-3 gap-2 flex-wrap px-1">
               <div className="flex items-center gap-2">
                 <Label className="text-sm text-muted-foreground hidden sm:inline">Status:</Label>
                 <Select
@@ -409,10 +409,10 @@ export default function Workspace() {
           )}
           {!currentDocument ? (
             <Card className="h-full flex items-center justify-center">
-              <CardContent className="text-center py-12">
+              <CardContent className="text-center py-12 px-6">
                 <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-lg font-medium mb-2">Select a document or start a new one</p>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-muted-foreground mb-4 max-w-xs mx-auto">
                   {isMobile ? 'Tap "Docs" to browse' : 'Choose from the sidebar or create a new workspace document'}
                 </p>
                 <Button onClick={() => setIsNewDocDialogOpen(true)} size="sm">
@@ -422,7 +422,9 @@ export default function Workspace() {
               </CardContent>
             </Card>
           ) : (
-            <WorkspaceEditor document={currentDocument} onChange={handleEditorChange} />
+            <div className="flex-1 min-h-0 overflow-y-auto px-1">
+              <WorkspaceEditor document={currentDocument} onChange={handleEditorChange} />
+            </div>
           )}
         </div>
 
