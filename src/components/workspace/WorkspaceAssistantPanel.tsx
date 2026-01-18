@@ -6,11 +6,14 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 import type { TaskContext } from '@/types/tasks';
 
+export type RefinementType = 'shorter' | 'detailed' | 'different' | 'actionable';
+
 interface WorkspaceAssistantPanelProps {
   document: WorkspaceDocument;
   loading?: boolean;
   onRequestSuggestion: (taskContext?: TaskContext) => void;
   onApplySuggestion: (mode: 'insert' | 'replace') => void;
+  onRefineSuggestion?: (refinementType: RefinementType) => void;
   taskContext?: TaskContext;
   onClose?: () => void;
   isCollapsed?: boolean;
@@ -22,6 +25,7 @@ export function WorkspaceAssistantPanel({
   loading = false,
   onRequestSuggestion,
   onApplySuggestion,
+  onRefineSuggestion,
   taskContext,
   onClose,
   isCollapsed = false,
@@ -183,6 +187,51 @@ export function WorkspaceAssistantPanel({
                 </p>
               </div>
             </div>
+
+            {/* Refinement buttons */}
+            {onRefineSuggestion && !loading && (
+              <div className="space-y-2 pt-2">
+                <p className="text-xs text-muted-foreground font-medium">Refine this suggestion:</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => onRefineSuggestion('shorter')}
+                    className="h-8 text-xs touch-manipulation"
+                    disabled={loading}
+                  >
+                    Shorter
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => onRefineSuggestion('detailed')}
+                    className="h-8 text-xs touch-manipulation"
+                    disabled={loading}
+                  >
+                    More Detail
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => onRefineSuggestion('different')}
+                    className="h-8 text-xs touch-manipulation"
+                    disabled={loading}
+                  >
+                    Different Angle
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => onRefineSuggestion('actionable')}
+                    className="h-8 text-xs touch-manipulation"
+                    disabled={loading}
+                  >
+                    More Actionable
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2 pt-2">
               <Button

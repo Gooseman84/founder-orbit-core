@@ -19,7 +19,7 @@ import { FileText, CheckCircle2, Download, Copy, Menu } from 'lucide-react';
 import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
-import { WorkspaceAssistantPanel } from '@/components/workspace/WorkspaceAssistantPanel';
+import { WorkspaceAssistantPanel, RefinementType } from '@/components/workspace/WorkspaceAssistantPanel';
 import { ProBadge } from '@/components/billing/ProBadge';
 import { ProUpgradeModal } from '@/components/billing/ProUpgradeModal';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -206,6 +206,24 @@ export default function Workspace() {
       });
     }
   };
+
+  const handleRefineSuggestion = useCallback(async (refinementType: RefinementType) => {
+    if (!currentDocument?.ai_suggestions) return;
+    
+    setAiLoading(true);
+    const result = await requestAISuggestion(currentDocument.id, taskContext, {
+      previousSuggestion: currentDocument.ai_suggestions,
+      refinementType,
+    });
+    setAiLoading(false);
+
+    if (result) {
+      toast({
+        title: 'Suggestion refined',
+        description: `Applied "${refinementType}" refinement to the suggestion.`,
+      });
+    }
+  }, [currentDocument, taskContext, requestAISuggestion, toast]);
 
   const handleApplySuggestion = (mode: 'insert' | 'replace') => {
     if (!currentDocument?.ai_suggestions) return;
@@ -452,6 +470,7 @@ export default function Workspace() {
                 loading={aiLoading}
                 onRequestSuggestion={handleRequestAI}
                 onApplySuggestion={handleApplySuggestion}
+                onRefineSuggestion={handleRefineSuggestion}
                 taskContext={taskContext}
               />
             </div>
@@ -467,6 +486,7 @@ export default function Workspace() {
             loading={aiLoading}
             onRequestSuggestion={handleRequestAI}
             onApplySuggestion={handleApplySuggestion}
+            onRefineSuggestion={handleRefineSuggestion}
             taskContext={taskContext}
             isCollapsed={aiPanelCollapsed}
             onToggleCollapse={() => setAiPanelCollapsed(!aiPanelCollapsed)}
