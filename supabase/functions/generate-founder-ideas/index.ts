@@ -1,7 +1,7 @@
 // supabase/functions/generate-founder-ideas/index.ts
 // EPIC v7 — TrueBlazer Two-Pass Idea Engine (v6.1 Creativity + v2.0 Commercial Rigor)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
