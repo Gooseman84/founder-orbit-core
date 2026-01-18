@@ -33,7 +33,7 @@ export const IdeaCard = ({ idea }: IdeaCardProps) => {
   const navigate = useNavigate();
 
   return (
-    <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/ideas/${idea.id}`)}>
+    <Card className="cursor-pointer hover:shadow-lg transition-shadow overflow-hidden" onClick={() => navigate(`/ideas/${idea.id}`)}>
       <CardHeader>
         <div className="flex items-start justify-between gap-2 mb-2">
           <CardTitle className="text-xl leading-tight">{idea.title}</CardTitle>

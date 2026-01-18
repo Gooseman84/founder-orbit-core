@@ -55,7 +55,7 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar }: L
   const variantLabel = sourceMeta?.variant_label;
 
   return (
-    <Card className={`hover:shadow-lg transition-all duration-200 flex flex-col group hover:border-primary/30 ${isNorthStar ? 'ring-2 ring-amber-500/40 border-amber-500/30' : ''}`}>
+    <Card className={`hover:shadow-lg transition-all duration-200 flex flex-col group hover:border-primary/30 overflow-hidden ${isNorthStar ? 'ring-2 ring-amber-500/40 border-amber-500/30' : ''}`}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -172,15 +172,15 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar }: L
         )}
 
         {/* Actions */}
-        <div className="flex gap-2 mt-auto pt-2">
+        <div className="grid grid-cols-2 sm:flex gap-2 mt-auto pt-2">
           <Button
             onClick={() => navigate(`/ideas/${idea.id}`)}
             variant="default"
             size="sm"
-            className="flex-1 gap-1.5"
+            className="gap-1.5"
           >
             <Eye className="w-3.5 h-3.5" />
-            Open
+            <span className="truncate">Open</span>
           </Button>
           
           {!isNorthStar && onSetNorthStar && (
@@ -188,10 +188,11 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar }: L
               onClick={() => onSetNorthStar(idea.id)}
               variant="outline"
               size="sm"
-              className="flex-1 gap-1.5 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+              className="gap-1.5 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
             >
-              <Star className="w-3.5 h-3.5" />
-              North Star
+              <Star className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline truncate">North Star</span>
+              <span className="sm:hidden truncate">Star</span>
             </Button>
           )}
           
@@ -200,10 +201,11 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar }: L
               onClick={() => navigate("/north-star")}
               variant="default"
               size="sm"
-              className="flex-1 gap-1.5 bg-amber-500 hover:bg-amber-600"
+              className="gap-1.5 bg-amber-500 hover:bg-amber-600"
             >
-              <Map className="w-3.5 h-3.5" />
-              View North Star
+              <Map className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline truncate">View North Star</span>
+              <span className="sm:hidden truncate">View</span>
             </Button>
           )}
           
@@ -214,8 +216,9 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar }: L
               size="sm"
               className="gap-1.5"
             >
-              <FileText className="w-3.5 h-3.5" />
-              Workspace
+              <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline truncate">Workspace</span>
+              <span className="sm:hidden truncate">Work</span>
             </Button>
           )}
           
@@ -224,9 +227,10 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar }: L
               onClick={() => onDelete(idea.id)}
               variant="ghost"
               size="sm"
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 col-span-2 sm:col-span-1"
             >
               <Trash2 className="w-3.5 h-3.5" />
+              <span className="sm:hidden ml-1">Delete</span>
             </Button>
           )}
         </div>
