@@ -200,9 +200,16 @@ export function useWorkspace(options: UseWorkspaceOptions = {}) {
   }, [user]);
 
   /**
-   * Request AI suggestion for a document
+   * Request AI suggestion for a document (with optional refinement)
    */
-  const requestAISuggestion = useCallback(async (documentId: string, taskContext?: TaskContext) => {
+  const requestAISuggestion = useCallback(async (
+    documentId: string, 
+    taskContext?: TaskContext,
+    refinementOptions?: {
+      previousSuggestion?: string;
+      refinementType?: 'shorter' | 'detailed' | 'different' | 'actionable';
+    }
+  ) => {
     if (!user) {
       setError('User not authenticated');
       return null;
@@ -218,6 +225,8 @@ export function useWorkspace(options: UseWorkspaceOptions = {}) {
           body: {
             documentId,
             taskContext: taskContext ?? null,
+            previousSuggestion: refinementOptions?.previousSuggestion,
+            refinementType: refinementOptions?.refinementType,
           },
         }
       );

@@ -27,9 +27,11 @@ serve(async (req) => {
   }
 
   try {
-    const { documentId, taskContext } = await req.json() as {
+    const { documentId, taskContext, previousSuggestion, refinementType } = await req.json() as {
       documentId: string;
       taskContext?: TaskContext;
+      previousSuggestion?: string;
+      refinementType?: 'shorter' | 'detailed' | 'different' | 'actionable';
     };
 
     if (!documentId) {
@@ -45,6 +47,7 @@ serve(async (req) => {
 
     console.log("Generating workspace suggestion for document:", documentId);
     console.log("Task context:", taskContext);
+    console.log("Refinement mode:", refinementType ? `Refining with type: ${refinementType}` : "Fresh suggestion");
 
     // 1) Fetch the document content
     const { data: doc, error: docError } = await supabase
@@ -360,6 +363,30 @@ Behavior:
       }
     }
 
+    // Build refinement prompt if in refinement mode
+    let refinementPrompt = '';
+    if (previousSuggestion && refinementType) {
+      const refinementInstructions: Record<string, string> = {
+        shorter: 'Make this more concise and tighter. Remove unnecessary words and filler. Keep the core message but cut the length by at least 30%.',
+        detailed: 'Expand this with more detail, specific examples, and deeper explanation. Add nuance and supporting points.',
+        different: 'Take a completely different angle or approach. Reimagine this content from a fresh perspective while keeping it relevant to the task.',
+        actionable: 'Make this more actionable with concrete steps, specific next actions, and clear deliverables the user can execute on immediately.',
+      };
+      
+      refinementPrompt = `
+
+PREVIOUS AI SUGGESTION (user wants to refine this):
+"""
+${previousSuggestion.slice(0, 6000)}
+"""
+
+REFINEMENT REQUEST: ${refinementInstructions[refinementType] || 'Improve this content.'}
+
+Your task: Produce an IMPROVED version based on the refinement request above. 
+Output ONLY the refined content, no explanations or meta-commentary about the changes.
+`;
+    }
+
     const userPrompt = `
 You are helping the founder make progress in this workspace document.
 
@@ -380,7 +407,8 @@ Current document content (may be partially filled, messy, or a brain dump):
 """
 ${currentContent.slice(0, 8000)}
 """
-
+${refinementPrompt}
+${!refinementPrompt ? `
 Instructions:
 1. First, restate briefly what "done" should look like for this document type and task category.
 2. Then produce high-quality, ready-to-use content OR a stronger structure.
@@ -390,6 +418,7 @@ Instructions:
 6. Output plain text only — no JSON, no markdown except headings/bullets.
 
 Your goal: move THIS document and THIS task meaningfully forward.
+` : ''}
 `;
 
     // 3) Call Lovable AI Gateway (Gemini 2.5 Flash)
