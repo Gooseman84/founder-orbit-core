@@ -7,7 +7,14 @@ export type PaywallReasonCode =
   | "WORKSPACE_LIMIT"
   | "EXPORT_REQUIRES_PRO"
   | "MULTI_BLUEPRINT_TASKS"
-  | "TRIAL_EXPIRED";
+  | "TRIAL_EXPIRED"
+  | "FUSION_REQUIRES_PRO"
+  | "COMPARE_REQUIRES_PRO"
+  | "RADAR_REQUIRES_PRO"
+  | "OPPORTUNITY_SCORE_REQUIRES_PRO"
+  | "FEATURE_REQUIRES_PRO"
+  | "IMPORT_REQUIRES_PRO"
+  | "MARKET_SIGNAL_REQUIRES_PRO";
 
 export interface PaywallCopy {
   headline: string;
@@ -80,6 +87,55 @@ export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
       "You've explored TrueBlazer's potential. Now unlock the full experience with Pro to continue your founder journey.",
     cta: "Subscribe to Pro",
     microcopy: "Don't let your momentum stop here.",
+  },
+  FUSION_REQUIRES_PRO: {
+    headline: "Idea Fusion is a Pro feature.",
+    subhead:
+      "Combine multiple ideas into powerful new concepts. Fusion Lab helps you discover unexpected synergies and create breakthrough business models.",
+    cta: "Unlock Idea Fusion",
+    microcopy: "The best ideas often come from combining others.",
+  },
+  COMPARE_REQUIRES_PRO: {
+    headline: "Compare Ideas is a Pro feature.",
+    subhead:
+      "Unlock side-by-side opportunity score comparisons to make data-driven decisions about which idea to pursue.",
+    cta: "Unlock Idea Comparison",
+    microcopy: "Make confident decisions with data.",
+  },
+  RADAR_REQUIRES_PRO: {
+    headline: "Niche Radar is a Pro feature.",
+    subhead:
+      "Get AI-powered market signals and emerging opportunities tailored to your chosen idea. Stay ahead of trends.",
+    cta: "Unlock Niche Radar",
+    microcopy: "Know what's coming before everyone else.",
+  },
+  OPPORTUNITY_SCORE_REQUIRES_PRO: {
+    headline: "Opportunity Scoring is a Pro feature.",
+    subhead:
+      "Get detailed market analysis with sub-scores for market size, competition, timing, and more. Make informed decisions.",
+    cta: "Unlock Opportunity Scoring",
+    microcopy: "Turn intuition into data-driven decisions.",
+  },
+  FEATURE_REQUIRES_PRO: {
+    headline: "This is a Pro feature.",
+    subhead:
+      "Unlock the full TrueBlazer toolkit with Pro. Get access to advanced features designed to accelerate your founder journey.",
+    cta: "Upgrade to Pro",
+    microcopy: "Upgrade anytime. Cancel anytime.",
+  },
+  IMPORT_REQUIRES_PRO: {
+    headline: "Import Ideas is a Pro feature.",
+    subhead:
+      "Bring your existing business ideas into TrueBlazer and get AI-powered scoring, analysis, and execution plans.",
+    cta: "Unlock Idea Import",
+    microcopy: "Your ideas deserve the TrueBlazer treatment.",
+  },
+  MARKET_SIGNAL_REQUIRES_PRO: {
+    headline: "Market Pain Signals is a Pro feature.",
+    subhead:
+      "Discover real problems people are facing and generate ideas tailored to solve them. Find opportunities hiding in plain sight.",
+    cta: "Unlock Market Signals",
+    microcopy: "The best businesses solve real problems.",
   },
 };
 

@@ -52,6 +52,22 @@ const LIMIT_MESSAGES: Record<PlanErrorCode, { title: string; description: string
     title: "Trial expired",
     description: "Your 7-day trial has ended. Subscribe to TrueBlazer Pro to continue your founder journey.",
   },
+  [PLAN_ERROR_CODES.FUSION_REQUIRES_PRO]: {
+    title: "Idea Fusion requires Pro",
+    description: "Combine multiple ideas into powerful new concepts with TrueBlazer Pro.",
+  },
+  [PLAN_ERROR_CODES.COMPARE_REQUIRES_PRO]: {
+    title: "Compare Ideas requires Pro",
+    description: "Unlock side-by-side opportunity score comparisons with TrueBlazer Pro.",
+  },
+  [PLAN_ERROR_CODES.RADAR_REQUIRES_PRO]: {
+    title: "Niche Radar requires Pro",
+    description: "Get AI-powered market signals and emerging opportunities with TrueBlazer Pro.",
+  },
+  [PLAN_ERROR_CODES.OPPORTUNITY_SCORE_REQUIRES_PRO]: {
+    title: "Opportunity Scoring requires Pro",
+    description: "Get detailed market analysis and sub-scores with TrueBlazer Pro.",
+  },
 };
 
 interface PaywallModalProps {

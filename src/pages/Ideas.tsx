@@ -553,12 +553,19 @@ const Ideas = () => {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button 
-            onClick={() => setShowMarketSignalModal(true)} 
+            onClick={() => {
+              if (!hasPro) {
+                setPaywallReasonCode("FEATURE_REQUIRES_PRO");
+                setShowPaywall(true);
+                return;
+              }
+              setShowMarketSignalModal(true);
+            }} 
             variant="outline" 
             size="sm" 
             className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
-            disabled={!canAccessIdeationTools || !hasPro}
-            title={!hasPro ? "Pro feature" : ideationDisabledReason || undefined}
+            disabled={!canAccessIdeationTools && hasPro}
+            title={!hasPro ? "Upgrade to Pro to unlock Market Pain signals" : ideationDisabledReason || undefined}
           >
             {!hasPro && <Lock className="w-3 h-3" />}
             <TrendingUp className="w-4 h-4" />
@@ -566,12 +573,19 @@ const Ideas = () => {
             <span className="sm:hidden">Market</span>
           </Button>
           <Button 
-            onClick={() => setShowImportModal(true)} 
+            onClick={() => {
+              if (!hasPro) {
+                setPaywallReasonCode("FEATURE_REQUIRES_PRO");
+                setShowPaywall(true);
+                return;
+              }
+              setShowImportModal(true);
+            }} 
             variant="outline" 
             size="sm" 
             className="gap-2 border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10"
-            disabled={!canAccessIdeationTools || !hasPro}
-            title={!hasPro ? "Pro feature" : ideationDisabledReason || undefined}
+            disabled={!canAccessIdeationTools && hasPro}
+            title={!hasPro ? "Upgrade to Pro to import ideas" : ideationDisabledReason || undefined}
           >
             {!hasPro && <Lock className="w-3 h-3" />}
             <Upload className="w-4 h-4" />
@@ -581,12 +595,12 @@ const Ideas = () => {
           <Button 
             onClick={() => {
               if (!hasPro) {
-                setPaywallReasonCode("MODE_REQUIRES_PRO");
+                setPaywallReasonCode("FUSION_REQUIRES_PRO");
                 setShowPaywall(true);
                 return;
               }
               navigate("/fusion-lab");
-            }} 
+            }}
             variant="outline" 
             size="sm" 
             className="gap-2"

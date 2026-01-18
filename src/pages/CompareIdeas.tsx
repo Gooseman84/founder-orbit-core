@@ -1066,6 +1066,9 @@ const CompareIdeas = () => {
 
   // Feature gating - show promotional view if user doesn't have access
   if (!gate("compare_engine")) {
+    const { isTrialExpired } = useFeatureAccess();
+    const ctaText = isTrialExpired ? "Subscribe to Pro" : "Upgrade to Pro";
+    
     return (
       <div className="space-y-6">
         <div className="max-w-2xl mx-auto text-center py-12">
@@ -1106,14 +1109,15 @@ const CompareIdeas = () => {
 
           <Button size="lg" onClick={() => setShowPaywall(true)} className="gap-2">
             <Lock className="w-4 h-4" />
-            Upgrade to Pro
+            {ctaText}
           </Button>
         </div>
 
         <PaywallModal 
           featureName="compare_engine" 
           open={showPaywall} 
-          onClose={() => setShowPaywall(false)} 
+          onClose={() => setShowPaywall(false)}
+          errorCode="COMPARE_REQUIRES_PRO"
         />
       </div>
     );
