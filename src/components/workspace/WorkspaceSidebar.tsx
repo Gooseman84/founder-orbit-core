@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { FileText, Pencil, FolderOpen, Files } from 'lucide-react';
+import { FileText, Pencil, FolderOpen, Files, FolderPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,15 +11,28 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { FolderTreeItem, FolderTreeNode } from './FolderTreeItem';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 import type { WorkspaceScope } from '@/hooks/useWorkspace';
 
+interface WorkspaceFolder {
+  id: string;
+  user_id: string;
+  venture_id: string | null;
+  name: string;
+  parent_folder_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 interface WorkspaceSidebarProps {
   documents: WorkspaceDocument[];
+  folders?: WorkspaceFolder[];
   currentId?: string;
   loading?: boolean;
   onSelect: (id: string) => void;
   onNewDocument: () => void;
+  onNewFolder?: () => void;
   onRename?: (id: string, newTitle: string) => void;
   scope?: WorkspaceScope;
   onScopeChange?: (scope: WorkspaceScope) => void;
@@ -28,10 +41,12 @@ interface WorkspaceSidebarProps {
 
 export function WorkspaceSidebar({
   documents,
+  folders = [],
   currentId,
   loading = false,
   onSelect,
   onNewDocument,
+  onNewFolder,
   onRename,
   scope = 'current_venture',
   onScopeChange,
@@ -41,6 +56,7 @@ export function WorkspaceSidebar({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -50,10 +66,97 @@ export function WorkspaceSidebar({
     }
   }, [renamingId]);
 
+  // Filter documents by status
   const filteredDocuments = useMemo(() => {
     if (statusFilter === 'all') return documents;
     return documents.filter((doc) => doc.status === statusFilter);
   }, [documents, statusFilter]);
+
+  // Build folder tree from flat data
+  const folderTree = useMemo((): FolderTreeNode[] => {
+    const folderMap = new Map<string, FolderTreeNode>();
+    const rootNodes: FolderTreeNode[] = [];
+
+    // Create folder nodes
+    folders.forEach((folder) => {
+      folderMap.set(folder.id, {
+        type: 'folder',
+        id: folder.id,
+        name: folder.name,
+        children: [],
+      });
+    });
+
+    // Build folder hierarchy
+    folders.forEach((folder) => {
+      const node = folderMap.get(folder.id)!;
+      if (folder.parent_folder_id) {
+        const parent = folderMap.get(folder.parent_folder_id);
+        if (parent && parent.children) {
+          parent.children.push(node);
+        } else {
+          // Orphaned folder - add to root
+          rootNodes.push(node);
+        }
+      } else {
+        rootNodes.push(node);
+      }
+    });
+
+    // Add documents to folders or root
+    filteredDocuments.forEach((doc) => {
+      const docNode: FolderTreeNode = {
+        type: 'document',
+        id: doc.id,
+        name: doc.title,
+        documentData: doc,
+      };
+
+      const folderId = (doc as any).folder_id;
+      if (folderId) {
+        const folder = folderMap.get(folderId);
+        if (folder && folder.children) {
+          folder.children.push(docNode);
+        } else {
+          // Orphaned document - add to root
+          rootNodes.push(docNode);
+        }
+      } else {
+        // Uncategorized document - add to root
+        rootNodes.push(docNode);
+      }
+    });
+
+    // Sort: folders first, then documents, alphabetically within each group
+    const sortNodes = (nodes: FolderTreeNode[]) => {
+      nodes.sort((a, b) => {
+        if (a.type !== b.type) {
+          return a.type === 'folder' ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
+      });
+      nodes.forEach((node) => {
+        if (node.children) {
+          sortNodes(node.children);
+        }
+      });
+    };
+    sortNodes(rootNodes);
+
+    return rootNodes;
+  }, [folders, filteredDocuments]);
+
+  const handleToggleFolder = (folderId: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
+  };
 
   const startRenaming = (doc: WorkspaceDocument, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -111,9 +214,26 @@ export function WorkspaceSidebar({
       <CardHeader className="pb-2 pt-3 px-3 shrink-0 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-sm font-medium truncate flex-1">Documents</CardTitle>
-          <Button size="sm" variant="outline" onClick={onNewDocument} className="h-7 w-7 p-0 shrink-0">
-            <FileText className="w-3.5 h-3.5" />
-          </Button>
+          <div className="flex gap-1 shrink-0">
+            {onNewFolder && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="sm" variant="ghost" onClick={onNewFolder} className="h-7 w-7 p-0">
+                    <FolderPlus className="w-3.5 h-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>New Folder</TooltipContent>
+              </Tooltip>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="outline" onClick={onNewDocument} className="h-7 w-7 p-0">
+                  <FileText className="w-3.5 h-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>New Document</TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
         {/* Scope Toggle */}
@@ -168,75 +288,27 @@ export function WorkspaceSidebar({
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : filteredDocuments.length === 0 ? (
+          ) : folderTree.length === 0 ? (
             <div className="p-3 text-center text-sm text-muted-foreground">
-              {scope === 'current_venture' 
+              {scope === 'current_venture'
                 ? 'No documents for this venture yet.'
                 : statusFilter === 'all'
-                  ? 'No documents yet. Create one to get started.'
-                  : `No ${statusFilter.replace('_', ' ')} documents.`
-              }
+                ? 'No documents yet. Create one to get started.'
+                : `No ${statusFilter.replace('_', ' ')} documents.`}
             </div>
           ) : (
-            <div className="p-2 space-y-1">
-              {filteredDocuments.map((doc) => {
-                const isSelected = currentId === doc.id;
-                const isRenaming = renamingId === doc.id;
-
-                return (
-                  <button
-                    key={doc.id}
-                    onClick={() => !isRenaming && onSelect(doc.id)}
-                    className={`w-full py-2.5 px-3 text-left rounded-md transition-colors group min-h-[56px] ${
-                      isSelected 
-                        ? 'bg-primary text-primary-foreground ring-1 ring-primary/40 hover:bg-primary/90' 
-                        : 'hover:bg-secondary'
-                    }`}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <FileText className={`w-4 h-4 mt-0.5 shrink-0 ${isSelected ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
-                      <div className="flex-1 min-w-0">
-                        {isRenaming ? (
-                          <Input
-                            ref={inputRef}
-                            value={newTitle}
-                            onChange={(e) => setNewTitle(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            onBlur={saveRename}
-                            onClick={(e) => e.stopPropagation()}
-                            className="h-6 text-sm py-0 px-1"
-                          />
-                        ) : (
-                          <div className="flex items-start gap-1 min-w-0">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <p className="font-medium text-sm line-clamp-2 flex-1 text-left leading-snug break-words">
-                                  {doc.title}
-                                </p>
-                              </TooltipTrigger>
-                              <TooltipContent side="right" align="start" className="max-w-[250px]">
-                                <p className="whitespace-normal break-words">{doc.title}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            {isSelected && onRename && (
-                              <button
-                                onClick={(e) => startRenaming(doc, e)}
-                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-background/20 rounded transition-opacity shrink-0 mt-0.5"
-                                title="Rename"
-                              >
-                                <Pencil className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        <p className={`text-xs capitalize mt-1 ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
-                          {doc.doc_type?.replace('_', ' ')} · {format(new Date(doc.updated_at), 'MMM d')}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="p-2 space-y-0.5">
+              {folderTree.map((node) => (
+                <FolderTreeItem
+                  key={node.id}
+                  node={node}
+                  level={0}
+                  selectedId={currentId}
+                  onSelect={onSelect}
+                  onToggleFolder={handleToggleFolder}
+                  expandedFolders={expandedFolders}
+                />
+              ))}
             </div>
           )}
         </ScrollArea>

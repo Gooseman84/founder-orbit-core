@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useVentureState } from '@/hooks/useVentureState';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +28,16 @@ import { PLAN_FEATURES } from '@/config/plans';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { PaywallReasonCode } from '@/config/paywallCopy';
 import type { TaskContext } from '@/types/tasks';
+
+interface WorkspaceFolder {
+  id: string;
+  user_id: string;
+  venture_id: string | null;
+  name: string;
+  parent_folder_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function Workspace() {
   const { id: documentId } = useParams<{ id: string }>();
@@ -56,6 +67,33 @@ export default function Workspace() {
   } = useWorkspace({
     ventureId: activeVenture?.id,
     scope: activeVenture ? 'current_venture' : 'all',
+  });
+
+  // Fetch workspace folders
+  const { data: folders = [] } = useQuery<WorkspaceFolder[]>({
+    queryKey: ['workspace-folders', user?.id, activeVenture?.id, scope],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      let query = supabase
+        .from('workspace_folders')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name');
+      
+      // Filter by venture if in venture scope
+      if (scope === 'current_venture' && activeVenture?.id) {
+        query = query.or(`venture_id.eq.${activeVenture.id},venture_id.is.null`);
+      }
+      
+      const { data, error } = await query;
+      if (error) {
+        console.error('Error fetching folders:', error);
+        return [];
+      }
+      return data || [];
+    },
+    enabled: !!user?.id,
   });
 
   const [isNewDocDialogOpen, setIsNewDocDialogOpen] = useState(false);
@@ -297,6 +335,7 @@ export default function Workspace() {
   const sidebarContent = (
     <WorkspaceSidebar
       documents={documents}
+      folders={folders}
       currentId={currentDocument?.id}
       loading={loading}
       onSelect={handleSelectDocument}
