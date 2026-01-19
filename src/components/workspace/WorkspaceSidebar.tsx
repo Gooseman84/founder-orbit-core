@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,9 +33,10 @@ interface WorkspaceSidebarProps {
   currentId?: string;
   loading?: boolean;
   onSelect: (id: string) => void;
-  onNewDocument: () => void;
+  onNewDocument: (folderId?: string) => void;
   onNewFolder?: () => void;
   onRename?: (id: string, newTitle: string) => void;
+  onRefresh?: () => void;
   scope?: WorkspaceScope;
   onScopeChange?: (scope: WorkspaceScope) => void;
   ventureName?: string;
@@ -48,6 +51,7 @@ export function WorkspaceSidebar({
   onNewDocument,
   onNewFolder,
   onRename,
+  onRefresh,
   scope = 'current_venture',
   onScopeChange,
   ventureName,
@@ -57,6 +61,9 @@ export function WorkspaceSidebar({
   const [newTitle, setNewTitle] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [documentToMove, setDocumentToMove] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -95,7 +102,6 @@ export function WorkspaceSidebar({
         if (parent && parent.children) {
           parent.children.push(node);
         } else {
-          // Orphaned folder - add to root
           rootNodes.push(node);
         }
       } else {
@@ -118,16 +124,14 @@ export function WorkspaceSidebar({
         if (folder && folder.children) {
           folder.children.push(docNode);
         } else {
-          // Orphaned document - add to root
           rootNodes.push(docNode);
         }
       } else {
-        // Uncategorized document - add to root
         rootNodes.push(docNode);
       }
     });
 
-    // Sort: folders first, then documents, alphabetically within each group
+    // Sort: folders first, then documents, alphabetically
     const sortNodes = (nodes: FolderTreeNode[]) => {
       nodes.sort((a, b) => {
         if (a.type !== b.type) {
@@ -158,55 +162,120 @@ export function WorkspaceSidebar({
     });
   };
 
-  const startRenaming = (doc: WorkspaceDocument, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setRenamingId(doc.id);
-    setNewTitle(doc.title);
+  const handleRenameFolder = async (folderId: string, currentName: string) => {
+    const newName = prompt('Enter new folder name:', currentName);
+    if (!newName || newName === currentName) return;
+
+    try {
+      const { error } = await supabase
+        .from('workspace_folders')
+        .update({ name: newName })
+        .eq('id', folderId);
+
+      if (error) throw error;
+      toast({ title: 'Folder renamed' });
+      onRefresh?.();
+    } catch (err) {
+      console.error('Error renaming folder:', err);
+      toast({ title: 'Error renaming folder', variant: 'destructive' });
+    }
   };
 
-  const saveRename = async () => {
-    if (!renamingId || !newTitle.trim()) {
-      setRenamingId(null);
-      setNewTitle('');
-      return;
+  const handleDeleteFolder = async (folderId: string) => {
+    const confirmed = confirm('Delete this folder? Documents inside will be moved to root.');
+    if (!confirmed) return;
+
+    try {
+      // Move documents to root first
+      await supabase
+        .from('workspace_documents')
+        .update({ folder_id: null })
+        .eq('folder_id', folderId);
+
+      // Delete the folder
+      const { error } = await supabase
+        .from('workspace_folders')
+        .delete()
+        .eq('id', folderId);
+
+      if (error) throw error;
+      toast({ title: 'Folder deleted' });
+      onRefresh?.();
+    } catch (err) {
+      console.error('Error deleting folder:', err);
+      toast({ title: 'Error deleting folder', variant: 'destructive' });
     }
+  };
+
+  const handleRenameDocument = async (documentId: string, currentTitle: string) => {
+    const newName = prompt('Enter new document name:', currentTitle);
+    if (!newName || newName === currentTitle) return;
 
     try {
       const { error } = await supabase
         .from('workspace_documents')
-        .update({ title: newTitle.trim() })
-        .eq('id', renamingId);
+        .update({ title: newName })
+        .eq('id', documentId);
 
       if (error) throw error;
-
-      if (onRename) {
-        onRename(renamingId, newTitle.trim());
-      }
-      setRenamingId(null);
-      setNewTitle('');
+      toast({ title: 'Document renamed' });
+      onRename?.(documentId, newName);
+      onRefresh?.();
     } catch (err) {
       console.error('Error renaming document:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to rename document',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error renaming document', variant: 'destructive' });
     }
   };
 
-  const cancelRename = () => {
-    setRenamingId(null);
-    setNewTitle('');
+  const handleDeleteDocument = async (documentId: string) => {
+    const confirmed = confirm('Delete this document? This cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('workspace_documents')
+        .delete()
+        .eq('id', documentId);
+
+      if (error) throw error;
+      toast({ title: 'Document deleted' });
+      onRefresh?.();
+    } catch (err) {
+      console.error('Error deleting document:', err);
+      toast({ title: 'Error deleting document', variant: 'destructive' });
+    }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      saveRename();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      cancelRename();
+  const handleMoveDocument = (documentId: string) => {
+    setDocumentToMove(documentId);
+    setSelectedFolderId(null);
+    setMoveDialogOpen(true);
+  };
+
+  const confirmMoveDocument = async () => {
+    if (!documentToMove) return;
+
+    try {
+      const { error } = await supabase
+        .from('workspace_documents')
+        .update({ folder_id: selectedFolderId })
+        .eq('id', documentToMove);
+
+      if (error) throw error;
+      toast({ title: selectedFolderId ? 'Document moved to folder' : 'Document moved to root' });
+      setMoveDialogOpen(false);
+      setDocumentToMove(null);
+      onRefresh?.();
+    } catch (err) {
+      console.error('Error moving document:', err);
+      toast({ title: 'Error moving document', variant: 'destructive' });
     }
+  };
+
+  const handleCreateDocumentInFolder = (folderId: string) => {
+    // Expand the folder so the new doc is visible
+    setExpandedFolders((prev) => new Set(prev).add(folderId));
+    onNewDocument(folderId);
   };
 
   return (
@@ -227,7 +296,7 @@ export function WorkspaceSidebar({
             )}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="sm" variant="outline" onClick={onNewDocument} className="h-7 w-7 p-0">
+                <Button size="sm" variant="outline" onClick={() => onNewDocument()} className="h-7 w-7 p-0">
                   <FileText className="w-3.5 h-3.5" />
                 </Button>
               </TooltipTrigger>
@@ -308,12 +377,51 @@ export function WorkspaceSidebar({
                   onSelect={onSelect}
                   onToggleFolder={handleToggleFolder}
                   expandedFolders={expandedFolders}
+                  onRenameFolder={handleRenameFolder}
+                  onDeleteFolder={handleDeleteFolder}
+                  onRenameDocument={handleRenameDocument}
+                  onDeleteDocument={handleDeleteDocument}
+                  onMoveDocument={handleMoveDocument}
+                  onCreateDocumentInFolder={handleCreateDocumentInFolder}
                 />
               ))}
             </div>
           )}
         </ScrollArea>
       </CardContent>
+
+      {/* Move to Folder Dialog */}
+      <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Move to Folder</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <Label>Select destination folder</Label>
+            <Select value={selectedFolderId || 'root'} onValueChange={(v) => setSelectedFolderId(v === 'root' ? null : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select folder" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="root">📁 Root (No folder)</SelectItem>
+                {folders.map((folder) => (
+                  <SelectItem key={folder.id} value={folder.id}>
+                    📁 {folder.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmMoveDocument}>
+              Move
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

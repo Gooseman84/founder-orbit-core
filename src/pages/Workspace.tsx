@@ -210,18 +210,20 @@ export default function Workspace() {
       return;
     }
 
-    // Associate document with active venture if executing
+    // Associate document with active venture and folder if set
     const doc = await createDocument({
       doc_type: newDocType,
       title: newDocTitle.trim(),
       source_type: 'manual',
       venture_id: activeVenture?.id || undefined,
+      folder_id: targetFolderId || undefined,
     });
 
     if (doc) {
       setIsNewDocDialogOpen(false);
       setNewDocTitle('');
       setNewDocType('brain_dump');
+      setTargetFolderId(null);
       navigate(`/workspace/${doc.id}`);
       toast({
         title: 'Document created',
@@ -360,6 +362,20 @@ export default function Workspace() {
     }
   };
 
+  // Handle creating document in a specific folder
+  const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
+
+  const handleOpenNewDocDialog = (folderId?: string) => {
+    setTargetFolderId(folderId || null);
+    setIsNewDocDialogOpen(true);
+    if (isMobile) setMobileDrawerOpen(false);
+  };
+
+  const handleOpenNewFolderDialog = () => {
+    setIsNewFolderDialogOpen(true);
+    if (isMobile) setMobileDrawerOpen(false);
+  };
+
   // Sidebar component (reused in both desktop and mobile)
   const sidebarContent = (
     <WorkspaceSidebar
@@ -368,9 +384,10 @@ export default function Workspace() {
       currentId={currentDocument?.id}
       loading={loading}
       onSelect={handleSelectDocument}
-      onNewDocument={() => setIsNewDocDialogOpen(true)}
-      onNewFolder={() => setIsNewFolderDialogOpen(true)}
+      onNewDocument={handleOpenNewDocDialog}
+      onNewFolder={handleOpenNewFolderDialog}
       onRename={renameDocument}
+      onRefresh={refreshList}
       scope={scope}
       onScopeChange={changeScope}
       ventureName={activeVenture?.name}

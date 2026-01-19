@@ -12,7 +12,8 @@ interface CreateDocumentParams {
   source_type?: string;
   source_id?: string;
   idea_id?: string;
-  venture_id?: string; // Added: associate doc with a venture
+  venture_id?: string;
+  folder_id?: string; // Added: associate doc with a folder
 }
 
 export type WorkspaceScope = 'current_venture' | 'all';
@@ -92,7 +93,8 @@ export function useWorkspace(options: UseWorkspaceOptions = {}) {
           source_type: params.source_type || 'manual',
           source_id: params.source_id || null,
           idea_id: params.idea_id || null,
-          venture_id: params.venture_id || null, // Associate with venture
+          venture_id: params.venture_id || null,
+          folder_id: params.folder_id || null, // Associate with folder
           content: '',
           status: 'draft',
         })
