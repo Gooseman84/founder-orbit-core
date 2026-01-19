@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { FileText, CheckCircle2, Download, Copy, Menu, Plus, FolderPlus } from 'lucide-react';
+import { FileText, CheckCircle2, Download, Archive, Menu, Plus, FolderPlus } from 'lucide-react';
 import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
@@ -290,39 +290,29 @@ export default function Workspace() {
     }
   };
 
-  const handleDuplicateDocument = async () => {
+  const handleArchiveDocument = async () => {
     if (!currentDocument || !user) return;
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('workspace_documents')
-        .insert({
-          user_id: user.id,
-          idea_id: currentDocument.idea_id,
-          source_type: currentDocument.source_type,
-          source_id: currentDocument.source_id,
-          doc_type: currentDocument.doc_type,
-          title: `${currentDocument.title || 'Untitled'} (Copy)`,
-          content: currentDocument.content || '',
-          status: currentDocument.status || 'draft',
-          venture_id: currentDocument.venture_id || activeVenture?.id || null,
-        })
-        .select('id')
-        .single();
+        .update({ status: 'archived' })
+        .eq('id', currentDocument.id);
 
       if (error) throw error;
 
       await refreshList();
-      navigate(`/workspace/${data.id}`);
+      // Navigate to workspace root after archiving
+      navigate('/workspace');
       toast({
-        title: 'Document duplicated',
-        description: 'A copy of the document has been created.',
+        title: 'Document archived',
+        description: 'Document has been moved to archive.',
       });
     } catch (err) {
-      console.error('Error duplicating document:', err);
+      console.error('Error archiving document:', err);
       toast({
         title: 'Error',
-        description: 'Failed to duplicate document',
+        description: 'Failed to archive document',
         variant: 'destructive',
       });
     }
@@ -449,6 +439,7 @@ export default function Workspace() {
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="final">Final</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -456,11 +447,11 @@ export default function Workspace() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleDuplicateDocument}
+                  onClick={handleArchiveDocument}
                   className="h-8"
                 >
-                  <Copy className="w-4 h-4 sm:mr-1" />
-                  <span className="hidden sm:inline">Duplicate</span>
+                  <Archive className="w-4 h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Archive</span>
                 </Button>
                 <Button
                   variant="outline"

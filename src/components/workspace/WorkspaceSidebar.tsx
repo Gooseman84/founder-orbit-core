@@ -276,6 +276,7 @@ export function WorkspaceSidebar({
             <SelectItem value="draft">Draft</SelectItem>
             <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="final">Final</SelectItem>
+            <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>
         </Select>
       </CardHeader>
