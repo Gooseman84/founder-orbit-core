@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { FileText, CheckCircle2, Download, Archive, Menu, Plus, FolderPlus } from 'lucide-react';
 import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
@@ -395,25 +395,77 @@ export default function Workspace() {
   );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden -mt-2 md:-mt-4">
-      <div className="flex flex-1 min-h-0 gap-2 p-1 md:gap-3 md:p-2">
-        {/* Mobile: Drawer trigger + Sheet */}
-        {isMobile && (
-          <Sheet open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="absolute top-2 left-2 z-10 md:hidden">
-                <Menu className="w-4 h-4 mr-1.5" />
-                Docs
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0">
-              <div className="h-full pt-10">
-                {sidebarContent}
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+      {/* Mobile Header with hamburger menu */}
+      {isMobile && (
+        <div className="flex items-center gap-2 px-3 py-2 border-b bg-background shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileDrawerOpen(true)}
+            className="h-9 w-9 shrink-0"
+            aria-label="Open documents"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            {currentDocument ? (
+              <div>
+                <p className="font-medium text-sm truncate">{currentDocument.title}</p>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {currentDocument.doc_type?.replace('_', ' ')} · {currentDocument.status}
+                </p>
               </div>
-            </SheetContent>
-          </Sheet>
-        )}
+            ) : (
+              <p className="font-medium text-sm">Workspace</p>
+            )}
+          </div>
+          {currentDocument && (
+            <div className="flex items-center gap-1 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleArchiveDocument}
+                className="h-9 w-9"
+              >
+                <Archive className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (!isPro) {
+                    setPaywallReason("EXPORT_REQUIRES_PRO");
+                    setShowPaywall(true);
+                    track("paywall_shown", { reasonCode: "EXPORT_REQUIRES_PRO" });
+                    return;
+                  }
+                  exportWorkspaceDocToPdf({
+                    title: currentDocument.title || 'Workspace Document',
+                    content: currentDocument.content || '',
+                  });
+                }}
+                className="h-9 w-9"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
+      {/* Mobile: Drawer for documents/folders */}
+      {isMobile && (
+        <Sheet open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
+          <SheetContent side="left" className="w-[85vw] max-w-sm p-0">
+            <div className="h-full pt-6">
+              {sidebarContent}
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
+      <div className="flex flex-1 min-h-0 gap-2 p-1 md:gap-3 md:p-2">
         {/* Desktop: Left Sidebar - Documents List */}
         {!isMobile && (
           <aside className="w-56 shrink-0 min-w-0 hidden md:block">
@@ -422,8 +474,9 @@ export default function Workspace() {
         )}
 
         {/* Main Editor Area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden pt-10 md:pt-0">
-          {currentDocument && (
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Desktop: Document toolbar */}
+          {currentDocument && !isMobile && (
             <div className="flex items-center justify-between mb-3 gap-2 flex-wrap px-1">
               <div className="flex items-center gap-2">
                 <Label className="text-sm text-muted-foreground hidden sm:inline">Status:</Label>
@@ -500,12 +553,20 @@ export default function Workspace() {
                 <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-lg font-medium mb-2">Select a document or start a new one</p>
                 <p className="text-sm text-muted-foreground mb-4 max-w-xs mx-auto">
-                  {isMobile ? 'Tap "Docs" to browse' : 'Choose from the sidebar or create a new workspace document'}
+                  {isMobile ? 'Tap the menu icon to browse documents' : 'Choose from the sidebar or create a new workspace document'}
                 </p>
-                <Button onClick={() => setIsNewDocDialogOpen(true)} size="sm">
-                  <FileText className="w-4 h-4 mr-1.5" />
-                  New Document
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                  {isMobile && (
+                    <Button variant="outline" onClick={() => setMobileDrawerOpen(true)} size="sm">
+                      <Menu className="w-4 h-4 mr-1.5" />
+                      Browse Documents
+                    </Button>
+                  )}
+                  <Button onClick={() => setIsNewDocDialogOpen(true)} size="sm">
+                    <FileText className="w-4 h-4 mr-1.5" />
+                    New Document
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (
