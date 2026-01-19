@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { FileText, CheckCircle2, Download, Copy, Menu } from 'lucide-react';
+import { FileText, CheckCircle2, Download, Copy, Menu, Plus, FolderPlus } from 'lucide-react';
 import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
@@ -97,8 +97,10 @@ export default function Workspace() {
   });
 
   const [isNewDocDialogOpen, setIsNewDocDialogOpen] = useState(false);
+  const [isNewFolderDialogOpen, setIsNewFolderDialogOpen] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocType, setNewDocType] = useState<string>('brain_dump');
+  const [newFolderName, setNewFolderName] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [taskCompleted, setTaskCompleted] = useState(false);
   const [completingTask, setCompletingTask] = useState(false);
@@ -331,6 +333,43 @@ export default function Workspace() {
     if (isMobile) setMobileDrawerOpen(false);
   };
 
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim() || !user) {
+      toast({
+        title: 'Folder name required',
+        description: 'Please enter a folder name',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('workspace_folders')
+        .insert({
+          user_id: user.id,
+          name: newFolderName.trim(),
+          venture_id: activeVenture?.id || null,
+        });
+
+      if (error) throw error;
+
+      setIsNewFolderDialogOpen(false);
+      setNewFolderName('');
+      toast({
+        title: 'Folder created',
+        description: `Created folder "${newFolderName.trim()}"`,
+      });
+    } catch (err) {
+      console.error('Error creating folder:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to create folder',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Sidebar component (reused in both desktop and mobile)
   const sidebarContent = (
     <WorkspaceSidebar
@@ -340,6 +379,7 @@ export default function Workspace() {
       loading={loading}
       onSelect={handleSelectDocument}
       onNewDocument={() => setIsNewDocDialogOpen(true)}
+      onNewFolder={() => setIsNewFolderDialogOpen(true)}
       onRename={renameDocument}
       scope={scope}
       onScopeChange={changeScope}
@@ -579,12 +619,54 @@ export default function Workspace() {
         </DialogContent>
       </Dialog>
 
+      {/* New Folder Dialog */}
+      <Dialog open={isNewFolderDialogOpen} onOpenChange={setIsNewFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Folder</DialogTitle>
+            <DialogDescription>
+              Create a folder to organize your documents
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="folder-name">Folder Name</Label>
+              <Input
+                id="folder-name"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="My Folder"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCreateFolder();
+                }}
+              />
+            </div>
+            <Button onClick={handleCreateFolder} className="w-full">
+              <FolderPlus className="w-4 h-4 mr-1.5" />
+              Create Folder
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Pro Upgrade Modal */}
       <ProUpgradeModal 
         open={showPaywall} 
         onClose={() => setShowPaywall(false)}
         reasonCode={paywallReason}
       />
+
+      {/* Mobile FAB for new document */}
+      {isMobile && (
+        <Button
+          onClick={() => setIsNewDocDialogOpen(true)}
+          className="fixed bottom-20 right-4 z-50 h-14 w-14 rounded-full shadow-lg md:hidden"
+          size="lg"
+          aria-label="New Document"
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
+      )}
     </div>
   );
 }

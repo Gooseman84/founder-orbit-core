@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronRight, Folder, FileText } from 'lucide-react';
 import { format } from 'date-fns';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 
 export interface FolderTreeNode {
@@ -108,16 +108,18 @@ export function FolderTreeItem({
           }`} 
         />
         <div className="flex-1 min-w-0">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <p className="font-medium text-sm line-clamp-2 text-left leading-snug break-words">
-                {node.name}
-              </p>
-            </TooltipTrigger>
-            <TooltipContent side="right" align="start" className="max-w-[250px]">
-              <p className="whitespace-normal break-words">{node.name}</p>
-            </TooltipContent>
-          </Tooltip>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="font-medium text-sm line-clamp-2 text-left leading-snug break-words">
+                  {node.name}
+                </p>
+              </TooltipTrigger>
+              <TooltipContent side="right" align="start" className="max-w-[250px]">
+                <p className="whitespace-normal break-words">{node.name}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {doc && (
             <p 
               className={`text-xs capitalize mt-1 ${
