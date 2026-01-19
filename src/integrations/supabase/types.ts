@@ -1447,6 +1447,7 @@ export type Database = {
           content: string | null
           created_at: string
           doc_type: string | null
+          folder_id: string | null
           id: string
           idea_id: string | null
           linked_task_id: string | null
@@ -1464,6 +1465,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           doc_type?: string | null
+          folder_id?: string | null
           id?: string
           idea_id?: string | null
           linked_task_id?: string | null
@@ -1481,6 +1483,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           doc_type?: string | null
+          folder_id?: string | null
           id?: string
           idea_id?: string | null
           linked_task_id?: string | null
@@ -1495,6 +1498,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "workspace_documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_folders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "workspace_documents_linked_task_id_fkey"
             columns: ["linked_task_id"]
             isOneToOne: false
@@ -1503,6 +1513,51 @@ export type Database = {
           },
           {
             foreignKeyName: "workspace_documents_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_folder_id: string | null
+          updated_at: string
+          user_id: string
+          venture_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_folder_id?: string | null
+          updated_at?: string
+          user_id: string
+          venture_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_folder_id?: string | null
+          updated_at?: string
+          user_id?: string
+          venture_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_folders_venture_id_fkey"
             columns: ["venture_id"]
             isOneToOne: false
             referencedRelation: "ventures"
