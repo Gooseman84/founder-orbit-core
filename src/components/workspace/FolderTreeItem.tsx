@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { ChevronRight, Folder, FileText } from 'lucide-react';
+import { ChevronRight, Folder, FileText, MoreVertical, Pencil, Trash2, FolderInput, FilePlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 
 export interface FolderTreeNode {
@@ -20,6 +23,12 @@ interface FolderTreeItemProps {
   onSelect: (id: string) => void;
   onToggleFolder?: (id: string) => void;
   expandedFolders?: Set<string>;
+  onRenameFolder?: (id: string, name: string) => void;
+  onDeleteFolder?: (id: string) => void;
+  onRenameDocument?: (id: string, title: string) => void;
+  onDeleteDocument?: (id: string) => void;
+  onMoveDocument?: (documentId: string) => void;
+  onCreateDocumentInFolder?: (folderId: string) => void;
 }
 
 export function FolderTreeItem({
@@ -29,8 +38,14 @@ export function FolderTreeItem({
   onSelect,
   onToggleFolder,
   expandedFolders,
+  onRenameFolder,
+  onDeleteFolder,
+  onRenameDocument,
+  onDeleteDocument,
+  onMoveDocument,
+  onCreateDocumentInFolder,
 }: FolderTreeItemProps) {
-  // Local expanded state fallback if not controlled
+  const isMobile = useIsMobile();
   const [localExpanded, setLocalExpanded] = useState(false);
   
   const isExpanded = expandedFolders 
@@ -52,19 +67,61 @@ export function FolderTreeItem({
     return (
       <div>
         {/* Folder row */}
-        <button
-          onClick={handleToggle}
-          className="w-full py-1.5 px-2 text-left rounded-md transition-colors hover:bg-secondary flex items-center gap-2 group"
+        <div 
+          className="w-full py-1.5 px-2 rounded-md transition-colors hover:bg-secondary flex items-center gap-2 group"
           style={{ paddingLeft: `${indentPx + 8}px` }}
         >
-          <ChevronRight 
-            className={`w-4 h-4 text-muted-foreground transition-transform duration-150 shrink-0 ${
-              isExpanded ? 'rotate-90' : ''
-            }`}
-          />
-          <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
-          <span className="text-sm font-medium truncate flex-1">{node.name}</span>
-        </button>
+          <button
+            onClick={handleToggle}
+            className="flex items-center gap-2 flex-1 min-w-0"
+          >
+            <ChevronRight 
+              className={`w-4 h-4 text-muted-foreground transition-transform duration-150 shrink-0 ${
+                isExpanded ? 'rotate-90' : ''
+              }`}
+            />
+            <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-sm font-medium truncate flex-1 text-left">{node.name}</span>
+          </button>
+          
+          {/* Action menu for folders */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-6 w-6 p-0 shrink-0 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="w-3.5 h-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {onCreateDocumentInFolder && (
+                <DropdownMenuItem onClick={() => onCreateDocumentInFolder(node.id)}>
+                  <FilePlus className="w-4 h-4 mr-2" />
+                  New Document Here
+                </DropdownMenuItem>
+              )}
+              {onRenameFolder && (
+                <DropdownMenuItem onClick={() => onRenameFolder(node.id, node.name)}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Rename Folder
+                </DropdownMenuItem>
+              )}
+              {(onCreateDocumentInFolder || onRenameFolder) && onDeleteFolder && <DropdownMenuSeparator />}
+              {onDeleteFolder && (
+                <DropdownMenuItem 
+                  onClick={() => onDeleteFolder(node.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Folder
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {/* Children (nested folders and documents) */}
         {isExpanded && node.children && node.children.length > 0 && (
@@ -78,6 +135,12 @@ export function FolderTreeItem({
                 onSelect={onSelect}
                 onToggleFolder={onToggleFolder}
                 expandedFolders={expandedFolders}
+                onRenameFolder={onRenameFolder}
+                onDeleteFolder={onDeleteFolder}
+                onRenameDocument={onRenameDocument}
+                onDeleteDocument={onDeleteDocument}
+                onMoveDocument={onMoveDocument}
+                onCreateDocumentInFolder={onCreateDocumentInFolder}
               />
             ))}
           </div>
@@ -89,12 +152,11 @@ export function FolderTreeItem({
   // Document node
   const doc = node.documentData;
   const isSelected = selectedId === node.id;
-  const docIndentPx = indentPx + 24; // Extra indent for documents
+  const docIndentPx = indentPx + 24;
 
   return (
-    <button
-      onClick={() => onSelect(node.id)}
-      className={`w-full py-2 px-2 text-left rounded-md transition-colors group ${
+    <div 
+      className={`w-full py-2 px-2 rounded-md transition-colors group ${
         isSelected
           ? 'bg-primary text-primary-foreground ring-1 ring-primary/40'
           : 'hover:bg-secondary'
@@ -102,35 +164,80 @@ export function FolderTreeItem({
       style={{ paddingLeft: `${docIndentPx}px` }}
     >
       <div className="flex items-start gap-2">
-        <FileText 
-          className={`w-4 h-4 mt-0.5 shrink-0 ${
-            isSelected ? 'text-primary-foreground' : 'text-muted-foreground'
-          }`} 
-        />
-        <div className="flex-1 min-w-0">
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <p className="font-medium text-sm line-clamp-2 text-left leading-snug break-words">
-                  {node.name}
-                </p>
-              </TooltipTrigger>
-              <TooltipContent side="right" align="start" className="max-w-[250px]">
-                <p className="whitespace-normal break-words">{node.name}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          {doc && (
-            <p 
-              className={`text-xs capitalize mt-1 ${
-                isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'
+        <button
+          onClick={() => onSelect(node.id)}
+          className="flex items-start gap-2 flex-1 min-w-0 text-left"
+        >
+          <FileText 
+            className={`w-4 h-4 mt-0.5 shrink-0 ${
+              isSelected ? 'text-primary-foreground' : 'text-muted-foreground'
+            }`} 
+          />
+          <div className="flex-1 min-w-0">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p className="font-medium text-sm line-clamp-2 text-left leading-snug break-words">
+                    {node.name}
+                  </p>
+                </TooltipTrigger>
+                <TooltipContent side="right" align="start" className="max-w-[250px]">
+                  <p className="whitespace-normal break-words">{node.name}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            {doc && (
+              <p 
+                className={`text-xs capitalize mt-1 ${
+                  isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                }`}
+              >
+                {doc.doc_type?.replace('_', ' ')} · {format(new Date(doc.updated_at), 'MMM d')}
+              </p>
+            )}
+          </div>
+        </button>
+        
+        {/* Action menu for documents */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-6 w-6 p-0 shrink-0 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity ${
+                isSelected ? 'text-primary-foreground hover:bg-primary-foreground/10' : ''
               }`}
+              onClick={(e) => e.stopPropagation()}
             >
-              {doc.doc_type?.replace('_', ' ')} · {format(new Date(doc.updated_at), 'MMM d')}
-            </p>
-          )}
-        </div>
+              <MoreVertical className="w-3.5 h-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {onMoveDocument && (
+              <DropdownMenuItem onClick={() => onMoveDocument(node.id)}>
+                <FolderInput className="w-4 h-4 mr-2" />
+                Move to Folder
+              </DropdownMenuItem>
+            )}
+            {onRenameDocument && (
+              <DropdownMenuItem onClick={() => onRenameDocument(node.id, node.name)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Rename
+              </DropdownMenuItem>
+            )}
+            {(onMoveDocument || onRenameDocument) && onDeleteDocument && <DropdownMenuSeparator />}
+            {onDeleteDocument && (
+              <DropdownMenuItem 
+                onClick={() => onDeleteDocument(node.id)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-    </button>
+    </div>
   );
 }
