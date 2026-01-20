@@ -645,7 +645,7 @@ export default function Workspace() {
               </Card>
             )}
             
-            <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <WorkspaceAssistantPanel
                 document={currentDocument}
                 loading={aiLoading}
