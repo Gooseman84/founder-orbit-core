@@ -684,21 +684,52 @@ export default function Workspace() {
         )}
       </div>
 
-      {/* Mobile: AI Assistant below editor - collapsible */}
+      {/* Mobile: AI Assistant as a bottom sheet (prevents cutoff behind bottom nav) */}
       {currentDocument && isMobile && (
-        <div className="p-2 pt-0">
-          <WorkspaceAssistantPanel
-            document={currentDocument}
-            loading={aiLoading}
-            onRequestSuggestion={handleRequestAI}
-            onApplySuggestion={handleApplySuggestion}
-            onDismissSuggestion={handleDismissSuggestion}
-            onRefineSuggestion={handleRefineSuggestion}
-            taskContext={taskContext}
-            isCollapsed={aiPanelCollapsed}
-            onToggleCollapse={() => setAiPanelCollapsed(!aiPanelCollapsed)}
-          />
-        </div>
+        <>
+          {/* Collapsed trigger button */}
+          <div className="p-2 pt-0">
+            <WorkspaceAssistantPanel
+              document={currentDocument}
+              loading={aiLoading}
+              onRequestSuggestion={handleRequestAI}
+              onApplySuggestion={handleApplySuggestion}
+              onDismissSuggestion={handleDismissSuggestion}
+              onRefineSuggestion={handleRefineSuggestion}
+              taskContext={taskContext}
+              isCollapsed={aiPanelCollapsed}
+              onToggleCollapse={() => setAiPanelCollapsed(!aiPanelCollapsed)}
+            />
+          </div>
+
+          <Sheet
+            open={!aiPanelCollapsed}
+            onOpenChange={(open) => setAiPanelCollapsed(!open)}
+          >
+            <SheetContent side="bottom" className="h-[80vh] flex flex-col p-0">
+              <div
+                className="flex-1 overflow-y-auto"
+                style={{
+                  paddingBottom: 'max(160px, calc(128px + env(safe-area-inset-bottom)))',
+                }}
+              >
+                <div className="p-2">
+                  <WorkspaceAssistantPanel
+                    document={currentDocument}
+                    loading={aiLoading}
+                    onRequestSuggestion={handleRequestAI}
+                    onApplySuggestion={handleApplySuggestion}
+                    onDismissSuggestion={handleDismissSuggestion}
+                    onRefineSuggestion={handleRefineSuggestion}
+                    taskContext={taskContext}
+                    isCollapsed={false}
+                    onToggleCollapse={() => setAiPanelCollapsed(true)}
+                  />
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </>
       )}
 
       {/* New Document Dialog */}
