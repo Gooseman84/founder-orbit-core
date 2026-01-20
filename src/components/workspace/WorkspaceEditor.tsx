@@ -11,11 +11,12 @@ interface WorkspaceEditorProps {
 export function WorkspaceEditor({ document, onChange }: WorkspaceEditorProps) {
   const [content, setContent] = useState(document.content || '');
 
-  // Only sync local content when switching to a different document
-  // Do NOT include document.content in deps - that causes race conditions during typing
+  // Sync local content when switching documents OR when the document is refreshed externally
+  // (e.g., applying an AI suggestion). We avoid depending on `document.content` directly
+  // to prevent race conditions during typing.
   useEffect(() => {
     setContent(document.content || '');
-  }, [document.id]);
+  }, [document.id, document.updated_at]);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {

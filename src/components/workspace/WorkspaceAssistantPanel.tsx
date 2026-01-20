@@ -12,8 +12,8 @@ interface WorkspaceAssistantPanelProps {
   document: WorkspaceDocument;
   loading?: boolean;
   onRequestSuggestion: (taskContext?: TaskContext) => void;
-  onApplySuggestion: (mode: 'insert' | 'replace') => void;
-  onDismissSuggestion: () => void;
+  onApplySuggestion: (mode: 'insert' | 'replace') => Promise<void> | void;
+  onDismissSuggestion: () => Promise<void> | void;
   onRefineSuggestion?: (refinementType: RefinementType) => void;
   taskContext?: TaskContext;
   onClose?: () => void;
@@ -41,7 +41,7 @@ export function WorkspaceAssistantPanel({
   const handleApply = async (mode: 'insert' | 'replace') => {
     setApplyingMode(mode);
     try {
-      onApplySuggestion(mode);
+      await onApplySuggestion(mode);
       setShowSuccess(true);
       // Auto-collapse on mobile after successful apply
       setTimeout(() => {
@@ -76,8 +76,8 @@ export function WorkspaceAssistantPanel({
   }
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3 relative">
+    <Card className="relative flex flex-col h-full">
+      <CardHeader className="pb-3 relative shrink-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -115,7 +115,7 @@ export function WorkspaceAssistantPanel({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 flex flex-col pb-8">
+      <CardContent className="flex-1 min-h-0 overflow-y-auto space-y-4 flex flex-col pb-24">
         {/* Success feedback overlay */}
         {showSuccess && (
           <div className="absolute inset-0 bg-background/90 flex items-center justify-center z-10 rounded-lg">
@@ -206,7 +206,14 @@ export function WorkspaceAssistantPanel({
                 Apply to Document
               </Button>
               <Button
-                onClick={onDismissSuggestion}
+                onClick={async () => {
+                  setApplyingMode('insert');
+                  try {
+                    await onDismissSuggestion();
+                  } finally {
+                    setApplyingMode(null);
+                  }
+                }}
                 variant="outline"
                 size="default"
                 disabled={applyingMode !== null}
