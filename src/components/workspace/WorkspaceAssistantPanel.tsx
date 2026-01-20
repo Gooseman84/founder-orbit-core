@@ -76,7 +76,7 @@ export function WorkspaceAssistantPanel({
   }
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden">
+    <Card className="flex flex-col">
       <CardHeader className="pb-3 relative">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -115,7 +115,7 @@ export function WorkspaceAssistantPanel({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 flex flex-col flex-1 overflow-y-auto">
+      <CardContent className="space-y-4 flex flex-col pb-8">
         {/* Success feedback overlay */}
         {showSuccess && (
           <div className="absolute inset-0 bg-background/90 flex items-center justify-center z-10 rounded-lg">
@@ -190,8 +190,8 @@ export function WorkspaceAssistantPanel({
               </div>
             </div>
 
-            {/* Primary action buttons - Apply and Dismiss - ALWAYS VISIBLE */}
-            <div className="space-y-2 pt-3 border-t bg-background sticky bottom-0">
+            {/* Primary action buttons - Apply and Dismiss */}
+            <div className="space-y-2 pt-3 border-t">
               <Button
                 onClick={() => handleApply('insert')}
                 size="default"
@@ -263,9 +263,7 @@ export function WorkspaceAssistantPanel({
             )}
 
             {/* Additional options - collapsed by default */}
-
-            {/* Additional options - collapsed by default */}
-            <details className="pt-2">
+            <details className="pt-2 pb-4">
               <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
                 More options...
               </summary>
