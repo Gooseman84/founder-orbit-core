@@ -292,6 +292,37 @@ export default function Workspace() {
     }
   };
 
+  const handleDismissSuggestion = useCallback(async () => {
+    if (!currentDocument) return;
+    
+    try {
+      // Clear the AI suggestion from the database
+      await supabase
+        .from('workspace_documents')
+        .update({ ai_suggestions: null })
+        .eq('id', currentDocument.id);
+      
+      // Refresh the document to show cleared suggestion
+      await loadDocument(currentDocument.id);
+      
+      toast({
+        title: 'Suggestion dismissed',
+      });
+      
+      // Collapse AI panel on mobile
+      if (isMobile) {
+        setAiPanelCollapsed(true);
+      }
+    } catch (err) {
+      console.error('Error dismissing suggestion:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to dismiss suggestion',
+        variant: 'destructive',
+      });
+    }
+  }, [currentDocument, loadDocument, toast, isMobile]);
+
   const handleArchiveDocument = async () => {
     if (!currentDocument || !user) return;
 
@@ -620,6 +651,7 @@ export default function Workspace() {
                 loading={aiLoading}
                 onRequestSuggestion={handleRequestAI}
                 onApplySuggestion={handleApplySuggestion}
+                onDismissSuggestion={handleDismissSuggestion}
                 onRefineSuggestion={handleRefineSuggestion}
                 taskContext={taskContext}
               />
@@ -636,6 +668,7 @@ export default function Workspace() {
             loading={aiLoading}
             onRequestSuggestion={handleRequestAI}
             onApplySuggestion={handleApplySuggestion}
+            onDismissSuggestion={handleDismissSuggestion}
             onRefineSuggestion={handleRefineSuggestion}
             taskContext={taskContext}
             isCollapsed={aiPanelCollapsed}

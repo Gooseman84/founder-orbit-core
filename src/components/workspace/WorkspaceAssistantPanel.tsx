@@ -13,6 +13,7 @@ interface WorkspaceAssistantPanelProps {
   loading?: boolean;
   onRequestSuggestion: (taskContext?: TaskContext) => void;
   onApplySuggestion: (mode: 'insert' | 'replace') => void;
+  onDismissSuggestion: () => void;
   onRefineSuggestion?: (refinementType: RefinementType) => void;
   taskContext?: TaskContext;
   onClose?: () => void;
@@ -25,6 +26,7 @@ export function WorkspaceAssistantPanel({
   loading = false,
   onRequestSuggestion,
   onApplySuggestion,
+  onDismissSuggestion,
   onRefineSuggestion,
   taskContext,
   onClose,
@@ -118,8 +120,8 @@ export function WorkspaceAssistantPanel({
         {showSuccess && (
           <div className="absolute inset-0 bg-background/90 flex items-center justify-center z-10 rounded-lg">
             <div className="text-center">
-              <Check className="w-10 h-10 text-green-500 mx-auto mb-2" />
-              <p className="text-sm font-medium text-green-600">Applied successfully!</p>
+              <Check className="w-10 h-10 text-primary mx-auto mb-2" />
+              <p className="text-sm font-medium text-primary">Applied successfully!</p>
             </div>
           </div>
         )}
@@ -233,48 +235,61 @@ export function WorkspaceAssistantPanel({
               </div>
             )}
 
-            <div className="space-y-2 pt-2">
+            {/* Primary action buttons - Apply and Dismiss */}
+            <div className="space-y-2 pt-3 border-t">
               <Button
                 onClick={() => handleApply('insert')}
-                variant="outline"
-                size="sm"
+                size="default"
                 disabled={applyingMode !== null}
-                className="w-full h-11 touch-manipulation"
+                className="w-full h-12 touch-manipulation font-medium"
               >
                 {applyingMode === 'insert' ? (
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
-                  <ArrowDownToLine className="w-4 h-4 mr-2" />
+                  <Check className="w-4 h-4 mr-2" />
                 )}
-                Insert at end of document
+                Apply to Document
               </Button>
               <Button
-                onClick={() => handleApply('replace')}
+                onClick={onDismissSuggestion}
                 variant="outline"
-                size="sm"
+                size="default"
                 disabled={applyingMode !== null}
-                className="w-full h-11 touch-manipulation"
+                className="w-full h-12 touch-manipulation"
               >
-                {applyingMode === 'replace' ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
-                Replace all content
+                <X className="w-4 h-4 mr-2" />
+                Dismiss
               </Button>
-              
-              {/* Done button for mobile */}
-              {isMobile && onToggleCollapse && (
-                <Button
-                  onClick={onToggleCollapse}
-                  variant="secondary"
-                  size="sm"
-                  className="w-full h-11 touch-manipulation mt-2"
-                >
-                  Done
-                </Button>
-              )}
             </div>
+
+            {/* Additional options - collapsed by default */}
+            <details className="pt-2">
+              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                More options...
+              </summary>
+              <div className="space-y-2 pt-2">
+                <Button
+                  onClick={() => handleApply('insert')}
+                  variant="ghost"
+                  size="sm"
+                  disabled={applyingMode !== null}
+                  className="w-full h-10 touch-manipulation text-xs"
+                >
+                  <ArrowDownToLine className="w-3 h-3 mr-2" />
+                  Insert at end of document
+                </Button>
+                <Button
+                  onClick={() => handleApply('replace')}
+                  variant="ghost"
+                  size="sm"
+                  disabled={applyingMode !== null}
+                  className="w-full h-10 touch-manipulation text-xs"
+                >
+                  <RefreshCw className="w-3 h-3 mr-2" />
+                  Replace all content
+                </Button>
+              </div>
+            </details>
           </>
         )}
 
