@@ -267,30 +267,54 @@ export default function Workspace() {
     }
   }, [currentDocument, taskContext, requestAISuggestion, toast]);
 
-  const handleApplySuggestion = (mode: 'insert' | 'replace') => {
+  const handleApplySuggestion = useCallback(async (mode: 'insert' | 'replace') => {
     if (!currentDocument?.ai_suggestions) return;
 
     let newContent: string;
 
     if (mode === 'replace') {
       newContent = currentDocument.ai_suggestions;
-      toast({
-        title: 'Content replaced',
-        description: 'Editor content replaced with AI suggestion',
-      });
     } else {
       // For insert, append at the end
       newContent = (currentDocument.content || '') + '\n\n' + currentDocument.ai_suggestions;
-      toast({
-        title: 'Suggestion inserted',
-        description: 'AI content added to document',
-      });
     }
 
-    if (currentDocument) {
-      updateContent(currentDocument.id, newContent);
+    try {
+      // Update both content and clear the AI suggestion
+      const { error } = await supabase
+        .from('workspace_documents')
+        .update({ 
+          content: newContent,
+          ai_suggestions: null, // Clear suggestion after applying
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentDocument.id);
+
+      if (error) throw error;
+
+      // Reload document to reflect changes in editor
+      await loadDocument(currentDocument.id);
+
+      toast({
+        title: mode === 'replace' ? 'Content replaced' : 'Suggestion applied',
+        description: mode === 'replace' 
+          ? 'Editor content replaced with AI suggestion' 
+          : 'AI content added to document',
+      });
+
+      // Collapse AI panel on mobile
+      if (isMobile) {
+        setAiPanelCollapsed(true);
+      }
+    } catch (err) {
+      console.error('Error applying suggestion:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to apply suggestion',
+        variant: 'destructive',
+      });
     }
-  };
+  }, [currentDocument, loadDocument, toast, isMobile]);
 
   const handleDismissSuggestion = useCallback(async () => {
     if (!currentDocument) return;
