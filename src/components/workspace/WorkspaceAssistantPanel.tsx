@@ -115,7 +115,7 @@ export function WorkspaceAssistantPanel({
           )}
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 overflow-y-auto space-y-4 flex flex-col pb-40 md:pb-24">
+      <CardContent className="flex-1 min-h-0 space-y-4 flex flex-col pb-8">
         {/* Success feedback overlay */}
         {showSuccess && (
           <div className="absolute inset-0 bg-background/90 flex items-center justify-center z-10 rounded-lg">
