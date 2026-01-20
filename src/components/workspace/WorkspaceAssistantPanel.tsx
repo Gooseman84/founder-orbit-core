@@ -76,7 +76,7 @@ export function WorkspaceAssistantPanel({
   }
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col h-full overflow-hidden">
       <CardHeader className="pb-3 relative">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -115,7 +115,7 @@ export function WorkspaceAssistantPanel({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 flex flex-col">
+      <CardContent className="space-y-4 flex flex-col flex-1 overflow-y-auto">
         {/* Success feedback overlay */}
         {showSuccess && (
           <div className="absolute inset-0 bg-background/90 flex items-center justify-center z-10 rounded-lg">
@@ -183,11 +183,38 @@ export function WorkspaceAssistantPanel({
           <>
             <div className="border-t pt-4 flex flex-col">
               <p className="text-sm font-medium mb-2">Latest Suggestion:</p>
-              <div className="border rounded-md p-3 max-h-[300px] sm:max-h-[400px] overflow-y-auto">
+              <div className="border rounded-md p-3 max-h-[200px] sm:max-h-[250px] overflow-y-auto bg-muted/30">
                 <p className="text-sm whitespace-pre-wrap leading-relaxed break-words">
                   {document.ai_suggestions}
                 </p>
               </div>
+            </div>
+
+            {/* Primary action buttons - Apply and Dismiss - ALWAYS VISIBLE */}
+            <div className="space-y-2 pt-3 border-t bg-background sticky bottom-0">
+              <Button
+                onClick={() => handleApply('insert')}
+                size="default"
+                disabled={applyingMode !== null}
+                className="w-full h-12 touch-manipulation font-medium"
+              >
+                {applyingMode === 'insert' ? (
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4 mr-2" />
+                )}
+                Apply to Document
+              </Button>
+              <Button
+                onClick={onDismissSuggestion}
+                variant="outline"
+                size="default"
+                disabled={applyingMode !== null}
+                className="w-full h-12 touch-manipulation"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Dismiss
+              </Button>
             </div>
 
             {/* Refinement buttons */}
@@ -235,32 +262,7 @@ export function WorkspaceAssistantPanel({
               </div>
             )}
 
-            {/* Primary action buttons - Apply and Dismiss */}
-            <div className="space-y-2 pt-3 border-t">
-              <Button
-                onClick={() => handleApply('insert')}
-                size="default"
-                disabled={applyingMode !== null}
-                className="w-full h-12 touch-manipulation font-medium"
-              >
-                {applyingMode === 'insert' ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Check className="w-4 h-4 mr-2" />
-                )}
-                Apply to Document
-              </Button>
-              <Button
-                onClick={onDismissSuggestion}
-                variant="outline"
-                size="default"
-                disabled={applyingMode !== null}
-                className="w-full h-12 touch-manipulation"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Dismiss
-              </Button>
-            </div>
+            {/* Additional options - collapsed by default */}
 
             {/* Additional options - collapsed by default */}
             <details className="pt-2">
