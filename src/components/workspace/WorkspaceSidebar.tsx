@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { FileText, Pencil, FolderOpen, Files, FolderPlus } from 'lucide-react';
+import { FileText, Pencil, FolderOpen, Files, FolderPlus, Folder } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,7 +13,22 @@ import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { FolderTreeItem, FolderTreeNode } from './FolderTreeItem';
+import { WorkspaceSearch, SearchResultsInfo } from './WorkspaceSearch';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { GripVertical } from 'lucide-react';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 import type { WorkspaceScope } from '@/hooks/useWorkspace';
 
@@ -57,9 +72,16 @@ export function WorkspaceSidebar({
   ventureName,
 }: WorkspaceSidebarProps) {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Drag and drop state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  
   // Persist expanded folder state in localStorage
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
     try {
@@ -69,10 +91,23 @@ export function WorkspaceSidebar({
       return new Set();
     }
   });
+  // Track folders expanded due to search (to collapse when search clears)
+  const [searchExpandedFolders, setSearchExpandedFolders] = useState<Set<string>>(new Set());
+  
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [documentToMove, setDocumentToMove] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: isMobile
+        ? { delay: 300, tolerance: 5 }
+        : { distance: 8 },
+    }),
+    useSensor(KeyboardSensor)
+  );
 
   useEffect(() => {
     if (renamingId && inputRef.current) {
@@ -158,6 +193,99 @@ export function WorkspaceSidebar({
     return rootNodes;
   }, [folders, filteredDocuments]);
 
+  // Filter folder tree based on search query
+  const filterTree = (nodes: FolderTreeNode[], query: string): { filtered: FolderTreeNode[]; matchingFolderIds: string[] } => {
+    if (!query.trim()) return { filtered: nodes, matchingFolderIds: [] };
+    
+    const lowerQuery = query.toLowerCase();
+    const matchingFolderIds: string[] = [];
+    
+    const filterNode = (node: FolderTreeNode): FolderTreeNode | null => {
+      if (node.type === 'document') {
+        const matchesTitle = node.name.toLowerCase().includes(lowerQuery);
+        const matchesContent = node.documentData?.content?.toLowerCase().includes(lowerQuery);
+        return (matchesTitle || matchesContent) ? node : null;
+      }
+      
+      if (node.type === 'folder') {
+        const matchingChildren = node.children
+          ?.map(child => filterNode(child))
+          .filter(Boolean) as FolderTreeNode[];
+        
+        if (matchingChildren && matchingChildren.length > 0) {
+          matchingFolderIds.push(node.id);
+          return { ...node, children: matchingChildren };
+        }
+        
+        if (node.name.toLowerCase().includes(lowerQuery)) {
+          return node;
+        }
+        
+        return null;
+      }
+      return null;
+    };
+    
+    const filtered = nodes.map(node => filterNode(node)).filter(Boolean) as FolderTreeNode[];
+    return { filtered, matchingFolderIds };
+  };
+
+  const { filtered: filteredFolderTree, matchingFolderIds } = useMemo(() => {
+    return filterTree(folderTree, searchQuery);
+  }, [folderTree, searchQuery]);
+
+  // Count documents in tree
+  const countDocuments = (nodes: FolderTreeNode[]): number => {
+    return nodes.reduce((count, node) => {
+      if (node.type === 'document') return count + 1;
+      if (node.children) return count + countDocuments(node.children);
+      return count;
+    }, 0);
+  };
+
+  // Flatten tree to get all IDs for sortable context
+  const allIds = useMemo(() => {
+    const ids: string[] = [];
+    const collectIds = (nodes: FolderTreeNode[]) => {
+      nodes.forEach((node) => {
+        ids.push(node.id);
+        if (node.children) {
+          collectIds(node.children);
+        }
+      });
+    };
+    collectIds(filteredFolderTree);
+    return ids;
+  }, [filteredFolderTree]);
+
+  // Find item in tree by ID
+  const findItemById = (id: string, nodes: FolderTreeNode[]): FolderTreeNode | null => {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = findItemById(id, node.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  // Expand matching folders when searching
+  useEffect(() => {
+    if (searchQuery && matchingFolderIds.length > 0) {
+      setSearchExpandedFolders(new Set(matchingFolderIds));
+    } else {
+      setSearchExpandedFolders(new Set());
+    }
+  }, [searchQuery, matchingFolderIds]);
+
+  // Combine regular expanded + search expanded folders
+  const effectiveExpandedFolders = useMemo(() => {
+    const combined = new Set(expandedFolders);
+    searchExpandedFolders.forEach(id => combined.add(id));
+    return combined;
+  }, [expandedFolders, searchExpandedFolders]);
+
   // Persist expanded folders to localStorage
   useEffect(() => {
     try {
@@ -169,6 +297,62 @@ export function WorkspaceSidebar({
       // Ignore localStorage errors
     }
   }, [expandedFolders]);
+
+  // DnD handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragOver = (event: any) => {
+    setOverId(event.over?.id as string | null);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    setOverId(null);
+
+    if (!over) return;
+
+    const draggedId = active.id as string;
+    const targetId = over.id as string;
+
+    if (draggedId === targetId) return;
+
+    const draggedItem = findItemById(draggedId, folderTree);
+    const targetItem = findItemById(targetId, folderTree);
+
+    if (!draggedItem || draggedItem.type !== 'document') return;
+
+    let newFolderId: string | null = null;
+    
+    if (targetItem?.type === 'folder') {
+      newFolderId = targetId;
+    } else if (targetItem?.type === 'document') {
+      newFolderId = (targetItem.documentData as any)?.folder_id || null;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('workspace_documents')
+        .update({ folder_id: newFolderId })
+        .eq('id', draggedId);
+
+      if (error) throw error;
+      toast({ title: newFolderId ? 'Moved to folder' : 'Moved to root' });
+      onRefresh?.();
+    } catch (err) {
+      console.error('Error moving document:', err);
+      toast({ title: 'Error moving document', variant: 'destructive' });
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveId(null);
+    setOverId(null);
+  };
+
+  const activeItem = activeId ? findItemById(activeId, folderTree) : null;
 
   const handleToggleFolder = (folderId: string) => {
     setExpandedFolders((prev) => {
@@ -375,9 +559,19 @@ export function WorkspaceSidebar({
             <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Search Input */}
+        <WorkspaceSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          resultsCount={countDocuments(filteredFolderTree)}
+        />
       </CardHeader>
 
       <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
+        {/* Search results info */}
+        <SearchResultsInfo query={searchQuery} count={countDocuments(filteredFolderTree)} />
+        
         <ScrollArea className="h-full">
           {loading && documents.length === 0 ? (
             <div className="p-2 space-y-2">
@@ -385,35 +579,67 @@ export function WorkspaceSidebar({
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : folderTree.length === 0 ? (
+          ) : filteredFolderTree.length === 0 ? (
             <div className="p-3 text-center text-sm text-muted-foreground">
-              {scope === 'current_venture'
+              {searchQuery
+                ? `No results for "${searchQuery}"`
+                : scope === 'current_venture'
                 ? 'No documents for this venture yet.'
                 : statusFilter === 'all'
                 ? 'No documents yet. Create one to get started.'
                 : `No ${statusFilter.replace('_', ' ')} documents.`}
             </div>
           ) : (
-            <div className="p-2 space-y-0.5">
-              {folderTree.map((node) => (
-                <FolderTreeItem
-                  key={node.id}
-                  node={node}
-                  level={0}
-                  selectedId={currentId}
-                  onSelect={onSelect}
-                  onToggleFolder={handleToggleFolder}
-                  expandedFolders={expandedFolders}
-                  onRenameFolder={handleRenameFolder}
-                  onDeleteFolder={handleDeleteFolder}
-                  onRenameDocument={handleRenameDocument}
-                  onDeleteDocument={handleDeleteDocument}
-                  onMoveDocument={handleMoveDocument}
-                  onCreateDocumentInFolder={handleCreateDocumentInFolder}
-                  onCreateSubfolder={handleCreateSubfolder}
-                />
-              ))}
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+            >
+              <SortableContext items={allIds} strategy={verticalListSortingStrategy}>
+                <div className="p-2 space-y-0.5">
+                  {filteredFolderTree.map((node) => (
+                    <FolderTreeItem
+                      key={node.id}
+                      node={node}
+                      level={0}
+                      selectedId={currentId}
+                      onSelect={onSelect}
+                      onToggleFolder={handleToggleFolder}
+                      expandedFolders={effectiveExpandedFolders}
+                      onRenameFolder={handleRenameFolder}
+                      onDeleteFolder={handleDeleteFolder}
+                      onRenameDocument={handleRenameDocument}
+                      onDeleteDocument={handleDeleteDocument}
+                      onMoveDocument={handleMoveDocument}
+                      onCreateDocumentInFolder={handleCreateDocumentInFolder}
+                      onCreateSubfolder={handleCreateSubfolder}
+                      isDragging={activeId === node.id}
+                      isDropTarget={overId === node.id && node.type === 'folder'}
+                      searchQuery={searchQuery}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+
+              <DragOverlay>
+                {activeItem ? (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-background border rounded-md shadow-lg opacity-90">
+                    <GripVertical className="w-4 h-4 text-muted-foreground" />
+                    {activeItem.type === 'folder' ? (
+                      <Folder className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                    )}
+                    <span className="text-sm font-medium truncate max-w-[150px]">
+                      {activeItem.name}
+                    </span>
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           )}
         </ScrollArea>
       </CardContent>
