@@ -101,6 +101,8 @@ export default function Workspace() {
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocType, setNewDocType] = useState<string>('brain_dump');
   const [newFolderName, setNewFolderName] = useState('');
+  const [parentFolderId, setParentFolderId] = useState<string | null>(null);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [taskCompleted, setTaskCompleted] = useState(false);
   const [completingTask, setCompletingTask] = useState(false);
@@ -390,6 +392,7 @@ export default function Workspace() {
       return;
     }
 
+    setIsCreatingFolder(true);
     try {
       const { error } = await supabase
         .from('workspace_folders')
@@ -397,16 +400,21 @@ export default function Workspace() {
           user_id: user.id,
           name: newFolderName.trim(),
           venture_id: activeVenture?.id || null,
+          parent_folder_id: parentFolderId,
         });
 
       if (error) throw error;
 
       setIsNewFolderDialogOpen(false);
       setNewFolderName('');
+      setParentFolderId(null);
       toast({
-        title: 'Folder created',
-        description: `Created folder "${newFolderName.trim()}"`,
+        title: parentFolderId ? 'Subfolder created' : 'Folder created',
+        description: `Created "${newFolderName.trim()}"`,
       });
+      
+      // Refresh to update UI
+      await refreshList();
     } catch (err) {
       console.error('Error creating folder:', err);
       toast({
@@ -414,6 +422,8 @@ export default function Workspace() {
         description: 'Failed to create folder',
         variant: 'destructive',
       });
+    } finally {
+      setIsCreatingFolder(false);
     }
   };
 
@@ -426,7 +436,8 @@ export default function Workspace() {
     if (isMobile) setMobileDrawerOpen(false);
   };
 
-  const handleOpenNewFolderDialog = () => {
+  const handleOpenNewFolderDialog = (parentId?: string) => {
+    setParentFolderId(parentId || null);
     setIsNewFolderDialogOpen(true);
     if (isMobile) setMobileDrawerOpen(false);
   };
@@ -777,12 +788,26 @@ export default function Workspace() {
       </Dialog>
 
       {/* New Folder Dialog */}
-      <Dialog open={isNewFolderDialogOpen} onOpenChange={setIsNewFolderDialogOpen}>
+      <Dialog 
+        open={isNewFolderDialogOpen} 
+        onOpenChange={(open) => {
+          setIsNewFolderDialogOpen(open);
+          if (!open) {
+            setNewFolderName('');
+            setParentFolderId(null);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>New Folder</DialogTitle>
+            <DialogTitle>
+              {parentFolderId ? 'Create Subfolder' : 'New Folder'}
+            </DialogTitle>
             <DialogDescription>
-              Create a folder to organize your documents
+              {parentFolderId 
+                ? 'Create a subfolder inside the selected folder'
+                : 'Create a folder to organize your documents'
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
@@ -793,14 +818,19 @@ export default function Workspace() {
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 placeholder="My Folder"
+                autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleCreateFolder();
+                  if (e.key === 'Enter' && newFolderName.trim()) handleCreateFolder();
                 }}
               />
             </div>
-            <Button onClick={handleCreateFolder} className="w-full">
+            <Button 
+              onClick={handleCreateFolder} 
+              className="w-full"
+              disabled={!newFolderName.trim() || isCreatingFolder}
+            >
               <FolderPlus className="w-4 h-4 mr-1.5" />
-              Create Folder
+              {isCreatingFolder ? 'Creating...' : parentFolderId ? 'Create Subfolder' : 'Create Folder'}
             </Button>
           </div>
         </DialogContent>
