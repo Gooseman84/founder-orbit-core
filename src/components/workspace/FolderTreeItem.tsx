@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, Folder, FileText, MoreVertical, Pencil, Trash2, FolderInput, FilePlus } from 'lucide-react';
+import { ChevronRight, Folder, FileText, MoreVertical, Pencil, Trash2, FolderInput, FilePlus, FolderPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -29,6 +29,7 @@ interface FolderTreeItemProps {
   onDeleteDocument?: (id: string) => void;
   onMoveDocument?: (documentId: string) => void;
   onCreateDocumentInFolder?: (folderId: string) => void;
+  onCreateSubfolder?: (parentFolderId: string) => void;
 }
 
 export function FolderTreeItem({
@@ -44,6 +45,7 @@ export function FolderTreeItem({
   onDeleteDocument,
   onMoveDocument,
   onCreateDocumentInFolder,
+  onCreateSubfolder,
 }: FolderTreeItemProps) {
   const isMobile = useIsMobile();
   const [localExpanded, setLocalExpanded] = useState(false);
@@ -103,13 +105,19 @@ export function FolderTreeItem({
                   New Document Here
                 </DropdownMenuItem>
               )}
+              {onCreateSubfolder && (
+                <DropdownMenuItem onClick={() => onCreateSubfolder(node.id)}>
+                  <FolderPlus className="w-4 h-4 mr-2" />
+                  New Subfolder
+                </DropdownMenuItem>
+              )}
               {onRenameFolder && (
                 <DropdownMenuItem onClick={() => onRenameFolder(node.id, node.name)}>
                   <Pencil className="w-4 h-4 mr-2" />
                   Rename Folder
                 </DropdownMenuItem>
               )}
-              {(onCreateDocumentInFolder || onRenameFolder) && onDeleteFolder && <DropdownMenuSeparator />}
+              {(onCreateDocumentInFolder || onCreateSubfolder || onRenameFolder) && onDeleteFolder && <DropdownMenuSeparator />}
               {onDeleteFolder && (
                 <DropdownMenuItem 
                   onClick={() => onDeleteFolder(node.id)}
@@ -141,6 +149,7 @@ export function FolderTreeItem({
                 onDeleteDocument={onDeleteDocument}
                 onMoveDocument={onMoveDocument}
                 onCreateDocumentInFolder={onCreateDocumentInFolder}
+                onCreateSubfolder={onCreateSubfolder}
               />
             ))}
           </div>

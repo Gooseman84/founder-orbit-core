@@ -34,7 +34,7 @@ interface WorkspaceSidebarProps {
   loading?: boolean;
   onSelect: (id: string) => void;
   onNewDocument: (folderId?: string) => void;
-  onNewFolder?: () => void;
+  onNewFolder?: (parentFolderId?: string) => void;
   onRename?: (id: string, newTitle: string) => void;
   onRefresh?: () => void;
   scope?: WorkspaceScope;
@@ -60,7 +60,15 @@ export function WorkspaceSidebar({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  // Persist expanded folder state in localStorage
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('workspace_expanded_folders');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [documentToMove, setDocumentToMove] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -150,6 +158,18 @@ export function WorkspaceSidebar({
     return rootNodes;
   }, [folders, filteredDocuments]);
 
+  // Persist expanded folders to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'workspace_expanded_folders',
+        JSON.stringify(Array.from(expandedFolders))
+      );
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [expandedFolders]);
+
   const handleToggleFolder = (folderId: string) => {
     setExpandedFolders((prev) => {
       const next = new Set(prev);
@@ -160,6 +180,13 @@ export function WorkspaceSidebar({
       }
       return next;
     });
+  };
+
+  // Create subfolder handler
+  const handleCreateSubfolder = (parentId: string) => {
+    // Expand the parent folder so subfolder is visible
+    setExpandedFolders((prev) => new Set(prev).add(parentId));
+    onNewFolder?.(parentId);
   };
 
   const handleRenameFolder = async (folderId: string, currentName: string) => {
@@ -287,7 +314,7 @@ export function WorkspaceSidebar({
             {onNewFolder && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="sm" variant="ghost" onClick={onNewFolder} className="h-7 w-7 p-0">
+                  <Button size="sm" variant="ghost" onClick={() => onNewFolder()} className="h-7 w-7 p-0">
                     <FolderPlus className="w-3.5 h-3.5" />
                   </Button>
                 </TooltipTrigger>
@@ -383,6 +410,7 @@ export function WorkspaceSidebar({
                   onDeleteDocument={handleDeleteDocument}
                   onMoveDocument={handleMoveDocument}
                   onCreateDocumentInFolder={handleCreateDocumentInFolder}
+                  onCreateSubfolder={handleCreateSubfolder}
                 />
               ))}
             </div>
