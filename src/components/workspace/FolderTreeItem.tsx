@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { ChevronRight, Folder, FileText, MoreVertical, Pencil, Trash2, FolderInput, FilePlus, FolderPlus } from 'lucide-react';
+import { ChevronRight, Folder, FileText, MoreVertical, Pencil, Trash2, FolderInput, FilePlus, FolderPlus, GripVertical } from 'lucide-react';
 import { format } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { cn } from '@/lib/utils';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 
 export interface FolderTreeNode {
@@ -30,6 +33,9 @@ interface FolderTreeItemProps {
   onMoveDocument?: (documentId: string) => void;
   onCreateDocumentInFolder?: (folderId: string) => void;
   onCreateSubfolder?: (parentFolderId: string) => void;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
+  searchQuery?: string;
 }
 
 export function FolderTreeItem({
@@ -46,9 +52,26 @@ export function FolderTreeItem({
   onMoveDocument,
   onCreateDocumentInFolder,
   onCreateSubfolder,
+  isDragging = false,
+  isDropTarget = false,
+  searchQuery,
 }: FolderTreeItemProps) {
   const isMobile = useIsMobile();
   const [localExpanded, setLocalExpanded] = useState(false);
+  
+  // Sortable hook for drag-and-drop
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: node.id });
+  
+  const sortableStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
   
   const isExpanded = expandedFolders 
     ? expandedFolders.has(node.id) 
@@ -67,20 +90,28 @@ export function FolderTreeItem({
 
   if (node.type === 'folder') {
     return (
-      <div>
+      <div
+        ref={setNodeRef}
+        style={sortableStyle}
+        className={cn(
+          isDragging && 'opacity-50',
+          isDropTarget && 'ring-2 ring-primary ring-offset-1 rounded-md bg-primary/5'
+        )}
+      >
         {/* Folder row */}
         <div 
-          className="w-full py-1.5 px-2 rounded-md transition-colors hover:bg-secondary flex items-center gap-2 group"
-          style={{ paddingLeft: `${indentPx + 8}px` }}
+          className="w-full py-1.5 px-2 rounded-md transition-colors hover:bg-secondary flex items-center gap-1 group"
+          style={{ paddingLeft: `${indentPx + 4}px` }}
         >
           <button
             onClick={handleToggle}
             className="flex items-center gap-2 flex-1 min-w-0"
           >
             <ChevronRight 
-              className={`w-4 h-4 text-muted-foreground transition-transform duration-150 shrink-0 ${
-                isExpanded ? 'rotate-90' : ''
-              }`}
+              className={cn(
+                'w-4 h-4 text-muted-foreground transition-transform duration-150 shrink-0',
+                isExpanded && 'rotate-90'
+              )}
             />
             <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
             <span className="text-sm font-medium truncate flex-1 text-left">{node.name}</span>
@@ -92,7 +123,10 @@ export function FolderTreeItem({
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-6 w-6 p-0 shrink-0 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+                className={cn(
+                  'h-6 w-6 p-0 shrink-0 transition-opacity',
+                  isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                )}
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreVertical className="w-3.5 h-3.5" />
@@ -150,6 +184,7 @@ export function FolderTreeItem({
                 onMoveDocument={onMoveDocument}
                 onCreateDocumentInFolder={onCreateDocumentInFolder}
                 onCreateSubfolder={onCreateSubfolder}
+                searchQuery={searchQuery}
               />
             ))}
           </div>
@@ -161,26 +196,51 @@ export function FolderTreeItem({
   // Document node
   const doc = node.documentData;
   const isSelected = selectedId === node.id;
-  const docIndentPx = indentPx + 24;
+  const docIndentPx = indentPx + 8;
 
   return (
     <div 
-      className={`w-full py-2 px-2 rounded-md transition-colors group ${
+      ref={setNodeRef}
+      style={sortableStyle}
+      className={cn(
+        'w-full py-2 px-2 rounded-md transition-colors group',
         isSelected
           ? 'bg-primary text-primary-foreground ring-1 ring-primary/40'
-          : 'hover:bg-secondary'
-      }`}
-      style={{ paddingLeft: `${docIndentPx}px` }}
+          : 'hover:bg-secondary',
+        isDragging && 'opacity-50',
+        isDropTarget && 'ring-2 ring-primary ring-offset-1'
+      )}
     >
-      <div className="flex items-start gap-2">
+      <div 
+        className="flex items-start gap-1"
+        style={{ paddingLeft: `${docIndentPx}px` }}
+      >
+        {/* Drag handle - only for documents */}
+        <button
+          {...attributes}
+          {...listeners}
+          className={cn(
+            'p-1 cursor-grab active:cursor-grabbing shrink-0 rounded hover:bg-secondary/50',
+            isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+            isSelected && 'hover:bg-primary-foreground/10'
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className={cn(
+            'w-3 h-3',
+            isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground'
+          )} />
+        </button>
+
         <button
           onClick={() => onSelect(node.id)}
           className="flex items-start gap-2 flex-1 min-w-0 text-left"
         >
           <FileText 
-            className={`w-4 h-4 mt-0.5 shrink-0 ${
+            className={cn(
+              'w-4 h-4 mt-0.5 shrink-0',
               isSelected ? 'text-primary-foreground' : 'text-muted-foreground'
-            }`} 
+            )} 
           />
           <div className="flex-1 min-w-0">
             <TooltipProvider delayDuration={300}>
@@ -197,9 +257,10 @@ export function FolderTreeItem({
             </TooltipProvider>
             {doc && (
               <p 
-                className={`text-xs capitalize mt-1 ${
+                className={cn(
+                  'text-xs capitalize mt-1',
                   isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                }`}
+                )}
               >
                 {doc.doc_type?.replace('_', ' ')} · {format(new Date(doc.updated_at), 'MMM d')}
               </p>
@@ -213,9 +274,11 @@ export function FolderTreeItem({
             <Button
               variant="ghost"
               size="icon"
-              className={`h-6 w-6 p-0 shrink-0 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity ${
-                isSelected ? 'text-primary-foreground hover:bg-primary-foreground/10' : ''
-              }`}
+              className={cn(
+                'h-6 w-6 p-0 shrink-0 transition-opacity',
+                isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                isSelected && 'text-primary-foreground hover:bg-primary-foreground/10'
+              )}
               onClick={(e) => e.stopPropagation()}
             >
               <MoreVertical className="w-3.5 h-3.5" />
