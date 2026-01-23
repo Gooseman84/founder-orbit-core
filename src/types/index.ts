@@ -7,4 +7,5 @@ export * from './tasks';
 export * from './profile';
 export * from './blueprint';
 export * from './ideaSource';
+export * from './implementationKit';
 // Note: founderBlueprint types are now consolidated in blueprint.ts
