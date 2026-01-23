@@ -236,6 +236,84 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_prds: {
+        Row: {
+          acceptance_criteria: Json | null
+          actual_days: number | null
+          analytics_events: Json | null
+          api_endpoints: Json | null
+          blocked_reason: string | null
+          created_at: string | null
+          data_changes: Json | null
+          estimated_days: number | null
+          feature_name: string
+          id: string
+          implementation_kit_id: string
+          priority: number
+          status: string | null
+          ui_states: Json | null
+          updated_at: string | null
+          user_id: string
+          user_story: Json | null
+          workspace_document_id: string | null
+        }
+        Insert: {
+          acceptance_criteria?: Json | null
+          actual_days?: number | null
+          analytics_events?: Json | null
+          api_endpoints?: Json | null
+          blocked_reason?: string | null
+          created_at?: string | null
+          data_changes?: Json | null
+          estimated_days?: number | null
+          feature_name: string
+          id?: string
+          implementation_kit_id: string
+          priority: number
+          status?: string | null
+          ui_states?: Json | null
+          updated_at?: string | null
+          user_id: string
+          user_story?: Json | null
+          workspace_document_id?: string | null
+        }
+        Update: {
+          acceptance_criteria?: Json | null
+          actual_days?: number | null
+          analytics_events?: Json | null
+          api_endpoints?: Json | null
+          blocked_reason?: string | null
+          created_at?: string | null
+          data_changes?: Json | null
+          estimated_days?: number | null
+          feature_name?: string
+          id?: string
+          implementation_kit_id?: string
+          priority?: number
+          status?: string | null
+          ui_states?: Json | null
+          updated_at?: string | null
+          user_id?: string
+          user_story?: Json | null
+          workspace_document_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_prds_implementation_kit_id_fkey"
+            columns: ["implementation_kit_id"]
+            isOneToOne: false
+            referencedRelation: "implementation_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_prds_workspace_document_id_fkey"
+            columns: ["workspace_document_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feed_items: {
         Row: {
           body: string
@@ -724,6 +802,63 @@ export type Database = {
           title?: string
           user_id?: string
           virality_potential?: number | null
+        }
+        Relationships: []
+      }
+      implementation_kits: {
+        Row: {
+          ai_coding_tool: string
+          architecture_contract_id: string | null
+          backend_platform: string
+          blueprint_id: string | null
+          created_at: string | null
+          deployment_platform: string
+          error_message: string | null
+          frontend_framework: string
+          id: string
+          implementation_folder_id: string | null
+          north_star_spec_id: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          venture_id: string
+          vertical_slice_plan_id: string | null
+        }
+        Insert: {
+          ai_coding_tool: string
+          architecture_contract_id?: string | null
+          backend_platform: string
+          blueprint_id?: string | null
+          created_at?: string | null
+          deployment_platform: string
+          error_message?: string | null
+          frontend_framework: string
+          id?: string
+          implementation_folder_id?: string | null
+          north_star_spec_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          venture_id: string
+          vertical_slice_plan_id?: string | null
+        }
+        Update: {
+          ai_coding_tool?: string
+          architecture_contract_id?: string | null
+          backend_platform?: string
+          blueprint_id?: string | null
+          created_at?: string | null
+          deployment_platform?: string
+          error_message?: string | null
+          frontend_framework?: string
+          id?: string
+          implementation_folder_id?: string | null
+          north_star_spec_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          venture_id?: string
+          vertical_slice_plan_id?: string | null
         }
         Relationships: []
       }
