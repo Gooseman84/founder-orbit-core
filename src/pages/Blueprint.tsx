@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BlueprintSkeleton } from "@/components/shared/SkeletonLoaders";
+import { GenerateKitButton, TechStackDialog } from "@/components/implementationKit";
+import { useImplementationKitByBlueprint, useCreateImplementationKit } from "@/hooks/useImplementationKit";
 import { 
   Target, 
   AlertTriangle, 
@@ -22,6 +24,7 @@ import {
   Lock
 } from "lucide-react";
 import type { CommitmentWindowDays, CommitmentDraft, CommitmentFull, Venture, VentureState } from "@/types/venture";
+import type { TechStack } from "@/types/implementationKit";
 
 const Blueprint = () => {
   const navigate = useNavigate();
@@ -41,11 +44,30 @@ const Blueprint = () => {
   // Blueprint scoped to venture's idea
   const { blueprint, loading: blueprintLoading } = useVentureBlueprint(venture?.idea_id);
   
+  // Implementation Kit state
+  const [showTechStackDialog, setShowTechStackDialog] = useState(false);
+  const { data: existingKit, isLoading: kitLoading } = useImplementationKitByBlueprint(blueprint?.id);
+  const createKit = useCreateImplementationKit();
+  
   // Form state
   const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(hasPro ? 14 : 7);
   const [successMetric, setSuccessMetric] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
+  
+  // Handle tech stack submission
+  const handleGenerateKit = (techStack: TechStack) => {
+    if (!blueprint?.id || !venture?.id) return;
+    createKit.mutate({
+      blueprintId: blueprint.id,
+      ventureId: venture.id,
+      techStack
+    }, {
+      onSuccess: () => {
+        setShowTechStackDialog(false);
+      }
+    });
+  };
 
   // Fetch venture by ID from URL param
   useEffect(() => {
@@ -366,6 +388,26 @@ const Blueprint = () => {
           </p>
         </div>
       )}
+      
+      {/* Generate Implementation Kit Section */}
+      {blueprint && (
+        <div className="mt-8">
+          <GenerateKitButton
+            blueprintId={blueprint.id}
+            ventureId={venture.id}
+            hasExistingKit={!!existingKit}
+            onGenerate={() => setShowTechStackDialog(true)}
+          />
+        </div>
+      )}
+      
+      {/* Tech Stack Selection Dialog */}
+      <TechStackDialog
+        open={showTechStackDialog}
+        onOpenChange={setShowTechStackDialog}
+        onSubmit={handleGenerateKit}
+        isGenerating={createKit.isPending}
+      />
     </div>
   );
 };
