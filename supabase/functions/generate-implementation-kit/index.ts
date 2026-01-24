@@ -83,7 +83,7 @@ serve(async (req) => {
       .insert({
         user_id: userId,
         venture_id: ventureId,
-        name: `${blueprint.title || 'Venture'} - Implementation Kit`,
+        name: `${blueprint.north_star_one_liner || 'Venture'} - Implementation Kit`,
       })
       .select()
       .single();
@@ -92,7 +92,68 @@ serve(async (req) => {
       console.error('Folder creation warning:', folderError);
     }
 
-    console.log('Generating documents with AI...');
+    // Update kit with folder ID
+    if (folder) {
+      await supabase
+        .from('implementation_kits')
+        .update({ implementation_folder_id: folder.id })
+        .eq('id', kit.id);
+    }
+
+    console.log('Starting background document generation...');
+
+    // Return immediately - don't wait for document generation
+    const response = new Response(
+      JSON.stringify({ 
+        kit: { ...kit, implementation_folder_id: folder?.id }, 
+        folderId: folder?.id || null,
+        message: 'Generating documents in background...' 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+    // Generate documents in background (fire and forget - don't await)
+    generateDocumentsInBackground(
+      supabaseUrl,
+      supabaseServiceKey,
+      lovableApiKey,
+      kit.id,
+      blueprint,
+      techStack,
+      userId,
+      ventureId,
+      folder?.id || null
+    );
+
+    return response;
+
+  } catch (error) {
+    console.error('Error in generate-implementation-kit:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
+
+// Background document generation function
+async function generateDocumentsInBackground(
+  supabaseUrl: string,
+  supabaseServiceKey: string,
+  lovableApiKey: string,
+  kitId: string,
+  blueprint: any,
+  techStack: any,
+  userId: string,
+  ventureId: string,
+  folderId: string | null
+) {
+  // Create a new supabase client for background work
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  try {
+    console.log('Background generation started for kit:', kitId);
 
     // Helper function to call Lovable AI Gateway
     async function callAI(prompt: string): Promise<string> {
@@ -119,16 +180,100 @@ serve(async (req) => {
     }
 
     // Extract blueprint content
-    const blueprintContent = typeof blueprint.content === 'string' 
-      ? blueprint.content 
-      : JSON.stringify(blueprint.content, null, 2);
+    const blueprintTitle = blueprint.north_star_one_liner || 'Untitled Venture';
+    const blueprintContent = JSON.stringify({
+      problem_statement: blueprint.problem_statement,
+      target_audience: blueprint.target_audience,
+      offer_model: blueprint.offer_model,
+      monetization_strategy: blueprint.monetization_strategy,
+      validation_stage: blueprint.validation_stage,
+      success_metrics: blueprint.success_metrics,
+      ai_summary: blueprint.ai_summary,
+    }, null, 2);
 
-    // Generate North Star Spec
-    const northStarPrompt = `You are a product strategy expert. Generate a North Star Spec document.
+    // Build prompts
+    const northStarPrompt = buildNorthStarPrompt(blueprintTitle, blueprintContent, techStack);
+    const contractPrompt = buildArchitecturePrompt(blueprintTitle, techStack);
+    const slicePrompt = buildSlicePlanPrompt(blueprintTitle, blueprintContent, techStack);
+
+    console.log('Generating all 3 documents in parallel...');
+
+    // Generate all 3 documents in parallel
+    const [northStarSpec, architectureContract, verticalSlicePlan] = await Promise.all([
+      callAI(northStarPrompt),
+      callAI(contractPrompt),
+      callAI(slicePrompt),
+    ]);
+
+    console.log('All documents generated, saving to database...');
+
+    // Save all 3 documents in parallel
+    const [northStarResult, contractResult, sliceResult] = await Promise.all([
+      supabase.from('workspace_documents').insert({
+        user_id: userId,
+        venture_id: ventureId,
+        folder_id: folderId,
+        title: 'North Star Spec',
+        doc_type: 'north_star_spec',
+        content: northStarSpec,
+        status: 'final',
+      }).select().single(),
+      supabase.from('workspace_documents').insert({
+        user_id: userId,
+        venture_id: ventureId,
+        folder_id: folderId,
+        title: 'Architecture Contract',
+        doc_type: 'architecture_contract',
+        content: architectureContract,
+        status: 'final',
+      }).select().single(),
+      supabase.from('workspace_documents').insert({
+        user_id: userId,
+        venture_id: ventureId,
+        folder_id: folderId,
+        title: 'Thin Vertical Slice Plan',
+        doc_type: 'vertical_slice_plan',
+        content: verticalSlicePlan,
+        status: 'final',
+      }).select().single(),
+    ]);
+
+    console.log('Documents saved, updating kit status...');
+
+    // Update kit with document IDs and mark complete
+    await supabase
+      .from('implementation_kits')
+      .update({
+        north_star_spec_id: northStarResult.data?.id,
+        architecture_contract_id: contractResult.data?.id,
+        vertical_slice_plan_id: sliceResult.data?.id,
+        status: 'complete',
+      })
+      .eq('id', kitId);
+
+    console.log('Implementation kit generation complete!');
+
+  } catch (error) {
+    console.error('Background generation error:', error);
+    
+    // Update kit status to error
+    await supabase
+      .from('implementation_kits')
+      .update({ 
+        status: 'error', 
+        error_message: error instanceof Error ? error.message : 'Unknown error' 
+      })
+      .eq('id', kitId);
+  }
+}
+
+// Prompt builders
+function buildNorthStarPrompt(title: string, content: string, techStack: any): string {
+  return `You are a product strategy expert. Generate a North Star Spec document.
 
 BLUEPRINT:
-Title: ${blueprint.title || 'Untitled Venture'}
-Content: ${blueprintContent}
+Title: ${title}
+Content: ${content}
 
 TECH STACK:
 Frontend: ${techStack.frontend}
@@ -138,7 +283,7 @@ Deployment: ${techStack.deployment}
 
 Generate a North Star Spec following this EXACT structure:
 
-# North Star Spec: ${blueprint.title || 'Untitled Venture'}
+# North Star Spec: ${title}
 
 ## 1. Positioning (Who/What/Why)
 
@@ -214,14 +359,84 @@ These are immutable principles that guide all product decisions:
 ---
 
 Make it specific, actionable, and based on the actual blueprint details. Use markdown formatting. Keep it to 2 pages maximum when printed.`;
+}
 
-    const northStarSpec = await callAI(northStarPrompt);
+function buildArchitecturePrompt(title: string, techStack: any): string {
+  const supabasePatterns = `### Supabase Patterns
 
-    // Generate Architecture Contract
-    const contractPrompt = `You are a senior software architect. Generate an Architecture Contract document.
+**Simple Operations:** Direct table access via Supabase client
+\`\`\`typescript
+const { data, error } = await supabase
+  .from('table_name')
+  .select('*')
+  .eq('user_id', userId);
+\`\`\`
+
+**Complex Operations:** Use Supabase RPC functions
+\`\`\`typescript
+const { data, error } = await supabase
+  .rpc('function_name', { param1, param2 });
+\`\`\`
+
+**Real-time:** Use Supabase subscriptions for live updates
+
+**Authentication:** JWT tokens in every request, validated by RLS`;
+
+  const restPatterns = `### RESTful API Patterns
+
+**Endpoints:**
+- GET /api/v1/[resource] - List all
+- GET /api/v1/[resource]/:id - Get one
+- POST /api/v1/[resource] - Create
+- PUT /api/v1/[resource]/:id - Update
+- DELETE /api/v1/[resource]/:id - Delete
+
+**Authentication:** JWT tokens in Authorization header
+
+**Response Format:**
+\`\`\`typescript
+{
+  success: boolean;
+  data?: any;
+  error?: { code: string; message: string };
+}
+\`\`\``;
+
+  const rlsSupabase = `**REQUIRED on every table:**
+\`\`\`sql
+alter table table_name enable row level security;
+
+create policy "Users manage their own data"
+  on table_name for all
+  using (auth.uid() = user_id);
+\`\`\``;
+
+  const rlsRest = `**Enforced in application layer:**
+Every query must filter by user_id or organization_id`;
+
+  const componentPatterns = techStack.frontend === 'react' || techStack.frontend === 'nextjs'
+    ? `**Framework:** Tailwind CSS + shadcn/ui
+
+**Pattern:** Composable components
+\`\`\`tsx
+// ✅ Good
+<Card>
+  <CardHeader />
+  <CardContent />
+  <CardFooter />
+</Card>
+
+// ❌ Bad
+<MegaComponent withHeader withFooter content={...} />
+\`\`\``
+    : `**Framework:** ${techStack.frontend === 'vue' ? 'Vue 3 Composition API' : 'Component-based architecture'}
+
+Use scoped styles and composition patterns.`;
+
+  return `You are a senior software architect. Generate an Architecture Contract document.
 
 CONTEXT:
-Business: ${blueprint.title || 'Untitled Venture'}
+Business: ${title}
 Frontend: ${techStack.frontend}
 Backend: ${techStack.backend}
 AI Tool: ${techStack.aiTool}
@@ -229,7 +444,7 @@ Deployment: ${techStack.deployment}
 
 Generate an Architecture Contract following this structure:
 
-# Architecture Contract: ${blueprint.title || 'Untitled Venture'}
+# Architecture Contract: ${title}
 
 ## Purpose
 This document defines the technical scaffold that EVERY feature must follow. It ensures consistency, scalability, and maintainability as the codebase grows.
@@ -286,45 +501,7 @@ interface User {
 
 ## Contract 3: API Patterns
 
-${techStack.backend === 'supabase' 
-  ? `### Supabase Patterns
-
-**Simple Operations:** Direct table access via Supabase client
-\`\`\`typescript
-const { data, error } = await supabase
-  .from('table_name')
-  .select('*')
-  .eq('user_id', userId);
-\`\`\`
-
-**Complex Operations:** Use Supabase RPC functions
-\`\`\`typescript
-const { data, error } = await supabase
-  .rpc('function_name', { param1, param2 });
-\`\`\`
-
-**Real-time:** Use Supabase subscriptions for live updates
-
-**Authentication:** JWT tokens in every request, validated by RLS`
-  : `### RESTful API Patterns
-
-**Endpoints:**
-- GET /api/v1/[resource] - List all
-- GET /api/v1/[resource]/:id - Get one
-- POST /api/v1/[resource] - Create
-- PUT /api/v1/[resource]/:id - Update
-- DELETE /api/v1/[resource]/:id - Delete
-
-**Authentication:** JWT tokens in Authorization header
-
-**Response Format:**
-\`\`\`typescript
-{
-  success: boolean;
-  data?: any;
-  error?: { code: string; message: string };
-}
-\`\`\``}
+${techStack.backend === 'supabase' ? supabasePatterns : restPatterns}
 
 ### Error Handling
 - 400: Bad Request (validation errors)
@@ -351,17 +528,7 @@ updated_at timestamptz default now()
 \`\`\`
 
 ### Row Level Security (RLS)
-${techStack.backend === 'supabase'
-  ? `**REQUIRED on every table:**
-\`\`\`sql
-alter table table_name enable row level security;
-
-create policy "Users manage their own data"
-  on table_name for all
-  using (auth.uid() = user_id);
-\`\`\``
-  : `**Enforced in application layer:**
-Every query must filter by user_id or organization_id`}
+${techStack.backend === 'supabase' ? rlsSupabase : rlsRest}
 
 ### Migrations
 - Sequential numbering: 001_initial.sql, 002_add_feature.sql
@@ -388,24 +555,7 @@ Every query must filter by user_id or organization_id`}
 \`\`\`
 
 ### Component Patterns
-${techStack.frontend === 'react' || techStack.frontend === 'nextjs'
-  ? `**Framework:** Tailwind CSS + shadcn/ui
-
-**Pattern:** Composable components
-\`\`\`tsx
-// ✅ Good
-<Card>
-  <CardHeader />
-  <CardContent />
-  <CardFooter />
-</Card>
-
-// ❌ Bad
-<MegaComponent withHeader withFooter content={...} />
-\`\`\``
-  : `**Framework:** ${techStack.frontend === 'vue' ? 'Vue 3 Composition API' : 'Component-based architecture'}
-
-Use scoped styles and composition patterns.`}
+${componentPatterns}
 
 ### State Management
 - **Local state:** useState for component-specific data
@@ -426,21 +576,52 @@ Before every feature:
 ---
 
 Make it tech-stack-specific and actionable for ${techStack.frontend} + ${techStack.backend}.`;
+}
 
-    const architectureContract = await callAI(contractPrompt);
+function buildSlicePlanPrompt(title: string, content: string, techStack: any): string {
+  const supabaseAuth = `1. **Set up Supabase Auth**
+   - Enable email/password authentication
+   - Configure email templates
+   - Set up redirect URLs
+   
+2. **Create auth pages**
+   - Sign up page (email + password)
+   - Sign in page
+   - Password reset flow
+   - Email verification
+   
+3. **Build user profile**
+   - Profile settings page
+   - Update email/password
+   - Delete account option`;
 
-    // Generate Vertical Slice Plan
-    const slicePrompt = `You are a technical lead. Generate a Thin Vertical Slice Plan.
+  const jwtAuth = `1. **Implement JWT authentication**
+   - Create registration endpoint
+   - Create login endpoint
+   - Implement password hashing (bcrypt)
+   - Generate JWT tokens
+   
+2. **Create auth pages**
+   - Sign up page
+   - Sign in page
+   - Password reset flow
+   
+3. **Build user profile**
+   - Profile settings page
+   - Update password
+   - Session management`;
+
+  return `You are a technical lead. Generate a Thin Vertical Slice Plan.
 
 CONTEXT:
-Business: ${blueprint.title || 'Untitled Venture'}
-Blueprint: ${blueprintContent}
+Business: ${title}
+Blueprint: ${content}
 Tech Stack: ${techStack.frontend} + ${techStack.backend}
 Deployment: ${techStack.deployment}
 
 Generate a plan following this structure:
 
-# Thin Vertical Slice Plan: ${blueprint.title || 'Untitled Venture'}
+# Thin Vertical Slice Plan: ${title}
 
 ## What is the Thin Vertical Slice?
 
@@ -460,37 +641,7 @@ This is NOT your full product. This is the **spine** everything else attaches to
 Users can sign up, sign in, and manage their profile.
 
 ### Tasks
-${techStack.backend === 'supabase'
-  ? `1. **Set up Supabase Auth**
-   - Enable email/password authentication
-   - Configure email templates
-   - Set up redirect URLs
-   
-2. **Create auth pages**
-   - Sign up page (email + password)
-   - Sign in page
-   - Password reset flow
-   - Email verification
-   
-3. **Build user profile**
-   - Profile settings page
-   - Update email/password
-   - Delete account option`
-  : `1. **Implement JWT authentication**
-   - Create registration endpoint
-   - Create login endpoint
-   - Implement password hashing (bcrypt)
-   - Generate JWT tokens
-   
-2. **Create auth pages**
-   - Sign up page
-   - Sign in page
-   - Password reset flow
-   
-3. **Build user profile**
-   - Profile settings page
-   - Update password
-   - Session management`}
+${techStack.backend === 'supabase' ? supabaseAuth : jwtAuth}
 
 ### Database Schema
 \`\`\`sql
@@ -597,19 +748,7 @@ create policy "Users can view own subscription"
 ### Goal
 Implement the primary business entities and the one key workflow that delivers value.
 
-Based on the blueprint, the core entities should be:
-
-[Define 2-3 core entities specific to this business with schemas]
-
-### The Core Workflow
-
-Based on the blueprint's value proposition, the main workflow is:
-
-**User Journey:**
-1. [Step 1: User does X]
-2. [Step 2: System processes Y]
-3. [Step 3: User sees result Z]
-4. [Step 4: Value delivered]
+Based on the blueprint, identify 2-3 core entities and the main workflow.
 
 ### Implementation Tasks
 1. **Build data layer**
@@ -706,91 +845,4 @@ Once this is done, you can:
 But ship THIS first. Everything else can wait.
 
 Make it specific and actionable for ${techStack.frontend} + ${techStack.backend} + ${techStack.deployment}.`;
-
-    const verticalSlicePlan = await callAI(slicePrompt);
-
-    console.log('Saving documents to workspace...');
-
-    // Save North Star Spec
-    const { data: northStarDoc } = await supabase
-      .from('workspace_documents')
-      .insert({
-        user_id: userId,
-        venture_id: ventureId,
-        folder_id: folder?.id || null,
-        title: 'North Star Spec',
-        doc_type: 'north_star_spec',
-        content: northStarSpec,
-        status: 'final',
-      })
-      .select()
-      .single();
-
-    // Save Architecture Contract
-    const { data: contractDoc } = await supabase
-      .from('workspace_documents')
-      .insert({
-        user_id: userId,
-        venture_id: ventureId,
-        folder_id: folder?.id || null,
-        title: 'Architecture Contract',
-        doc_type: 'architecture_contract',
-        content: architectureContract,
-        status: 'final',
-      })
-      .select()
-      .single();
-
-    // Save Vertical Slice Plan
-    const { data: sliceDoc } = await supabase
-      .from('workspace_documents')
-      .insert({
-        user_id: userId,
-        venture_id: ventureId,
-        folder_id: folder?.id || null,
-        title: 'Thin Vertical Slice Plan',
-        doc_type: 'vertical_slice_plan',
-        content: verticalSlicePlan,
-        status: 'final',
-      })
-      .select()
-      .single();
-
-    console.log('Updating kit with document references...');
-
-    // Update kit with document IDs and mark complete
-    await supabase
-      .from('implementation_kits')
-      .update({
-        north_star_spec_id: northStarDoc?.id,
-        architecture_contract_id: contractDoc?.id,
-        vertical_slice_plan_id: sliceDoc?.id,
-        implementation_folder_id: folder?.id,
-        status: 'complete',
-      })
-      .eq('id', kit.id);
-
-    console.log('Implementation kit generation complete!');
-
-    return new Response(
-      JSON.stringify({
-        kit,
-        folderId: folder?.id || null,
-        documentIds: {
-          northStar: northStarDoc?.id,
-          contract: contractDoc?.id,
-          slice: sliceDoc?.id,
-        },
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error in generate-implementation-kit:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-});
+}
