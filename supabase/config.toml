@@ -128,3 +128,6 @@ verify_jwt = false
 
 [functions.feature-implementation-agent]
 verify_jwt = false
+
+[functions.generate-implementation-kit]
+verify_jwt = false
