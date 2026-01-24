@@ -103,7 +103,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: 'openai/gpt-5-mini',
-          max_tokens: 4096,
+          max_completion_tokens: 4096,
           messages: [{ role: 'user', content: prompt }],
         }),
       });
