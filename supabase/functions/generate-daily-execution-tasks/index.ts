@@ -145,6 +145,60 @@ serve(async (req) => {
       idea = data;
     }
 
+    // --- NEW: Fetch recent daily reflections ---
+    const { data: recentReflections } = await supabaseService
+      .from("daily_reflections")
+      .select("reflection_date, energy_level, stress_level, mood_tags, what_did, blockers, top_priority, ai_summary")
+      .eq("user_id", user.id)
+      .order("reflection_date", { ascending: false })
+      .limit(3);
+
+    // --- NEW: Fetch recent venture check-ins ---
+    const { data: recentCheckins } = await supabaseService
+      .from("venture_daily_checkins")
+      .select("checkin_date, completion_status, explanation, reflection")
+      .eq("venture_id", ventureId)
+      .order("checkin_date", { ascending: false })
+      .limit(3);
+
+    // --- NEW: Fetch recent workspace documents for this venture (last 7 days) ---
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const { data: recentWorkspaceDocs } = await supabaseService
+      .from("workspace_documents")
+      .select("id, title, doc_type, updated_at, source_type, linked_task_id")
+      .eq("user_id", user.id)
+      .eq("venture_id", ventureId)
+      .gte("updated_at", sevenDaysAgo.toISOString())
+      .order("updated_at", { ascending: false })
+      .limit(10);
+
+    // --- NEW: Build founder state context ---
+    const founderState = {
+      latestEnergy: recentReflections?.[0]?.energy_level ?? null,
+      latestStress: recentReflections?.[0]?.stress_level ?? null,
+      latestBlockers: recentReflections?.[0]?.blockers ?? null,
+      recentMoods: recentReflections?.[0]?.mood_tags ?? [],
+      topPriority: recentReflections?.[0]?.top_priority ?? null,
+      yesterdayCompletion: recentCheckins?.[0]?.completion_status ?? null,
+      yesterdayExplanation: recentCheckins?.[0]?.explanation ?? null,
+    };
+
+    // --- NEW: Build workspace context ---
+    const workspaceContext = recentWorkspaceDocs?.map(d => ({
+      title: d.title,
+      docType: d.doc_type,
+      updatedAt: d.updated_at,
+      sourceType: d.source_type,
+    })) ?? [];
+
+    const workspaceDocsFormatted = workspaceContext.length > 0
+      ? workspaceContext.map(d => 
+          `- "${d.title}" (${d.docType || 'document'}, last updated ${new Date(d.updatedAt).toLocaleDateString()})`
+        ).join('\n')
+      : 'No recent workspace activity';
+
     // Get existing tasks for context in append mode
     const existingTasks = existingTasksRow?.tasks || [];
     const existingTaskTitles = Array.isArray(existingTasks) 
@@ -164,6 +218,8 @@ serve(async (req) => {
     };
 
     console.log("[generate-daily-execution-tasks] Context:", JSON.stringify(context, null, 2));
+    console.log("[generate-daily-execution-tasks] Founder state:", JSON.stringify(founderState, null, 2));
+    console.log("[generate-daily-execution-tasks] Workspace docs count:", workspaceContext.length);
 
     // Adjust task count based on append mode
     const taskCount = append ? "1-2" : "1-3";
@@ -171,19 +227,54 @@ serve(async (req) => {
       ? `\n\nIMPORTANT: The user has already completed these tasks today: ${existingTaskTitles}\nGenerate DIFFERENT tasks that build on or complement what they've done. Do NOT repeat similar tasks.`
       : "";
 
-    // Call Lovable AI to generate tasks
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_AI_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are an execution-focused task generator for founders. Generate ${taskCount} concrete, actionable tasks for TODAY only.
+    // --- ENHANCED: System prompt with smart calibration + workspace awareness ---
+    const systemPrompt = `You are an execution-focused task generator for founders. Generate ${taskCount} concrete, actionable tasks for TODAY only.
+
+FOUNDER STATE (use to calibrate strategically):
+- Energy Level: ${founderState.latestEnergy ?? 'unknown'}/5
+- Stress Level: ${founderState.latestStress ?? 'unknown'}/5  
+- Yesterday's Completion: ${founderState.yesterdayCompletion ?? 'unknown'}
+- Yesterday's Explanation: ${founderState.yesterdayExplanation ?? 'none'}
+- Current Blockers: ${founderState.latestBlockers ?? 'none stated'}
+- Top Priority: ${founderState.topPriority ?? 'not specified'}
+
+WORKSPACE CONTEXT (use to avoid duplicate work):
+Recent Workspace Documents:
+${workspaceDocsFormatted}
+
+SMART CALIBRATION (strategic, not just "easier tasks"):
+
+1. LOW ENERGY + YESTERDAY INCOMPLETE:
+   - Suggest a simplified, smaller-scoped version of yesterday's unfinished task
+   - Add one quick-win task (5-10 min) for momentum
+   - Avoid introducing new complex work
+
+2. HIGH STRESS (> 3):
+   - Include one "organizational" task (cleanup, documentation, planning review)
+   - Avoid tasks with external dependencies or waiting
+   - Focus on tasks the founder fully controls
+
+3. BLOCKERS MENTIONED:
+   - First task MUST directly address the stated blocker
+   - Keep it small and specific (unblock, not solve everything)
+   - Example: "Schedule 15-min call with X to clarify Y" not "Resolve partnership issues"
+
+4. HIGH ENERGY + YESTERDAY COMPLETE:
+   - Push slightly harder with a stretch goal
+   - Include one task that advances long-term positioning
+   - Can suggest more ambitious scope
+
+5. DEFAULT (no data or neutral state):
+   - Balance between validation, build, and marketing
+   - One quick-win, one medium task, one slightly challenging task
+
+WORKSPACE AWARENESS RULES:
+- If a workspace doc exists for yesterday's task, reference it in today's task description
+  Example: "Continue work on 'Investor Email Draft v2' - finalize and send"
+- Do NOT suggest tasks that duplicate recent workspace activity
+  Example: If "Landing Page Copy" doc exists, don't suggest "Write landing page copy"
+- Use workspace doc titles as context clues for what's already in progress
+- Suggest tasks that BUILD ON existing workspace work, not restart it
 
 STRICT RULES:
 - Tasks MUST be derived from the venture's blueprint, plan, or success metric
@@ -198,12 +289,26 @@ Return a JSON array of tasks with this structure:
   {
     "id": "uuid-string",
     "title": "Short action-oriented title",
-    "description": "Specific what-to-do description",
+    "description": "Specific what-to-do description. Reference existing workspace docs if relevant.",
     "category": "validation|build|marketing|ops",
     "estimatedMinutes": 30-120,
     "completed": false
   }
-]`
+]`;
+
+    // Call Lovable AI to generate tasks
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LOVABLE_AI_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
           },
           {
             role: "user",

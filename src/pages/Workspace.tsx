@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useVentureState } from '@/hooks/useVentureState';
+import { useBlueprint } from '@/hooks/useBlueprint';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useXP } from '@/hooks/useXP';
@@ -48,6 +49,7 @@ export default function Workspace() {
   const { refresh: refreshXp } = useXP();
   const { plan } = useSubscription();
   const { activeVenture } = useVentureState();
+  const { blueprint } = useBlueprint();
   const isMobile = useIsMobile();
   const isPro = plan === 'pro' || plan === 'founder';
 
@@ -457,6 +459,8 @@ export default function Workspace() {
       scope={scope}
       onScopeChange={changeScope}
       ventureName={activeVenture?.name}
+      blueprintId={blueprint?.id}
+      ventureId={activeVenture?.id}
     />
   );
 

@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useDailyExecution } from "@/hooks/useDailyExecution";
+import { useBlueprint } from "@/hooks/useBlueprint";
+import { useImplementationKitByBlueprint } from "@/hooks/useImplementationKit";
 import { useToast } from "@/hooks/use-toast";
 import { VentureContextHeader } from "@/components/tasks/VentureContextHeader";
 import { ExecutionTaskCard } from "@/components/tasks/ExecutionTaskCard";
 import { DailyCheckinForm } from "@/components/tasks/DailyCheckinForm";
+import { ImplementationKitStatus } from "@/components/implementationKit/ImplementationKitStatus";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -23,6 +26,8 @@ const Tasks = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { activeVenture, isLoading: ventureLoading } = useVentureState();
+  const { blueprint } = useBlueprint();
+  const { data: implementationKit } = useImplementationKitByBlueprint(blueprint?.id);
   const [isSubmittingCheckin, setIsSubmittingCheckin] = useState(false);
 
   const {
@@ -154,6 +159,16 @@ const Tasks = () => {
       {/* Venture Context Header */}
       <VentureContextHeader venture={activeVenture} commitmentProgress={commitmentProgress} />
 
+      {/* Implementation Kit Link - Only show if complete */}
+      {implementationKit?.status === 'complete' && (
+        <ImplementationKitStatus
+          blueprintId={blueprint?.id}
+          ventureId={activeVenture?.id}
+          showGenerateButton={false}
+          compact={true}
+        />
+      )}
+
       {/* Today's Tasks Section */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -195,6 +210,7 @@ const Tasks = () => {
                 <ExecutionTaskCard
                   key={task.id}
                   task={task}
+                  ventureId={activeVenture?.id}
                   onToggle={(completed) => markTaskCompleted(task.id, completed)}
                   disabled={false} // Allow toggling even after check-in for corrections
                 />
