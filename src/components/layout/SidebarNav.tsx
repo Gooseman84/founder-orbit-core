@@ -171,8 +171,8 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
       </div>
 
       {createItems.length > 0 && <NavSectionComponent label="Create" items={createItems} defaultOpen={false} onNavigate={onNavigate} />}
-      {buildItems.length > 0 && <NavSectionComponent label="Build" items={buildItems} defaultOpen={isExecuting} onNavigate={onNavigate} />}
       {alignItems.length > 0 && <NavSectionComponent label="Align" items={alignItems} defaultOpen={false} onNavigate={onNavigate} />}
+      {buildItems.length > 0 && <NavSectionComponent label="Build" items={buildItems} defaultOpen={isExecuting} onNavigate={onNavigate} />}
       <NavSectionComponent label="System" items={systemItems} defaultOpen={false} onNavigate={onNavigate} />
       
       <div className="mt-auto pt-3 border-t border-border space-y-1">

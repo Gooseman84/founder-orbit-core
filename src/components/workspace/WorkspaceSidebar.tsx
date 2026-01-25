@@ -27,6 +27,7 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { FolderTreeItem, FolderTreeNode } from './FolderTreeItem';
 import { WorkspaceSearch, SearchResultsInfo } from './WorkspaceSearch';
+import { ImplementationKitStatus } from '@/components/implementationKit/ImplementationKitStatus';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { GripVertical } from 'lucide-react';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
@@ -55,6 +56,8 @@ interface WorkspaceSidebarProps {
   scope?: WorkspaceScope;
   onScopeChange?: (scope: WorkspaceScope) => void;
   ventureName?: string;
+  blueprintId?: string;
+  ventureId?: string;
 }
 
 export function WorkspaceSidebar({
@@ -70,6 +73,8 @@ export function WorkspaceSidebar({
   scope = 'current_venture',
   onScopeChange,
   ventureName,
+  blueprintId,
+  ventureId,
 }: WorkspaceSidebarProps) {
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -490,7 +495,17 @@ export function WorkspaceSidebar({
   };
 
   return (
-    <Card className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden gap-2">
+      {/* Implementation Kit Status - Primary Location */}
+      {blueprintId && ventureId && (
+        <ImplementationKitStatus
+          blueprintId={blueprintId}
+          ventureId={ventureId}
+          showGenerateButton={true}
+        />
+      )}
+      
+      <Card className="flex-1 flex flex-col overflow-hidden min-h-0">
       <CardHeader className="pb-2 pt-3 px-3 shrink-0 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-sm font-medium truncate flex-1">Documents</CardTitle>
@@ -676,6 +691,7 @@ export function WorkspaceSidebar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+      </Card>
+    </div>
   );
 }
