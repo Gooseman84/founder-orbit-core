@@ -538,7 +538,7 @@ export default function Workspace() {
       <div className="flex flex-1 min-h-0 gap-2 p-1 md:gap-3 md:p-2">
         {/* Desktop: Left Sidebar - Documents List */}
         {!isMobile && (
-          <aside className="w-56 shrink-0 min-w-0 hidden md:block">
+          <aside className="w-64 shrink-0 min-w-0 hidden md:block">
             {sidebarContent}
           </aside>
         )}
