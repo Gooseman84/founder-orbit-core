@@ -114,7 +114,7 @@ export function FolderTreeItem({
               )}
             />
             <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
-            <span className="text-sm font-medium truncate flex-1 text-left">{node.name}</span>
+            <span className="text-sm font-medium line-clamp-1 flex-1 text-left break-words">{node.name}</span>
           </button>
           
           {/* Action menu for folders */}
@@ -220,7 +220,7 @@ export function FolderTreeItem({
           {...attributes}
           {...listeners}
           className={cn(
-            'p-1 cursor-grab active:cursor-grabbing shrink-0 rounded hover:bg-secondary/50',
+            'p-0.5 cursor-grab active:cursor-grabbing shrink-0 rounded hover:bg-secondary/50',
             isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
             isSelected && 'hover:bg-primary-foreground/10'
           )}
@@ -246,7 +246,7 @@ export function FolderTreeItem({
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <p className="font-medium text-sm line-clamp-2 text-left leading-snug break-words">
+                  <p className="font-medium text-sm line-clamp-2 text-left leading-tight break-words hyphens-auto">
                     {node.name}
                   </p>
                 </TooltipTrigger>
