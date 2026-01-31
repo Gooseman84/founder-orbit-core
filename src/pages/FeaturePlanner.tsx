@@ -5,47 +5,107 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, Rocket, CheckCircle2, Clock, AlertCircle, Copy, History, Plus } from 'lucide-react';
+import { 
+  Loader2, Rocket, AlertCircle, History, Plus, ChevronDown, 
+  Lightbulb, X, RefreshCw, FileText, Calendar, Layers
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ImplementationPlanDisplay, ImplementationPlan } from '@/components/feature-builder/ImplementationPlanDisplay';
 
-interface Phase {
-  phase_number: number;
-  name: string;
-  description: string;
-  deliverables: string[];
-  lovable_prompts: string[];
-  estimated_hours: number;
-  prerequisites: string[];
-  test_criteria: string[];
-  dependencies: string[];
-}
+// Feature templates for quick start
+const FEATURE_TEMPLATES = [
+  {
+    id: 'payment-integration',
+    name: 'Payment Integration',
+    title: 'Stripe Payment Integration',
+    description: 'Integrate Stripe for processing payments, subscriptions, and handling webhooks for payment events.',
+    userStories: [
+      'As a user, I want to pay for premium features using my credit card',
+      'As a user, I want to manage my subscription and billing details',
+      'As an admin, I want to see payment analytics and revenue metrics'
+    ],
+    successMetrics: [
+      '99.9% payment processing success rate',
+      'Less than 3 seconds for payment confirmation',
+      'Support for at least 3 payment methods'
+    ]
+  },
+  {
+    id: 'user-auth',
+    name: 'User Authentication',
+    title: 'Complete Authentication System',
+    description: 'Implement a full authentication system with email/password, social logins, password reset, and session management.',
+    userStories: [
+      'As a user, I want to sign up with my email and password',
+      'As a user, I want to sign in with Google or GitHub',
+      'As a user, I want to reset my password if I forget it'
+    ],
+    successMetrics: [
+      'Support OAuth with Google and GitHub',
+      'Password reset flow under 2 minutes',
+      'Session persistence across browser restarts'
+    ]
+  },
+  {
+    id: 'file-upload',
+    name: 'File Upload System',
+    title: 'File Upload & Storage System',
+    description: 'Build a file upload system with drag-and-drop, progress tracking, file type validation, and cloud storage integration.',
+    userStories: [
+      'As a user, I want to drag and drop files to upload them',
+      'As a user, I want to see upload progress for large files',
+      'As a user, I want to preview uploaded images before saving'
+    ],
+    successMetrics: [
+      'Support files up to 100MB',
+      'Real-time upload progress indication',
+      'Image preview in under 500ms'
+    ]
+  },
+  {
+    id: 'notifications',
+    name: 'Notification System',
+    title: 'Real-time Notification System',
+    description: 'Implement a notification system with in-app notifications, email digests, and push notification support.',
+    userStories: [
+      'As a user, I want to receive in-app notifications for important updates',
+      'As a user, I want to customize which notifications I receive',
+      'As a user, I want to see a history of my notifications'
+    ],
+    successMetrics: [
+      'Real-time notification delivery under 1 second',
+      'Support for notification preferences per category',
+      '7-day notification history retention'
+    ]
+  }
+];
 
-interface Risk {
-  description: string;
-  mitigation: string;
-  severity: 'low' | 'medium' | 'high';
-}
+// Character limits
+const CHAR_LIMITS = {
+  title: 100,
+  description: 500,
+  userStory: 200,
+  successMetric: 150,
+  constraint: 150
+};
 
-interface Architecture {
-  components: { name: string; path: string; purpose: string; props: string[] }[];
-  database_changes: { type: string; name: string; columns: string[]; indexes: string[]; rls: boolean; rls_policies: string[] }[];
-  edge_functions: { name: string; method: string; purpose: string; auth_required: boolean; inputs: Record<string, string>; outputs: Record<string, string> }[];
-  ui_flows: string[];
-}
+// Progress messages for loading state
+const PROGRESS_MESSAGES = [
+  { message: 'Analyzing your requirements...', duration: 5000 },
+  { message: 'Designing architecture...', duration: 8000 },
+  { message: 'Breaking into implementation phases...', duration: 10000 },
+  { message: 'Generating Lovable prompts...', duration: 12000 },
+  { message: 'Finalizing implementation plan...', duration: 15000 }
+];
 
-interface ImplementationPlan {
-  feature_id: string;
-  architecture: Architecture;
-  phases: Phase[];
-  total_estimated_hours: number;
-  risks: Risk[];
-}
+type PageState = 'form' | 'generating' | 'plan-display';
+type Priority = 'critical' | 'high' | 'medium' | 'low';
 
 interface SavedPlan {
   id: string;
@@ -54,28 +114,46 @@ interface SavedPlan {
   updated_at: string;
 }
 
-type Priority = 'critical' | 'high' | 'medium' | 'low';
+interface FormDraft {
+  title: string;
+  description: string;
+  userStories: string[];
+  successMetrics: string[];
+  constraints: string[];
+  priority: Priority;
+  savedAt: string;
+}
+
+const DRAFT_STORAGE_KEY = 'feature-planner-draft';
 
 export default function FeaturePlanner() {
   const { user } = useAuth();
   const { toast } = useToast();
   
+  // Page state
+  const [pageState, setPageState] = useState<PageState>('form');
+  const [progressMessageIndex, setProgressMessageIndex] = useState(0);
+  
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [userStories, setUserStories] = useState('');
-  const [successMetrics, setSuccessMetrics] = useState('');
-  const [constraints, setConstraints] = useState('');
+  const [userStories, setUserStories] = useState<string[]>(['']);
+  const [successMetrics, setSuccessMetrics] = useState<string[]>(['']);
+  const [constraints, setConstraints] = useState<string[]>([]);
   const [priority, setPriority] = useState<Priority>('high');
   
-  // Agent state
-  const [planning, setPlanning] = useState(false);
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  // Plan state
   const [plan, setPlan] = useState<ImplementationPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   
   // Persistence state
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
 
   // Load saved plans on mount
   const loadSavedPlans = useCallback(async () => {
@@ -99,27 +177,96 @@ export default function FeaturePlanner() {
       }));
       
       setSavedPlans(parsedPlans);
-      
-      // Auto-load most recent plan if no plan is currently loaded
-      if (parsedPlans.length > 0 && !plan) {
-        setPlan(parsedPlans[0].memory_data);
-      }
     } catch (err) {
       console.error('Error loading saved plans:', err);
     } finally {
       setLoadingPlans(false);
     }
-  }, [user, plan]);
+  }, [user]);
+
+  // Load draft from localStorage
+  const loadDraft = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) {
+        const draft: FormDraft = JSON.parse(saved);
+        setTitle(draft.title);
+        setDescription(draft.description);
+        setUserStories(draft.userStories.length > 0 ? draft.userStories : ['']);
+        setSuccessMetrics(draft.successMetrics.length > 0 ? draft.successMetrics : ['']);
+        setConstraints(draft.constraints);
+        setPriority(draft.priority);
+        setHasDraft(true);
+      }
+    } catch (err) {
+      console.error('Error loading draft:', err);
+    }
+  }, []);
+
+  // Save draft to localStorage
+  const saveDraft = useCallback(() => {
+    if (!title && !description && userStories.every(s => !s) && successMetrics.every(s => !s)) {
+      return; // Don't save empty forms
+    }
+    
+    const draft: FormDraft = {
+      title,
+      description,
+      userStories,
+      successMetrics,
+      constraints,
+      priority,
+      savedAt: new Date().toISOString()
+    };
+    
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    setHasDraft(true);
+  }, [title, description, userStories, successMetrics, constraints, priority]);
+
+  // Clear draft
+  const clearDraft = () => {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+    setHasDraft(false);
+  };
 
   useEffect(() => {
     loadSavedPlans();
-  }, [loadSavedPlans]);
+    loadDraft();
+  }, [loadSavedPlans, loadDraft]);
+
+  // Auto-save draft on form changes
+  useEffect(() => {
+    const timer = setTimeout(saveDraft, 1000);
+    return () => clearTimeout(timer);
+  }, [saveDraft]);
+
+  // Progress message cycling during generation
+  useEffect(() => {
+    if (pageState !== 'generating') return;
+    
+    setProgressMessageIndex(0);
+    
+    const intervals: NodeJS.Timeout[] = [];
+    let cumulativeTime = 0;
+    
+    PROGRESS_MESSAGES.forEach((_, index) => {
+      if (index === 0) return;
+      cumulativeTime += PROGRESS_MESSAGES[index - 1].duration;
+      
+      const timeout = setTimeout(() => {
+        setProgressMessageIndex(index);
+      }, cumulativeTime);
+      
+      intervals.push(timeout);
+    });
+    
+    return () => intervals.forEach(clearTimeout);
+  }, [pageState]);
 
   const savePlanToMemory = async (planData: ImplementationPlan) => {
     if (!user) return;
 
     try {
-      // Check if plan already exists
       const { data: existing } = await supabase
         .from('agent_memory')
         .select('id')
@@ -130,7 +277,6 @@ export default function FeaturePlanner() {
       const jsonData = JSON.parse(JSON.stringify(planData));
 
       if (existing) {
-        // Update existing
         const { error: updateError } = await supabase
           .from('agent_memory')
           .update({
@@ -141,7 +287,6 @@ export default function FeaturePlanner() {
 
         if (updateError) throw updateError;
       } else {
-        // Insert new
         const { error: insertError } = await supabase
           .from('agent_memory')
           .insert([{
@@ -153,11 +298,39 @@ export default function FeaturePlanner() {
         if (insertError) throw insertError;
       }
       
-      // Refresh saved plans list
       await loadSavedPlans();
     } catch (err) {
       console.error('Error saving plan to memory:', err);
     }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!title.trim()) {
+      errors.title = 'Feature title is required';
+    } else if (title.length > CHAR_LIMITS.title) {
+      errors.title = `Title must be under ${CHAR_LIMITS.title} characters`;
+    }
+    
+    if (!description.trim()) {
+      errors.description = 'Description is required';
+    } else if (description.length > CHAR_LIMITS.description) {
+      errors.description = `Description must be under ${CHAR_LIMITS.description} characters`;
+    }
+    
+    const validStories = userStories.filter(s => s.trim());
+    if (validStories.length === 0) {
+      errors.userStories = 'At least one user story is required';
+    }
+    
+    const validMetrics = successMetrics.filter(s => s.trim());
+    if (validMetrics.length === 0) {
+      errors.successMetrics = 'At least one success metric is required';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handlePlan = async () => {
@@ -170,18 +343,17 @@ export default function FeaturePlanner() {
       return;
     }
 
-    if (!title || !description || !userStories || !successMetrics) {
+    if (!validateForm()) {
       toast({
-        title: 'Missing fields',
-        description: 'Please fill in all required fields',
+        title: 'Validation Error',
+        description: 'Please fix the highlighted errors',
         variant: 'destructive'
       });
       return;
     }
 
-    setPlanning(true);
+    setPageState('generating');
     setError(null);
-    setPlan(null);
 
     try {
       const { data, error: apiError } = await supabase.functions.invoke('feature-implementation-agent', {
@@ -190,9 +362,9 @@ export default function FeaturePlanner() {
           feature: {
             title,
             description,
-            user_stories: userStories.split('\n').filter(s => s.trim()),
-            success_metrics: successMetrics.split('\n').filter(s => s.trim()),
-            constraints: constraints ? constraints.split('\n').filter(s => s.trim()) : [],
+            user_stories: userStories.filter(s => s.trim()),
+            success_metrics: successMetrics.filter(s => s.trim()),
+            constraints: constraints.filter(s => s.trim()),
             priority
           }
         }
@@ -201,9 +373,9 @@ export default function FeaturePlanner() {
       if (apiError) throw apiError;
 
       setPlan(data.plan);
-      
-      // Save to agent_memory for persistence
       await savePlanToMemory(data.plan);
+      clearDraft();
+      setPageState('plan-display');
       
       toast({
         title: 'Implementation Plan Generated!',
@@ -214,13 +386,12 @@ export default function FeaturePlanner() {
       console.error('Feature planning error:', err);
       const errorMsg = err instanceof Error ? err.message : 'Failed to generate implementation plan';
       setError(errorMsg);
+      setPageState('form');
       toast({
         title: 'Planning Failed',
         description: errorMsg,
         variant: 'destructive'
       });
-    } finally {
-      setPlanning(false);
     }
   };
 
@@ -228,6 +399,7 @@ export default function FeaturePlanner() {
     const selected = savedPlans.find(p => p.id === planId);
     if (selected) {
       setPlan(selected.memory_data);
+      setPageState('plan-display');
       toast({
         title: 'Plan Loaded',
         description: `Loaded ${selected.memory_data.feature_id}`
@@ -235,370 +407,510 @@ export default function FeaturePlanner() {
     }
   };
 
-  const handleClearPlan = () => {
+  const handleStartNew = () => {
     setPlan(null);
     setTitle('');
     setDescription('');
-    setUserStories('');
-    setSuccessMetrics('');
-    setConstraints('');
+    setUserStories(['']);
+    setSuccessMetrics(['']);
+    setConstraints([]);
     setPriority('high');
+    setValidationErrors({});
+    setError(null);
+    clearDraft();
+    setPageState('form');
   };
 
-  const handleCopyPrompt = (prompt: string, phaseNum: number) => {
-    navigator.clipboard.writeText(prompt);
-    toast({
-      title: 'Copied!',
-      description: `Phase ${phaseNum} prompt copied to clipboard`
-    });
-  };
-
-  const getPriorityColor = (p: string): "destructive" | "default" | "secondary" | "outline" => {
-    switch (p) {
-      case 'critical': return 'destructive';
-      case 'high': return 'default';
-      case 'medium': return 'secondary';
-      case 'low': return 'outline';
-      default: return 'outline';
+  const handleApplyTemplate = (templateId: string) => {
+    const template = FEATURE_TEMPLATES.find(t => t.id === templateId);
+    if (template) {
+      setTitle(template.title);
+      setDescription(template.description);
+      setUserStories(template.userStories);
+      setSuccessMetrics(template.successMetrics);
+      setValidationErrors({});
+      toast({
+        title: 'Template Applied',
+        description: `Loaded "${template.name}" template`
+      });
     }
   };
 
-  const getRiskColor = (severity: string): "destructive" | "default" | "secondary" | "outline" => {
-    switch (severity) {
-      case 'high': return 'destructive';
-      case 'medium': return 'default';
-      case 'low': return 'secondary';
-      default: return 'outline';
+  const addUserStory = () => {
+    if (userStories.length < 10) {
+      setUserStories([...userStories, '']);
     }
   };
 
+  const removeUserStory = (index: number) => {
+    if (userStories.length > 1) {
+      setUserStories(userStories.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateUserStory = (index: number, value: string) => {
+    const updated = [...userStories];
+    updated[index] = value;
+    setUserStories(updated);
+  };
+
+  const addSuccessMetric = () => {
+    if (successMetrics.length < 10) {
+      setSuccessMetrics([...successMetrics, '']);
+    }
+  };
+
+  const removeSuccessMetric = (index: number) => {
+    if (successMetrics.length > 1) {
+      setSuccessMetrics(successMetrics.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateSuccessMetric = (index: number, value: string) => {
+    const updated = [...successMetrics];
+    updated[index] = value;
+    setSuccessMetrics(updated);
+  };
+
+  const addConstraint = () => {
+    if (constraints.length < 5) {
+      setConstraints([...constraints, '']);
+    }
+  };
+
+  const removeConstraint = (index: number) => {
+    setConstraints(constraints.filter((_, i) => i !== index));
+  };
+
+  const updateConstraint = (index: number, value: string) => {
+    const updated = [...constraints];
+    updated[index] = value;
+    setConstraints(updated);
+  };
+
+  // Render loading state
+  if (pageState === 'generating') {
+    return (
+      <TooltipProvider>
+        <div className="container mx-auto py-8 px-4 max-w-4xl">
+          <Card className="border-primary/20">
+            <CardContent className="py-16">
+              <div className="text-center space-y-6">
+                <div className="relative mx-auto w-24 h-24">
+                  <Rocket className="h-24 w-24 text-primary animate-bounce" />
+                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                </div>
+                
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold">Generating Your Plan</h2>
+                  <p className="text-lg text-primary font-medium animate-pulse">
+                    {PROGRESS_MESSAGES[progressMessageIndex]?.message}
+                  </p>
+                </div>
+                
+                <div className="flex justify-center gap-2">
+                  {PROGRESS_MESSAGES.map((_, i) => (
+                    <div 
+                      key={i}
+                      className={`h-2 w-8 rounded-full transition-colors duration-300 ${
+                        i <= progressMessageIndex ? 'bg-primary' : 'bg-muted'
+                      }`}
+                    />
+                  ))}
+                </div>
+                
+                <p className="text-sm text-muted-foreground">
+                  This usually takes 30-60 seconds
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </TooltipProvider>
+    );
+  }
+
+  // Render plan display
+  if (pageState === 'plan-display' && plan) {
+    return (
+      <TooltipProvider>
+        <div className="container mx-auto py-8 px-4 max-w-6xl">
+          <ImplementationPlanDisplay 
+            plan={plan} 
+            onStartNew={handleStartNew}
+          />
+        </div>
+      </TooltipProvider>
+    );
+  }
+
+  // Render form
   return (
     <TooltipProvider>
-      <div className="container mx-auto py-8 px-4 max-w-6xl">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Rocket className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Feature Implementation Agent</h1>
-            <p className="text-muted-foreground">Generate complete implementation plans with AI</p>
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <Rocket className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Feature Implementation Agent</h1>
+              <p className="text-muted-foreground">Generate complete implementation plans with AI</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Input Form */}
+        {/* Plan History Section */}
+        {savedPlans.length > 0 && (
+          <Collapsible open={historyOpen} onOpenChange={setHistoryOpen} className="mb-6">
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <History className="h-4 w-4 text-muted-foreground" />
+                      <CardTitle className="text-base">Recent Plans</CardTitle>
+                      <Badge variant="secondary">{savedPlans.length}</Badge>
+                    </div>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${historyOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 pb-4">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {savedPlans.slice(0, 6).map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleLoadPlan(p.id)}
+                        className="flex flex-col items-start gap-2 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <FileText className="h-4 w-4 text-primary shrink-0" />
+                          <span className="font-medium text-sm truncate flex-1">
+                            {p.memory_data.feature_id}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(p.updated_at).toLocaleDateString()}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Layers className="h-3 w-3" />
+                            {p.memory_data.phases?.length || 0} phases
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  {savedPlans.length > 6 && (
+                    <p className="text-sm text-muted-foreground mt-3 text-center">
+                      +{savedPlans.length - 6} more plans
+                    </p>
+                  )}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        )}
+
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>{error}</span>
+              <Button variant="outline" size="sm" onClick={() => setError(null)}>
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Try Again
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Draft indicator */}
+        {hasDraft && (
+          <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground bg-muted/50 rounded-lg px-4 py-2">
+            <span>Draft saved automatically</span>
+            <Button variant="ghost" size="sm" onClick={clearDraft}>
+              Clear Draft
+            </Button>
+          </div>
+        )}
+
+        {/* Feature Request Form */}
         <Card>
           <CardHeader>
-            <CardTitle>Feature Request</CardTitle>
-            <CardDescription>
-              Describe the feature you want to build
-            </CardDescription>
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <CardTitle>Feature Request</CardTitle>
+                <CardDescription>
+                  Describe the feature you want to build
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select onValueChange={handleApplyTemplate}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Start from template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FEATURE_TEMPLATES.map(t => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="title">Feature Title *</Label>
+          <CardContent className="space-y-6">
+            {/* Feature Title */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="title">Feature Title *</Label>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Lightbulb className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">A clear, concise name for the feature. E.g., "Stripe Payment Integration" or "Real-time Chat System"</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 id="title"
                 placeholder="e.g., Stripe Payment Recovery System"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                maxLength={CHAR_LIMITS.title}
+                className={validationErrors.title ? 'border-destructive' : ''}
               />
+              <div className="flex justify-between text-xs">
+                {validationErrors.title && (
+                  <span className="text-destructive">{validationErrors.title}</span>
+                )}
+                <span className="text-muted-foreground ml-auto">
+                  {title.length}/{CHAR_LIMITS.title}
+                </span>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="description">Description *</Label>
+            {/* Description */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="description">Description *</Label>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Lightbulb className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">Explain what this feature does, why it's needed, and the problem it solves</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Textarea
                 id="description"
                 placeholder="Describe what this feature does and why it's needed..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
+                maxLength={CHAR_LIMITS.description}
+                className={validationErrors.description ? 'border-destructive' : ''}
               />
+              <div className="flex justify-between text-xs">
+                {validationErrors.description && (
+                  <span className="text-destructive">{validationErrors.description}</span>
+                )}
+                <span className="text-muted-foreground ml-auto">
+                  {description.length}/{CHAR_LIMITS.description}
+                </span>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="user-stories">User Stories * (one per line)</Label>
-              <Textarea
-                id="user-stories"
-                placeholder="As a user, I want to...
-As an admin, I need to..."
-                value={userStories}
-                onChange={(e) => setUserStories(e.target.value)}
-                rows={4}
-              />
+            {/* User Stories */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Label>User Stories *</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Lightbulb className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Format: "As a [role], I want to [action] so that [benefit]"</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addUserStory}
+                  disabled={userStories.length >= 10}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Story
+                </Button>
+              </div>
+              {validationErrors.userStories && (
+                <span className="text-xs text-destructive">{validationErrors.userStories}</span>
+              )}
+              <div className="space-y-2">
+                {userStories.map((story, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      placeholder={index === 0 ? "As a user, I want to..." : "As a [role], I want to..."}
+                      value={story}
+                      onChange={(e) => updateUserStory(index, e.target.value)}
+                      maxLength={CHAR_LIMITS.userStory}
+                    />
+                    {userStories.length > 1 && (
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => removeUserStory(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="success-metrics">Success Metrics * (one per line)</Label>
-              <Textarea
-                id="success-metrics"
-                placeholder="95% payment recovery rate
-< 2 second response time"
-                value={successMetrics}
-                onChange={(e) => setSuccessMetrics(e.target.value)}
-                rows={3}
-              />
+            {/* Success Metrics */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Label>Success Metrics *</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Lightbulb className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Measurable criteria to determine if the feature is successful. E.g., "95% uptime" or "under 2s load time"</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addSuccessMetric}
+                  disabled={successMetrics.length >= 10}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Metric
+                </Button>
+              </div>
+              {validationErrors.successMetrics && (
+                <span className="text-xs text-destructive">{validationErrors.successMetrics}</span>
+              )}
+              <div className="space-y-2">
+                {successMetrics.map((metric, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      placeholder={index === 0 ? "95% payment recovery rate" : "Enter success metric..."}
+                      value={metric}
+                      onChange={(e) => updateSuccessMetric(index, e.target.value)}
+                      maxLength={CHAR_LIMITS.successMetric}
+                    />
+                    {successMetrics.length > 1 && (
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => removeSuccessMetric(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="constraints">Constraints (one per line, optional)</Label>
-              <Textarea
-                id="constraints"
-                placeholder="Must use Stripe webhooks
-Must support retry logic"
-                value={constraints}
-                onChange={(e) => setConstraints(e.target.value)}
-                rows={2}
-              />
+            {/* Constraints */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Label>Constraints (optional)</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Lightbulb className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Technical or business limitations. E.g., "Must use Stripe webhooks" or "No third-party analytics"</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addConstraint}
+                  disabled={constraints.length >= 5}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Constraint
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {constraints.map((constraint, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      placeholder="Must use Stripe webhooks..."
+                      value={constraint}
+                      onChange={(e) => updateConstraint(index, e.target.value)}
+                      maxLength={CHAR_LIMITS.constraint}
+                    />
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => removeConstraint(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                {constraints.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No constraints added</p>
+                )}
+              </div>
             </div>
 
-            <div>
+            {/* Priority */}
+            <div className="space-y-2">
               <Label htmlFor="priority">Priority</Label>
               <Select value={priority} onValueChange={(v: Priority) => setPriority(v)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="critical">🔴 Critical</SelectItem>
+                  <SelectItem value="high">🟠 High</SelectItem>
+                  <SelectItem value="medium">🟡 Medium</SelectItem>
+                  <SelectItem value="low">🟢 Low</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Submit Button */}
             <Button
               onClick={handlePlan}
-              disabled={planning || !title || !description || !userStories || !successMetrics}
+              disabled={!title || !description}
               className="w-full"
               size="lg"
+              variant="gradient"
             >
-              {planning ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating Plan...
-                </>
-              ) : (
-                <>
-                  <Rocket className="mr-2 h-4 w-4" />
-                  Generate Implementation Plan
-                </>
-              )}
+              <Rocket className="mr-2 h-4 w-4" />
+              Generate Implementation Plan
             </Button>
           </CardContent>
         </Card>
-
-        {/* Results Panel */}
-        <div className="space-y-4">
-          {/* Plan History Dropdown */}
-          {savedPlans.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <History className="h-4 w-4 text-muted-foreground" />
-                    <CardTitle className="text-base">Saved Plans</CardTitle>
-                  </div>
-                  {plan && (
-                    <Button variant="outline" size="sm" onClick={handleClearPlan}>
-                      <Plus className="h-3 w-3 mr-1" />
-                      New Plan
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Select onValueChange={handleLoadPlan}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Load a saved plan..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {savedPlans.map(p => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.memory_data.feature_id} — {new Date(p.updated_at).toLocaleDateString()}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Implementation Plan</CardTitle>
-              <CardDescription>
-                AI-generated phased implementation with Lovable prompts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {!plan && !error && !planning && (
-                <div className="text-center text-muted-foreground py-12">
-                  <Rocket className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                  <p>Submit a feature request to see the implementation plan</p>
-                </div>
-              )}
-
-              {planning && (
-                <div className="text-center py-12">
-                  <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-primary" />
-                  <p className="text-muted-foreground">Analyzing feature requirements...</p>
-                  <p className="text-sm text-muted-foreground mt-2">This may take 30-60 seconds</p>
-                </div>
-              )}
-
-              {plan && (
-                <div className="space-y-6">
-                  {/* Overview */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-lg">
-                        {plan.feature_id}
-                      </h3>
-                      <Badge variant={getPriorityColor(priority)}>
-                        {priority}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>{plan.total_estimated_hours} hours total</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                        <span>{plan.phases?.length || 0} phases</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Architecture Overview */}
-                  {plan.architecture && (
-                    <div className="border rounded-lg p-4 space-y-2">
-                      <h4 className="font-semibold">Architecture</h4>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div>
-                          <div className="text-muted-foreground">Components</div>
-                          <div className="font-mono">{plan.architecture.components?.length || 0}</div>
-                        </div>
-                        <div>
-                          <div className="text-muted-foreground">DB Changes</div>
-                          <div className="font-mono">{plan.architecture.database_changes?.length || 0}</div>
-                        </div>
-                        <div>
-                          <div className="text-muted-foreground">Edge Functions</div>
-                          <div className="font-mono">{plan.architecture.edge_functions?.length || 0}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Phases */}
-                  {plan.phases && plan.phases.length > 0 && (
-                    <Accordion type="single" collapsible className="w-full">
-                      {plan.phases.map((phase: Phase) => (
-                        <AccordionItem key={phase.phase_number} value={`phase-${phase.phase_number}`}>
-                          <AccordionTrigger>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">Phase {phase.phase_number}</Badge>
-                              <span className="font-semibold">{phase.name}</span>
-                              <span className="text-sm text-muted-foreground ml-auto mr-4">
-                                {phase.estimated_hours}h
-                              </span>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="space-y-4 pt-2">
-                              <p className="text-sm">{phase.description}</p>
-
-                              {phase.deliverables && phase.deliverables.length > 0 && (
-                                <div>
-                                  <h5 className="text-sm font-semibold mb-2">Deliverables:</h5>
-                                  <ul className="list-disc list-inside text-sm space-y-1">
-                                    {phase.deliverables.map((d: string, i: number) => (
-                                      <li key={i}>{d}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                              {phase.lovable_prompts && phase.lovable_prompts.length > 0 && (
-                                <div>
-                                  <h5 className="text-sm font-semibold mb-2">Lovable Prompts:</h5>
-                                  {phase.lovable_prompts.map((prompt: string, i: number) => (
-                                    <div key={i} className="relative mb-3">
-                                      <Textarea
-                                        value={prompt}
-                                        readOnly
-                                        rows={8}
-                                        className="text-xs font-mono resize-none"
-                                      />
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="absolute top-2 right-2"
-                                        onClick={() => handleCopyPrompt(prompt, phase.phase_number)}
-                                      >
-                                        <Copy className="h-3 w-3 mr-1" />
-                                        Copy
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {phase.test_criteria && phase.test_criteria.length > 0 && (
-                                <div>
-                                  <h5 className="text-sm font-semibold mb-2">Test Criteria:</h5>
-                                  <ul className="list-disc list-inside text-sm space-y-1">
-                                    {phase.test_criteria.map((t: string, i: number) => (
-                                      <li key={i}>{t}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  )}
-
-                  {/* Risks */}
-                  {plan.risks && plan.risks.length > 0 && (
-                    <div className="border rounded-lg p-4 space-y-2">
-                      <h4 className="font-semibold">Risks & Mitigations</h4>
-                      <div className="space-y-2">
-                        {plan.risks.map((risk: Risk, i: number) => (
-                          <div key={i} className="text-sm">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant={getRiskColor(risk.severity)}>
-                                {risk.severity}
-                              </Badge>
-                              <span className="font-medium">{risk.description}</span>
-                            </div>
-                            <p className="text-muted-foreground ml-2">
-                              Mitigation: {risk.mitigation}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        </div>
       </div>
     </TooltipProvider>
   );
