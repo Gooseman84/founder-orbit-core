@@ -335,6 +335,16 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/feature-builder"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <FeaturePlanner />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
               </Routes>
