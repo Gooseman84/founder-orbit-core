@@ -132,7 +132,6 @@ const pathToSection: Record<string, NavSection> = {
   "/blueprint": "blueprint",
   "/workspace": "workspace",
   "/feature-builder": "workspace",
-  "/feature-planner": "workspace",
   
   // Align section
   "/north-star": "north-star",
