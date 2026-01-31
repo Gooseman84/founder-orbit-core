@@ -326,16 +326,6 @@ const App = () => (
               }
             />
             <Route
-              path="/feature-planner"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <FeaturePlanner />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/feature-builder"
               element={
                 <ProtectedRoute>
