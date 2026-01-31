@@ -20,7 +20,8 @@ import {
   CreditCard,
   LogOut,
   ChevronRight,
-  ClipboardCheck
+  ClipboardCheck,
+  Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
@@ -119,6 +120,7 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
     const items: NavItem[] = [];
     if (isAllowed("blueprint")) items.push({ name: "Blueprint", href: blueprintHref, icon: Map, section: "blueprint" });
     if (isAllowed("workspace")) items.push({ name: "Workspace", href: "/workspace", icon: FileText, section: "workspace" });
+    items.push({ name: "Feature Builder", href: "/feature-builder", icon: Wrench, section: "workspace" });
     return items;
   }, [ventureState, blueprintHref]);
 
