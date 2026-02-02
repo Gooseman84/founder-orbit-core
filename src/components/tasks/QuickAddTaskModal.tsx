@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -26,16 +25,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-
-// Task categories with default XP rewards
-const TASK_CATEGORIES = [
-  { value: "validation", label: "Validation", defaultXp: 25 },
-  { value: "development", label: "Development", defaultXp: 30 },
-  { value: "marketing", label: "Marketing", defaultXp: 20 },
-  { value: "research", label: "Research", defaultXp: 15 },
-  { value: "operations", label: "Operations", defaultXp: 20 },
-  { value: "other", label: "Other", defaultXp: 10 },
-] as const;
+import { TASK_CATEGORIES } from "@/config/taskCategories";
 
 interface QuickAddTaskFormValues {
   title: string;
@@ -66,7 +56,7 @@ export function QuickAddTaskModal({
 
   const handleCategoryChange = (category: string) => {
     form.setValue("category", category);
-    const categoryConfig = TASK_CATEGORIES.find((c) => c.value === category);
+    const categoryConfig = TASK_CATEGORIES.find((c) => c.id === category);
     if (categoryConfig) {
       form.setValue("xpReward", categoryConfig.defaultXp);
     }
@@ -150,9 +140,9 @@ export function QuickAddTaskModal({
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                <SelectContent>
                       {TASK_CATEGORIES.map((category) => (
-                        <SelectItem key={category.value} value={category.value}>
+                        <SelectItem key={category.id} value={category.id}>
                           {category.label}
                         </SelectItem>
                       ))}
