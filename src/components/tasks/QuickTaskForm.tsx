@@ -18,16 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-
-// Task categories with default XP rewards
-export const TASK_CATEGORIES = [
-  { id: "validation", label: "Validation", defaultXp: 25 },
-  { id: "development", label: "Development", defaultXp: 30 },
-  { id: "marketing", label: "Marketing", defaultXp: 20 },
-  { id: "research", label: "Research", defaultXp: 15 },
-  { id: "operations", label: "Operations", defaultXp: 20 },
-  { id: "other", label: "Other", defaultXp: 10 },
-] as const;
+import { TASK_CATEGORIES } from "@/config/taskCategories";
 
 export type TaskCategory = (typeof TASK_CATEGORIES)[number]["id"];
 

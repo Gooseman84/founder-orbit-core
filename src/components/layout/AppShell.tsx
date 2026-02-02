@@ -10,6 +10,8 @@ import { useXP } from "@/hooks/useXP";
 import { useOnboardingGuard } from "@/hooks/useOnboardingGuard";
 import { cn } from "@/lib/utils";
 import { QuickAddTaskFab } from "@/components/tasks/QuickAddTaskFab";
+import { QuickAddTaskModal } from "@/components/tasks/QuickAddTaskModal";
+import { useToast } from "@/hooks/use-toast";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -17,7 +19,9 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [quickTaskModalOpen, setQuickTaskModalOpen] = useState(false);
   const { xpSummary, loading } = useXP();
+  const { toast } = useToast();
   const location = useLocation();
   useOnboardingGuard();
 
@@ -134,8 +138,21 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Quick Add Task FAB */}
       <QuickAddTaskFab 
-        onClick={() => console.log("QuickAddTaskFab clicked - ready for task creation!")} 
+        onClick={() => setQuickTaskModalOpen(true)}
         className="mb-16 md:mb-0"
+      />
+      
+      <QuickAddTaskModal
+        isOpen={quickTaskModalOpen}
+        onClose={() => setQuickTaskModalOpen(false)}
+        onTaskCreated={async (task) => {
+          console.log("Task to be created:", task);
+          toast({
+            title: "Task created!",
+            description: task.title,
+          });
+          // Phase 3 will connect to actual task creation API
+        }}
       />
     </div>
   );
