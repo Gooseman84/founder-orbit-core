@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useXP } from "@/hooks/useXP";
 import { useOnboardingGuard } from "@/hooks/useOnboardingGuard";
 import { cn } from "@/lib/utils";
+import { QuickAddTaskFab } from "@/components/tasks/QuickAddTaskFab";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -130,6 +131,12 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
+
+      {/* Quick Add Task FAB */}
+      <QuickAddTaskFab 
+        onClick={() => console.log("QuickAddTaskFab clicked - ready for task creation!")} 
+        className="mb-16 md:mb-0"
+      />
     </div>
   );
 }
