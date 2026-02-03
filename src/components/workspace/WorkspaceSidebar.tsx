@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { FileText, Pencil, FolderOpen, Files, FolderPlus, Folder } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { FileText, Pencil, FolderOpen, Files, FolderPlus, Folder, Package, ChevronDown, ChevronRight, Download, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,6 +11,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -27,7 +30,8 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { FolderTreeItem, FolderTreeNode } from './FolderTreeItem';
 import { WorkspaceSearch, SearchResultsInfo } from './WorkspaceSearch';
-import { ImplementationKitStatus } from '@/components/implementationKit/ImplementationKitStatus';
+import { useImplementationKitByBlueprint } from '@/hooks/useImplementationKit';
+import { downloadAsMarkdown } from '@/lib/documentExport';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { GripVertical } from 'lucide-react';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
@@ -58,6 +62,109 @@ interface WorkspaceSidebarProps {
   ventureName?: string;
   blueprintId?: string;
   ventureId?: string;
+}
+
+// Collapsible Implementation Kit quick access for sidebar
+function ImplementationKitQuickAccess({ blueprintId }: { blueprintId?: string }) {
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(true);
+  const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  
+  const { data: kit, isLoading } = useImplementationKitByBlueprint(blueprintId);
+
+  const handleDownload = async (docId: string, filename: string) => {
+    setDownloadingDoc(docId);
+    try {
+      await downloadAsMarkdown(docId, filename);
+      toast({
+        title: "Download started",
+        description: `${filename}.md is downloading`,
+      });
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: error instanceof Error ? error.message : "Failed to download",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingDoc(null);
+    }
+  };
+
+  // Don't show if no blueprint or no kit
+  if (!blueprintId || isLoading) return null;
+  if (!kit || kit.status !== 'complete') return null;
+
+  const documents = [
+    { id: kit.north_star_spec_id, name: "North Star Spec" },
+    { id: kit.architecture_contract_id, name: "Architecture Contract" },
+    { id: kit.vertical_slice_plan_id, name: "Vertical Slice Plan" },
+  ].filter(doc => doc.id);
+
+  if (documents.length === 0) return null;
+
+  return (
+    <Card className="shrink-0">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="py-2 px-3 cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardTitle className="text-xs font-medium flex items-center gap-2">
+              {isOpen ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+              <Package className="h-3.5 w-3.5 text-primary" />
+              Implementation Kit
+              <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">
+                {documents.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0 px-2 pb-2 space-y-0.5">
+            {documents.map((doc) => (
+              <div 
+                key={doc.id} 
+                className="flex items-center gap-1 py-1 px-1 rounded hover:bg-muted/50 transition-colors group"
+              >
+                <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-1.5 text-xs flex-1 justify-start font-normal" 
+                  asChild
+                >
+                  <Link to={`/workspace/${doc.id}`}>
+                    <span className="truncate">{doc.name}</span>
+                  </Link>
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleDownload(doc.id!, doc.name)}
+                      disabled={downloadingDoc === doc.id}
+                    >
+                      {downloadingDoc === doc.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Download className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Download as Markdown</TooltipContent>
+                </Tooltip>
+              </div>
+            ))}
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
 }
 
 export function WorkspaceSidebar({
@@ -496,14 +603,8 @@ export function WorkspaceSidebar({
 
   return (
     <div className="h-full flex flex-col overflow-hidden gap-2">
-      {/* Implementation Kit Status - Primary Location */}
-      {blueprintId && ventureId && (
-        <ImplementationKitStatus
-          blueprintId={blueprintId}
-          ventureId={ventureId}
-          showGenerateButton={true}
-        />
-      )}
+      {/* Implementation Kit Quick Access - Collapsible Section */}
+      <ImplementationKitQuickAccess blueprintId={blueprintId} />
       
       <Card className="flex-1 flex flex-col overflow-hidden min-h-0">
       <CardHeader className="pb-2 pt-3 px-3 shrink-0 space-y-2">

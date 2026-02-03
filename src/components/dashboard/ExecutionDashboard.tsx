@@ -12,13 +12,12 @@ import {
   ClipboardCheck,
   Flame,
   ArrowRight,
-  AlertTriangle,
   Skull,
   RefreshCw
 } from "lucide-react";
 import type { Venture } from "@/types/venture";
 import { useDailyExecution } from "@/hooks/useDailyExecution";
-import { format, differenceInDays } from "date-fns";
+import { ImplementationKitCard } from "@/components/implementationKit/ImplementationKitCard";
 
 interface ExecutionDashboardProps {
   venture: Venture;
@@ -69,6 +68,9 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Implementation Kit - Reference Companion */}
+      <ImplementationKitCard ventureId={venture.id} />
 
       {/* Quick Actions Grid */}
       <div className="grid gap-3 grid-cols-2">
