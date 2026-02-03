@@ -59,6 +59,8 @@ export function ExecutionTaskCard({ task, ventureId, onToggle, disabled }: Execu
       }
 
       // Create new document for this task
+      // Note: Don't use linked_task_id here - execution tasks are stored in venture_daily_tasks (JSONB),
+      // not in the tasks table, so the foreign key constraint would fail
       const { data: newDoc, error } = await supabase
         .from("workspace_documents")
         .insert({
@@ -66,7 +68,6 @@ export function ExecutionTaskCard({ task, ventureId, onToggle, disabled }: Execu
           venture_id: ventureId || null,
           source_type: "execution_task",
           source_id: task.id,
-          linked_task_id: task.id,
           doc_type: "task-work",
           title: task.title,
           content: `## ${task.title}\n\n**Category:** ${task.category}\n**Estimated Time:** ${task.estimatedMinutes} minutes\n\n### Description\n${task.description}\n\n### Notes\n\n`,
