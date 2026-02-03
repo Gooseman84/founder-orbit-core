@@ -103,26 +103,13 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
           taskId: task.id,
         });
         refreshXp();
-        toast.success("Opening your workspace document! (+10 XP)");
-        navigate(`/workspace/${existingDoc.id}`, {
-          state: {
-            taskContext: {
-              id: task.id,
-              title: task.title,
-              description: task.description,
-              estimated_minutes: task.estimated_minutes,
-              xp_reward: task.xp_reward,
-              category: task.category,
-            },
-          },
-        });
+        toast.success(`Workspace ready for: ${task.title}`);
+        navigate(`/workspace/${existingDoc.id}`);
         setIsWorkspaceProcessing(false);
         return;
       }
 
       // 3. Create new workspace document
-      const docType = task.metadata?.doc_type || "plan";
-
       const { data: newDoc, error: insertError } = await supabase
         .from("workspace_documents")
         .insert({
@@ -130,10 +117,12 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
           idea_id: task.idea_id || null,
           source_type: "task",
           source_id: task.id,
-          doc_type: docType,
+          linked_task_id: task.id,
+          doc_type: "task-work",
           title: task.title,
           content: task.description || "",
           status: "draft",
+          metadata: { taskId: task.id },
         })
         .select()
         .single();
@@ -150,19 +139,8 @@ export function TaskCard({ task, onComplete, onStart, isCompleting = false }: Ta
       });
       refreshXp();
 
-      toast.success("Workspace document created! (+10 XP)");
-      navigate(`/workspace/${newDoc.id}`, {
-        state: {
-          taskContext: {
-            id: task.id,
-            title: task.title,
-            description: task.description,
-            estimated_minutes: task.estimated_minutes,
-            xp_reward: task.xp_reward,
-            category: task.category,
-          },
-        },
-      });
+      toast.success(`Workspace ready for: ${task.title}`);
+      navigate(`/workspace/${newDoc.id}`);
     } catch (error) {
       console.error("Error opening workspace:", error);
       toast.error("Failed to open workspace. Please try again.");

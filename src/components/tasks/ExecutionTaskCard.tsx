@@ -53,7 +53,7 @@ export function ExecutionTaskCard({ task, ventureId, onToggle, disabled }: Execu
           taskId: task.id,
         });
         refreshXp();
-        toast.success("Opening workspace document! (+10 XP)");
+        toast.success(`Workspace ready for: ${task.title}`);
         navigate(`/workspace/${existingDoc.id}`);
         return;
       }
@@ -67,10 +67,11 @@ export function ExecutionTaskCard({ task, ventureId, onToggle, disabled }: Execu
           source_type: "execution_task",
           source_id: task.id,
           linked_task_id: task.id,
-          doc_type: "execution_notes",
+          doc_type: "task-work",
           title: task.title,
           content: `## ${task.title}\n\n**Category:** ${task.category}\n**Estimated Time:** ${task.estimatedMinutes} minutes\n\n### Description\n${task.description}\n\n### Notes\n\n`,
           status: "draft",
+          metadata: { taskId: task.id },
         })
         .select()
         .single();
@@ -82,7 +83,7 @@ export function ExecutionTaskCard({ task, ventureId, onToggle, disabled }: Execu
         taskId: task.id,
       });
       refreshXp();
-      toast.success("Workspace document created! (+10 XP)");
+      toast.success(`Workspace ready for: ${task.title}`);
       navigate(`/workspace/${newDoc.id}`);
     } catch (error) {
       console.error("Error opening workspace:", error);
