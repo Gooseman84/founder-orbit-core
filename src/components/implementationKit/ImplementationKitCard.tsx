@@ -130,7 +130,7 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
             </div>
             <Button 
               size="sm"
-              onClick={() => navigate('/blueprint')}
+              onClick={() => navigate(`/blueprint?ventureId=${ventureId}`)}
               className="shrink-0"
             >
               Generate
@@ -177,7 +177,7 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => navigate('/blueprint')}
+              onClick={() => navigate(`/blueprint?ventureId=${ventureId}`)}
             >
               Retry
             </Button>
