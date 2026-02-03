@@ -21,8 +21,11 @@ import {
   Rocket,
   Clock,
   Loader2,
-  Lock
+  Lock,
+  ClipboardList,
+  CheckCircle
 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { CommitmentWindowDays, CommitmentDraft, CommitmentFull, Venture, VentureState } from "@/types/venture";
 import type { TechStack } from "@/types/implementationKit";
 
@@ -119,20 +122,21 @@ const Blueprint = () => {
     fetchVenture();
   }, [user, ventureIdParam]);
 
-  // State-based redirects
+  // State-based redirects - only for killed ventures
+  // Allow "executing" and "reviewed" to view Blueprint in read-only mode
   useEffect(() => {
     if (ventureLoading || !venture) return;
     
     const ventureState = venture.venture_state;
     
-    if (ventureState === "executing") {
-      navigate("/tasks", { replace: true });
-    } else if (ventureState === "reviewed") {
-      navigate("/venture-review", { replace: true });
-    } else if (ventureState === "killed") {
+    // Only redirect killed ventures - all others can view Blueprint
+    if (ventureState === "killed") {
       navigate("/ideas", { replace: true });
     }
   }, [venture, ventureLoading, navigate]);
+
+  // Determine if in read-only mode (executing or reviewed)
+  const isReadOnly = venture?.venture_state === "executing" || venture?.venture_state === "reviewed";
 
   // Pre-fill form if venture already has commitment data
   useEffect(() => {
@@ -234,11 +238,24 @@ const Blueprint = () => {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-3xl">
+      {/* Read-only Mode Banner */}
+      {isReadOnly && (
+        <Alert className="mb-6 border-primary/30 bg-primary/5">
+          <ClipboardList className="h-4 w-4" />
+          <AlertDescription className="flex items-center gap-2">
+            <span className="font-medium">Execution Mode:</span> 
+            Your commitment is locked. Complete or end your current commitment to make changes.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header */}
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-2">Your Blueprint</h1>
         <p className="text-muted-foreground">
-          This is where thinking ends and building begins.
+          {isReadOnly 
+            ? "Reference your plan while building."
+            : "This is where thinking ends and building begins."}
         </p>
       </div>
 
@@ -303,8 +320,8 @@ const Blueprint = () => {
                   type="button"
                   variant={windowDays === days ? "default" : "outline"}
                   className="w-full"
-                  onClick={() => setWindowDays(days as CommitmentWindowDays)}
-                  disabled={!hasPro && days !== 7}
+                  onClick={() => !isReadOnly && setWindowDays(days as CommitmentWindowDays)}
+                  disabled={isReadOnly || (!hasPro && days !== 7)}
                 >
                   {days} days
                   {!hasPro && days !== 7 && <Lock className="ml-1 h-3 w-3" />}
@@ -322,65 +339,86 @@ const Blueprint = () => {
               id="success-metric"
               placeholder="e.g., 5 paying customers, $1000 revenue, 100 signups..."
               value={successMetric}
-              onChange={(e) => setSuccessMetric(e.target.value)}
+              onChange={(e) => !isReadOnly && setSuccessMetric(e.target.value)}
               className="w-full"
+              disabled={isReadOnly}
             />
             <p className="text-xs text-muted-foreground">
-              How will you know this worked? Be specific.
+              {isReadOnly 
+                ? `Your success metric: "${venture?.success_metric || successMetric}"`
+                : "How will you know this worked? Be specific."}
             </p>
           </div>
 
-          {/* Acknowledgment */}
-          <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
-            <Checkbox
-              id="acknowledge"
-              checked={acknowledged}
-              onCheckedChange={(checked) => setAcknowledged(checked === true)}
-            />
-            <label 
-              htmlFor="acknowledge" 
-              className="text-sm leading-relaxed cursor-pointer"
-            >
-              I understand that once execution starts, this plan locks. I'm committing 
-              to focus on this venture for the next {windowDays} days.
-            </label>
-          </div>
+          {/* Acknowledgment - hide in read-only mode */}
+          {!isReadOnly && (
+            <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
+              <Checkbox
+                id="acknowledge"
+                checked={acknowledged}
+                onCheckedChange={(checked) => setAcknowledged(checked === true)}
+              />
+              <label 
+                htmlFor="acknowledge" 
+                className="text-sm leading-relaxed cursor-pointer"
+              >
+                I understand that once execution starts, this plan locks. I'm committing 
+                to focus on this venture for the next {windowDays} days.
+              </label>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Actions */}
       <div className="space-y-3">
-        <Button
-          size="lg"
-          className="w-full"
-          disabled={!isFormValid || isCommitting}
-          onClick={handleCommitAndStart}
-        >
-          {isCommitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Starting execution...
-            </>
-          ) : (
-            <>
-              <Rocket className="mr-2 h-4 w-4" />
-              Commit & Start Execution
-            </>
-          )}
-        </Button>
+        {isReadOnly ? (
+          // Read-only mode: show commitment active status
+          <Button
+            size="lg"
+            className="w-full"
+            disabled
+            variant="secondary"
+          >
+            <CheckCircle className="mr-2 h-4 w-4" />
+            Commitment Active
+          </Button>
+        ) : (
+          // Normal mode: show commit button
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={!isFormValid || isCommitting}
+            onClick={handleCommitAndStart}
+          >
+            {isCommitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Starting execution...
+              </>
+            ) : (
+              <>
+                <Rocket className="mr-2 h-4 w-4" />
+                Commit & Start Execution
+              </>
+            )}
+          </Button>
+        )}
 
-        <Button
-          variant="ghost"
-          className="w-full text-muted-foreground"
-          onClick={handleNotReady}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          I'm not ready to commit yet
-        </Button>
+        {!isReadOnly && (
+          <Button
+            variant="ghost"
+            className="w-full text-muted-foreground"
+            onClick={handleNotReady}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            I'm not ready to commit yet
+          </Button>
+        )}
       </div>
 
-      {/* Validation hint */}
-      {!isFormValid && (
+      {/* Validation hint - only show when not in read-only mode */}
+      {!isReadOnly && !isFormValid && (
         <div className="mt-4 text-center">
           <p className="text-xs text-muted-foreground flex items-center justify-center gap-2">
             {!successMetric.trim() && <span>• Enter a success metric</span>}
