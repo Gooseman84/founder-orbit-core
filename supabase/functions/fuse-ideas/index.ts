@@ -115,6 +115,35 @@ serve(async (req) => {
       { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
     );
 
+    // 4. Check subscription status and fusion limits
+    const { data: subscription } = await supabaseAdmin
+      .from("user_subscriptions")
+      .select("plan, status")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const plan = subscription?.plan || "trial";
+    const isPaidUser = plan === "pro" || plan === "founder";
+
+    // For trial users, check fusion count
+    if (!isPaidUser) {
+      const { count: fusionCount } = await supabaseAdmin
+        .from("ideas")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("mode", "fusion");
+
+      if ((fusionCount || 0) >= 2) {
+        return new Response(
+          JSON.stringify({ 
+            error: "FUSION_LIMIT_REACHED", 
+            message: "You've used your 2 trial fusions. Upgrade to Pro for unlimited idea fusions." 
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const { ideas } = await req.json();
 
     if (!ideas || !Array.isArray(ideas) || ideas.length < 2 || ideas.length > 3) {

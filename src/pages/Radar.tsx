@@ -27,12 +27,14 @@ interface RadarSignal {
 export default function Radar() {
   const { user } = useAuth();
   const { refresh: refreshXp } = useXP();
-  const { hasPro, loading: featureLoading } = useFeatureAccess();
+  const { hasPro, plan, loading: featureLoading } = useFeatureAccess();
   const [signals, setSignals] = useState<RadarSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [viewedSignals, setViewedSignals] = useState<Set<string>>(new Set());
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<"RADAR_REQUIRES_PRO" | "RADAR_LIMIT_REACHED">("RADAR_REQUIRES_PRO");
+  const [scanCount, setScanCount] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -53,6 +55,17 @@ export default function Radar() {
 
       if (error) throw error;
       setSignals(data || []);
+      
+      // Count unique scan batches (signals are generated in batches)
+      // We count by distinct created_at dates (within a minute tolerance)
+      const uniqueDates = new Set<string>();
+      (data || []).forEach((signal) => {
+        const date = new Date(signal.created_at);
+        // Round to nearest minute to group batch signals
+        date.setSeconds(0, 0);
+        uniqueDates.add(date.toISOString());
+      });
+      setScanCount(uniqueDates.size);
     } catch (error) {
       console.error("Error fetching radar signals:", error);
       toast.error("Failed to load radar signals");
@@ -66,17 +79,27 @@ export default function Radar() {
 
     // Check Pro access before generating
     if (!hasPro) {
-      setShowUpgradeModal(true);
-      return;
+      // Check if trial user has hit their scan limit (1)
+      if (scanCount >= 1) {
+        setPaywallReason("RADAR_LIMIT_REACHED");
+        setShowUpgradeModal(true);
+        return;
+      }
     }
 
     try {
       setGenerating(true);
-      const { data, error } = await invokeAuthedFunction<{ signals?: any[] }>("generate-niche-radar", {});
+      const { data, error } = await invokeAuthedFunction<{ signals?: any[]; error?: string }>("generate-niche-radar", {});
 
       if (error) {
         // Check if it's a subscription-related error
+        if (error.message?.includes("RADAR_LIMIT_REACHED")) {
+          setPaywallReason("RADAR_LIMIT_REACHED");
+          setShowUpgradeModal(true);
+          return;
+        }
         if (error.message?.includes("upgrade") || error.message?.includes("Pro subscription")) {
+          setPaywallReason("RADAR_REQUIRES_PRO");
           setShowUpgradeModal(true);
           return;
         }
@@ -202,7 +225,7 @@ export default function Radar() {
       <ProUpgradeModal
         open={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        reasonCode="RADAR_REQUIRES_PRO"
+        reasonCode={paywallReason}
       />
     </div>
   );

@@ -56,6 +56,10 @@ const LIMIT_MESSAGES: Record<PlanErrorCode, { title: string; description: string
     title: "Idea Fusion requires Pro",
     description: "Combine multiple ideas into powerful new concepts with TrueBlazer Pro.",
   },
+  [PLAN_ERROR_CODES.FUSION_LIMIT_REACHED]: {
+    title: "Fusion limit reached",
+    description: "You've used your 2 trial fusions. Upgrade to Pro for unlimited idea fusions.",
+  },
   [PLAN_ERROR_CODES.COMPARE_REQUIRES_PRO]: {
     title: "Compare Ideas requires Pro",
     description: "Unlock side-by-side opportunity score comparisons with TrueBlazer Pro.",
@@ -64,9 +68,21 @@ const LIMIT_MESSAGES: Record<PlanErrorCode, { title: string; description: string
     title: "Niche Radar requires Pro",
     description: "Get AI-powered market signals and emerging opportunities with TrueBlazer Pro.",
   },
+  [PLAN_ERROR_CODES.RADAR_LIMIT_REACHED]: {
+    title: "Radar limit reached",
+    description: "You've used your trial radar scan. Upgrade to Pro for unlimited market research.",
+  },
   [PLAN_ERROR_CODES.OPPORTUNITY_SCORE_REQUIRES_PRO]: {
     title: "Opportunity Scoring requires Pro",
     description: "Get detailed market analysis and sub-scores with TrueBlazer Pro.",
+  },
+  [PLAN_ERROR_CODES.IMPLEMENTATION_KIT_REQUIRES_PRO]: {
+    title: "Implementation Kit requires Pro",
+    description: "Get your North Star Spec, Architecture Contract, and Vertical Slice Plan with TrueBlazer Pro.",
+  },
+  [PLAN_ERROR_CODES.PROMPT_TYPE_REQUIRES_PRO]: {
+    title: "Build Prompts require Pro",
+    description: "Access Lovable, Cursor, and v0 build prompts with TrueBlazer Pro.",
   },
 };
 

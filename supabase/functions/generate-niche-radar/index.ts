@@ -366,28 +366,42 @@ serve(async (req) => {
       { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
     );
 
-    // Server-side subscription validation
+    // Server-side subscription validation with scan limit for trial
     const { data: subscription, error: subError } = await supabaseAdmin
       .from('user_subscriptions')
       .select('plan, status')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
-    if (subError || !subscription) {
-      return new Response(
-        JSON.stringify({ error: 'upgrade_required', message: 'Pro subscription required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const plan = subscription?.plan || "trial";
+    const isPro = plan === 'pro' || plan === 'founder';
+    const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
 
-    const isPro = subscription.plan === 'pro' || subscription.plan === 'founder';
-    const isActive = subscription.status === 'active' || subscription.status === 'trialing';
-
-    if (!isPro || !isActive) {
-      return new Response(
-        JSON.stringify({ error: 'upgrade_required', message: 'Active Pro subscription required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // For trial users, check scan count (limit 1)
+    if (!isPro) {
+      // Count existing radar signals grouped by time (each batch = 1 scan)
+      const { data: existingSignals } = await supabaseAdmin
+        .from('niche_radar')
+        .select('created_at')
+        .eq('user_id', userId);
+      
+      // Count unique scan batches
+      const uniqueDates = new Set<string>();
+      (existingSignals || []).forEach((signal) => {
+        const date = new Date(signal.created_at);
+        date.setSeconds(0, 0);
+        uniqueDates.add(date.toISOString());
+      });
+      
+      if (uniqueDates.size >= 1) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'RADAR_LIMIT_REACHED', 
+            message: 'You\'ve used your trial radar scan. Upgrade to Pro for unlimited market research.' 
+          }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const inputData = await buildRadarInput(supabaseAdmin, userId);
