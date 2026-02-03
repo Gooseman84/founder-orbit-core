@@ -20,6 +20,7 @@ import { PromptViewer } from "@/components/shared/PromptViewer";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useActiveVenture } from "@/hooks/useActiveVenture";
 import { useNorthStarVenture, NORTH_STAR_VENTURE_QUERY_KEY } from "@/hooks/useNorthStarVenture";
 import { useGenerateVenturePlan } from "@/hooks/useGenerateVenturePlan";
@@ -27,8 +28,10 @@ import { useVenturePlans } from "@/hooks/useVenturePlans";
 import { useVentureTasks } from "@/hooks/useVentureTasks";
 import { ThirtyDayPlanCard } from "@/components/venture/ThirtyDayPlanCard";
 import { EmptyPlanState } from "@/components/venture/EmptyPlanState";
+import { PaywallModal } from "@/components/paywall/PaywallModal";
+import { promptTypeRequiresPro } from "@/config/plans";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Sparkles, RefreshCw, Calendar, Clock, Pencil, Map } from "lucide-react";
+import { Loader2, AlertCircle, Sparkles, RefreshCw, Calendar, Clock, Pencil, Map, Lock } from "lucide-react";
 import { 
   PlatformMode, 
   MasterPromptData,
@@ -44,6 +47,7 @@ export default function NorthStar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { hasPro, hasFounder } = useFeatureAccess();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [masterPrompt, setMasterPrompt] = useState<MasterPromptData | null>(null);
@@ -54,7 +58,14 @@ export default function NorthStar() {
   const [isOutdated, setIsOutdated] = useState(false);
   const [isEdited, setIsEdited] = useState(false);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
   const repairAttemptedRef = useRef(false);
+
+  // Check if a prompt type is locked for this user
+  const isPromptTypeLocked = (type: PlatformMode): boolean => {
+    if (hasPro || hasFounder) return false;
+    return promptTypeRequiresPro(type);
+  };
 
   // North Star venture hook (for auto-heal detection)
   const { needsRepair, refresh: refreshNorthStarVenture } = useNorthStarVenture();
@@ -321,6 +332,13 @@ export default function NorthStar() {
   // Handle platform mode change
   const handleModeChange = async (newMode: string) => {
     const mode = newMode as PlatformMode;
+    
+    // Check if this mode is locked for trial users
+    if (isPromptTypeLocked(mode)) {
+      setPlatformMode(mode); // Still switch to show the locked state
+      return;
+    }
+    
     setPlatformMode(mode);
     
     if (!user || !chosenIdeaId) return;
@@ -610,13 +628,16 @@ export default function NorthStar() {
               <TabsTrigger value="strategy" className="text-xs sm:text-sm">
                 {PLATFORM_MODE_LABELS.strategy}
               </TabsTrigger>
-              <TabsTrigger value="lovable" className="text-xs sm:text-sm">
+              <TabsTrigger value="lovable" className="text-xs sm:text-sm gap-1">
+                {isPromptTypeLocked('lovable') && <Lock className="h-3 w-3" />}
                 {PLATFORM_MODE_LABELS.lovable}
               </TabsTrigger>
-              <TabsTrigger value="cursor" className="text-xs sm:text-sm">
+              <TabsTrigger value="cursor" className="text-xs sm:text-sm gap-1">
+                {isPromptTypeLocked('cursor') && <Lock className="h-3 w-3" />}
                 {PLATFORM_MODE_LABELS.cursor}
               </TabsTrigger>
-              <TabsTrigger value="v0" className="text-xs sm:text-sm">
+              <TabsTrigger value="v0" className="text-xs sm:text-sm gap-1">
+                {isPromptTypeLocked('v0') && <Lock className="h-3 w-3" />}
                 {PLATFORM_MODE_LABELS.v0}
               </TabsTrigger>
             </TabsList>
@@ -661,8 +682,48 @@ export default function NorthStar() {
         </div>
       </Card>
 
-      {/* Prompt Viewer */}
-      {masterPrompt && (
+      {/* Locked Prompt Type Overlay */}
+      {isPromptTypeLocked(platformMode) && (
+        <Card className="relative overflow-hidden">
+          {/* Blurred placeholder content */}
+          <div className="p-6 blur-sm opacity-50 select-none pointer-events-none">
+            <div className="space-y-4">
+              <div className="h-4 bg-muted rounded w-3/4" />
+              <div className="h-4 bg-muted rounded w-full" />
+              <div className="h-4 bg-muted rounded w-5/6" />
+              <div className="h-4 bg-muted rounded w-2/3" />
+              <div className="h-24 bg-muted rounded" />
+              <div className="h-4 bg-muted rounded w-4/5" />
+              <div className="h-4 bg-muted rounded w-full" />
+            </div>
+          </div>
+          
+          {/* Lock overlay */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-[2px]">
+            <div className="text-center space-y-4 max-w-sm px-4">
+              <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                <Lock className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold">
+                Upgrade to Pro
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Access {PLATFORM_MODE_LABELS[platformMode]} build prompts to accelerate your development with AI-ready implementation specs.
+              </p>
+              <Button 
+                onClick={() => setShowPaywallModal(true)} 
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Upgrade to Pro
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Prompt Viewer - only show if not locked */}
+      {masterPrompt && !isPromptTypeLocked(platformMode) && (
         <section className="space-y-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="space-y-1">
@@ -671,13 +732,13 @@ export default function NorthStar() {
                   {PLATFORM_MODE_LABELS[platformMode]}
                 </p>
                 {isEdited && (
-                  <Badge variant="outline" className="text-blue-600 border-blue-500 text-xs gap-1">
+                  <Badge variant="outline" className="text-primary border-primary/50 text-xs gap-1">
                     <Pencil className="h-3 w-3" />
                     Edited
                   </Badge>
                 )}
                 {isOutdated && (
-                  <Badge variant="outline" className="text-amber-600 border-amber-500 text-xs animate-pulse">
+                  <Badge variant="outline" className="text-destructive border-destructive/50 text-xs animate-pulse">
                     ⚠️ Context changed — regenerate?
                   </Badge>
                 )}
@@ -699,7 +760,7 @@ export default function NorthStar() {
                   size="sm"
                   onClick={handleRegenerate}
                   disabled={generating}
-                  className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-50"
+                  className="gap-2 border-destructive/50 text-destructive hover:bg-destructive/10"
                 >
                   <RefreshCw className="h-4 w-4" />
                   Refresh
@@ -782,6 +843,14 @@ export default function NorthStar() {
           </div>
         </div>
       </Card>
+
+      {/* Paywall Modal for locked prompt types */}
+      <PaywallModal
+        featureName="Build Prompts"
+        open={showPaywallModal}
+        onClose={() => setShowPaywallModal(false)}
+        errorCode="PROMPT_TYPE_REQUIRES_PRO"
+      />
     </div>
   );
 }
