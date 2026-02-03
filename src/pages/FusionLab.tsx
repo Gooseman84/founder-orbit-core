@@ -70,7 +70,7 @@ const FusionLab = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { hasPro, loading: featureLoading } = useFeatureAccess();
+  const { hasPro, plan, loading: featureLoading } = useFeatureAccess();
   const [libraryIdeas, setLibraryIdeas] = useState<LibraryIdea[]>([]);
   const [fusionHistory, setFusionHistory] = useState<LibraryIdea[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -78,11 +78,13 @@ const FusionLab = () => {
   const [fusedResult, setFusedResult] = useState<LibraryIdea | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<"FUSION_REQUIRES_PRO" | "FUSION_LIMIT_REACHED">("FUSION_REQUIRES_PRO");
+  const [fusionCount, setFusionCount] = useState(0);
 
   // Show upgrade modal for free users instead of redirecting
   useEffect(() => {
     if (!featureLoading && !hasPro) {
-      setShowUpgradeModal(true);
+      // Don't auto-show modal, let users try and hit limit
     }
   }, [hasPro, featureLoading]);
 
@@ -107,6 +109,10 @@ const FusionLab = () => {
           (i) => i.mode === "fusion" || i.mode?.startsWith("variant")
         );
         setFusionHistory(fusions);
+        
+        // Count fusions for trial limit check
+        const fusionOnlyCount = typedIdeas.filter(i => i.mode === "fusion").length;
+        setFusionCount(fusionOnlyCount);
       } catch (error) {
         console.error("Error fetching fusion lab data:", error);
       } finally {
@@ -134,8 +140,12 @@ const FusionLab = () => {
   const handleFuseIdeas = async () => {
     // Check Pro access first
     if (!hasPro) {
-      setShowUpgradeModal(true);
-      return;
+      // Check if trial user has hit their fusion limit (2)
+      if (fusionCount >= 2) {
+        setPaywallReason("FUSION_LIMIT_REACHED");
+        setShowUpgradeModal(true);
+        return;
+      }
     }
 
     if (selectedIds.size < 2) {
@@ -148,11 +158,19 @@ const FusionLab = () => {
     setFusedResult(null);
 
     try {
-      const { data, error } = await invokeAuthedFunction<{ idea?: LibraryIdea }>("fuse-ideas", {
+      const { data, error } = await invokeAuthedFunction<{ idea?: LibraryIdea; error?: string }>("fuse-ideas", {
         body: { ideas: selectedIdeas },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check for server-side limit error
+        if (error.message?.includes("FUSION_LIMIT_REACHED")) {
+          setPaywallReason("FUSION_LIMIT_REACHED");
+          setShowUpgradeModal(true);
+          return;
+        }
+        throw error;
+      }
 
       const newIdea = data?.idea as LibraryIdea;
       if (newIdea) {
@@ -160,6 +178,7 @@ const FusionLab = () => {
         setFusionHistory((prev) => [newIdea, ...prev]);
         setLibraryIdeas((prev) => [newIdea, ...prev]);
         setSelectedIds(new Set());
+        setFusionCount((prev) => prev + 1);
         toast({ title: "Fusion Complete!", description: `"${newIdea.title}" has been created.` });
       }
     } catch (error: any) {
@@ -524,12 +543,8 @@ const FusionLab = () => {
         open={showUpgradeModal}
         onClose={() => {
           setShowUpgradeModal(false);
-          // Navigate back if user is not Pro
-          if (!hasPro) {
-            navigate("/ideas");
-          }
         }}
-        reasonCode="FUSION_REQUIRES_PRO"
+        reasonCode={paywallReason}
       />
     </div>
   );

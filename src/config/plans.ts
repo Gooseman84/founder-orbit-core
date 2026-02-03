@@ -15,9 +15,13 @@ export const PLAN_ERROR_CODES = {
   MULTI_BLUEPRINT_TASKS: "MULTI_BLUEPRINT_TASKS",
   TRIAL_EXPIRED: "TRIAL_EXPIRED",
   FUSION_REQUIRES_PRO: "FUSION_REQUIRES_PRO",
+  FUSION_LIMIT_REACHED: "FUSION_LIMIT_REACHED",
   COMPARE_REQUIRES_PRO: "COMPARE_REQUIRES_PRO",
   RADAR_REQUIRES_PRO: "RADAR_REQUIRES_PRO",
+  RADAR_LIMIT_REACHED: "RADAR_LIMIT_REACHED",
   OPPORTUNITY_SCORE_REQUIRES_PRO: "OPPORTUNITY_SCORE_REQUIRES_PRO",
+  IMPLEMENTATION_KIT_REQUIRES_PRO: "IMPLEMENTATION_KIT_REQUIRES_PRO",
+  PROMPT_TYPE_REQUIRES_PRO: "PROMPT_TYPE_REQUIRES_PRO",
 } as const;
 
 export type PlanErrorCode = typeof PLAN_ERROR_CODES[keyof typeof PLAN_ERROR_CODES];
@@ -59,6 +63,11 @@ export const IDEA_MODES: ModeConfig[] = [
 // Trial modes for quick lookup
 export const TRIAL_MODES: IdeaMode[] = ["breadth", "focus", "creator"];
 
+// Prompt types for North Star prompts
+export type PromptType = "strategy" | "lovable" | "cursor" | "v0";
+export const TRIAL_PROMPT_TYPES: PromptType[] = ["strategy"];
+export const ALL_PROMPT_TYPES: PromptType[] = ["strategy", "lovable", "cursor", "v0"];
+
 export interface PlanFeatures {
   // Idea Generation
   maxIdeaGenerationsTotal: number; // Total for trial, Infinity for paid
@@ -80,6 +89,18 @@ export interface PlanFeatures {
   // AI Features
   canUseAdvancedAI: boolean;
   canUseFusionLab: boolean;
+  
+  // Fusion Lab
+  maxFusions: number;
+  
+  // Radar
+  maxRadarScans: number;
+  
+  // Implementation Kit
+  canGenerateImplementationKit: boolean;
+  
+  // North Star Prompts
+  allowedPromptTypes: PromptType[] | "all";
   
   // Display
   displayName: string;
@@ -111,6 +132,18 @@ export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
     canUseAdvancedAI: false,
     canUseFusionLab: false,
     
+    // Fusion Lab - 2 fusions during trial
+    maxFusions: 2,
+    
+    // Radar - 1 scan during trial
+    maxRadarScans: 1,
+    
+    // Implementation Kit - Pro only
+    canGenerateImplementationKit: false,
+    
+    // North Star Prompts - Strategy only
+    allowedPromptTypes: TRIAL_PROMPT_TYPES,
+    
     // Display
     displayName: "Trial",
     description: "7-day trial with limited features",
@@ -139,6 +172,18 @@ export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
     canUseAdvancedAI: true,
     canUseFusionLab: true,
     
+    // Fusion Lab - Unlimited
+    maxFusions: Infinity,
+    
+    // Radar - Unlimited
+    maxRadarScans: Infinity,
+    
+    // Implementation Kit - Full access
+    canGenerateImplementationKit: true,
+    
+    // North Star Prompts - All types
+    allowedPromptTypes: "all",
+    
     // Display
     displayName: "TrueBlazer Pro",
     description: "Full access to all features",
@@ -160,6 +205,10 @@ export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
     canSeeFullIdeaDetails: true,
     canUseAdvancedAI: true,
     canUseFusionLab: true,
+    maxFusions: Infinity,
+    maxRadarScans: Infinity,
+    canGenerateImplementationKit: true,
+    allowedPromptTypes: "all",
     displayName: "TrueBlazer Founder",
     description: "Everything in Pro + founder perks",
     monthlyPrice: 49,
@@ -177,6 +226,7 @@ export const FEATURE_GATE_MAP: Record<string, keyof PlanFeatures> = {
   "workspace_unlimited": "canUseWorkspace",
   "fusion_lab": "canUseFusionLab",
   "export": "canExport",
+  "implementation_kit": "canGenerateImplementationKit",
 } as const;
 
 // Helper to check if a plan is "paid" (pro or founder)
@@ -189,6 +239,11 @@ export function modeRequiresPro(mode: IdeaMode): boolean {
   return !TRIAL_MODES.includes(mode);
 }
 
+// Check if a prompt type requires Pro
+export function promptTypeRequiresPro(promptType: PromptType): boolean {
+  return !TRIAL_PROMPT_TYPES.includes(promptType);
+}
+
 // Get allowed modes for a plan
 export function getAllowedModes(plan: PlanId): IdeaMode[] {
   const features = PLAN_FEATURES[plan];
@@ -196,6 +251,15 @@ export function getAllowedModes(plan: PlanId): IdeaMode[] {
     return IDEA_MODES.map(m => m.mode);
   }
   return features.allowedIdeaModes;
+}
+
+// Get allowed prompt types for a plan
+export function getAllowedPromptTypes(plan: PlanId): PromptType[] {
+  const features = PLAN_FEATURES[plan];
+  if (features.allowedPromptTypes === "all") {
+    return ALL_PROMPT_TYPES;
+  }
+  return features.allowedPromptTypes;
 }
 
 // Get list of features that are Pro-only for display
@@ -208,6 +272,7 @@ export function getProOnlyFeatures(): (keyof PlanFeatures)[] {
     "canUseFusionLab",
     "canUseAdvancedAI",
     "canSeeFullIdeaDetails",
+    "canGenerateImplementationKit",
   ];
 }
 

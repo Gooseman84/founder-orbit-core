@@ -9,12 +9,16 @@ export type PaywallReasonCode =
   | "MULTI_BLUEPRINT_TASKS"
   | "TRIAL_EXPIRED"
   | "FUSION_REQUIRES_PRO"
+  | "FUSION_LIMIT_REACHED"
   | "COMPARE_REQUIRES_PRO"
   | "RADAR_REQUIRES_PRO"
+  | "RADAR_LIMIT_REACHED"
   | "OPPORTUNITY_SCORE_REQUIRES_PRO"
   | "FEATURE_REQUIRES_PRO"
   | "IMPORT_REQUIRES_PRO"
-  | "MARKET_SIGNAL_REQUIRES_PRO";
+  | "MARKET_SIGNAL_REQUIRES_PRO"
+  | "IMPLEMENTATION_KIT_REQUIRES_PRO"
+  | "PROMPT_TYPE_REQUIRES_PRO";
 
 export interface PaywallCopy {
   headline: string;
@@ -136,6 +140,34 @@ export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
       "Discover real problems people are facing and generate ideas tailored to solve them. Find opportunities hiding in plain sight.",
     cta: "Unlock Market Signals",
     microcopy: "The best businesses solve real problems.",
+  },
+  FUSION_LIMIT_REACHED: {
+    headline: "You've used your 2 trial fusions.",
+    subhead:
+      "You've combined 2 idea fusions during your trial. Upgrade to Pro for unlimited idea fusions and discover powerful hybrid ventures.",
+    cta: "Unlock Unlimited Fusions",
+    microcopy: "The best ideas often come from combining others.",
+  },
+  RADAR_LIMIT_REACHED: {
+    headline: "You've used your trial radar scan.",
+    subhead:
+      "You've generated 1 radar scan during your trial. Upgrade to Pro for unlimited market research and stay ahead of emerging opportunities.",
+    cta: "Unlock Unlimited Radar",
+    microcopy: "Know what's coming before everyone else.",
+  },
+  IMPLEMENTATION_KIT_REQUIRES_PRO: {
+    headline: "Unlock Your Build Specs",
+    subhead:
+      "The Implementation Kit includes your North Star Spec, Architecture Contract, and Thin Vertical Slice Plan — everything you need to start building.",
+    cta: "Upgrade to Pro",
+    microcopy: "Turn your idea into implementation-ready specs.",
+  },
+  PROMPT_TYPE_REQUIRES_PRO: {
+    headline: "Unlock Build Prompts",
+    subhead:
+      "Get implementation-ready prompts for Lovable, Cursor, and v0 to accelerate your build. Copy-paste and start building immediately.",
+    cta: "Upgrade to Pro",
+    microcopy: "Build faster with AI-ready prompts.",
   },
 };
 

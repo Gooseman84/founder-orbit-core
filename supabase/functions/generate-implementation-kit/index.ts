@@ -32,6 +32,26 @@ serve(async (req) => {
       );
     }
 
+    // Check subscription status - Implementation Kit is Pro only
+    const { data: subscription } = await supabase
+      .from('user_subscriptions')
+      .select('plan, status')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const plan = subscription?.plan || 'trial';
+    const isPaidUser = plan === 'pro' || plan === 'founder';
+
+    if (!isPaidUser) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'IMPLEMENTATION_KIT_REQUIRES_PRO', 
+          message: 'Implementation Kit is a Pro feature. Upgrade to get your complete build specifications.' 
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('Fetching blueprint:', blueprintId);
 
     // Fetch blueprint
