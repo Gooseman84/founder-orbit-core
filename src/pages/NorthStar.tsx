@@ -645,44 +645,7 @@ export default function NorthStar() {
         </div>
       </Card>
 
-      {/* 30-Day Plan Section */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">30-Day Execution Plan</h2>
-        </div>
-        
-        {latestPlan && venture?.id ? (
-          <ThirtyDayPlanCard
-            plan={latestPlan}
-            tasksByWeek={tasksByWeek}
-            ventureId={venture.id}
-          />
-        ) : (
-          <EmptyPlanState
-            onGenerate={handleGeneratePlan}
-            isGenerating={isGeneratingPlan}
-            disabled={!venture?.id}
-          />
-        )}
-      </section>
-
-      {/* Usage Instructions */}
-      <Card className="p-6 bg-primary/5 border-primary/20">
-        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-          <AlertCircle className="h-5 w-5" />
-          How to Use Your {PLATFORM_MODE_LABELS[platformMode]}
-        </h3>
-        <div className="space-y-3 text-sm">
-          {getUsageInstructions()}
-          <p className="text-muted-foreground italic">
-            💡 Tip: Save this prompt and reuse it across all your AI tools for consistent, personalized advice
-            aligned with your goals and constraints.
-          </p>
-        </div>
-      </Card>
-
-      {/* Locked Prompt Type Overlay */}
+      {/* Locked Prompt Type Overlay - show immediately after tabs for locked modes */}
       {isPromptTypeLocked(platformMode) && (
         <Card className="relative overflow-hidden">
           {/* Blurred placeholder content */}
@@ -802,6 +765,43 @@ export default function NorthStar() {
           </Card>
         </section>
       )}
+
+      {/* Usage Instructions */}
+      <Card className="p-6 bg-primary/5 border-primary/20">
+        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          <AlertCircle className="h-5 w-5" />
+          How to Use Your {PLATFORM_MODE_LABELS[platformMode]}
+        </h3>
+        <div className="space-y-3 text-sm">
+          {getUsageInstructions()}
+          <p className="text-muted-foreground italic">
+            💡 Tip: Save this prompt and reuse it across all your AI tools for consistent, personalized advice
+            aligned with your goals and constraints.
+          </p>
+        </div>
+      </Card>
+
+      {/* 30-Day Plan Section */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold">30-Day Execution Plan</h2>
+        </div>
+        
+        {latestPlan && venture?.id ? (
+          <ThirtyDayPlanCard
+            plan={latestPlan}
+            tasksByWeek={tasksByWeek}
+            ventureId={venture.id}
+          />
+        ) : (
+          <EmptyPlanState
+            onGenerate={handleGeneratePlan}
+            isGenerating={isGeneratingPlan}
+            disabled={!venture?.id}
+          />
+        )}
+      </section>
 
       {/* Regenerate Confirmation Dialog */}
       <AlertDialog open={showRegenerateConfirm} onOpenChange={setShowRegenerateConfirm}>
