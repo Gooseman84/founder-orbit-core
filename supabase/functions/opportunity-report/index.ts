@@ -14,22 +14,50 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, ideaId } = await req.json();
+    // Initialize Supabase clients
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+    // === JWT Authentication ===
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Missing Authorization header", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error("[opportunity-report] Auth error:", authError?.message);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_SESSION_MISSING" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Use verified userId from JWT, ignore any client-provided userId
+    const userId = user.id;
+    
+    const { ideaId } = await req.json();
     console.log("Generating opportunity report for userId:", userId, "ideaId:", ideaId);
 
-    if (!userId || !ideaId) {
+    if (!ideaId) {
       return new Response(
-        JSON.stringify({ error: "userId and ideaId are required" }),
+        JSON.stringify({ error: "ideaId is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch idea
+    // Fetch idea - user_id check ensures ownership
     const { data: idea, error: ideaError } = await supabase
       .from("ideas")
       .select("*")
