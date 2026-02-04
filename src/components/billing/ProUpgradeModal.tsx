@@ -5,20 +5,20 @@ import { getPaywallCopy, type PaywallReasonCode } from "@/config/paywallCopy";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import { 
-  Loader2, 
-  Sparkles, 
-  Zap, 
-  Target, 
+  Loader2,
+  Sparkles,
+  Zap,
+  Target,
   Infinity,
   Rocket,
   CheckCircle,
-  Crown,
-  X
+  Crown
 } from "lucide-react";
 
 const PRO_FEATURES = [
@@ -108,13 +108,8 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg p-0 overflow-hidden border-border/50 bg-card">
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 z-10 rounded-full p-1.5 bg-muted/50 hover:bg-muted transition-colors"
-        >
-          <X className="w-4 h-4 text-muted-foreground" />
-        </button>
+        {/* Visually hidden title for accessibility */}
+        <DialogTitle className="sr-only">Upgrade to TrueBlazer Pro</DialogTitle>
 
         {/* Header with gradient */}
         <div className="relative px-6 pt-8 pb-6 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent">
