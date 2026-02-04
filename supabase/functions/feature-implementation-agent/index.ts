@@ -139,8 +139,9 @@ serve(async (req) => {
 
     console.log('[feature-implementation-agent] Authenticated user:', user.id);
 
-    // 2. Parse and validate request body
-    const { userId, feature }: RequestBody = await req.json();
+    // 2. Parse and validate request body - use verified user ID from JWT, ignore client-provided userId
+    const { feature }: { feature: Feature } = await req.json();
+    const userId = user.id; // Use verified userId from JWT, never trust client input
 
     if (!feature.title || !feature.description || !feature.user_stories || !feature.success_metrics) {
       console.error('[feature-implementation-agent] Missing required feature fields');
@@ -257,7 +258,7 @@ Generate a complete implementation plan with 3-7 phases, each with detailed Lova
     const { error: memoryError } = await supabaseClient
       .from('agent_memory')
       .upsert({
-        user_id: userId || user.id,
+        user_id: userId, // Already verified from JWT
         memory_path: `engineering/feature_specs/${implementationPlan.feature_id}`,
         memory_data: implementationPlan,
         updated_at: new Date().toISOString()
@@ -276,7 +277,7 @@ Generate a complete implementation plan with 3-7 phases, each with detailed Lova
     const { error: decisionError } = await supabaseClient
       .from('agent_decisions')
       .insert({
-        user_id: userId || user.id,
+        user_id: userId, // Already verified from JWT
         agent_name: 'feature_implementation',
         decision_type: 'feature_plan_created',
         inputs: feature,
