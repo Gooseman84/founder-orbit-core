@@ -1,77 +1,77 @@
 
+# Remove Trial on Explicit Upgrade
 
-# Fix Stripe Webhook Runtime Error
+## Current Problem
 
-## Problem Identified
+When a user clicks "Upgrade to Pro" and enters payment details, the checkout creates a **new 7-day trial** before charging. This means:
 
-Your screenshots show a critical error that's crashing the webhook:
-
-```
-event loop error: Error: Deno.core.runMicrotasks() is not supported in this environment
-    at Object.core.runMicrotasks (https://deno.land/std@0.177.1/node/_core.ts:23:11)
-```
-
-This error occurs because the edge function uses **outdated library versions** that rely on Node.js polyfills no longer supported in the current Supabase/Deno runtime.
-
-## Root Cause
-
-The current imports in `stripe-webhook/index.ts`:
-
-```text
-std@0.168.0      ← Outdated Deno standard library
-stripe@14.21.0   ← Old Stripe SDK pulling incompatible polyfills
-```
-
-These old versions use internal Deno APIs (`Deno.core.runMicrotasks`) that have been removed in newer Deno versions, causing the function to crash after processing.
-
----
+- Someone on day 2 of their in-app trial who upgrades won't be charged until day 9
+- They get a "double trial" experience which is confusing
+- The "Upgrade" action doesn't feel like upgrading - it feels like extending their trial
 
 ## The Fix
 
-Update all imports to current, stable versions:
-
-| Library | Current Version | Required Version |
-|---------|----------------|------------------|
-| Deno std | 0.168.0 | **0.190.0** |
-| Stripe SDK | 14.21.0 | **18.5.0** |
-| Supabase JS | 2.49.1 | **2.57.2** |
-| Stripe API | 2023-10-16 | **2025-08-27.basil** |
+Remove the trial from checkout sessions. When a user explicitly chooses to pay, charge them immediately and activate Pro.
 
 ---
 
 ## Implementation
 
-### Single File Change: `supabase/functions/stripe-webhook/index.ts`
+### File: `supabase/functions/create-checkout-session/index.ts`
 
-**Lines 1-8** - Update imports and API version:
+**Change lines 177-190** - Remove `trial_period_days` from checkout:
 
-```typescript
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+```text
+Current:
+subscription_data: {
+  trial_period_days: 7,  ← REMOVE THIS
+  metadata: { ... }
+}
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
-  apiVersion: "2025-08-27.basil",
-});
+After:
+subscription_data: {
+  metadata: { ... }
+}
 ```
 
-The rest of the file remains unchanged - only the import versions and API version need updating.
+This single change means:
+- **Upgrade action** → Immediate charge, Pro unlocks instantly
+- **Cancellation** → User keeps access until current_period_end (Stripe default)
 
 ---
 
-## Why This Will Fix It
+## How Trial + Upgrade Will Work
 
-1. **Deno std@0.190.0** - Uses modern Deno APIs without deprecated Node polyfills
-2. **Stripe@18.5.0** - Built for current Deno runtime, no legacy dependencies
-3. **Supabase@2.57.2** - Latest stable client compatible with Edge Functions
-4. **API version 2025-08-27.basil** - Current stable Stripe API (the `.basil` suffix is the stable version name)
+| Scenario | What Happens |
+|----------|--------------|
+| Day 1: User signs up | Gets 7-day in-app trial (from your `user_subscriptions` table) |
+| Day 3: User clicks Upgrade | Payment charged immediately, trial ends, Pro active |
+| Day 8: Trial expires, no upgrade | Features locked, paywall shown |
+| Pro user cancels | Keeps Pro until current billing cycle ends |
 
 ---
 
-## After Implementation
+## Why This Is Correct
 
-Once deployed, you'll need to test by:
-1. Triggering a checkout in your app (click "Subscribe to Pro" on Billing page)
-2. Use test card `4242 4242 4242 4242`
-3. Check the webhook logs - you should see successful event processing without the runtime error
+1. **Clear value exchange**: User pays → User gets Pro immediately
+2. **No double-trial confusion**: The in-app trial and Stripe trial were redundant
+3. **Standard SaaS behavior**: "Upgrade" means start paying now
+4. **Cancellations work as expected**: Stripe automatically maintains access until period end
 
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `supabase/functions/create-checkout-session/index.ts` | Remove `trial_period_days: 7` from subscription_data |
+
+---
+
+## Note on Sync Function
+
+This change pairs well with the sync-subscription function from the previous plan. Together they ensure:
+
+1. User clicks Upgrade → Charged immediately (this fix)
+2. User returns to app → Sync function updates database (previous plan)
+3. Features unlock → User sees Pro experience
