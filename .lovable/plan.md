@@ -1,77 +1,80 @@
 
-# Remove Trial on Explicit Upgrade
+# Fix Auto-Scroll in Mavrik Interview Chat
 
-## Current Problem
+## Problem
 
-When a user clicks "Upgrade to Pro" and enters payment details, the checkout creates a **new 7-day trial** before charging. This means:
+When Mavrik asks new questions and the user responds, the chat dialogue stays static at its current scroll position. Users must manually scroll down to see new messages, which creates a poor conversational experience.
 
-- Someone on day 2 of their in-app trial who upgrades won't be charged until day 9
-- They get a "double trial" experience which is confusing
-- The "Upgrade" action doesn't feel like upgrading - it feels like extending their trial
+## Solution
 
-## The Fix
-
-Remove the trial from checkout sessions. When a user explicitly chooses to pay, charge them immediately and activate Pro.
+Add auto-scroll behavior that smoothly scrolls to the bottom of the chat whenever new messages appear.
 
 ---
 
 ## Implementation
 
-### File: `supabase/functions/create-checkout-session/index.ts`
+### File: `src/pages/OnboardingInterview.tsx`
 
-**Change lines 177-190** - Remove `trial_period_days` from checkout:
+**Change 1: Add a scroll anchor ref**
+
+Create a ref that points to an invisible element at the bottom of the message list:
 
 ```text
-Current:
-subscription_data: {
-  trial_period_days: 7,  ← REMOVE THIS
-  metadata: { ... }
-}
-
-After:
-subscription_data: {
-  metadata: { ... }
-}
+const scrollAnchorRef = useRef<HTMLDivElement>(null);
 ```
 
-This single change means:
-- **Upgrade action** → Immediate charge, Pro unlocks instantly
-- **Cancellation** → User keeps access until current_period_end (Stripe default)
+**Change 2: Add useEffect to trigger scroll**
+
+Watch for changes to `transcript` and `asking` state, then scroll to the anchor:
+
+```text
+useEffect(() => {
+  // Scroll to bottom when transcript changes or when AI is thinking
+  scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
+}, [transcript, asking]);
+```
+
+**Change 3: Add scroll anchor element**
+
+Place an invisible div at the end of the message list, inside the ScrollArea:
+
+```text
+{/* Messages render here... */}
+
+{asking && (
+  <div>Thinking about the next question...</div>
+)}
+
+{/* Scroll anchor - always at the bottom */}
+<div ref={scrollAnchorRef} />
+```
 
 ---
 
-## How Trial + Upgrade Will Work
+## Why This Works
 
-| Scenario | What Happens |
-|----------|--------------|
-| Day 1: User signs up | Gets 7-day in-app trial (from your `user_subscriptions` table) |
-| Day 3: User clicks Upgrade | Payment charged immediately, trial ends, Pro active |
-| Day 8: Trial expires, no upgrade | Features locked, paywall shown |
-| Pro user cancels | Keeps Pro until current billing cycle ends |
+1. **scrollIntoView**: Native browser API that smoothly scrolls an element into the visible area
+2. **behavior: "smooth"**: Creates a nice animated scroll instead of jarring jumps
+3. **Trigger on transcript change**: Fires when user sends answer or AI responds
+4. **Trigger on asking change**: Fires when "Thinking..." message appears
 
 ---
 
-## Why This Is Correct
+## Summary of Changes
 
-1. **Clear value exchange**: User pays → User gets Pro immediately
-2. **No double-trial confusion**: The in-app trial and Stripe trial were redundant
-3. **Standard SaaS behavior**: "Upgrade" means start paying now
-4. **Cancellations work as expected**: Stripe automatically maintains access until period end
-
----
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `supabase/functions/create-checkout-session/index.ts` | Remove `trial_period_days: 7` from subscription_data |
+| Location | Change |
+|----------|--------|
+| Line ~19 | Add `scrollAnchorRef` ref |
+| After line ~68 | Add `useEffect` for auto-scroll |
+| Line ~276 (after asking indicator) | Add invisible scroll anchor div |
 
 ---
 
-## Note on Sync Function
+## User Experience After Fix
 
-This change pairs well with the sync-subscription function from the previous plan. Together they ensure:
+1. User types answer and clicks "Send"
+2. Their message bubble appears and chat auto-scrolls to show it
+3. "Thinking about the next question..." appears, chat scrolls to show it
+4. Mavrik's next question appears, chat smoothly scrolls to reveal it
 
-1. User clicks Upgrade → Charged immediately (this fix)
-2. User returns to app → Sync function updates database (previous plan)
-3. Features unlock → User sees Pro experience
+The conversation will always stay at the bottom, just like any modern chat interface.
