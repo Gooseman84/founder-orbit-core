@@ -17,6 +17,7 @@ export default function OnboardingInterview() {
   const { user } = useAuth();
   const { toast } = useToast();
   const hasTrackedStartRef = useRef(false);
+  const scrollAnchorRef = useRef<HTMLDivElement>(null);
 
   const [interview, setInterview] = useState<FounderInterview | null>(null);
   const [transcript, setTranscript] = useState<InterviewTurn[]>([]);
@@ -67,6 +68,11 @@ export default function OnboardingInterview() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  // Auto-scroll to bottom when transcript changes or AI is thinking
+  useEffect(() => {
+    scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [transcript, asking]);
 
   const askNextQuestion = useCallback(
     async (latestUserAnswer?: string, existingInterview?: FounderInterview | null) => {
@@ -274,6 +280,9 @@ export default function OnboardingInterview() {
                   </div>
                 </div>
               )}
+
+              {/* Scroll anchor - always at the bottom */}
+              <div ref={scrollAnchorRef} />
             </div>
           </ScrollArea>
         </div>
