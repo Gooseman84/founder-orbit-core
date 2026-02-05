@@ -39,19 +39,36 @@ const Billing = () => {
     if (status === "success") {
       // Sync subscription from Stripe before showing success
       setSyncLoading(true);
-      invokeAuthedFunction("sync-subscription", { body: {} })
-        .then(() => {
-          toast({
-            title: "🎉 Welcome to Pro!",
-            description: "Your subscription is now active. Enjoy all the premium features!",
-          });
+      invokeAuthedFunction<{ synced?: boolean; error?: string }>("sync-subscription", { body: {} })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Sync error:", error);
+            toast({
+              title: "Payment received",
+              description: "We received your payment but couldn't confirm access yet. Please click 'Refresh subscription status' below.",
+              variant: "default",
+            });
+          } else if (data?.synced) {
+            toast({
+              title: "🎉 Welcome to Pro!",
+              description: "Your subscription is now active. Enjoy all the premium features!",
+            });
+          } else {
+            // synced: false means no active subscription found yet
+            toast({
+              title: "Payment processing",
+              description: "Your payment is being processed. Please click 'Refresh subscription status' in a moment.",
+              variant: "default",
+            });
+          }
           refresh();
         })
         .catch((err) => {
-          console.error("Sync error:", err);
+          console.error("Sync call failed:", err);
           toast({
-            title: "Subscription activated",
-            description: "Your payment was successful. Refreshing your status...",
+            title: "Payment received",
+            description: "We received your payment but couldn't sync your status. Please click 'Refresh subscription status'.",
+            variant: "default",
           });
           refresh();
         })

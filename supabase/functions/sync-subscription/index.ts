@@ -1,5 +1,5 @@
  import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
- import Stripe from "https://esm.sh/stripe@14.21.0";
+import Stripe from "https://esm.sh/stripe@18.5.0";
  import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
  
  const corsHeaders = {
@@ -13,6 +13,20 @@
    console.log(`[SYNC-SUBSCRIPTION] ${step}${detailsStr}`);
  };
  
+// Safe timestamp converter - prevents "Invalid time value" crashes
+const toIsoOrNull = (unixSeconds: unknown): string | null => {
+  if (typeof unixSeconds !== "number" || !Number.isFinite(unixSeconds)) {
+    logStep("Invalid timestamp value", { value: unixSeconds, type: typeof unixSeconds });
+    return null;
+  }
+  try {
+    return new Date(unixSeconds * 1000).toISOString();
+  } catch (e) {
+    logStep("Failed to convert timestamp", { value: unixSeconds, error: String(e) });
+    return null;
+  }
+};
+
  serve(async (req) => {
    if (req.method === "OPTIONS") {
      return new Response(null, { headers: corsHeaders });
@@ -108,38 +122,53 @@
      logStep("Found active subscription", {
        subscriptionId: activeSub.id,
        status: activeSub.status,
-       currentPeriodEnd: new Date(activeSub.current_period_end * 1000).toISOString(),
+        // Log raw values for debugging - Stripe SDK v18+ uses snake_case
+        rawCurrentPeriodEnd: (activeSub as any).current_period_end,
+        rawCancelAt: (activeSub as any).cancel_at,
+        // Also check camelCase in case SDK returns that
+        rawCurrentPeriodEndCamel: (activeSub as any).currentPeriodEnd,
+        itemsCount: activeSub.items?.data?.length,
      });
  
      // Determine plan and renewal period from subscription
      const plan = "pro"; // All paid subscriptions are pro for now
      const status = activeSub.status;
-     const currentPeriodEnd = new Date(activeSub.current_period_end * 1000).toISOString();
-     const cancelAt = activeSub.cancel_at 
-       ? new Date(activeSub.cancel_at * 1000).toISOString() 
-       : null;
+      
+      // Stripe SDK v18 uses snake_case, but we'll check both to be safe
+      const rawPeriodEnd = (activeSub as any).current_period_end ?? (activeSub as any).currentPeriodEnd;
+      const rawCancelAt = (activeSub as any).cancel_at ?? (activeSub as any).cancelAt;
+      
+      const currentPeriodEnd = toIsoOrNull(rawPeriodEnd);
+      const cancelAt = toIsoOrNull(rawCancelAt);
+      
+      logStep("Converted timestamps", { currentPeriodEnd, cancelAt });
      
      // Determine renewal period from price interval
      let renewalPeriod: string | null = null;
-     if (activeSub.items.data.length > 0) {
-       const priceInterval = activeSub.items.data[0].price.recurring?.interval;
+      if (activeSub.items?.data?.length > 0) {
+        const priceInterval = activeSub.items.data[0]?.price?.recurring?.interval;
        if (priceInterval === "month") renewalPeriod = "month";
        else if (priceInterval === "year") renewalPeriod = "year";
+        logStep("Determined renewal period", { priceInterval, renewalPeriod });
      }
  
      // Update or insert subscription record
-     const { error: upsertError } = await supabaseClient
+      const upsertData = {
+        user_id: userId,
+        plan,
+        status,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: activeSub.id,
+        current_period_end: currentPeriodEnd,
+        cancel_at: cancelAt,
+        renewal_period: renewalPeriod,
+      };
+      
+      logStep("Upserting subscription data", upsertData);
+      
+      const { error: upsertError } = await supabaseClient
        .from("user_subscriptions")
-       .upsert({
-         user_id: userId,
-         plan,
-         status,
-         stripe_customer_id: customerId,
-         stripe_subscription_id: activeSub.id,
-         current_period_end: currentPeriodEnd,
-         cancel_at: cancelAt,
-         renewal_period: renewalPeriod,
-       }, {
+        .upsert(upsertData, {
          onConflict: "user_id",
        });
  
