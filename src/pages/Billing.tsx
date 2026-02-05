@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CreditCard, Calendar, CheckCircle, ArrowUpRight, Clock, AlertTriangle, Loader2, XCircle } from "lucide-react";
+import { CreditCard, Calendar, CheckCircle, ArrowUpRight, Clock, AlertTriangle, Loader2, XCircle, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,7 @@ const Billing = () => {
   const { isTrialExpired, isLockedOut } = useFeatureAccess();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -36,12 +37,28 @@ const Billing = () => {
   useEffect(() => {
     const status = searchParams.get("status");
     if (status === "success") {
-      toast({
-        title: "🎉 Welcome to Pro!",
-        description: "Your subscription is now active. Enjoy all the premium features!",
+      // Sync subscription from Stripe before showing success
+      setSyncLoading(true);
+      invokeAuthedFunction("sync-subscription", { body: {} })
+        .then(() => {
+          toast({
+            title: "🎉 Welcome to Pro!",
+            description: "Your subscription is now active. Enjoy all the premium features!",
+          });
+          refresh();
+        })
+        .catch((err) => {
+          console.error("Sync error:", err);
+          toast({
+            title: "Subscription activated",
+            description: "Your payment was successful. Refreshing your status...",
+          });
+          refresh();
+        })
+        .finally(() => {
+          setSyncLoading(false);
+          setSearchParams({});
       });
-      refresh();
-      setSearchParams({});
     } else if (status === "cancelled") {
       toast({
         title: "Checkout cancelled",
@@ -50,6 +67,40 @@ const Billing = () => {
       setSearchParams({});
     }
   }, [searchParams, toast, refresh, setSearchParams]);
+
+  const syncSubscription = async () => {
+    setSyncLoading(true);
+    try {
+      const { data, error } = await invokeAuthedFunction<{ synced?: boolean; error?: string }>(
+        "sync-subscription",
+        { body: {} }
+      );
+
+      if (error) throw error;
+
+      if (data?.synced) {
+        toast({
+          title: "Subscription synced",
+          description: "Your subscription status has been updated.",
+        });
+        refresh();
+      } else {
+        toast({
+          title: "No changes",
+          description: "Your subscription is already up to date.",
+        });
+      }
+    } catch (error) {
+      console.error("Sync error:", error);
+      toast({
+        title: "Sync failed",
+        description: "Unable to sync subscription. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncLoading(false);
+    }
+  };
 
   const openCustomerPortal = async () => {
     setPortalLoading(true);
@@ -86,6 +137,27 @@ const Billing = () => {
   };
 
   if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">Billing & Subscription</h1>
+          <p className="text-muted-foreground">Manage your subscription and billing settings</p>
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-40 mb-2" />
+            <Skeleton className="h-4 w-60" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (syncLoading) {
     return (
       <div className="space-y-6">
         <div>
@@ -379,6 +451,25 @@ const Billing = () => {
                     <p className="text-xs text-muted-foreground text-center">
                       Update payment methods, view invoices, or cancel your subscription
                     </p>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full gap-2 text-muted-foreground"
+                      onClick={syncSubscription}
+                      disabled={syncLoading}
+                    >
+                      {syncLoading ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-3 h-3" />
+                          Refresh subscription status
+                        </>
+                      )}
+                    </Button>
                   </>
                 )}
               </div>
