@@ -3,7 +3,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
@@ -27,6 +26,36 @@ serve(async (req) => {
   }
 
   try {
+    // ===== CANONICAL AUTH BLOCK =====
+    const authHeader = req.headers.get('Authorization') ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
+      return new Response(
+        JSON.stringify({ error: 'Missing Authorization header', code: 'AUTH_SESSION_MISSING' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.slice(7).trim();
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    if (authError || !user) {
+      console.error('generate-workspace-suggestion: auth error', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', code: 'AUTH_SESSION_MISSING' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+    console.log("Generating workspace suggestion for user:", userId);
+
     const { documentId, taskContext, previousSuggestion, refinementType } = await req.json() as {
       documentId: string;
       taskContext?: TaskContext;
@@ -46,13 +75,14 @@ serve(async (req) => {
     }
 
     console.log("Generating workspace suggestion for document:", documentId);
-    console.log("Task context:", taskContext);
-    console.log("Refinement mode:", refinementType ? `Refining with type: ${refinementType}` : "Fresh suggestion");
 
-    // 1) Fetch the document content
+    // Use service role client for DB operations (after auth verified)
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    // 1) Fetch the document content with ownership check
     const { data: doc, error: docError } = await supabase
       .from("workspace_documents")
-      .select("id, title, content, doc_type")
+      .select("id, title, content, doc_type, user_id")
       .eq("id", documentId)
       .maybeSingle();
 
@@ -65,6 +95,15 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Document not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // CRITICAL: Verify ownership before proceeding
+    if (doc.user_id !== userId) {
+      console.error("Unauthorized access attempt to document:", documentId, "by user:", userId);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized access to document" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
