@@ -2,11 +2,30 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
+// Helper to determine if we're in test mode
+const isTestMode = () => Deno.env.get("STRIPE_TEST_MODE") === "true";
+
+// Get the appropriate Stripe secret key based on mode
+const getStripeSecretKey = () => {
+  if (isTestMode()) {
+    return Deno.env.get("STRIPE_SECRET_KEY_TEST") || Deno.env.get("STRIPE_SECRET_KEY")!;
+  }
+  return Deno.env.get("STRIPE_SECRET_KEY_LIVE") || Deno.env.get("STRIPE_SECRET_KEY")!;
+};
+
+// Get the appropriate webhook secret based on mode
+const getWebhookSecret = () => {
+  if (isTestMode()) {
+    return Deno.env.get("STRIPE_WEBHOOK_SECRET_TEST") || Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
+  }
+  return Deno.env.get("STRIPE_WEBHOOK_SECRET_LIVE") || Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
+};
+
+const stripe = new Stripe(getStripeSecretKey(), {
   apiVersion: "2025-08-27.basil",
 });
 
-const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
+const webhookSecret = getWebhookSecret();
 
 serve(async (req) => {
   if (req.method !== "POST") {

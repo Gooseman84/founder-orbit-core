@@ -7,6 +7,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to determine if we're in test mode
+const isTestMode = () => Deno.env.get("STRIPE_TEST_MODE") === "true";
+
+// Get the appropriate Stripe secret key based on mode
+const getStripeSecretKey = () => {
+  if (isTestMode()) {
+    return Deno.env.get("STRIPE_SECRET_KEY_TEST") || Deno.env.get("STRIPE_SECRET_KEY")!;
+  }
+  return Deno.env.get("STRIPE_SECRET_KEY_LIVE") || Deno.env.get("STRIPE_SECRET_KEY")!;
+};
+
+// Get the appropriate price ID based on mode and plan
+const getPriceId = (plan: string) => {
+  const isTest = isTestMode();
+  
+  if (plan === "monthly") {
+    if (isTest) {
+      return Deno.env.get("STRIPE_PRICE_MONTHLY_TEST") || Deno.env.get("STRIPE_PRICE_PRO_MONTHLY");
+    }
+    return Deno.env.get("STRIPE_PRICE_MONTHLY_LIVE") || Deno.env.get("STRIPE_PRICE_PRO_MONTHLY");
+  } else if (plan === "yearly" || plan === "annual") {
+    if (isTest) {
+      return Deno.env.get("STRIPE_PRICE_ANNUAL_TEST") || Deno.env.get("STRIPE_PRICE_PRO_YEARLY");
+    }
+    return Deno.env.get("STRIPE_PRICE_ANNUAL_LIVE") || Deno.env.get("STRIPE_PRICE_PRO_YEARLY");
+  }
+  
+  return null;
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -18,17 +48,16 @@ serve(async (req) => {
   }
 
   try {
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
+    const stripeSecretKey = getStripeSecretKey();
+    console.log("[create-checkout-session] Mode:", isTestMode() ? "TEST" : "LIVE");
+    
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2025-08-27.basil",
     });
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    // Price IDs from secrets (set via Supabase dashboard)
-    const priceMonthly = Deno.env.get("STRIPE_PRICE_PRO_MONTHLY");
-    const priceYearly = Deno.env.get("STRIPE_PRICE_PRO_YEARLY");
 
     // ===== CANONICAL AUTH BLOCK =====
     const authHeader = req.headers.get("Authorization") ?? "";
@@ -64,24 +93,18 @@ serve(async (req) => {
     const body = await req.json();
     const { plan, successUrl, cancelUrl } = body;
 
-    // Determine price ID based on plan parameter
-    let priceId: string | undefined;
-    if (plan === "monthly") {
-      priceId = priceMonthly;
-    } else if (plan === "yearly") {
-      priceId = priceYearly;
-    } else if (body.priceId) {
-      // Fallback: allow direct priceId for backwards compatibility
-      priceId = body.priceId;
-    }
+    // Determine price ID based on plan parameter and test/live mode
+    const priceId = getPriceId(plan) || body.priceId;
 
     if (!priceId) {
-      console.error("[create-checkout-session] No price ID found for plan:", plan);
+      console.error("[create-checkout-session] No price ID found for plan:", plan, "Mode:", isTestMode() ? "TEST" : "LIVE");
       return new Response(
         JSON.stringify({ error: "Invalid plan selected" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    console.log("[create-checkout-session] Using price ID:", priceId, "for plan:", plan);
 
     // Get origin with fallback to production URL
     const origin = req.headers.get("origin") || "https://founder-orbit-core.lovable.app";
