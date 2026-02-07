@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { FinancialViabilityScore } from "@/components/opportunity/FinancialViabilityScore";
 import type { Recommendation } from "@/types/recommendation";
 
 interface RecommendationCardProps {
@@ -171,7 +172,24 @@ export function RecommendationCard({
             </div>
           </div>
 
-          {/* Fit Breakdown - Collapsed by default */}
+          {/* Financial Viability Score */}
+          <div className="border-t pt-4 mt-2">
+            <FinancialViabilityScore
+              score={recommendation.fitScore}
+              breakdown={{
+                marketSize: recommendation.fitBreakdown.marketTiming,
+                unitEconomics: recommendation.fitBreakdown.revenueAlignment,
+                timeToRevenue: recommendation.fitBreakdown.feasibility,
+                competition: 70, // Default estimate
+                capitalRequirements: recommendation.fitBreakdown.feasibility,
+                founderMarketFit: recommendation.fitBreakdown.founderMarketFit,
+              }}
+              showBreakdown={true}
+              size="md"
+            />
+          </div>
+
+          {/* Fit Breakdown */}
           <FitBreakdownBar breakdown={recommendation.fitBreakdown} />
 
           {/* Actions */}

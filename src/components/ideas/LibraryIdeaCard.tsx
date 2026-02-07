@@ -11,6 +11,7 @@ import { ModeBadge } from "@/components/shared/ModeBadge";
 import { CategoryBadge } from "@/components/shared/CategoryBadge";
 import { SourceTypeBadge } from "@/components/ideas/SourceTypeBadge";
 import { PainThemesPanel } from "@/components/ideas/PainThemesPanel";
+import { FinancialViabilityScoreInline } from "@/components/opportunity/FinancialViabilityScore";
 import type { Idea } from "@/hooks/useIdeas";
 
 interface LibraryIdeaCardProps {
@@ -158,17 +159,9 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar }: L
           size="sm"
         />
 
-        {/* Overall Fit Score */}
+        {/* Financial Viability Score */}
         {idea.overall_fit_score != null && idea.overall_fit_score > 0 && (
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Overall Fit</span>
-              <span className={`font-bold ${getScoreColor(idea.overall_fit_score)}`}>
-                {idea.overall_fit_score}%
-              </span>
-            </div>
-            <Progress value={idea.overall_fit_score} className="h-1.5" />
-          </div>
+          <FinancialViabilityScoreInline score={idea.overall_fit_score} />
         )}
 
         {/* Actions */}

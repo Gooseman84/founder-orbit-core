@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIdeaDetail } from "@/hooks/useIdeaDetail";
 import { IdeaVettingCard } from "@/components/ideas/IdeaVettingCard";
 import { OpportunityScoreCard } from "@/components/opportunity/OpportunityScoreCard";
+import { FinancialViabilityScore } from "@/components/opportunity/FinancialViabilityScore";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { IdeaVariantGenerator } from "@/components/ideas/IdeaVariantGenerator";
 import { IdeaOptimizerBar } from "@/components/shared/IdeaOptimizerBar";
@@ -581,7 +582,32 @@ const IdeaDetail = () => {
             )}
           </div>
 
-          {/* V6 Metrics Section */}
+          {/* Financial Viability Score */}
+          {hasScores(idea) && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-primary" />
+                  Financial Viability
+                </h3>
+                <FinancialViabilityScore
+                  score={idea.overall_fit_score || 0}
+                  breakdown={{
+                    marketSize: idea.passion_fit_score || 50,
+                    unitEconomics: idea.constraint_fit_score || 50,
+                    timeToRevenue: idea.lifestyle_fit_score || 50,
+                    competition: idea.skill_fit_score || 50,
+                    capitalRequirements: idea.constraint_fit_score || 50,
+                    founderMarketFit: idea.passion_fit_score || 50,
+                  }}
+                  showBreakdown={true}
+                  size="lg"
+                  onUpgradeClick={() => setShowPaywall(true)}
+                />
+              </div>
+            </>
+          )}
           {(idea.virality_potential || idea.leverage_score || idea.automation_density || 
             idea.autonomy_level || idea.culture_tailwind || idea.chaos_factor) && (
             <>

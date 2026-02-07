@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BlueprintSkeleton } from "@/components/shared/SkeletonLoaders";
+import { FinancialViabilityScore } from "@/components/opportunity/FinancialViabilityScore";
 import { GenerateKitButton, TechStackDialog } from "@/components/implementationKit";
 import { useImplementationKitByBlueprint, useCreateImplementationKit } from "@/hooks/useImplementationKit";
 import { 
@@ -23,7 +24,8 @@ import {
   Loader2,
   Lock,
   ClipboardList,
-  CheckCircle
+  CheckCircle,
+  BarChart3
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { CommitmentWindowDays, CommitmentDraft, CommitmentFull, Venture, VentureState } from "@/types/venture";
@@ -273,6 +275,33 @@ const Blueprint = () => {
           </p>
         </CardContent>
       </Card>
+
+      {/* Financial Viability Score Card */}
+      {blueprint && (
+        <Card className="mb-6">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Financial Viability</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <FinancialViabilityScore
+              score={blueprint.income_target ? Math.min(85, 50 + (blueprint.income_target / 10000) * 10) : 65}
+              breakdown={{
+                marketSize: 70,
+                unitEconomics: blueprint.income_target ? Math.min(90, 60 + (blueprint.income_target / 20000) * 30) : 60,
+                timeToRevenue: blueprint.time_available_hours_per_week ? Math.min(85, 40 + blueprint.time_available_hours_per_week * 2) : 55,
+                competition: 65,
+                capitalRequirements: blueprint.capital_available ? Math.min(90, 50 + Math.log10(blueprint.capital_available + 1) * 15) : 50,
+                founderMarketFit: 75,
+              }}
+              showBreakdown={true}
+              size="md"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Misalignment Callouts */}
       {misalignmentCallouts.length > 0 && (
