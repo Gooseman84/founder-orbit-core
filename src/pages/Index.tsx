@@ -165,21 +165,24 @@ const TransformationSection = () => {
   const steps = [
     {
       step: "01",
-      icon: Brain,
-      title: "Profile Your Strengths",
-      description: "We analyze your skills, experience, resources, and constraints to understand what you're uniquely positioned to build."
+      label: "DISCOVER",
+      icon: Compass,
+      title: "Discover What to Build",
+      description: "Our AI co-founder interviews you to uncover your unfair advantages, real constraints, and the ideas hiding in your expertise. No generic brainstorming—personalized recommendations based on who you are."
     },
     {
       step: "02",
-      icon: Compass,
-      title: "Stress-Test Your Idea",
-      description: "Our AI evaluates market fit, competitive landscape, and business model viability—giving you honest, data-backed insights."
+      label: "VALIDATE",
+      icon: Target,
+      title: "Validate Before You Invest",
+      description: "Stress-test your concept against market demand, unit economics, competitive landscape, and your personal constraints. Get a Financial Viability Score that tells you if this idea can actually make money."
     },
     {
       step: "03",
-      icon: Target,
-      title: "Get Your Go/No-Go",
-      description: "Receive a clear recommendation with specific next steps—whether to proceed, pivot, or pursue a better-fit opportunity."
+      label: "EXECUTE",
+      icon: Rocket,
+      title: "Build With Confidence",
+      description: "Get a complete implementation blueprint ready for Lovable, Cursor, or any AI coding tool. Plus your SaaS Vibe Coding Kit with architecture specs, vertical slice plans, and ready-to-paste prompts."
     }
   ];
 
@@ -189,28 +192,54 @@ const TransformationSection = () => {
         <div className={`text-center mb-20 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <p className="text-primary font-semibold mb-4 tracking-wide uppercase text-sm">How It Works</p>
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold">
-            Validation before execution.
+            From idea to implementation in three steps.
           </h2>
         </div>
         
-        <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 relative">
+          {/* Flow arrows (desktop only) */}
+          <div className="hidden md:block absolute top-1/2 left-[calc(33.333%-1rem)] -translate-y-1/2 w-8 z-10">
+            <div className={`flex items-center justify-center transition-all duration-700 ${isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"}`} style={{ transitionDelay: "500ms" }}>
+              <ArrowRight className="w-6 h-6 text-primary/60" />
+            </div>
+          </div>
+          <div className="hidden md:block absolute top-1/2 left-[calc(66.666%-1rem)] -translate-y-1/2 w-8 z-10">
+            <div className={`flex items-center justify-center transition-all duration-700 ${isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"}`} style={{ transitionDelay: "700ms" }}>
+              <ArrowRight className="w-6 h-6 text-primary/60" />
+            </div>
+          </div>
+          
           {steps.map((item, index) => (
             <div 
               key={item.title}
               className={`relative p-8 lg:p-10 rounded-3xl bg-card border border-border hover:border-primary/40 transition-all duration-500 group hover:shadow-[0_20px_60px_rgba(255,106,0,0.1)] hover:-translate-y-2 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
               style={{ transitionDelay: `${200 + index * 150}ms` }}
             >
+              {/* Step label badge */}
+              <div className="absolute -top-3 left-8 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold tracking-wider">
+                {item.label}
+              </div>
+              
               {/* Step number */}
-              <span className="absolute -top-4 left-8 text-6xl font-bold text-primary/10 group-hover:text-primary/20 transition-colors">
+              <span className="absolute -top-4 right-8 text-6xl font-bold text-primary/10 group-hover:text-primary/20 transition-colors">
                 {item.step}
               </span>
               
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mt-4 mb-6 group-hover:scale-110 transition-transform duration-300">
                 <item.icon className="w-8 h-8 text-primary" />
               </div>
               
-              <h3 className="text-2xl font-bold mb-4">{item.title}</h3>
-              <p className="text-muted-foreground leading-relaxed text-lg">{item.description}</p>
+              <h3 className="text-xl lg:text-2xl font-bold mb-4">{item.title}</h3>
+              <p className="text-muted-foreground leading-relaxed">{item.description}</p>
+              
+              {/* Mobile flow arrow */}
+              {index < steps.length - 1 && (
+                <div className="md:hidden flex justify-center mt-6 -mb-12">
+                  <div className={`w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: `${400 + index * 150}ms` }}>
+                    <ArrowRight className="w-4 h-4 text-primary rotate-90" />
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
