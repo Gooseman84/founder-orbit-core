@@ -29,6 +29,12 @@ const PRO_FEATURES = [
   { icon: Zap, text: "Tasks, Quests, Daily Pulse & exports" },
 ];
 
+// Pricing configuration
+const PRICING = {
+  monthly: { amount: 29, label: "Monthly" },
+  yearly: { amount: 199, label: "Yearly", monthlyEquivalent: 16.58, discount: 43 },
+};
+
 interface ProUpgradeModalProps {
   open: boolean;
   onClose: () => void;
@@ -156,7 +162,7 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Monthly
+              {PRICING.monthly.label}
             </button>
             <button
               onClick={() => setSelectedPlan("yearly")}
@@ -166,9 +172,9 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Yearly
+              {PRICING.yearly.label}
               <span className="absolute -top-2 -right-1 text-[10px] font-bold text-primary bg-primary/20 px-1.5 py-0.5 rounded-full">
-                -43%
+                -{PRICING.yearly.discount}%
               </span>
             </button>
           </div>
@@ -177,15 +183,15 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
           <div className="text-center py-2">
             {selectedPlan === "yearly" ? (
               <div>
-                <span className="text-3xl font-bold">$199</span>
+                <span className="text-3xl font-bold">${PRICING.yearly.amount}</span>
                 <span className="text-muted-foreground">/year</span>
                 <p className="text-xs text-muted-foreground mt-1">
-                  That's just $16.58/month
+                  That's just ${PRICING.yearly.monthlyEquivalent}/month
                 </p>
               </div>
             ) : (
               <div>
-                <span className="text-3xl font-bold">$29</span>
+                <span className="text-3xl font-bold">${PRICING.monthly.amount}</span>
                 <span className="text-muted-foreground">/month</span>
               </div>
             )}
