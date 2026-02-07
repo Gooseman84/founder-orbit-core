@@ -168,9 +168,13 @@ export default function Discover() {
     setIsThinking(true);
     try {
       // Generate summary
-      await invokeAuthedFunction("dynamic-founder-interview", {
+      const { data: summaryData, error: summaryError } = await invokeAuthedFunction<{
+        contextSummary: any;
+      }>("dynamic-founder-interview", {
         body: { interview_id: interviewId, mode: "summary" },
       });
+
+      if (summaryError) throw summaryError;
 
       // Finalize profile
       await invokeAuthedFunction("finalize-founder-profile", {
@@ -179,10 +183,13 @@ export default function Discover() {
 
       toast({
         title: "Profile complete!",
-        description: "Mavrik has processed your interview. Let's find your ideas.",
+        description: "Mavrik has processed your interview.",
       });
 
-      navigate("/ideas");
+      // Navigate to summary page with insights
+      navigate("/discover/summary", { 
+        state: { insights: summaryData?.contextSummary } 
+      });
     } catch (e: any) {
       console.error("Discover: finalize error", e);
       toast({
