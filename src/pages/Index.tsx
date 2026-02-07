@@ -32,9 +32,7 @@ const Index = () => {
       <HeroSection onNavigate={() => navigate("/auth")} />
       <SocialProofSection />
       <ProblemSolutionSection />
-      <IdentitySection />
       <TransformationSection />
-      <FutureSelfSection />
       <WhoThisIsForSection />
       <WeekOneSection />
       <PricingSection onNavigate={() => navigate("/auth")} />
@@ -43,7 +41,7 @@ const Index = () => {
       <footer className="py-12 px-6 border-t border-border/30">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground" suppressHydrationWarning>
-            © 2025 TrueBlazer.AI — Find your path. Build with purpose.
+            © 2026 TrueBlazer.AI — Know what to build. Build it right.
           </p>
           <div className="flex gap-6 text-sm text-muted-foreground">
             <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
@@ -200,36 +198,6 @@ const ProblemSolutionSection = () => {
   );
 };
 
-const IdentitySection = () => {
-  const { ref, isVisible } = useScrollAnimation({ threshold: 0.2 });
-
-  return (
-    <section ref={ref} className="py-24 md:py-32 px-6 bg-gradient-to-b from-muted/20 to-background">
-      <div className={`container mx-auto max-w-4xl text-center transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-        <p className="text-primary font-semibold mb-4 tracking-wide uppercase text-sm">This is about who you're becoming</p>
-        
-        <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-10 leading-tight">
-          Your future is calling.{" "}
-          <span className="text-muted-foreground">Stop putting it on hold.</span>
-        </h2>
-        
-        <div className={`text-lg md:text-xl text-muted-foreground leading-relaxed space-y-6 max-w-3xl mx-auto transition-all duration-1000 delay-200 ${isVisible ? "opacity-100" : "opacity-0"}`}>
-          <p>
-            Most people wait for the perfect idea, the perfect moment, the perfect plan.
-          </p>
-          <p>
-            But momentum comes from <span className="text-foreground font-medium">clarity</span> — and clarity comes from knowing who you are, what you're capable of, and what you're meant to build.
-          </p>
-          <p className="text-foreground">
-            TrueBlazer learns your story, your strengths, your time, your resources, and your desires…
-            <br />
-            <span className="text-primary font-semibold">Then it shows you the version of you who's already doing it.</span>
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-};
 
 const TransformationSection = () => {
   const { ref, isVisible } = useScrollAnimation({ threshold: 0.1 });
@@ -320,81 +288,30 @@ const TransformationSection = () => {
   );
 };
 
-const FutureSelfSection = () => {
-  const { ref, isVisible } = useScrollAnimation({ threshold: 0.2 });
-
-  const visions = [
-    "You wake up excited again.",
-    "You're building something that's yours.",
-    "You're no longer guessing — you have a plan.",
-    "You're in motion, not stuck.",
-    "Your business is growing because you are growing.",
-    "You feel proud of who you're becoming."
-  ];
-
-  return (
-    <section ref={ref} className="py-24 md:py-32 px-6 bg-gradient-to-b from-background via-muted/30 to-background relative overflow-hidden">
-      {/* Subtle glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
-      
-      <div className="container mx-auto max-w-4xl text-center relative z-10">
-        <p className={`text-primary font-semibold mb-4 tracking-wide uppercase text-sm transition-all duration-1000 ${isVisible ? "opacity-100" : "opacity-0"}`}>
-          Meet your future self
-        </p>
-        
-        <h2 className={`text-3xl md:text-5xl lg:text-6xl font-bold mb-16 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          Picture your life{" "}
-          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">12 months from now.</span>
-        </h2>
-        
-        <div className="space-y-5 text-xl md:text-2xl">
-          {visions.map((vision, index) => (
-            <p 
-              key={index}
-              className={`flex items-center justify-center gap-4 text-muted-foreground transition-all duration-700 ${isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-10"}`}
-              style={{ transitionDelay: `${300 + index * 100}ms` }}
-            >
-              <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
-              <span className="hover:text-foreground transition-colors">{vision}</span>
-            </p>
-          ))}
-        </div>
-        
-        <div className={`mt-16 p-8 rounded-3xl bg-card border border-primary/20 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`} style={{ transitionDelay: "900ms" }}>
-          <p className="text-xl md:text-2xl font-medium">
-            TrueBlazer doesn't just give you ideas.
-            <br />
-            <span className="text-primary font-bold">It gives you a path.</span>
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-};
 
 const WhoThisIsForSection = () => {
   const { ref, isVisible } = useScrollAnimation({ threshold: 0.1 });
 
   const identities = [
     {
-      icon: User,
-      title: "The 9-to-5 Builder",
-      description: "You want something of your own. You're done making others rich."
-    },
-    {
-      icon: Sparkles,
-      title: "The Creator With Untapped Potential",
-      description: "You know there's a business inside you waiting to come out."
-    },
-    {
       icon: Clock,
-      title: "The High-Performer With Zero Time",
-      description: "You need clarity, not chaos. Every hour matters."
+      title: "The Side-Hustle Strategist",
+      description: "You have 10-15 hours a week and zero room for wasted effort. TrueBlazer finds the idea that fits your schedule, skills, and financial goals."
+    },
+    {
+      icon: User,
+      title: "The Domain Expert",
+      description: "You've spent years in your industry and see problems everywhere. TrueBlazer turns your insider knowledge into a validated business concept."
+    },
+    {
+      icon: Target,
+      title: "The Analytical Builder",
+      description: "You don't trust gut feelings — you trust data. TrueBlazer gives you financial viability scores, market analysis, and a clear go/no-go before you invest a dime."
     },
     {
       icon: Repeat,
-      title: "The Serial Starter",
-      description: "This time, you finish. This time, it's different."
+      title: "The Idea Hoarder",
+      description: "You have 47 ideas in a Google Doc and have started none. TrueBlazer forces focus: one venture at a time, validated before you build."
     }
   ];
 
@@ -402,10 +319,9 @@ const WhoThisIsForSection = () => {
     <section ref={ref} className="py-24 md:py-32 px-6">
       <div className="container mx-auto max-w-6xl">
         <div className={`text-center mb-16 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <p className="text-primary font-semibold mb-4 tracking-wide uppercase text-sm">Identity Resonance</p>
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold">
-            TrueBlazer is built for the ones{" "}
-            <span className="text-muted-foreground">who refuse to settle.</span>
+            Built for founders who{" "}
+            <span className="text-muted-foreground">think before they build.</span>
           </h2>
         </div>
         
@@ -437,21 +353,20 @@ const WeekOneSection = () => {
   const { ref, isVisible } = useScrollAnimation({ threshold: 0.2 });
 
   const deliverables = [
-    "A crystal-clear Founder Profile",
-    "20–40 ideas built around your strengths",
-    "1–2 Blueprinted businesses ready to explore",
-    "A 30-day action plan",
-    "A sense of direction you haven't felt in years"
+    "A personalized Mavrik interview that uncovers your unfair advantages",
+    "3-5 venture ideas ranked by how well they fit YOUR specific profile",
+    "Financial Viability Scores on your top ideas",
+    "A validated Blueprint with market analysis and competitive positioning",
+    "Implementation-ready specs for Lovable, Cursor, or your preferred coding tool"
   ];
 
   return (
     <section ref={ref} id="week-one" className="py-24 md:py-32 px-6 bg-gradient-to-b from-muted/20 to-background">
       <div className="container mx-auto max-w-4xl text-center">
         <div className={`transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <p className="text-primary font-semibold mb-4 tracking-wide uppercase text-sm">Power Proof</p>
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6">
-            In your first 7 days,{" "}
-            <span className="text-muted-foreground">you'll walk away with:</span>
+            What you walk away with{" "}
+            <span className="text-muted-foreground">in 7 days</span>
           </h2>
         </div>
         
@@ -480,25 +395,25 @@ const PricingSection = ({ onNavigate }: { onNavigate: () => void }) => {
   const { ref, isVisible } = useScrollAnimation({ threshold: 0.2 });
 
   const features = [
-    "Full Founder Profile",
-    "Unlimited Idea Generation",
-    "Idea Library & Scoring",
-    "Blueprints & Workspace",
-    "Tasks & Daily Pulse",
-    "Progress & XP Tracking"
+    "Mavrik AI Interview (personalized idea discovery)",
+    "Unlimited Idea Generation & Scoring",
+    "Financial Viability Scores with full breakdown",
+    "Venture Blueprints & Validation",
+    "SaaS Vibe Coding Kit (implementation specs)",
+    "Workspace & Document Library",
+    "Voice-to-Text across all inputs"
   ];
 
   return (
     <section ref={ref} className="py-24 md:py-32 px-6">
       <div className="container mx-auto max-w-4xl">
         <div className={`text-center mb-16 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <p className="text-primary font-semibold mb-4 tracking-wide uppercase text-sm">Pricing</p>
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6">
-            Simple, sane pricing{" "}
-            <span className="text-muted-foreground">for builders.</span>
+            One plan.{" "}
+            <span className="text-muted-foreground">No upsell maze.</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Start free. Upgrade only when you know it's helping you build the life you want.
+            Try free for 7 days. Cancel anytime.
           </p>
         </div>
         
@@ -518,9 +433,9 @@ const PricingSection = ({ onNavigate }: { onNavigate: () => void }) => {
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
                     <Crown className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-2xl md:text-3xl font-bold">Founder Mode</h3>
+                  <h3 className="text-2xl md:text-3xl font-bold">TrueBlazer Pro</h3>
                 </div>
-                <p className="text-muted-foreground">Everything you need to find and build your business.</p>
+                <p className="text-muted-foreground">Everything you need to validate and build your venture.</p>
               </div>
               
               <div className="text-left md:text-right">
@@ -556,30 +471,15 @@ const PricingSection = ({ onNavigate }: { onNavigate: () => void }) => {
                 className="w-full md:w-auto text-lg px-12 py-7 group min-h-[60px]" 
                 onClick={onNavigate}
               >
-                Start free — unlock TrueBlazer
+                Start Your 7-Day Trial
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               
               <p className="text-sm text-muted-foreground">
-                No contracts. Cancel anytime in 2 clicks.
+                No credit card required. Cancel in 2 clicks.
               </p>
             </div>
           </div>
-        </div>
-        
-        {/* Secondary link */}
-        <div className={`text-center mt-8 transition-all duration-1000 delay-600 ${isVisible ? "opacity-100" : "opacity-0"}`}>
-          <a 
-            href="#week-one"
-            onClick={(e) => {
-              e.preventDefault();
-              document.getElementById("week-one")?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2"
-          >
-            See what you can build in 7 days
-            <ArrowRight className="w-4 h-4" />
-          </a>
         </div>
       </div>
     </section>
@@ -596,15 +496,13 @@ const FinalCTASection = ({ onNavigate }: { onNavigate: () => void }) => {
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-primary/10 rounded-full blur-[150px] pointer-events-none" />
       
       <div className={`container mx-auto max-w-4xl text-center relative z-10 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-        <p className="text-primary font-semibold mb-4 tracking-wide uppercase text-sm">Call to Rise</p>
-        
         <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-8 leading-tight">
-          Everything you want exists on the other side of{" "}
-          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">courage.</span>
+          Your next idea deserves more than{" "}
+          <span className="text-muted-foreground">a Google Doc.</span>
         </h2>
         
         <p className={`text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto transition-all duration-1000 delay-200 ${isVisible ? "opacity-100" : "opacity-0"}`}>
-          Let TrueBlazer show you the version of you who's already winning.
+          In 7 days, you'll know exactly what to build, why it will work, and how to start. Free.
         </p>
         
         <div className={`flex flex-col items-center gap-4 transition-all duration-1000 delay-400 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
@@ -614,13 +512,9 @@ const FinalCTASection = ({ onNavigate }: { onNavigate: () => void }) => {
             className="text-lg px-12 py-8 group min-h-[64px] shadow-2xl shadow-primary/20" 
             onClick={onNavigate}
           >
-            Start free — step into your future
+            Validate Your Idea
             <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
           </Button>
-          
-          <p className="text-muted-foreground font-medium">
-            No risk. Big upside.
-          </p>
         </div>
       </div>
     </section>
