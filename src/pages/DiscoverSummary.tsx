@@ -1,14 +1,17 @@
 // src/pages/DiscoverSummary.tsx
 import { useEffect, useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
-import { ArrowLeft, Compass, Lightbulb, Users, Clock, Target, Shield } from "lucide-react";
+import { ArrowLeft, Compass, Lightbulb, Users, Clock, Target, Shield, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { FounderPortrait } from "@/components/discover/FounderPortrait";
 import { InsightCard, InsightPills } from "@/components/discover/InsightCard";
 import type { InterviewInsights } from "@/types/interviewInsights";
+import type { CorrectionFields, CorrectionsPayload } from "@/types/corrections";
 
 export default function DiscoverSummary() {
   const navigate = useNavigate();
@@ -17,7 +20,21 @@ export default function DiscoverSummary() {
   const { toast } = useToast();
   
   const [insights, setInsights] = useState<InterviewInsights | null>(null);
+  const [interviewId, setInterviewId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [corrections, setCorrections] = useState<CorrectionFields>({
+    insiderKnowledge: null,
+    customerIntimacy: null,
+    constraints: null,
+    financialTarget: null,
+    hardNoFilters: null,
+  });
+  const [additionalContext, setAdditionalContext] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showUpdatedAnimation, setShowUpdatedAnimation] = useState(false);
 
   useEffect(() => {
     document.title = "Your Founder Profile | TrueBlazer";
@@ -30,8 +47,11 @@ export default function DiscoverSummary() {
     const loadInsights = async () => {
       // Check if insights were passed via navigation state
       const stateInsights = location.state?.insights as InterviewInsights | undefined;
+      const stateInterviewId = location.state?.interviewId as string | undefined;
+      
       if (stateInsights) {
         setInsights(stateInsights);
+        setInterviewId(stateInterviewId || null);
         setIsLoading(false);
         return;
       }
@@ -40,7 +60,7 @@ export default function DiscoverSummary() {
       try {
         const { data, error } = await supabase
           .from("founder_interviews")
-          .select("context_summary")
+          .select("id, context_summary")
           .eq("user_id", user.id)
           .eq("status", "completed")
           .order("updated_at", { ascending: false })
@@ -51,6 +71,7 @@ export default function DiscoverSummary() {
 
         if (data?.context_summary) {
           setInsights(data.context_summary as unknown as InterviewInsights);
+          setInterviewId(data.id);
         } else {
           toast({
             title: "No interview found",
@@ -75,16 +96,91 @@ export default function DiscoverSummary() {
   }, [user?.id, location.state, navigate, toast]);
 
   const handleConfirm = () => {
-    // Navigate to idea generation
-    navigate("/discover/results", { state: { insights } });
+    navigate("/discover/results", { state: { insights, interviewId } });
   };
 
   const handleClarify = () => {
-    // TODO: Implement clarification flow (Prompt 4)
-    toast({
-      title: "Coming soon",
-      description: "Clarification feature will be available soon.",
+    setIsEditMode(true);
+  };
+
+  const handleCancelCorrections = () => {
+    setIsEditMode(false);
+    setCorrections({
+      insiderKnowledge: null,
+      customerIntimacy: null,
+      constraints: null,
+      financialTarget: null,
+      hardNoFilters: null,
     });
+    setAdditionalContext("");
+  };
+
+  const handleCorrectionChange = (key: string, value: string | null) => {
+    setCorrections(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const handleSubmitCorrections = async () => {
+    if (!interviewId) {
+      toast({
+        title: "Error",
+        description: "Interview ID not found. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if any corrections were made
+    const hasCorrections = Object.values(corrections).some(v => v !== null) || additionalContext.trim();
+    
+    if (!hasCorrections) {
+      // No corrections, just proceed
+      handleConfirm();
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const payload: CorrectionsPayload = {
+        corrections,
+        additionalContext: additionalContext.trim() || null,
+      };
+
+      const { data, error } = await invokeAuthedFunction("mavrik-apply-corrections", {
+        body: {
+          interviewId,
+          corrections: payload,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.insights) {
+        setInsights(data.insights);
+        
+        // Show updated animation
+        setShowUpdatedAnimation(true);
+        setTimeout(() => {
+          setShowUpdatedAnimation(false);
+          // Navigate to results
+          navigate("/discover/results", { state: { insights: data.insights, interviewId } });
+        }, 1500);
+      } else {
+        throw new Error("No updated insights returned");
+      }
+    } catch (e: any) {
+      console.error("Failed to apply corrections:", e);
+      toast({
+        title: "Failed to apply corrections",
+        description: e?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) {
@@ -142,6 +238,18 @@ export default function DiscoverSummary() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
+      {/* Updated animation overlay */}
+      {showUpdatedAnimation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="flex flex-col items-center gap-3 animate-scale-in">
+            <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
+              <Check className="h-8 w-8 text-primary" />
+            </div>
+            <p className="text-lg font-medium">Updated!</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-3">
@@ -159,6 +267,11 @@ export default function DiscoverSummary() {
             <span className="font-semibold text-lg">TrueBlazer</span>
           </div>
         </div>
+        {isEditMode && (
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+            Edit mode
+          </span>
+        )}
       </header>
 
       {/* Main Content */}
@@ -173,10 +286,10 @@ export default function DiscoverSummary() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-semibold">
-                Here's What I Learned About You
+                {isEditMode ? "Make Your Corrections" : "Here's What I Learned About You"}
               </h1>
               <p className="text-sm text-muted-foreground">
-                Based on our conversation
+                {isEditMode ? "Edit any card or add context below" : "Based on our conversation"}
               </p>
             </div>
           </div>
@@ -193,6 +306,10 @@ export default function DiscoverSummary() {
               title="Your Edge"
               icon={Lightbulb}
               confidence={confidenceLevel.insiderKnowledge}
+              isEditMode={isEditMode}
+              cardKey="insiderKnowledge"
+              correctionValue={corrections.insiderKnowledge || ""}
+              onCorrectionChange={handleCorrectionChange}
             >
               <InsightPills items={extractedInsights.insiderKnowledge} />
             </InsightCard>
@@ -202,6 +319,10 @@ export default function DiscoverSummary() {
               title="Your People"
               icon={Users}
               confidence={confidenceLevel.customerIntimacy}
+              isEditMode={isEditMode}
+              cardKey="customerIntimacy"
+              correctionValue={corrections.customerIntimacy || ""}
+              onCorrectionChange={handleCorrectionChange}
             >
               <InsightPills items={extractedInsights.customerIntimacy} />
             </InsightCard>
@@ -211,6 +332,10 @@ export default function DiscoverSummary() {
               title="Your Reality"
               icon={Clock}
               confidence={confidenceLevel.constraints}
+              isEditMode={isEditMode}
+              cardKey="constraints"
+              correctionValue={corrections.constraints || ""}
+              onCorrectionChange={handleCorrectionChange}
             >
               <p className="text-sm text-foreground/80">{formatConstraints()}</p>
               {extractedInsights.constraints.otherConstraints && 
@@ -226,6 +351,10 @@ export default function DiscoverSummary() {
               title="Your Target"
               icon={Target}
               confidence={confidenceLevel.financialTarget}
+              isEditMode={isEditMode}
+              cardKey="financialTarget"
+              correctionValue={corrections.financialTarget || ""}
+              onCorrectionChange={handleCorrectionChange}
             >
               <p className="text-sm text-foreground/80">
                 {extractedInsights.financialTarget.description || "No target specified"}
@@ -233,37 +362,91 @@ export default function DiscoverSummary() {
             </InsightCard>
 
             {/* Your Boundaries (Conditional) */}
-            {extractedInsights.hardNoFilters && 
-             extractedInsights.hardNoFilters.length > 0 && (
+            {(extractedInsights.hardNoFilters && 
+             extractedInsights.hardNoFilters.length > 0) || isEditMode ? (
               <InsightCard
                 title="Your Boundaries"
                 icon={Shield}
                 className="sm:col-span-2"
+                isEditMode={isEditMode}
+                cardKey="hardNoFilters"
+                correctionValue={corrections.hardNoFilters || ""}
+                onCorrectionChange={handleCorrectionChange}
               >
-                <InsightPills items={extractedInsights.hardNoFilters} />
+                {extractedInsights.hardNoFilters && extractedInsights.hardNoFilters.length > 0 ? (
+                  <InsightPills items={extractedInsights.hardNoFilters} />
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No boundaries specified</p>
+                )}
               </InsightCard>
-            )}
+            ) : null}
           </div>
+
+          {/* General correction area - only in edit mode */}
+          {isEditMode && (
+            <div className="mt-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <label className="block text-sm font-medium mb-2">
+                Anything else I should know?
+              </label>
+              <Textarea
+                value={additionalContext}
+                onChange={(e) => setAdditionalContext(e.target.value)}
+                placeholder="Add context, correct assumptions, or tell me what I missed..."
+                className="min-h-[100px] resize-none"
+                rows={4}
+              />
+            </div>
+          )}
         </div>
       </main>
 
       {/* CTA Section - Fixed at bottom */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 py-4 pb-safe">
         <div className="max-w-2xl mx-auto flex flex-col gap-2">
-          <Button
-            onClick={handleConfirm}
-            size="lg"
-            variant="gradient"
-            className="w-full"
-          >
-            That's me — show me ideas
-          </Button>
-          <button
-            onClick={handleClarify}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
-          >
-            Not quite — let me clarify
-          </button>
+          {isEditMode ? (
+            <>
+              <Button
+                onClick={handleSubmitCorrections}
+                size="lg"
+                variant="gradient"
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update & show me ideas"
+                )}
+              </Button>
+              <button
+                onClick={handleCancelCorrections}
+                disabled={isSubmitting}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2 disabled:opacity-50"
+              >
+                Cancel corrections
+              </button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={handleConfirm}
+                size="lg"
+                variant="gradient"
+                className="w-full"
+              >
+                That's me — show me ideas
+              </Button>
+              <button
+                onClick={handleClarify}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+              >
+                Not quite — let me clarify
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

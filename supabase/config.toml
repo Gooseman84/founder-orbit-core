@@ -134,3 +134,6 @@ verify_jwt = false
 
 [functions.mavrik-interview]
 verify_jwt = false
+
+[functions.mavrik-apply-corrections]
+verify_jwt = false
