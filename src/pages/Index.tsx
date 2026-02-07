@@ -31,6 +31,7 @@ const Index = () => {
 
       <HeroSection onNavigate={() => navigate("/auth")} />
       <SocialProofSection />
+      <ProblemSolutionSection />
       <IdentitySection />
       <TransformationSection />
       <FutureSelfSection />
@@ -123,6 +124,77 @@ const SocialProofSection = () => {
         <p className="text-muted-foreground text-sm md:text-base">
           Built by a <span className="text-foreground font-medium">CFA Charterholder & CFP</span> who evaluates business models for a living.
         </p>
+      </div>
+    </section>
+  );
+};
+
+const ProblemSolutionSection = () => {
+  const { ref, isVisible } = useScrollAnimation({ threshold: 0.2 });
+
+  return (
+    <section ref={ref} className="py-20 md:py-28 px-6">
+      <div className="container mx-auto max-w-6xl">
+        {/* Section Header */}
+        <div className={`text-center mb-16 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold">
+            The Real Problem Isn't Building.{" "}
+            <span className="text-muted-foreground">It's Choosing.</span>
+          </h2>
+        </div>
+
+        {/* Two Column Layout */}
+        <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
+          {/* Problem Column */}
+          <div 
+            className={`p-8 lg:p-10 rounded-3xl bg-muted/50 border border-border/50 transition-all duration-700 ${isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-10"}`}
+            style={{ transitionDelay: "200ms" }}
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-muted-foreground/10 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">The Problem</span>
+            </div>
+            
+            <div className="space-y-4 text-muted-foreground leading-relaxed">
+              <p>
+                AI coding tools made building easy. But <span className="text-foreground font-medium">90% of startups still fail.</span>
+              </p>
+              <p>
+                Why? Because founders skip the most important step: figuring out if their idea is actually worth building.
+              </p>
+              <p>
+                Every week spent building the wrong thing is a week you'll never get back. And no amount of vibe coding can fix a fundamentally flawed business model.
+              </p>
+            </div>
+          </div>
+
+          {/* Solution Column */}
+          <div 
+            className={`p-8 lg:p-10 rounded-3xl bg-gradient-to-br from-primary/5 via-card to-card border border-primary/20 transition-all duration-700 ${isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-10"}`}
+            style={{ transitionDelay: "400ms" }}
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-sm font-semibold text-primary uppercase tracking-wide">The Solution</span>
+            </div>
+            
+            <div className="space-y-4 text-foreground/80 leading-relaxed">
+              <p>
+                <span className="text-foreground font-medium">TrueBlazer is the due diligence layer</span> between having an idea and committing to build it.
+              </p>
+              <p>
+                We combine AI-powered analysis with the financial rigor of a CFA Charterholder to give you the one thing every founder needs:
+              </p>
+              <p className="text-primary font-semibold text-lg">
+                Confidence that you're building something people will actually pay for.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
