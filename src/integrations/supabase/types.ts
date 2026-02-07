@@ -1089,6 +1089,41 @@ export type Database = {
           },
         ]
       }
+      personalized_recommendations: {
+        Row: {
+          created_at: string
+          generation_notes: string | null
+          id: string
+          interview_id: string
+          recommendations: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          generation_notes?: string | null
+          id?: string
+          interview_id: string
+          recommendations?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          generation_notes?: string | null
+          id?: string
+          interview_id?: string
+          recommendations?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personalized_recommendations_interview_id_fkey"
+            columns: ["interview_id"]
+            isOneToOne: false
+            referencedRelation: "founder_interviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pulse_checks: {
         Row: {
           ai_insight: string | null
