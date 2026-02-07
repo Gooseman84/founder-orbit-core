@@ -18,6 +18,7 @@ import Onboarding from "./pages/Onboarding";
 import ExtendedOnboarding from "./pages/ExtendedOnboarding";
 import StructuredOnboarding from "./pages/StructuredOnboarding";
 import OnboardingInterview from "./pages/OnboardingInterview";
+import Discover from "./pages/Discover";
 import Ideas from "./pages/Ideas";
 import IdeaDetail from "./pages/IdeaDetail";
 import CompareIdeas from "./pages/CompareIdeas";
@@ -92,6 +93,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <OnboardingInterview />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/discover"
+              element={
+                <ProtectedRoute>
+                  <Discover />
                 </ProtectedRoute>
               }
             />
