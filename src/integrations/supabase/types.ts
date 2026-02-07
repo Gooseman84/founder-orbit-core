@@ -356,6 +356,50 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_viability_scores: {
+        Row: {
+          composite_score: number
+          created_at: string
+          dimensions: Json
+          id: string
+          idea_id: string
+          summary: string | null
+          top_opportunity: string | null
+          top_risk: string | null
+          user_id: string
+        }
+        Insert: {
+          composite_score: number
+          created_at?: string
+          dimensions?: Json
+          id?: string
+          idea_id: string
+          summary?: string | null
+          top_opportunity?: string | null
+          top_risk?: string | null
+          user_id: string
+        }
+        Update: {
+          composite_score?: number
+          created_at?: string
+          dimensions?: Json
+          id?: string
+          idea_id?: string
+          summary?: string | null
+          top_opportunity?: string | null
+          top_risk?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_viability_scores_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       founder_blueprints: {
         Row: {
           ai_recommendations: Json | null
