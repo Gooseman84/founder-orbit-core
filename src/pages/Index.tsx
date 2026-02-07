@@ -30,6 +30,7 @@ const Index = () => {
       </nav>
 
       <HeroSection onNavigate={() => navigate("/auth")} />
+      <SocialProofSection />
       <IdentitySection />
       <TransformationSection />
       <FutureSelfSection />
@@ -56,8 +57,12 @@ const Index = () => {
 const HeroSection = ({ onNavigate }: { onNavigate: () => void }) => {
   const { ref, isVisible } = useScrollAnimation({ threshold: 0.1 });
 
+  const scrollToHowItWorks = () => {
+    document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
-    <section ref={ref} className="relative pt-32 pb-24 md:pt-40 md:pb-32 px-6 overflow-hidden">
+    <section ref={ref} className="relative pt-32 pb-16 md:pt-40 md:pb-24 px-6 overflow-hidden">
       {/* Cinematic gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background pointer-events-none" />
       <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
@@ -66,39 +71,58 @@ const HeroSection = ({ onNavigate }: { onNavigate: () => void }) => {
       <div className={`container mx-auto max-w-5xl text-center relative z-10 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-10">
-          <Flame className="w-4 h-4" />
-          Your transformation begins now
+          <Target className="w-4 h-4" />
+          Founder Intelligence Platform
         </div>
         
         {/* Main Headline */}
         <h1 className={`text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.1] mb-8 tracking-tight transition-all duration-1000 delay-200 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          Become the person who builds{" "}
+          AI can build anything.{" "}
           <span className="bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">
-            the life you keep talking about.
+            TrueBlazer tells you what's worth building.
           </span>
         </h1>
         
         {/* Subhead */}
         <p className={`text-xl md:text-2xl text-muted-foreground mb-4 max-w-3xl mx-auto leading-relaxed transition-all duration-1000 delay-300 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          TrueBlazer.AI is your AI cofounder — helping you discover the business you were meant to build and guiding you through every step until it becomes real.
+          The founder intelligence platform that validates your business idea, stress-tests your model, and gives you a clear go/no-go before you write a single line of code.
         </p>
         
-        {/* CTA */}
-        <div className={`flex flex-col items-center gap-4 mt-12 transition-all duration-1000 delay-500 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+        {/* CTAs */}
+        <div className={`flex flex-col sm:flex-row items-center justify-center gap-4 mt-12 transition-all duration-1000 delay-500 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <Button 
             variant="gradient" 
             size="lg" 
             className="text-lg px-10 py-7 group min-h-[60px]" 
             onClick={onNavigate}
           >
-            Start free — unlock your future
+            Validate Your Idea
             <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
           </Button>
           
-          <p className="text-sm text-muted-foreground">
-            No credit card. No pressure. Just clarity.
-          </p>
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="text-lg px-8 py-7 min-h-[60px] border-border/50 hover:border-primary/50 hover:bg-primary/5" 
+            onClick={scrollToHowItWorks}
+          >
+            See How It Works
+          </Button>
         </div>
+      </div>
+    </section>
+  );
+};
+
+const SocialProofSection = () => {
+  const { ref, isVisible } = useScrollAnimation({ threshold: 0.3 });
+
+  return (
+    <section ref={ref} className="py-8 md:py-12 px-6 border-y border-border/20 bg-muted/10">
+      <div className={`container mx-auto max-w-4xl text-center transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
+        <p className="text-muted-foreground text-sm md:text-base">
+          Built by a <span className="text-foreground font-medium">CFA Charterholder & CFP</span> who evaluates business models for a living.
+        </p>
       </div>
     </section>
   );
@@ -142,30 +166,30 @@ const TransformationSection = () => {
     {
       step: "01",
       icon: Brain,
-      title: "Discover Yourself",
-      description: "Uncover your passions, skills, risk tolerance, lifestyle goals, and hidden strengths. See yourself more clearly than ever before."
+      title: "Profile Your Strengths",
+      description: "We analyze your skills, experience, resources, and constraints to understand what you're uniquely positioned to build."
     },
     {
       step: "02",
-      icon: Lightbulb,
-      title: "Find Your Business",
-      description: "Unlock idea streams, creator plays, SaaS angles, faceless brands, niche opportunities, and unexpected paths designed just for you."
+      icon: Compass,
+      title: "Stress-Test Your Idea",
+      description: "Our AI evaluates market fit, competitive landscape, and business model viability—giving you honest, data-backed insights."
     },
     {
       step: "03",
-      icon: Rocket,
-      title: "Build Your Future",
-      description: "With a Blueprint, tasks, daily guidance, and AI support — TrueBlazer turns \"I think I could do this…\" into \"I'm actually doing it.\""
+      icon: Target,
+      title: "Get Your Go/No-Go",
+      description: "Receive a clear recommendation with specific next steps—whether to proceed, pivot, or pursue a better-fit opportunity."
     }
   ];
 
   return (
-    <section ref={ref} className="py-24 md:py-32 px-6">
+    <section ref={ref} id="how-it-works" className="py-24 md:py-32 px-6">
       <div className="container mx-auto max-w-6xl">
         <div className={`text-center mb-20 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <p className="text-primary font-semibold mb-4 tracking-wide uppercase text-sm">The Transformation</p>
+          <p className="text-primary font-semibold mb-4 tracking-wide uppercase text-sm">How It Works</p>
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold">
-            Three steps to a new life.
+            Validation before execution.
           </h2>
         </div>
         
