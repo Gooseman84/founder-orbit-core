@@ -137,3 +137,6 @@ verify_jwt = false
 
 [functions.mavrik-apply-corrections]
 verify_jwt = false
+
+[functions.generate-personalized-ideas]
+verify_jwt = false
