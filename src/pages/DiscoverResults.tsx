@@ -10,6 +10,7 @@ import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { DiscoverResultsLoading } from "@/components/discover/DiscoverResultsLoading";
 import { RecommendationCard } from "@/components/discover/RecommendationCard";
 import { RegeneratePanel } from "@/components/discover/RegeneratePanel";
+import { ExploreIdeaModal } from "@/components/discover/ExploreIdeaModal";
 import type { Recommendation, GenerationResult } from "@/types/recommendation";
 
 export default function DiscoverResults() {
@@ -26,6 +27,11 @@ export default function DiscoverResults() {
   const [interviewDate, setInterviewDate] = useState<Date | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Explore modal state
+  const [exploreModalOpen, setExploreModalOpen] = useState(false);
+  const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
+  const [selectedRecommendationIndex, setSelectedRecommendationIndex] = useState(0);
 
   // Get interviewId from location state or fetch from DB
   const fetchInterviewId = useCallback(async (): Promise<string | null> => {
@@ -199,13 +205,12 @@ export default function DiscoverResults() {
     }
   };
 
-  // Handle "Explore This Idea" - placeholder for now
+  // Handle "Explore This Idea" - opens confirmation modal
   const handleExplore = (recommendation: Recommendation) => {
-    // TODO: Implement idea acceptance flow (Prompt 7)
-    toast({
-      title: "Coming soon",
-      description: `"${recommendation.name}" exploration will be available soon.`,
-    });
+    const index = recommendations.findIndex(r => r.name === recommendation.name);
+    setSelectedRecommendation(recommendation);
+    setSelectedRecommendationIndex(index >= 0 ? index : 0);
+    setExploreModalOpen(true);
   };
 
   // Handle "Save for Later"
@@ -304,9 +309,9 @@ export default function DiscoverResults() {
           <div className="max-w-2xl mx-auto px-4 py-6 sm:py-10">
             {/* Generation Notes Banner */}
             {generationNotes && (
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-6 flex items-start gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <Info className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-blue-900">{generationNotes}</p>
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 mb-6 flex items-start gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Info className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-foreground">{generationNotes}</p>
               </div>
             )}
 
@@ -354,6 +359,24 @@ export default function DiscoverResults() {
           </div>
         )}
       </main>
+
+      {/* Explore Idea Modal */}
+      <ExploreIdeaModal
+        isOpen={exploreModalOpen}
+        onClose={() => {
+          setExploreModalOpen(false);
+          setSelectedRecommendation(null);
+        }}
+        recommendation={selectedRecommendation}
+        interviewId={interviewId || ""}
+        recommendationIndex={selectedRecommendationIndex}
+        onSaved={() => {
+          toast({
+            title: "Idea saved",
+            description: "You can find it in your idea library.",
+          });
+        }}
+      />
     </div>
   );
 }

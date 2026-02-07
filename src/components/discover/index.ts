@@ -9,3 +9,4 @@ export { InsightCard, InsightPills } from "./InsightCard";
 export { DiscoverResultsLoading } from "./DiscoverResultsLoading";
 export { RecommendationCard } from "./RecommendationCard";
 export { RegeneratePanel } from "./RegeneratePanel";
+export { ExploreIdeaModal } from "./ExploreIdeaModal";
