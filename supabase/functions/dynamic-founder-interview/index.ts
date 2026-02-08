@@ -126,47 +126,78 @@ SUMMARY MODE
 When asked to summarize, return ONLY this JSON structure:
 
 {
-  "desires": ["financial freedom", "creative autonomy", "..."],
-  "roles": ["builder", "guide"],
-  "workStyle": ["deep focus mornings", "async communication"],
-  "hellNo": ["managing a team", "daily social media"],
-  "markets": ["developers", "solopreneurs", "..."],
-  "archetypes": ["productized service", "digital product"],
-  "quotes": ["I hate being told what to do", "..."],
-  "risks": ["limited time with day job", "..."],
-  "ideaAngles": ["dev tool for X", "course on Y", "..."]
+  "extractedInsights": {
+    "insiderKnowledge": ["specific expertise/edge #1", "insider access #2", "..."],
+    "customerIntimacy": ["customer group they understand", "market they have access to", "..."],
+    "constraints": {
+      "hoursPerWeek": 15,
+      "availableCapital": "$5,000",
+      "timeline": "6 months to first revenue",
+      "otherConstraints": ["day job", "family responsibilities"]
+    },
+    "financialTarget": {
+      "type": "side_income",
+      "minimumMonthlyRevenue": 3000,
+      "description": "Replace side income from consulting"
+    },
+    "hardNoFilters": ["managing employees", "cold calling", "physical products"],
+    "emotionalDrivers": ["freedom", "autonomy", "creative expression"],
+    "domainExpertise": ["fintech", "healthcare SaaS", "developer tools"]
+  },
+  "founderSummary": "A 2-3 sentence portrait of this founder - who they are, what drives them, and their unique edge.",
+  "confidenceLevel": {
+    "insiderKnowledge": "high",
+    "customerIntimacy": "medium",
+    "constraints": "high",
+    "financialTarget": "low"
+  },
+  "ideaGenerationContext": "Dense paragraph optimized for ideation engine with key signals: skills, markets, constraints, goals."
 }
 
 SUMMARY RULES:
 - Valid JSON only. No markdown fences.
 - Be specific, not generic.
-- 5-10 idea angles minimum.
-- Quotes should be verbatim from the founder.
+- Confidence levels: "high" (clearly stated), "medium" (implied), "low" (unclear/missing).
+- hoursPerWeek must be a number or the string "unclear".
+- minimumMonthlyRevenue must be a number or the string "unspecified".
+- type must be one of: "side_income", "salary_replacement", "wealth_building".
+- founderSummary should be personal and specific, not generic.
 
 ═══════════════════════════════════════════════════════════════════════════════
 EXAMPLE SUMMARY OUTPUT
 ═══════════════════════════════════════════════════════════════════════════════
 
 For a founder who mentioned: 10 years in DevOps, hates meetings, wants passive income, 
-knows the Kubernetes ecosystem, has 15 hours/week, and said "I just want to build 
-something once and have it pay me forever":
+knows the Kubernetes ecosystem, has 15 hours/week, $5k to invest, and said "I just want 
+to build something once and have it pay me forever":
 
 {
-  "desires": ["passive income", "time freedom", "work from anywhere"],
-  "roles": ["builder"],
-  "workStyle": ["solo deep work", "async-first", "evening hours"],
-  "hellNo": ["meetings", "managing people", "sales calls", "social media"],
-  "markets": ["DevOps engineers", "SRE teams", "Kubernetes users"],
-  "archetypes": ["dev tool", "paid template", "technical course"],
-  "quotes": ["I just want to build something once and have it pay me forever", "meetings are where productivity goes to die"],
-  "risks": ["limited hours may slow validation", "builder-only may need to force marketing"],
-  "ideaAngles": [
-    "Kubernetes config generator SaaS",
-    "DevOps interview prep course",
-    "Terraform template marketplace",
-    "Incident postmortem template kit",
-    "SRE onboarding documentation templates"
-  ]
+  "extractedInsights": {
+    "insiderKnowledge": ["10 years DevOps experience", "deep Kubernetes expertise", "knows infrastructure pain points"],
+    "customerIntimacy": ["DevOps engineers", "SRE teams", "Kubernetes users"],
+    "constraints": {
+      "hoursPerWeek": 15,
+      "availableCapital": "$5,000",
+      "timeline": "wants passive income stream",
+      "otherConstraints": ["limited availability due to day job"]
+    },
+    "financialTarget": {
+      "type": "side_income",
+      "minimumMonthlyRevenue": "unspecified",
+      "description": "Passive income that pays without ongoing effort"
+    },
+    "hardNoFilters": ["meetings", "managing people", "sales calls", "social media"],
+    "emotionalDrivers": ["autonomy", "time freedom", "work from anywhere", "build once, earn forever"],
+    "domainExpertise": ["DevOps", "Kubernetes", "infrastructure", "SRE"]
+  },
+  "founderSummary": "A seasoned DevOps engineer with a decade of Kubernetes expertise, seeking the ultimate builder's dream: passive income from a product they can create once. They crave autonomy and despise meetings—perfect for a solo SaaS or template business.",
+  "confidenceLevel": {
+    "insiderKnowledge": "high",
+    "customerIntimacy": "high",
+    "constraints": "high",
+    "financialTarget": "medium"
+  },
+  "ideaGenerationContext": "DevOps engineer, 10 years experience, Kubernetes expert. 15 hours/week, $5k capital. Wants passive income, hates meetings and people management. Target: other DevOps/SRE engineers. Solo builder archetype. Key opportunity: templates, tools, or courses for infrastructure professionals."
 }
 
 Stay sharp. Extract signal. Help them win.`;
