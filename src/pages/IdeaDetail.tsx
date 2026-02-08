@@ -12,6 +12,7 @@ import { useIdeaDetail } from "@/hooks/useIdeaDetail";
 import { IdeaVettingCard } from "@/components/ideas/IdeaVettingCard";
 import { OpportunityScoreCard } from "@/components/opportunity/OpportunityScoreCard";
 import { FinancialViabilityScore } from "@/components/opportunity/FinancialViabilityScore";
+import { useFinancialViabilityScore } from "@/hooks/useFinancialViabilityScore";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { IdeaVariantGenerator } from "@/components/ideas/IdeaVariantGenerator";
 import { IdeaOptimizerBar } from "@/components/shared/IdeaOptimizerBar";
@@ -55,6 +56,16 @@ const IdeaDetail = () => {
   const { gate } = useFeatureAccess();
   const queryClient = useQueryClient();
   const { idea, analysis, isLoading, isScoring, scoringError, analyzeIdea, updateIdeaStatus, refetch, reScore } = useIdeaDetail(id);
+  
+  // Financial Viability Score hook
+  const { 
+    score: fvsScore, 
+    isLoading: fvsLoading, 
+    isCalculating: fvsCalculating, 
+    error: fvsError, 
+    calculateScore: calculateFVS,
+    hasScore: hasFVS 
+  } = useFinancialViabilityScore(id);
   
   const [opportunityScore, setOpportunityScore] = useState<any>(null);
   const [loadingScore, setLoadingScore] = useState(true);
@@ -583,31 +594,118 @@ const IdeaDetail = () => {
           </div>
 
           {/* Financial Viability Score */}
-          {hasScores(idea) && (
-            <>
-              <Separator />
-              <div>
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-primary" />
-                  Financial Viability
-                </h3>
+          <Separator />
+          <div>
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Financial Viability
+              {fvsCalculating && (
+                <span className="text-xs text-muted-foreground font-normal flex items-center gap-1.5">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
+                  Calculating...
+                </span>
+              )}
+            </h3>
+            
+            {fvsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              </div>
+            ) : hasFVS && fvsScore ? (
+              <>
                 <FinancialViabilityScore
-                  score={idea.overall_fit_score || 0}
-                  breakdown={{
-                    marketSize: idea.passion_fit_score || 50,
-                    unitEconomics: idea.constraint_fit_score || 50,
-                    timeToRevenue: idea.lifestyle_fit_score || 50,
-                    competition: idea.skill_fit_score || 50,
-                    capitalRequirements: idea.constraint_fit_score || 50,
-                    founderMarketFit: idea.passion_fit_score || 50,
-                  }}
-                  showBreakdown={true}
+                  score={fvsScore.compositeScore}
+                  breakdown={fvsScore.dimensions ? {
+                    marketSize: fvsScore.dimensions.marketSize.score,
+                    unitEconomics: fvsScore.dimensions.unitEconomics.score,
+                    timeToRevenue: fvsScore.dimensions.timeToRevenue.score,
+                    competition: fvsScore.dimensions.competitiveDensity.score,
+                    capitalRequirements: fvsScore.dimensions.capitalRequirements.score,
+                    founderMarketFit: fvsScore.dimensions.founderMarketFit.score,
+                  } : undefined}
+                  showBreakdown={!!fvsScore.dimensions}
                   size="lg"
                   onUpgradeClick={() => setShowPaywall(true)}
                 />
+                
+                {/* Summary and Risk/Opportunity for Pro users */}
+                {fvsScore.summary && (
+                  <div className="mt-4 p-4 bg-muted/30 rounded-lg space-y-3">
+                    <p className="text-sm text-muted-foreground">{fvsScore.summary}</p>
+                    {fvsScore.topRisk && (
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                        <div>
+                          <span className="text-xs font-medium text-destructive">Top Risk: </span>
+                          <span className="text-xs text-muted-foreground">{fvsScore.topRisk}</span>
+                        </div>
+                      </div>
+                    )}
+                    {fvsScore.topOpportunity && (
+                      <div className="flex items-start gap-2">
+                        <TrendingUp className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <span className="text-xs font-medium text-green-600">Top Opportunity: </span>
+                          <span className="text-xs text-muted-foreground">{fvsScore.topOpportunity}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Recalculate button */}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="mt-3 text-xs"
+                  onClick={() => calculateFVS({
+                    title: idea.title,
+                    description: idea.description || undefined,
+                    targetCustomer: idea.target_customer || undefined,
+                    category: idea.category || undefined,
+                    platform: idea.platform || undefined,
+                  })}
+                  disabled={fvsCalculating}
+                >
+                  <RefreshCw className={`w-3 h-3 mr-1.5 ${fvsCalculating ? 'animate-spin' : ''}`} />
+                  Recalculate
+                </Button>
+              </>
+            ) : (
+              <div className="text-center py-6 bg-muted/20 rounded-lg border border-dashed">
+                <BarChart3 className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground mb-3">
+                  Get a CFA-grade financial viability analysis for this idea
+                </p>
+                <Button
+                  onClick={() => calculateFVS({
+                    title: idea.title,
+                    description: idea.description || undefined,
+                    targetCustomer: idea.target_customer || undefined,
+                    category: idea.category || undefined,
+                    platform: idea.platform || undefined,
+                  })}
+                  disabled={fvsCalculating}
+                  size="sm"
+                >
+                  {fvsCalculating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2" />
+                      Calculating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Calculate Viability Score
+                    </>
+                  )}
+                </Button>
+                {fvsError && (
+                  <p className="text-xs text-destructive mt-2">{fvsError}</p>
+                )}
               </div>
-            </>
-          )}
+            )}
+          </div>
           {(idea.virality_potential || idea.leverage_score || idea.automation_density || 
             idea.autonomy_level || idea.culture_tailwind || idea.chaos_factor) && (
             <>
