@@ -33,6 +33,9 @@ export default function DiscoverResults() {
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
   const [selectedRecommendationIndex, setSelectedRecommendationIndex] = useState(0);
 
+  // Check if we need to force regeneration (e.g., after corrections)
+  const forceRegenerate = (location.state?.forceRegenerate as boolean) || false;
+
   // Get interviewId from location state or fetch from DB
   const fetchInterviewId = useCallback(async (): Promise<string | null> => {
     // Check location state first
@@ -138,10 +141,17 @@ export default function DiscoverResults() {
           }
         }
 
-        // Check for cached results
-        const hasCached = await fetchCachedResults(id);
+        // Check for cached results (skip if forceRegenerate is true)
+        const hasCached = !forceRegenerate && await fetchCachedResults(id);
         
         if (!hasCached) {
+          // Delete old cached recommendations if regenerating
+          if (forceRegenerate) {
+            await supabase
+              .from("personalized_recommendations")
+              .delete()
+              .eq("interview_id", id);
+          }
           // Generate new recommendations
           await generateRecommendations(id);
         }
