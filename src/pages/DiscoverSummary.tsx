@@ -165,8 +165,10 @@ export default function DiscoverSummary() {
         setShowUpdatedAnimation(true);
         setTimeout(() => {
           setShowUpdatedAnimation(false);
-          // Navigate to results
-          navigate("/discover/results", { state: { insights: data.insights, interviewId } });
+          // Navigate to results with forceRegenerate flag to skip cache
+          navigate("/discover/results", { 
+            state: { insights: data.insights, interviewId, forceRegenerate: true } 
+          });
         }, 1500);
       } else {
         throw new Error("No updated insights returned");
