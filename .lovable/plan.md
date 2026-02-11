@@ -2,41 +2,44 @@
 
 ## Problem
 
-After sign-up, the user goes through **Structured Onboarding** (7 questions) which then routes to the **old** `/onboarding/interview` page. That old page uses a basic card-based chat UI and, upon finalization, navigates directly to `/ideas` (the old Idea Lab). This completely bypasses the new Mavrik Discovery flow (`/discover` -> `/discover/summary` -> `/discover/results`).
+The "Interview ID not found" error occurs because the summary page receives interview insights via navigation state but **without** the interview ID. This happens when the Mavrik interview finishes and navigates to `/discover/summary` -- it passes the `insights` object but omits the `interviewId`. Since insights are found in navigation state, the code skips the database fetch entirely (line 52-56), leaving `interviewId` as `null`. When you click "Update & show me ideas", the correction handler checks for `interviewId` and throws the error.
 
-There are three routing points that need to change:
+## Fix
 
-1. **StructuredOnboarding transition screen** (line 413) routes to `/onboarding/interview` instead of `/discover`
-2. **OnboardingInterview finalize** (line 193) routes to `/ideas` instead of through the discovery summary flow
-3. **OnboardingInterview skip buttons** (lines 234, 317) also route to `/ideas`
+**File: `src/pages/DiscoverSummary.tsx`** (lines 47-57)
 
-## Plan
+Update the `loadInsights` function so that when insights come from navigation state but the interview ID is missing, it fetches the interview ID from the database:
 
-### 1. Update StructuredOnboarding transition screen
-Change the "Continue to Mavrik" button to navigate to `/discover` instead of `/onboarding/interview`. This sends new users into the full-featured Mavrik chat interface with progress tracking, voice input, and the distraction-free layout.
+```typescript
+const loadInsights = async () => {
+  const stateInsights = location.state?.insights as InterviewInsights | undefined;
+  const stateInterviewId = location.state?.interviewId as string | undefined;
 
-### 2. Update OnboardingInterview as a fallback redirect
-Since `/onboarding/interview` is the old path, update its finalize handler to navigate to `/discover/summary` (passing the interview insights) instead of `/ideas`. Also update the skip buttons to navigate to `/discover` or `/dashboard` instead of `/ideas`.
+  if (stateInsights) {
+    setInsights(stateInsights);
 
-### 3. Update the onboarding guard exempt paths
-Add `/discover` paths to the exempt list in `useOnboardingGuard.ts` so the guard doesn't interfere with the discovery flow.
+    if (stateInterviewId) {
+      setInterviewId(stateInterviewId);
+    } else {
+      // Insights came from nav state but no interview ID -- fetch it from DB
+      const { data } = await supabase
+        .from("founder_interviews")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("status", "completed")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-## Technical Details
+      setInterviewId(data?.id || null);
+    }
+    setIsLoading(false);
+    return;
+  }
 
-**Files to modify:**
+  // ... rest of DB fetch stays the same
+};
+```
 
-- `src/pages/StructuredOnboarding.tsx`
-  - Line 413: Change `navigate('/onboarding/interview')` to `navigate('/discover')`
-  - Update transition copy to match the new discovery flow description
-
-- `src/pages/OnboardingInterview.tsx`
-  - Line 193: Change `navigate("/ideas")` to `navigate("/discover/summary", { state: { insights: summaryData?.contextSummary } })`
-  - Lines 234, 317: Change `navigate('/ideas')` to `navigate('/dashboard')`
-
-- `src/hooks/useOnboardingGuard.ts`
-  - Line 17: Add `/discover` to the exempt paths array so users mid-discovery aren't redirected back to onboarding
-
-- `src/features/onboarding/CoreOnboardingWizard.tsx`
-  - Line 169: Change the "Talk to Mavrik" card to navigate to `/discover` instead of `/onboarding/interview`
-  - Line 209: Keep "Skip to Ideas" as `/ideas` (this is the intentional bypass path)
+This is a one-file, ~10-line change. The correction flow will work because the interview ID will always be resolved before the user can tap "Update & show me ideas."
 
