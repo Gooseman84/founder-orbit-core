@@ -14,7 +14,7 @@ export const useOnboardingGuard = () => {
       if (loading || !user) return;
 
       // Don't redirect from these pages
-      const exemptPaths = ["/auth", "/onboarding", "/onboarding/interview", "/onboarding/extended"];
+      const exemptPaths = ["/auth", "/onboarding", "/onboarding/interview", "/onboarding/extended", "/discover"];
       if (exemptPaths.some(path => location.pathname.startsWith(path))) return;
 
       try {

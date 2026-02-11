@@ -190,7 +190,7 @@ export default function OnboardingInterview() {
         description: "Mavrik has woven your interview into your founder profile.",
       });
 
-      navigate("/ideas");
+      navigate("/discover/summary", { state: { insights: summaryData?.contextSummary } });
     } catch (e: any) {
       console.error("OnboardingInterview: finalize error", e);
       setError(e?.message || "Failed to finalize your profile.");
@@ -231,7 +231,7 @@ export default function OnboardingInterview() {
                         metadata: { question_count: aiQuestionCount }
                       });
                     }
-                    navigate('/ideas');
+                    navigate('/dashboard');
                   }}
                   className="text-muted-foreground hover:text-foreground"
                 >
@@ -313,7 +313,7 @@ export default function OnboardingInterview() {
                       metadata: { question_count: aiQuestionCount }
                     });
                   }
-                  navigate("/ideas");
+                  navigate("/dashboard");
                 }} 
                 disabled={finalizing}
               >

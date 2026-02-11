@@ -166,7 +166,7 @@ export function CoreOnboardingWizard() {
           {/* Option 1: Talk to Mavrik (Recommended) */}
           <Card 
             className="p-6 cursor-pointer hover:border-primary transition-all group relative overflow-hidden"
-            onClick={() => navigate("/onboarding/interview")}
+            onClick={() => navigate("/discover")}
           >
             <div className="absolute top-2 right-2">
               <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
