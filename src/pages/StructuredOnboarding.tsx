@@ -410,7 +410,7 @@ export default function StructuredOnboarding() {
             </p>
           </div>
           <Button 
-            onClick={() => navigate('/onboarding/interview')}
+            onClick={() => navigate('/discover')}
             size="lg"
             className="gap-2"
           >
