@@ -51,7 +51,22 @@ export default function DiscoverSummary() {
       
       if (stateInsights) {
         setInsights(stateInsights);
-        setInterviewId(stateInterviewId || null);
+
+        if (stateInterviewId) {
+          setInterviewId(stateInterviewId);
+        } else {
+          // Insights came from nav state but no interview ID -- fetch it from DB
+          const { data } = await supabase
+            .from("founder_interviews")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("status", "completed")
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          setInterviewId(data?.id || null);
+        }
         setIsLoading(false);
         return;
       }
