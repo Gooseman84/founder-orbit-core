@@ -106,22 +106,47 @@ serve(async (req) => {
     let resolvedProfile = existingProfile;
 
     if (!resolvedProfile) {
-      console.log("finalize-founder-profile: Creating new founder profile from interview data");
+      console.log(`finalize-founder-profile: No existing profile for user ${resolvedUserId}. Upserting minimal row.`);
       const nowForInsert = new Date().toISOString();
-      const { data: newProfile, error: insertError } = await supabase
-        .from("founder_profiles")
-        .insert({ user_id: resolvedUserId, profile: {}, interview_completed_at: nowForInsert })
-        .select("*")
-        .single();
+      try {
+        const { data: upsertedProfile, error: upsertError } = await supabase
+          .from("founder_profiles")
+          .upsert(
+            {
+              user_id: resolvedUserId,
+              profile: {},
+              interview_completed_at: nowForInsert,
+            },
+            { onConflict: "user_id", ignoreDuplicates: false }
+          )
+          .select("*")
+          .single();
 
-      if (insertError || !newProfile) {
-        console.error("finalize-founder-profile: error creating profile", insertError);
+        if (upsertError) {
+          console.error("finalize-founder-profile: upsert error details:", JSON.stringify(upsertError));
+          return new Response(
+            JSON.stringify({ error: "Failed to create founder profile", details: upsertError.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        if (!upsertedProfile) {
+          console.error("finalize-founder-profile: upsert returned no data");
+          return new Response(
+            JSON.stringify({ error: "Failed to create founder profile - no data returned" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        resolvedProfile = upsertedProfile;
+        console.log(`finalize-founder-profile: Successfully created profile for user ${resolvedUserId}, id=${resolvedProfile.id}`);
+      } catch (err) {
+        console.error("finalize-founder-profile: unexpected error during upsert:", err);
         return new Response(
-          JSON.stringify({ error: "Failed to create founder profile" }),
+          JSON.stringify({ error: "Unexpected error during profile creation" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      resolvedProfile = newProfile;
     }
 
     let profile = (resolvedProfile.profile as any) || {};
