@@ -47,15 +47,19 @@ export default function Commit() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { ensureVentureForIdea } = useActiveVenture();
-  const { transitionTo } = useVentureState();
+  const { transitionTo, activeVenture, isLoading: ventureLoading } = useVentureState();
 
   const [idea, setIdea] = useState<IdeaRow | null>(null);
   const [oppScore, setOppScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(30);
   const [successMetric, setSuccessMetric] = useState("");
+
+  // Check if there's already an active executing venture (for a different idea)
+  const hasConflictingVenture = activeVenture && activeVenture.venture_state === "executing" && activeVenture.idea_id !== ideaId;
 
   // Fetch idea + opportunity score
   useEffect(() => {
@@ -69,7 +73,7 @@ export default function Commit() {
           .select("id, title, description")
           .eq("id", ideaId)
           .eq("user_id", user.id)
-          .single(),
+          .maybeSingle(),
         supabase
           .from("opportunity_scores")
           .select("total_score")
@@ -81,8 +85,8 @@ export default function Commit() {
       ]);
 
       if (ideaRes.error || !ideaRes.data) {
-        toast.error("Idea not found");
-        navigate("/ideas");
+        setNotFound(true);
+        setLoading(false);
         return;
       }
 
@@ -94,11 +98,16 @@ export default function Commit() {
     };
 
     fetchData();
-  }, [ideaId, user, navigate]);
+  }, [ideaId, user]);
 
   const handleCommit = async () => {
     if (!ideaId || !idea || !successMetric.trim()) {
       toast.error("Please enter your success metric");
+      return;
+    }
+
+    if (hasConflictingVenture) {
+      toast.error("You already have an active venture. Complete or kill it before starting a new one.");
       return;
     }
 
@@ -122,11 +131,16 @@ export default function Commit() {
         toast.success("You're committed! Let's build. 🔥");
         navigate(`/blueprint?ventureId=${venture.id}`);
       } else {
-        toast.error("Failed to start execution. Please try again.");
+        toast.error("This venture is already in progress or cannot be started. Check your active ventures.");
       }
     } catch (err) {
       console.error("Commit error:", err);
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      if (message.includes("Invalid state transition")) {
+        toast.error("You already have an active venture. Complete or kill it before starting a new one.");
+      } else {
+        toast.error(message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -139,7 +153,7 @@ export default function Commit() {
     navigate("/ideas");
   };
 
-  if (loading) {
+  if (loading || ventureLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading…</div>
@@ -147,8 +161,38 @@ export default function Commit() {
     );
   }
 
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+        <div className="text-center max-w-md space-y-4">
+          <h1 className="text-2xl font-bold text-foreground">Idea not found</h1>
+          <p className="text-muted-foreground">
+            This idea doesn't exist or you don't have access to it.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button variant="outline" asChild>
+              <Link to="/discover/results">Back to results</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/ideas">Idea Lab</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Active venture warning */}
+      {hasConflictingVenture && (
+        <div className="w-full bg-destructive/10 border-b border-destructive/20 px-4 py-3">
+          <p className="text-sm text-destructive text-center">
+            You already have an active venture. Complete or kill it before committing to a new one.
+          </p>
+        </div>
+      )}
+
       {/* Top bar */}
       <div className="w-full px-4 pt-4 sm:pt-6">
         <Link
@@ -274,7 +318,7 @@ export default function Commit() {
               size="lg"
               className="w-full text-base"
               onClick={handleCommit}
-              disabled={submitting || !successMetric.trim()}
+              disabled={submitting || !successMetric.trim() || !!hasConflictingVenture}
             >
               {submitting ? (
                 "Committing…"
