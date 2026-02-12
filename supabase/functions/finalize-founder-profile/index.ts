@@ -103,14 +103,28 @@ serve(async (req) => {
       );
     }
 
-    if (!existingProfile) {
-      return new Response(
-        JSON.stringify({ error: "Founder profile not found. Complete structured onboarding first." }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    let resolvedProfile = existingProfile;
+
+    if (!resolvedProfile) {
+      console.log("finalize-founder-profile: Creating new founder profile from interview data");
+      const nowForInsert = new Date().toISOString();
+      const { data: newProfile, error: insertError } = await supabase
+        .from("founder_profiles")
+        .insert({ user_id: resolvedUserId, profile: {}, interview_completed_at: nowForInsert })
+        .select("*")
+        .single();
+
+      if (insertError || !newProfile) {
+        console.error("finalize-founder-profile: error creating profile", insertError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create founder profile" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      resolvedProfile = newProfile;
     }
 
-    let profile = (existingProfile.profile as any) || {};
+    let profile = (resolvedProfile.profile as any) || {};
 
     // Load interview + context summary
     const { data: interviewRow, error: interviewError } = await supabase
@@ -165,28 +179,28 @@ serve(async (req) => {
       
       // Keep existing structured onboarding fields (don't overwrite with nulls)
       // Only update if profile has values
-      hours_per_week: profile.hoursPerWeek ?? existingProfile.hours_per_week,
-      risk_tolerance: profile.riskTolerance ?? existingProfile.risk_tolerance,
-      commitment_level: profile.commitmentLevel ?? existingProfile.commitment_level,
-      time_per_week: profile.hoursPerWeek ?? existingProfile.time_per_week,
-      capital_available: profile.availableCapital ?? existingProfile.capital_available,
+      hours_per_week: profile.hoursPerWeek ?? resolvedProfile.hours_per_week,
+      risk_tolerance: profile.riskTolerance ?? resolvedProfile.risk_tolerance,
+      commitment_level: profile.commitmentLevel ?? resolvedProfile.commitment_level,
+      time_per_week: profile.hoursPerWeek ?? resolvedProfile.time_per_week,
+      capital_available: profile.availableCapital ?? resolvedProfile.capital_available,
       
       // Merge text fields - append interview insights to structured data
-      passions_text: mergeText(existingProfile.passions_text, ctx.inferredPrimaryDesires?.join(', ')),
-      skills_text: mergeText(existingProfile.skills_text, ctx.inferredFounderRoles?.join(', ')),
-      lifestyle_goals: mergeText(existingProfile.lifestyle_goals, ctx.inferredWorkStyle?.join(', ')),
-      success_vision: mergeText(existingProfile.success_vision, profile.visionOfSuccessText),
+      passions_text: mergeText(resolvedProfile.passions_text, ctx.inferredPrimaryDesires?.join(', ')),
+      skills_text: mergeText(resolvedProfile.skills_text, ctx.inferredFounderRoles?.join(', ')),
+      lifestyle_goals: mergeText(resolvedProfile.lifestyle_goals, ctx.inferredWorkStyle?.join(', ')),
+      success_vision: mergeText(resolvedProfile.success_vision, profile.visionOfSuccessText),
       
       // Merge array fields
-      passions_tags: mergeUnique(existingProfile.passions_tags, profile.passionDomains),
-      skills_tags: mergeUnique(existingProfile.skills_tags, profile.skillTags),
+      passions_tags: mergeUnique(resolvedProfile.passions_tags, profile.passionDomains),
+      skills_tags: mergeUnique(resolvedProfile.skills_tags, profile.skillTags),
     };
 
     console.log("finalize-founder-profile: merging structured + interview data", {
-      hasStructuredData: !!existingProfile.structured_onboarding_completed_at,
+      hasStructuredData: !!resolvedProfile.structured_onboarding_completed_at,
       hasInterviewData: !!ctx,
-      entryTrigger: existingProfile.entry_trigger,
-      futureVision: existingProfile.future_vision,
+      entryTrigger: resolvedProfile.entry_trigger,
+      futureVision: resolvedProfile.future_vision,
     });
 
     const { data: updated, error: updateError } = await supabase
