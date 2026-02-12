@@ -65,8 +65,9 @@ export function useVentureBlueprint(ideaId?: string | null): UseVentureBlueprint
           }
         }
 
-        // Fall back to user's most recent blueprint if no idea-specific one found
-        if (!fetchedBlueprint) {
+        // Only fall back to user's most recent blueprint if no ideaId was specified
+        // When ideaId IS specified but no match found, return null to allow auto-generation
+        if (!fetchedBlueprint && !ideaId) {
           const { data, error: fetchError } = await supabase
             .from("founder_blueprints")
             .select("*")
