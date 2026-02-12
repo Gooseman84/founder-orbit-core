@@ -130,7 +130,10 @@ export default function Discover() {
         if (error) throw error;
         if (!data) throw new Error("No response from interview engine");
 
-        const newTranscript = data.transcript;
+        // Filter out AI messages that are raw JSON (summary artifacts)
+        const newTranscript = (data.transcript as InterviewTurn[]).filter(
+          (t) => t.role !== "ai" || !t.content.trim().startsWith("{")
+        );
         const newInterviewId = data.interviewId;
 
         setInterviewId(newInterviewId);
