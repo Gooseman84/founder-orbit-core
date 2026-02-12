@@ -479,7 +479,7 @@ Now ask your first targeted question based on this context. Reference something 
 
     // mode === "summary"
     const summaryMessages = [
-      { role: "system" as const, content: SYSTEM_PROMPT },
+      { role: "system" as const, content: SYSTEM_PROMPT_BASE },
       ...mapTranscriptToMessages(transcript),
       {
         role: "user" as const,
