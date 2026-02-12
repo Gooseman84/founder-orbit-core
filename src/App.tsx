@@ -40,6 +40,7 @@ import ContextInspector from "./pages/ContextInspector";
 import VentureReview from "./pages/VentureReview";
 import CodeArchitectTest from "./pages/CodeArchitectTest";
 import FeaturePlanner from "./pages/FeaturePlanner";
+import Commit from "./pages/Commit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -81,6 +82,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <DiscoverResults />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commit/:ideaId"
+              element={
+                <ProtectedRoute>
+                  <Commit />
                 </ProtectedRoute>
               }
             />
