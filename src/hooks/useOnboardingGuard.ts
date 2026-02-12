@@ -14,24 +14,40 @@ export const useOnboardingGuard = () => {
       if (loading || !user) return;
 
       // Don't redirect from these pages
-      const exemptPaths = ["/auth", "/onboarding", "/onboarding/interview", "/onboarding/extended", "/discover"];
+      const exemptPaths = ["/auth", "/onboarding", "/onboarding/interview", "/onboarding/extended", "/discover", "/discover/summary", "/discover/results"];
       if (exemptPaths.some(path => location.pathname.startsWith(path))) return;
 
       try {
-        const { data: profile, error } = await supabase
-          .from("founder_profiles")
-          .select("id")
-          .eq("user_id", user.id)
-          .maybeSingle();
+        // Check both founder_profiles and founder_interviews
+        const [profileResult, interviewResult] = await Promise.all([
+          supabase
+            .from("founder_profiles")
+            .select("id, interview_completed_at")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("founder_interviews")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("status", "completed")
+            .limit(1)
+            .maybeSingle(),
+        ]);
 
-        if (error) {
-          console.error("Error checking onboarding status:", error);
+        if (profileResult.error) {
+          console.error("Error checking onboarding status:", profileResult.error);
           return;
         }
 
-        // No profile exists - redirect to onboarding
+        const profile = profileResult.data;
+        const hasCompletedInterview = !!interviewResult.data;
+
+        // Has a profile row → they're onboarded (grandfathered or completed)
+        if (profile) return;
+
+        // No profile at all → redirect to /discover (Mavrik interview)
         if (!profile) {
-          navigate("/onboarding", { replace: true });
+          navigate("/discover", { replace: true });
         }
       } catch (error) {
         console.error("Unexpected error in onboarding guard:", error);
