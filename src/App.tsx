@@ -14,10 +14,6 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
-import Onboarding from "./pages/Onboarding";
-import ExtendedOnboarding from "./pages/ExtendedOnboarding";
-import StructuredOnboarding from "./pages/StructuredOnboarding";
-import OnboardingInterview from "./pages/OnboardingInterview";
 import Discover from "./pages/Discover";
 import DiscoverSummary from "./pages/DiscoverSummary";
 import DiscoverResults from "./pages/DiscoverResults";
@@ -64,40 +60,6 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
-            <Route
-              path="/onboarding"
-              element={
-                <ProtectedRoute>
-                  <StructuredOnboarding />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/onboarding/legacy"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <Onboarding />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/onboarding/extended"
-              element={
-                <ProtectedRoute>
-                  <ExtendedOnboarding />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/onboarding/interview"
-              element={
-                <ProtectedRoute>
-                  <OnboardingInterview />
-                </ProtectedRoute>
-              }
-            />
             <Route
               path="/discover"
               element={
