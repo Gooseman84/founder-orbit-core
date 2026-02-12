@@ -129,7 +129,7 @@ export default function Commit() {
 
       if (success) {
         toast.success("You're committed! Let's build. 🔥");
-        navigate(`/blueprint?ventureId=${venture.id}`);
+        navigate(`/blueprint?ventureId=${venture.id}&fresh=1`);
       } else {
         toast.error("This venture is already in progress or cannot be started. Check your active ventures.");
       }
