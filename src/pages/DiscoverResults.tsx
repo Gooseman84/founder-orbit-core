@@ -1,7 +1,7 @@
 // src/pages/DiscoverResults.tsx
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
-import { ArrowLeft, Compass, Info } from "lucide-react";
+import { ArrowLeft, Compass, Info, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +10,6 @@ import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { DiscoverResultsLoading } from "@/components/discover/DiscoverResultsLoading";
 import { RecommendationCard } from "@/components/discover/RecommendationCard";
 import { RegeneratePanel } from "@/components/discover/RegeneratePanel";
-import { ExploreIdeaModal } from "@/components/discover/ExploreIdeaModal";
 import type { Recommendation, GenerationResult } from "@/types/recommendation";
 
 export default function DiscoverResults() {
@@ -26,12 +25,9 @@ export default function DiscoverResults() {
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [interviewDate, setInterviewDate] = useState<Date | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [committingId, setCommittingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Explore modal state
-  const [exploreModalOpen, setExploreModalOpen] = useState(false);
-  const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
-  const [selectedRecommendationIndex, setSelectedRecommendationIndex] = useState(0);
 
   // Check if we need to force regeneration (e.g., after corrections)
   const forceRegenerate = (location.state?.forceRegenerate as boolean) || false;
@@ -215,12 +211,52 @@ export default function DiscoverResults() {
     }
   };
 
-  // Handle "Explore This Idea" - opens confirmation modal
-  const handleExplore = (recommendation: Recommendation) => {
-    const index = recommendations.findIndex(r => r.name === recommendation.name);
-    setSelectedRecommendation(recommendation);
-    setSelectedRecommendationIndex(index >= 0 ? index : 0);
-    setExploreModalOpen(true);
+  // Handle "This is the one" - save idea then navigate to commit
+  const handleCommit = async (recommendation: Recommendation) => {
+    if (!user) return;
+
+    setCommittingId(recommendation.name);
+
+    try {
+      const { data, error } = await supabase.from("ideas").insert([{
+        user_id: user.id,
+        title: recommendation.name,
+        description: recommendation.oneLiner,
+        source_type: "generated" as const,
+        source_meta: {
+          source: "mavrik_recommendation",
+          whyThisFounder: recommendation.whyThisFounder,
+          targetCustomer: recommendation.targetCustomer,
+          revenueModel: recommendation.revenueModel,
+          timeToFirstRevenue: recommendation.timeToFirstRevenue,
+          capitalRequired: recommendation.capitalRequired,
+          fitScore: recommendation.fitScore,
+          fitBreakdown: {
+            founderMarketFit: recommendation.fitBreakdown.founderMarketFit,
+            feasibility: recommendation.fitBreakdown.feasibility,
+            revenueAlignment: recommendation.fitBreakdown.revenueAlignment,
+            marketTiming: recommendation.fitBreakdown.marketTiming,
+          },
+          keyRisk: recommendation.keyRisk,
+          firstStep: recommendation.firstStep,
+        },
+        overall_fit_score: recommendation.fitScore,
+        status: "candidate",
+      }]).select("id").single();
+
+      if (error || !data) throw error || new Error("Failed to save idea");
+
+      navigate(`/commit/${data.id}`);
+    } catch (e: any) {
+      console.error("Failed to save idea for commit:", e);
+      toast({
+        title: "Failed to save idea",
+        description: e?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCommittingId(null);
+    }
   };
 
   // Handle "Save for Later"
@@ -260,7 +296,7 @@ export default function DiscoverResults() {
 
       toast({
         title: "Idea saved",
-        description: `"${recommendation.name}" has been added to your idea library.`,
+        description: `"${recommendation.name}" has been added to your Idea Lab.`,
       });
     } catch (e: any) {
       console.error("Failed to save idea:", e);
@@ -352,41 +388,34 @@ export default function DiscoverResults() {
                   <RecommendationCard
                     recommendation={rec}
                     rank={index + 1}
-                    onExplore={handleExplore}
+                    onCommit={handleCommit}
                     onSave={handleSave}
+                    isCommitting={committingId === rec.name}
                     isSaving={savingId === rec.name}
                   />
                 </div>
               ))}
             </div>
 
+            {/* Browse all link */}
+            <div className="text-center mb-8">
+              <Link
+                to="/ideas"
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Browse all in Idea Lab
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
             {/* Regenerate Panel */}
             <RegeneratePanel
               onRegenerate={handleRegenerate}
               isRegenerating={isRegenerating}
-              className="mt-8"
             />
           </div>
         )}
       </main>
-
-      {/* Explore Idea Modal */}
-      <ExploreIdeaModal
-        isOpen={exploreModalOpen}
-        onClose={() => {
-          setExploreModalOpen(false);
-          setSelectedRecommendation(null);
-        }}
-        recommendation={selectedRecommendation}
-        interviewId={interviewId || ""}
-        recommendationIndex={selectedRecommendationIndex}
-        onSaved={() => {
-          toast({
-            title: "Idea saved",
-            description: "You can find it in your idea library.",
-          });
-        }}
-      />
     </div>
   );
 }

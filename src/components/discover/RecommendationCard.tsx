@@ -20,16 +20,18 @@ import type { Recommendation } from "@/types/recommendation";
 interface RecommendationCardProps {
   recommendation: Recommendation;
   rank: number;
-  onExplore: (recommendation: Recommendation) => void;
+  onCommit: (recommendation: Recommendation) => void;
   onSave: (recommendation: Recommendation) => void;
+  isCommitting?: boolean;
   isSaving?: boolean;
 }
 
 export function RecommendationCard({
   recommendation,
   rank,
-  onExplore,
+  onCommit,
   onSave,
+  isCommitting = false,
   isSaving = false,
 }: RecommendationCardProps) {
   const [isExpanded, setIsExpanded] = useState(rank === 1);
@@ -195,12 +197,14 @@ export function RecommendationCard({
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-2 mt-4">
             <Button
-              onClick={() => onExplore(recommendation)}
+              onClick={() => onCommit(recommendation)}
               variant="gradient"
               className="flex-1"
               size="lg"
+              disabled={isCommitting}
             >
-              Explore This Idea
+              <Rocket className="h-4 w-4 mr-2" />
+              {isCommitting ? "Saving…" : "This is the one"}
             </Button>
             <Button
               onClick={() => onSave(recommendation)}
