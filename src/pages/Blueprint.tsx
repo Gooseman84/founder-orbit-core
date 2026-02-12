@@ -1,77 +1,126 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useVentureBlueprint } from "@/hooks/useVentureBlueprint";
+import { useVenturePlans } from "@/hooks/useVenturePlans";
+import { useVentureTasks } from "@/hooks/useVentureTasks";
+import { useGenerateVenturePlan } from "@/hooks/useGenerateVenturePlan";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useToast } from "@/hooks/use-toast";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { BlueprintSkeleton } from "@/components/shared/SkeletonLoaders";
 import { FinancialViabilityScore } from "@/components/opportunity/FinancialViabilityScore";
+import { BusinessBlueprint } from "@/components/blueprint/BusinessBlueprint";
+import { BlueprintGenerationAnimation } from "@/components/blueprint/BlueprintGenerationAnimation";
+import { ThirtyDayPlanCard } from "@/components/venture/ThirtyDayPlanCard";
 import { GenerateKitButton, TechStackDialog } from "@/components/implementationKit";
 import { useImplementationKitByBlueprint, useCreateImplementationKit } from "@/hooks/useImplementationKit";
-import { 
-  Target, 
-  AlertTriangle, 
-  ArrowLeft, 
+import { MainLayout } from "@/components/layout/MainLayout";
+import { EditBlueprintDrawer } from "@/components/blueprint/EditBlueprintDrawer";
+import {
+  Target,
+  AlertTriangle,
+  ArrowLeft,
   Rocket,
-  Clock,
   Loader2,
-  Lock,
   ClipboardList,
-  CheckCircle,
-  BarChart3
+  BarChart3,
+  ArrowRight,
+  Check,
+  Calendar,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import type { CommitmentWindowDays, CommitmentDraft, CommitmentFull, Venture, VentureState } from "@/types/venture";
+import { cn } from "@/lib/utils";
+import type { CommitmentWindowDays, Venture, VentureState } from "@/types/venture";
 import type { TechStack } from "@/types/implementationKit";
+import type { FounderBlueprint } from "@/types/blueprint";
+
+// Journey stepper for fresh visits
+const STEPS = [
+  { label: "Interview", done: true },
+  { label: "Profile", done: true },
+  { label: "Ideas", done: true },
+  { label: "Commit", done: true },
+  { label: "Blueprint", active: true },
+  { label: "Build", done: false },
+];
+
+function JourneyStepper() {
+  return (
+    <div className="flex items-center gap-1 overflow-x-auto">
+      {STEPS.map((step, i) => (
+        <div key={step.label} className="flex items-center gap-1 shrink-0">
+          <div
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+              step.active && "bg-primary text-primary-foreground",
+              step.done && !step.active && "text-muted-foreground",
+              !step.done && !step.active && "text-muted-foreground/50"
+            )}
+          >
+            {step.done && !step.active && <Check className="h-3 w-3" />}
+            {step.label}
+          </div>
+          {i < STEPS.length - 1 && (
+            <ArrowRight className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const Blueprint = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const ventureIdParam = searchParams.get("ventureId");
-  
+  const isFreshVisit = searchParams.get("fresh") === "1";
+
   const { user } = useAuth();
   const { hasPro } = useFeatureAccess();
   const { transitionTo } = useVentureState();
   const { toast } = useToast();
-  
+
   // Venture state
   const [venture, setVenture] = useState<Venture | null>(null);
   const [ventureLoading, setVentureLoading] = useState(true);
   const [ventureError, setVentureError] = useState<string | null>(null);
-  
+
   // Blueprint scoped to venture's idea
-  const { blueprint, loading: blueprintLoading } = useVentureBlueprint(venture?.idea_id);
-  
+  const { blueprint, loading: blueprintLoading, error: blueprintError } = useVentureBlueprint(venture?.idea_id);
+
+  // Auto-generation state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedBlueprint, setGeneratedBlueprint] = useState<FounderBlueprint | null>(null);
+  const [showReveal, setShowReveal] = useState(false);
+
+  // The blueprint to display (generated or fetched)
+  const displayBlueprint = generatedBlueprint || blueprint;
+
+  // 30-Day Plan hooks
+  const { latestPlan, isLoading: plansLoading, refetch: refetchPlans } = useVenturePlans(venture?.id ?? null);
+  const { tasksByWeek, isLoading: tasksLoading, refetch: refetchTasks } = useVentureTasks(venture?.id ?? null);
+  const { generate: generatePlan, isPending: planGenerating } = useGenerateVenturePlan();
+
   // Implementation Kit state
   const [showTechStackDialog, setShowTechStackDialog] = useState(false);
-  const { data: existingKit, isLoading: kitLoading } = useImplementationKitByBlueprint(blueprint?.id);
+  const { data: existingKit, isLoading: kitLoading } = useImplementationKitByBlueprint(displayBlueprint?.id);
   const createKit = useCreateImplementationKit();
-  
-  // Form state
-  const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(hasPro ? 14 : 7);
-  const [successMetric, setSuccessMetric] = useState("");
-  const [acknowledged, setAcknowledged] = useState(false);
-  const [isCommitting, setIsCommitting] = useState(false);
-  
+
+  // Edit drawer state
+  const [editSection, setEditSection] = useState<string | null>(null);
+
   // Handle tech stack submission
   const handleGenerateKit = (techStack: TechStack) => {
-    if (!blueprint?.id || !venture?.id) return;
-    createKit.mutate({
-      blueprintId: blueprint.id,
-      ventureId: venture.id,
-      techStack
-    }, {
-      onSuccess: () => {
-        setShowTechStackDialog(false);
-      }
-    });
+    if (!displayBlueprint?.id || !venture?.id) return;
+    createKit.mutate(
+      { blueprintId: displayBlueprint.id, ventureId: venture.id, techStack },
+      { onSuccess: () => setShowTechStackDialog(false) }
+    );
   };
 
   // Fetch venture by ID from URL param
@@ -81,33 +130,25 @@ const Blueprint = () => {
         setVentureLoading(false);
         return;
       }
-      
       if (!ventureIdParam) {
         setVentureError("no_venture_id");
         setVentureLoading(false);
         return;
       }
-      
       try {
         setVentureLoading(true);
         setVentureError(null);
-        
         const { data, error } = await supabase
           .from("ventures")
           .select("*")
           .eq("id", ventureIdParam)
           .eq("user_id", user.id)
           .maybeSingle();
-        
-        if (error) {
-          throw error;
-        }
-        
+        if (error) throw error;
         if (!data) {
           setVentureError("venture_not_found");
           return;
         }
-        
         setVenture({
           ...data,
           venture_state: data.venture_state as VentureState,
@@ -120,103 +161,94 @@ const Blueprint = () => {
         setVentureLoading(false);
       }
     }
-    
     fetchVenture();
   }, [user, ventureIdParam]);
 
-  // State-based redirects - only for killed ventures
-  // Allow "executing" and "reviewed" to view Blueprint in read-only mode
+  // Redirect killed ventures
   useEffect(() => {
     if (ventureLoading || !venture) return;
-    
-    const ventureState = venture.venture_state;
-    
-    // Only redirect killed ventures - all others can view Blueprint
-    if (ventureState === "killed") {
+    if (venture.venture_state === "killed") {
       navigate("/ideas", { replace: true });
     }
   }, [venture, ventureLoading, navigate]);
 
-  // Determine if in read-only mode (executing or reviewed)
+  // Auto-generate blueprint when none exists
+  useEffect(() => {
+    if (ventureLoading || blueprintLoading) return;
+    if (!venture || !user) return;
+    if (blueprint || generatedBlueprint || isGenerating) return;
+
+    // No blueprint exists — trigger generation
+    setIsGenerating(true);
+
+    (async () => {
+      try {
+        const { data, error } = await invokeAuthedFunction<FounderBlueprint>(
+          "generate-blueprint",
+          { body: { ideaId: venture.idea_id } }
+        );
+        if (error) throw error;
+        if (data) {
+          setGeneratedBlueprint(data);
+          // Show reveal animation for fresh visits
+          if (isFreshVisit) {
+            setShowReveal(true);
+            setTimeout(() => setShowReveal(false), 800);
+          }
+        }
+      } catch (err) {
+        console.error("Blueprint generation failed:", err);
+        toast({
+          title: "Blueprint generation failed",
+          description: err instanceof Error ? err.message : "Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsGenerating(false);
+      }
+    })();
+  }, [ventureLoading, blueprintLoading, venture, user, blueprint, generatedBlueprint, isGenerating, isFreshVisit, toast]);
+
   const isReadOnly = venture?.venture_state === "executing" || venture?.venture_state === "reviewed";
 
-  // Pre-fill form if venture already has commitment data
-  useEffect(() => {
-    if (venture?.commitment_window_days) {
-      setWindowDays(venture.commitment_window_days);
+  // Handle plan generation
+  const handleGeneratePlan = async () => {
+    if (!venture?.id) return;
+    const result = await generatePlan(venture.id, { planType: "30_day" });
+    if (result) {
+      toast({ title: "30-Day Plan generated!", description: `${result.tasksCreated.length} tasks created.` });
+      refetchPlans();
+      refetchTasks();
     }
-    if (venture?.success_metric) {
-      setSuccessMetric(venture.success_metric);
-    }
-  }, [venture]);
-
-  const isFormValid = windowDays && successMetric.trim().length > 0 && acknowledged;
-  const ventureState = venture?.venture_state ?? "inactive";
-
-  const handleCommitAndStart = async () => {
-    if (!venture?.id || !isFormValid) return;
-
-    setIsCommitting(true);
-    try {
-      const now = new Date();
-      const endDate = new Date(now);
-      endDate.setDate(endDate.getDate() + windowDays);
-
-      if (ventureState === "inactive") {
-        // Direct transition: inactive → executing
-        const fullData: CommitmentFull = {
-          commitment_window_days: windowDays,
-          success_metric: successMetric.trim(),
-          commitment_start_at: now.toISOString(),
-          commitment_end_at: endDate.toISOString(),
-        };
-
-        const success = await transitionTo(venture.id, "executing", fullData);
-        if (!success) {
-          throw new Error("Failed to start execution");
-        }
-      }
-
-      toast({
-        title: "Execution started!",
-        description: `Your ${windowDays}-day commitment begins now.`,
-      });
-
-      navigate("/tasks");
-    } catch (err) {
-      console.error("Commit error:", err);
-      toast({
-        title: "Failed to start execution",
-        description: err instanceof Error ? err.message : "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCommitting(false);
-    }
-  };
-
-  const handleNotReady = () => {
-    navigate("/ideas");
   };
 
   // Loading state
   if (ventureLoading || blueprintLoading) {
-    return (
+    return renderWrapper(isFreshVisit, (
       <div className="container mx-auto py-8 px-4">
         <BlueprintSkeleton />
       </div>
-    );
+    ));
   }
 
-  // No venture ID provided or venture not found
+  // Generating state
+  if (isGenerating) {
+    return renderWrapper(true, (
+      <div className="container mx-auto py-8 px-4">
+        <BlueprintGenerationAnimation isGenerating />
+      </div>
+    ));
+  }
+
+  // No venture
   if (ventureError || !venture) {
-    return (
+    return renderWrapper(false, (
       <div className="container mx-auto py-12 px-4 flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md w-full text-center">
           <CardHeader>
             <CardTitle>No Venture Selected</CardTitle>
             <CardDescription>
-              {ventureError === "no_venture_id" 
+              {ventureError === "no_venture_id"
                 ? "Select an idea and create a venture to access the Blueprint."
                 : ventureError === "venture_not_found"
                 ? "This venture doesn't exist or you don't have access to it."
@@ -231,21 +263,31 @@ const Blueprint = () => {
           </CardContent>
         </Card>
       </div>
-    );
+    ));
   }
 
-  // Generate AI narrative from blueprint data
-  const narrativeSummary = generateNarrativeSummary(blueprint, venture.name);
-  const misalignmentCallouts = generateMisalignmentCallouts(blueprint);
+  // Generate narrative helpers
+  const narrativeSummary = generateNarrativeSummary(displayBlueprint, venture.name);
+  const misalignmentCallouts = generateMisalignmentCallouts(displayBlueprint);
 
-  return (
-    <div className="container mx-auto py-8 px-4 max-w-3xl">
+  const content = (
+    <div className={cn(
+      "container mx-auto py-8 px-4 max-w-3xl",
+      showReveal && "animate-fade-in"
+    )}>
+      {/* Fresh visit stepper header */}
+      {isFreshVisit && (
+        <div className="flex justify-center mb-8">
+          <JourneyStepper />
+        </div>
+      )}
+
       {/* Read-only Mode Banner */}
       {isReadOnly && (
         <Alert className="mb-6 border-primary/30 bg-primary/5">
           <ClipboardList className="h-4 w-4" />
           <AlertDescription className="flex items-center gap-2">
-            <span className="font-medium">Execution Mode:</span> 
+            <span className="font-medium">Execution Mode:</span>
             Your commitment is locked. Complete or end your current commitment to make changes.
           </AlertDescription>
         </Alert>
@@ -255,7 +297,7 @@ const Blueprint = () => {
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-2">Your Blueprint</h1>
         <p className="text-muted-foreground">
-          {isReadOnly 
+          {isReadOnly
             ? "Reference your plan while building."
             : "This is where thinking ends and building begins."}
         </p>
@@ -270,14 +312,19 @@ const Blueprint = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {narrativeSummary}
-          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{narrativeSummary}</p>
         </CardContent>
       </Card>
 
+      {/* Business Blueprint sections */}
+      {displayBlueprint && (
+        <div className="mb-6">
+          <BusinessBlueprint blueprint={displayBlueprint} onEditSection={setEditSection} />
+        </div>
+      )}
+
       {/* Financial Viability Score Card */}
-      {blueprint && (
+      {displayBlueprint && (
         <Card className="mb-6">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
@@ -287,16 +334,16 @@ const Blueprint = () => {
           </CardHeader>
           <CardContent>
             <FinancialViabilityScore
-              score={blueprint.income_target ? Math.min(85, 50 + (blueprint.income_target / 10000) * 10) : 65}
+              score={displayBlueprint.income_target ? Math.min(85, 50 + (displayBlueprint.income_target / 10000) * 10) : 65}
               breakdown={{
                 marketSize: 70,
-                unitEconomics: blueprint.income_target ? Math.min(90, 60 + (blueprint.income_target / 20000) * 30) : 60,
-                timeToRevenue: blueprint.time_available_hours_per_week ? Math.min(85, 40 + blueprint.time_available_hours_per_week * 2) : 55,
+                unitEconomics: displayBlueprint.income_target ? Math.min(90, 60 + (displayBlueprint.income_target / 20000) * 30) : 60,
+                timeToRevenue: displayBlueprint.time_available_hours_per_week ? Math.min(85, 40 + displayBlueprint.time_available_hours_per_week * 2) : 55,
                 competition: 65,
-                capitalRequirements: blueprint.capital_available ? Math.min(90, 50 + Math.log10(blueprint.capital_available + 1) * 15) : 50,
+                capitalRequirements: displayBlueprint.capital_available ? Math.min(90, 50 + Math.log10(displayBlueprint.capital_available + 1) * 15) : 50,
                 founderMarketFit: 75,
               }}
-              showBreakdown={true}
+              showBreakdown
               size="md"
             />
           </CardContent>
@@ -325,242 +372,163 @@ const Blueprint = () => {
         </Card>
       )}
 
-      {/* Commitment Inputs */}
-      <Card className="mb-6 border-primary/30">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Your Commitment</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Commitment Window */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Commitment Window</Label>
-            {!hasPro && (
-              <p className="text-xs text-muted-foreground">
-                Free tier: 7-day commitments only. Upgrade to Pro for 14, 30, or 90-day windows.
-              </p>
-            )}
-            <div className="grid grid-cols-3 gap-3">
-              {(hasPro ? [14, 30, 90] : [7]).map((days) => (
-                <Button
-                  key={days}
-                  type="button"
-                  variant={windowDays === days ? "default" : "outline"}
-                  className="w-full"
-                  onClick={() => !isReadOnly && setWindowDays(days as CommitmentWindowDays)}
-                  disabled={isReadOnly || (!hasPro && days !== 7)}
-                >
-                  {days} days
-                  {!hasPro && days !== 7 && <Lock className="ml-1 h-3 w-3" />}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Success Metric */}
-          <div className="space-y-2">
-            <Label htmlFor="success-metric" className="text-sm font-medium">
-              Success Metric
-            </Label>
-            <Input
-              id="success-metric"
-              placeholder="e.g., 5 paying customers, $1000 revenue, 100 signups..."
-              value={successMetric}
-              onChange={(e) => !isReadOnly && setSuccessMetric(e.target.value)}
-              className="w-full"
-              disabled={isReadOnly}
-            />
-            <p className="text-xs text-muted-foreground">
-              {isReadOnly 
-                ? `Your success metric: "${venture?.success_metric || successMetric}"`
-                : "How will you know this worked? Be specific."}
-            </p>
-          </div>
-
-          {/* Acknowledgment - hide in read-only mode */}
-          {!isReadOnly && (
-            <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
-              <Checkbox
-                id="acknowledge"
-                checked={acknowledged}
-                onCheckedChange={(checked) => setAcknowledged(checked === true)}
-              />
-              <label 
-                htmlFor="acknowledge" 
-                className="text-sm leading-relaxed cursor-pointer"
-              >
-                I understand that once execution starts, this plan locks. I'm committing 
-                to focus on this venture for the next {windowDays} days.
-              </label>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Actions */}
-      <div className="space-y-3">
-        {isReadOnly ? (
-          // Read-only mode: show commitment active status
-          <Button
-            size="lg"
-            className="w-full"
-            disabled
-            variant="secondary"
-          >
-            <CheckCircle className="mr-2 h-4 w-4" />
-            Commitment Active
-          </Button>
-        ) : (
-          // Normal mode: show commit button
-          <Button
-            size="lg"
-            className="w-full"
-            disabled={!isFormValid || isCommitting}
-            onClick={handleCommitAndStart}
-          >
-            {isCommitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Starting execution...
-              </>
-            ) : (
-              <>
-                <Rocket className="mr-2 h-4 w-4" />
-                Commit & Start Execution
-              </>
-            )}
-          </Button>
-        )}
-
-        {!isReadOnly && (
-          <Button
-            variant="ghost"
-            className="w-full text-muted-foreground"
-            onClick={handleNotReady}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            I'm not ready to commit yet
-          </Button>
-        )}
-      </div>
-
-      {/* Validation hint - only show when not in read-only mode */}
-      {!isReadOnly && !isFormValid && (
-        <div className="mt-4 text-center">
-          <p className="text-xs text-muted-foreground flex items-center justify-center gap-2">
-            {!successMetric.trim() && <span>• Enter a success metric</span>}
-            {!acknowledged && <span>• Acknowledge the commitment</span>}
-          </p>
-        </div>
-      )}
-      
-      {/* Generate Implementation Kit Section */}
-      {blueprint && (
-        <div className="mt-8">
+      {/* Implementation Kit */}
+      {displayBlueprint && (
+        <div className="mb-6">
           <GenerateKitButton
-            blueprintId={blueprint.id}
+            blueprintId={displayBlueprint.id}
             ventureId={venture.id}
             hasExistingKit={!!existingKit}
             onGenerate={() => setShowTechStackDialog(true)}
           />
         </div>
       )}
-      
-      {/* Tech Stack Selection Dialog */}
+
+      {/* ─── 30-Day Action Plan ─── */}
+      <div className="mb-6 mt-10">
+        <div className="flex items-center gap-2 mb-4">
+          <Calendar className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-bold">Your 30-Day Action Plan</h2>
+        </div>
+
+        {plansLoading || tasksLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-lg border bg-card p-4 space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+            ))}
+          </div>
+        ) : latestPlan ? (
+          <ThirtyDayPlanCard
+            plan={latestPlan}
+            tasksByWeek={tasksByWeek}
+            ventureId={venture.id}
+          />
+        ) : (
+          <Card className="border-dashed">
+            <CardContent className="py-8 text-center space-y-4">
+              <p className="text-muted-foreground text-sm">
+                No action plan yet. Generate a 30-day roadmap with weekly tasks.
+              </p>
+              <Button onClick={handleGeneratePlan} disabled={planGenerating}>
+                {planGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating plan…
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="mr-2 h-4 w-4" />
+                    Generate Your 30-Day Plan
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* ─── Start Building CTA ─── */}
+      <div className="mt-10 mb-4">
+        <Button
+          size="lg"
+          className="w-full text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+          onClick={() => navigate("/dashboard")}
+        >
+          Start Building
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Tech Stack Dialog */}
       <TechStackDialog
         open={showTechStackDialog}
         onOpenChange={setShowTechStackDialog}
         onSubmit={handleGenerateKit}
         isGenerating={createKit.isPending}
       />
+
+      {/* Edit Blueprint Drawer */}
+      {displayBlueprint && editSection && (
+        <EditBlueprintDrawer
+          open={!!editSection}
+          onClose={() => setEditSection(null)}
+          blueprint={displayBlueprint}
+          section={editSection as "life" | "business" | "northstar" | "traction"}
+          onSave={async (data) => {
+            if (!displayBlueprint?.id) return;
+            await supabase.from("founder_blueprints").update(data as any).eq("id", displayBlueprint.id);
+            setEditSection(null);
+          }}
+        />
+      )}
     </div>
   );
+
+  return renderWrapper(isFreshVisit, content);
 };
 
+// Wrap in MainLayout for return visits, bare for fresh visits
+function renderWrapper(isFresh: boolean, children: React.ReactNode) {
+  if (isFresh) {
+    return <div className="min-h-screen bg-background">{children}</div>;
+  }
+  return <MainLayout>{children}</MainLayout>;
+}
+
+// ─── Skeleton placeholder for plan loading ───
+function Skeleton({ className }: { className?: string }) {
+  return <div className={cn("animate-pulse rounded-md bg-muted", className)} />;
+}
+
 // Helper: Generate narrative summary from blueprint
-function generateNarrativeSummary(
-  blueprint: any,
-  ventureName?: string
-): string {
+function generateNarrativeSummary(blueprint: any, ventureName?: string): string {
   if (!blueprint) {
     return "Your venture is ready for commitment. Define your success criteria and begin execution.";
   }
-
   const parts: string[] = [];
-
-  if (ventureName) {
-    parts.push(`You're building ${ventureName}.`);
-  }
-
-  if (blueprint.north_star_one_liner) {
-    parts.push(blueprint.north_star_one_liner);
-  }
-
+  if (ventureName) parts.push(`You're building ${ventureName}.`);
+  if (blueprint.north_star_one_liner) parts.push(blueprint.north_star_one_liner);
   if (blueprint.target_audience && blueprint.problem_statement) {
     parts.push(`You're solving "${blueprint.problem_statement}" for ${blueprint.target_audience}.`);
   } else if (blueprint.target_audience) {
     parts.push(`Your target audience is ${blueprint.target_audience}.`);
   }
-
-  if (blueprint.offer_model) {
-    parts.push(`Your offer model: ${blueprint.offer_model}.`);
-  }
-
+  if (blueprint.offer_model) parts.push(`Your offer model: ${blueprint.offer_model}.`);
   if (blueprint.time_available_hours_per_week) {
     parts.push(`You have ${blueprint.time_available_hours_per_week} hours/week to invest.`);
   }
-
   if (parts.length === 0) {
     return "Your venture is ready for commitment. Define your success criteria and begin execution.";
   }
-
   return parts.join(" ");
 }
 
 // Helper: Generate misalignment callouts from blueprint
 function generateMisalignmentCallouts(blueprint: any): string[] {
   const callouts: string[] = [];
-
   if (!blueprint) return callouts;
-
-  // Time constraint warning
   if (blueprint.time_available_hours_per_week && blueprint.time_available_hours_per_week < 10) {
-    callouts.push(
-      `You only have ${blueprint.time_available_hours_per_week} hours/week. Ambitious ventures need focused execution windows.`
-    );
+    callouts.push(`You only have ${blueprint.time_available_hours_per_week} hours/week. Ambitious ventures need focused execution windows.`);
   }
-
-  // Capital warning
   if (blueprint.capital_available !== null && blueprint.capital_available < 500) {
-    callouts.push(
-      "Limited capital means you need to validate before building. Prioritize customer conversations."
-    );
+    callouts.push("Limited capital means you need to validate before building. Prioritize customer conversations.");
   }
-
-  // Risk profile warning
   if (blueprint.risk_profile === "conservative") {
-    callouts.push(
-      "Your conservative risk profile may conflict with the experimentation needed for early ventures."
-    );
+    callouts.push("Your conservative risk profile may conflict with the experimentation needed for early ventures.");
   }
-
-  // Missing critical elements
   if (!blueprint.target_audience) {
     callouts.push("You haven't defined your target audience. This needs clarity before execution.");
   }
-
   if (!blueprint.problem_statement) {
     callouts.push("No clear problem statement. What pain are you solving?");
   }
-
-  // Weaknesses acknowledgment
   if (blueprint.weaknesses) {
     callouts.push(`Your self-identified weakness: "${blueprint.weaknesses}". Plan around it.`);
   }
-
-  return callouts.slice(0, 5); // Max 5 callouts
+  return callouts.slice(0, 5);
 }
 
 export default Blueprint;
