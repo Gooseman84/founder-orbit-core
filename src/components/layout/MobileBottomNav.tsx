@@ -22,11 +22,13 @@ export function MobileBottomNav() {
   const ventureName = activeVenture?.name ?? "My Venture";
   
   // Get tabs based on mode
+  const ventureId = activeVenture?.id;
+  
   const getTabs = (): NavTab[] => {
-    if (isExecutionMode) {
+    if (isExecutionMode && ventureId) {
       return [
         { label: ventureName, path: "/dashboard", icon: Target },
-        { label: "Blueprint", path: "/blueprint", icon: Map },
+        { label: "Blueprint", path: `/blueprint?ventureId=${ventureId}`, icon: Map },
         { label: "Workspace", path: "/workspace", icon: FolderKanban },
       ];
     }
@@ -57,7 +59,8 @@ export function MobileBottomNav() {
       <nav className="fixed inset-x-0 bottom-0 z-30 bg-background/90 backdrop-blur border-t border-border shadow-[0_-4px_12px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)] md:hidden">
         <div className="flex items-center justify-around h-14">
           {tabs.map(({ label, path, icon: Icon }) => {
-            const isActive = location.pathname === path || location.pathname.startsWith(`${path}/`);
+            const basePath = path.split("?")[0];
+            const isActive = location.pathname === basePath || location.pathname.startsWith(`${basePath}/`);
             
             const handleTap = () => {
               if (navigator.vibrate) {
