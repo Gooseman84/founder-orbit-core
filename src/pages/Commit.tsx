@@ -56,6 +56,14 @@ export default function Commit() {
   // Check if there's already an active executing venture (for a different idea)
   const hasConflictingVenture = activeVenture && activeVenture.venture_state === "executing" && activeVenture.idea_id !== ideaId;
 
+  // Check for active venture on mount and redirect if exists (safety net)
+  useEffect(() => {
+    if (activeVenture && !ventureLoading) {
+      toast.error("You have an active venture. Complete, pivot, or kill it before starting a new one.");
+      navigate("/dashboard");
+    }
+  }, [activeVenture, ventureLoading, navigate]);
+
   // Fetch idea + opportunity score
   useEffect(() => {
     if (!ideaId || !user) return;

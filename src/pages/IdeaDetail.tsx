@@ -33,7 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload, MoreVertical, RefreshCw, Rocket } from "lucide-react";
+import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload, MoreVertical, RefreshCw, Rocket, Heart } from "lucide-react";
 import { useVentureState } from "@/hooks/useVentureState";
 
 const getComplexityVariant = (complexity: string | null) => {
@@ -77,6 +77,7 @@ const IdeaDetail = () => {
   const [settingNorthStar, setSettingNorthStar] = useState(false);
   const [unsettingNorthStar, setUnsettingNorthStar] = useState(false);
   const { activeVenture: currentActiveVenture } = useVentureState();
+  const [savedToLibrary, setSavedToLibrary] = useState(false);
 
   // Helpers for null-safe score rendering
   const scoreValue = (v: number | null | undefined) => (typeof v === "number" ? v : 0);
@@ -349,17 +350,28 @@ const IdeaDetail = () => {
         </Button>
 
         <div className="flex gap-2 flex-wrap">
-          {/* Commit to This — primary CTA when no active venture */}
-          {!currentActiveVenture && (
-            <Button
-              onClick={() => navigate(`/commit/${id}`)}
-              className="gap-2"
-              variant="default"
-            >
-              <Rocket className="w-4 h-4" />
-              Commit to This
-            </Button>
-          )}
+           {/* Commit to This — primary CTA when no active venture */}
+           {!currentActiveVenture ? (
+             <Button
+               onClick={() => navigate(`/commit/${id}`)}
+               className="gap-2"
+               variant="default"
+             >
+               <Rocket className="w-4 h-4" />
+               Commit to This
+             </Button>
+           ) : (
+             <Button
+               onClick={() => {
+                 navigate(`/ideas`);
+               }}
+               className="gap-2"
+               variant="default"
+             >
+               <Heart className="w-4 h-4" />
+               {savedToLibrary ? "Saved ✓" : "Save for Later"}
+             </Button>
+           )}
 
           {!analysis && (
             <Button onClick={handleVetIdea} disabled={analyzeIdea.isPending} variant={currentActiveVenture ? "default" : "outline"} className="gap-2">

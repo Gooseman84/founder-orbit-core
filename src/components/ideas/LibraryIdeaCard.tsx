@@ -19,6 +19,7 @@ interface LibraryIdeaCardProps {
   onDelete?: (id: string) => void;
   onPromote?: (id: string) => void;
   onSetNorthStar?: (id: string) => void;
+  hasActiveVenture?: boolean;
 }
 
 interface IdeaPayload {
@@ -42,7 +43,7 @@ const getScoreColor = (score: number | null) => {
   return "text-orange-600 dark:text-orange-400";
 };
 
-export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar }: LibraryIdeaCardProps) {
+export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar, hasActiveVenture = false }: LibraryIdeaCardProps) {
   const navigate = useNavigate();
   const isV6 = idea.engine_version === "v6";
   const isMarketSignal = (idea as any).source_type === "market_signal";
@@ -168,7 +169,7 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar }: L
         <div className="grid grid-cols-2 sm:flex gap-2 mt-auto pt-2">
           <Button
             onClick={() => navigate(`/ideas/${idea.id}`)}
-            variant="default"
+            variant={hasActiveVenture ? "outline" : "default"}
             size="sm"
             className="gap-1.5"
           >
