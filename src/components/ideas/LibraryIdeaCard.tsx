@@ -177,30 +177,35 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar, has
             <span className="truncate">Open</span>
           </Button>
           
-          {!isNorthStar && onSetNorthStar && (
-            <Button
-              onClick={() => onSetNorthStar(idea.id)}
-              variant="outline"
-              size="sm"
-              className="gap-1.5 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
-            >
-              <Star className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="hidden sm:inline truncate">North Star</span>
-              <span className="sm:hidden truncate">Star</span>
-            </Button>
-          )}
-          
-          {isNorthStar && (
-            <Button
-              onClick={() => navigate("/north-star")}
-              variant="default"
-              size="sm"
-              className="gap-1.5 bg-amber-500 hover:bg-amber-600"
-            >
-              <Map className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="hidden sm:inline truncate">View North Star</span>
-              <span className="sm:hidden truncate">View</span>
-            </Button>
+          {/* When no active venture: show North Star and Commit actions */}
+          {!hasActiveVenture && (
+            <>
+              {!isNorthStar && onSetNorthStar && (
+                <Button
+                  onClick={() => onSetNorthStar(idea.id)}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                >
+                  <Star className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="hidden sm:inline truncate">North Star</span>
+                  <span className="sm:hidden truncate">Star</span>
+                </Button>
+              )}
+              
+              {isNorthStar && (
+                <Button
+                  onClick={() => navigate("/north-star")}
+                  variant="default"
+                  size="sm"
+                  className="gap-1.5 bg-amber-500 hover:bg-amber-600"
+                >
+                  <Map className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="hidden sm:inline truncate">View North Star</span>
+                  <span className="sm:hidden truncate">View</span>
+                </Button>
+              )}
+            </>
           )}
           
           {onPromote && (

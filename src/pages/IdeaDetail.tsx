@@ -352,26 +352,31 @@ const IdeaDetail = () => {
         <div className="flex gap-2 flex-wrap">
            {/* Commit to This — primary CTA when no active venture */}
            {!currentActiveVenture ? (
-             <Button
-               onClick={() => navigate(`/commit/${id}`)}
-               className="gap-2"
-               variant="default"
-             >
-               <Rocket className="w-4 h-4" />
-               Commit to This
-             </Button>
-           ) : (
-             <Button
-               onClick={() => {
-                 navigate(`/ideas`);
-               }}
-               className="gap-2"
-               variant="default"
-             >
-               <Heart className="w-4 h-4" />
-               {savedToLibrary ? "Saved ✓" : "Save for Later"}
-             </Button>
-           )}
+              <Button
+                onClick={() => navigate(`/commit/${id}`)}
+                className="gap-2"
+                variant="default"
+              >
+                <Rocket className="w-4 h-4" />
+                Commit to This
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  setSavedToLibrary(true);
+                  toast({
+                    title: "Saved ✓",
+                    description: "This idea is in your library for later.",
+                  });
+                }}
+                className="gap-2"
+                variant={savedToLibrary ? "secondary" : "default"}
+                disabled={savedToLibrary}
+              >
+                <Heart className="w-4 h-4" />
+                {savedToLibrary ? "Saved ✓" : "Save for Later"}
+              </Button>
+            )}
 
           {!analysis && (
             <Button onClick={handleVetIdea} disabled={analyzeIdea.isPending} variant={currentActiveVenture ? "default" : "outline"} className="gap-2">
