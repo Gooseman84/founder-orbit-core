@@ -33,7 +33,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload, MoreVertical, RefreshCw } from "lucide-react";
+import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload, MoreVertical, RefreshCw, Rocket } from "lucide-react";
+import { useVentureState } from "@/hooks/useVentureState";
 
 const getComplexityVariant = (complexity: string | null) => {
   switch (complexity?.toLowerCase()) {
@@ -75,6 +76,7 @@ const IdeaDetail = () => {
   const [generatedVariants, setGeneratedVariants] = useState<any[]>([]);
   const [settingNorthStar, setSettingNorthStar] = useState(false);
   const [unsettingNorthStar, setUnsettingNorthStar] = useState(false);
+  const { activeVenture: currentActiveVenture } = useVentureState();
 
   // Helpers for null-safe score rendering
   const scoreValue = (v: number | null | undefined) => (typeof v === "number" ? v : 0);
@@ -347,8 +349,20 @@ const IdeaDetail = () => {
         </Button>
 
         <div className="flex gap-2 flex-wrap">
+          {/* Commit to This — primary CTA when no active venture */}
+          {!currentActiveVenture && (
+            <Button
+              onClick={() => navigate(`/commit/${id}`)}
+              className="gap-2"
+              variant="default"
+            >
+              <Rocket className="w-4 h-4" />
+              Commit to This
+            </Button>
+          )}
+
           {!analysis && (
-            <Button onClick={handleVetIdea} disabled={analyzeIdea.isPending} className="gap-2">
+            <Button onClick={handleVetIdea} disabled={analyzeIdea.isPending} variant={currentActiveVenture ? "default" : "outline"} className="gap-2">
               {analyzeIdea.isPending ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -368,12 +382,12 @@ const IdeaDetail = () => {
             <Button
               onClick={handleSetNorthStar}
               disabled={settingNorthStar}
-              variant="default"
+              variant="outline"
               className="gap-2"
             >
               {settingNorthStar ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                   Setting...
                 </>
               ) : (

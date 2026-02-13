@@ -225,13 +225,19 @@ serve(async (req) => {
       );
     }
 
-    console.log("[venture-review-decision] Success, new state:", updatedVenture.venture_state);
+    const redirectTo = action === "continue" ? "/dashboard" : "/ideas";
+    console.log("[venture-review-decision] Result:", {
+      action,
+      newState: updatedVenture.venture_state,
+      redirectTo,
+    });
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         venture: updatedVenture,
         action,
+        redirectTo,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
