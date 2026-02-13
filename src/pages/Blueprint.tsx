@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BlueprintSkeleton } from "@/components/shared/SkeletonLoaders";
+import { FunnelStepper } from "@/components/shared/FunnelStepper";
 import { FinancialViabilityScore } from "@/components/opportunity/FinancialViabilityScore";
 import { BusinessBlueprint } from "@/components/blueprint/BusinessBlueprint";
 import { BlueprintGenerationAnimation } from "@/components/blueprint/BlueprintGenerationAnimation";
@@ -34,45 +35,11 @@ import {
   Calendar,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { CommitmentWindowDays, Venture, VentureState } from "@/types/venture";
 import type { TechStack } from "@/types/implementationKit";
 import type { FounderBlueprint } from "@/types/blueprint";
-
-// Journey stepper for fresh visits
-const STEPS = [
-  { label: "Interview", done: true },
-  { label: "Profile", done: true },
-  { label: "Ideas", done: true },
-  { label: "Commit", done: true },
-  { label: "Blueprint", active: true },
-  { label: "Build", done: false },
-];
-
-function JourneyStepper() {
-  return (
-    <div className="flex items-center gap-1 overflow-x-auto">
-      {STEPS.map((step, i) => (
-        <div key={step.label} className="flex items-center gap-1 shrink-0">
-          <div
-            className={cn(
-              "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-              step.active && "bg-primary text-primary-foreground",
-              step.done && !step.active && "text-muted-foreground",
-              !step.done && !step.active && "text-muted-foreground/50"
-            )}
-          >
-            {step.done && !step.active && <Check className="h-3 w-3" />}
-            {step.label}
-          </div>
-          {i < STEPS.length - 1 && (
-            <ArrowRight className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 const Blueprint = () => {
   const navigate = useNavigate();
@@ -276,10 +243,10 @@ const Blueprint = () => {
       "container mx-auto py-8 px-4 max-w-3xl",
       showReveal && "animate-fade-in"
     )}>
-      {/* Fresh visit stepper header */}
+      {/* Fresh visit FunnelStepper header */}
       {isFreshVisit && (
-        <div className="flex justify-center mb-8">
-          <JourneyStepper />
+        <div className="mb-8">
+          <FunnelStepper currentStep="blueprint" />
         </div>
       )}
 
@@ -435,11 +402,10 @@ const Blueprint = () => {
       <div className="mt-10 mb-4">
         <Button
           size="lg"
-          className="w-full text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+          className="w-full text-base"
           onClick={() => navigate("/dashboard")}
         >
-          Start Building
-          <ArrowRight className="ml-2 h-5 w-5" />
+          Start Building →
         </Button>
       </div>
 
@@ -476,60 +442,49 @@ function renderWrapper(isFresh: boolean, children: React.ReactNode) {
   if (isFresh) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
+
   return <MainLayout>{children}</MainLayout>;
 }
 
-// ─── Skeleton placeholder for plan loading ───
-function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-md bg-muted", className)} />;
+// Helper: Generate AI narrative summary
+function generateNarrativeSummary(blueprint: FounderBlueprint | null | undefined, ventureName: string): string {
+  if (!blueprint) return "Loading your venture narrative...";
+
+  const parts = [
+    blueprint.promise_statement || "A focused venture",
+    blueprint.target_audience && `targeting ${blueprint.target_audience}`,
+    blueprint.offer_model && `via ${blueprint.offer_model}`,
+    blueprint.monetization_strategy && `monetized through ${blueprint.monetization_strategy}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return parts || "Your venture is uniquely positioned for success.";
 }
 
-// Helper: Generate narrative summary from blueprint
-function generateNarrativeSummary(blueprint: any, ventureName?: string): string {
-  if (!blueprint) {
-    return "Your venture is ready for commitment. Define your success criteria and begin execution.";
-  }
-  const parts: string[] = [];
-  if (ventureName) parts.push(`You're building ${ventureName}.`);
-  if (blueprint.north_star_one_liner) parts.push(blueprint.north_star_one_liner);
-  if (blueprint.target_audience && blueprint.problem_statement) {
-    parts.push(`You're solving "${blueprint.problem_statement}" for ${blueprint.target_audience}.`);
-  } else if (blueprint.target_audience) {
-    parts.push(`Your target audience is ${blueprint.target_audience}.`);
-  }
-  if (blueprint.offer_model) parts.push(`Your offer model: ${blueprint.offer_model}.`);
-  if (blueprint.time_available_hours_per_week) {
-    parts.push(`You have ${blueprint.time_available_hours_per_week} hours/week to invest.`);
-  }
-  if (parts.length === 0) {
-    return "Your venture is ready for commitment. Define your success criteria and begin execution.";
-  }
-  return parts.join(" ");
-}
+// Helper: Generate misalignment callouts
+function generateMisalignmentCallouts(blueprint: FounderBlueprint | null | undefined): string[] {
+  if (!blueprint) return [];
 
-// Helper: Generate misalignment callouts from blueprint
-function generateMisalignmentCallouts(blueprint: any): string[] {
   const callouts: string[] = [];
-  if (!blueprint) return callouts;
-  if (blueprint.time_available_hours_per_week && blueprint.time_available_hours_per_week < 10) {
-    callouts.push(`You only have ${blueprint.time_available_hours_per_week} hours/week. Ambitious ventures need focused execution windows.`);
+
+  if (!blueprint.time_available_hours_per_week || blueprint.time_available_hours_per_week < 20) {
+    callouts.push(
+      `You have limited hours available (${blueprint.time_available_hours_per_week || 0}hrs/week) — this venture will require serious focus.`
+    );
   }
-  if (blueprint.capital_available !== null && blueprint.capital_available < 500) {
-    callouts.push("Limited capital means you need to validate before building. Prioritize customer conversations.");
+
+  if (blueprint.capital_available && blueprint.capital_available < 5000) {
+    callouts.push(
+      `Your capital is tight (${blueprint.capital_available}) — focus on revenue-first strategies.`
+    );
   }
-  if (blueprint.risk_profile === "conservative") {
-    callouts.push("Your conservative risk profile may conflict with the experimentation needed for early ventures.");
+
+  if (blueprint.risk_profile === "low" && blueprint.monetization_strategy?.includes("high-risk")) {
+    callouts.push("Your risk profile is conservative, but this monetization approach carries risk.");
   }
-  if (!blueprint.target_audience) {
-    callouts.push("You haven't defined your target audience. This needs clarity before execution.");
-  }
-  if (!blueprint.problem_statement) {
-    callouts.push("No clear problem statement. What pain are you solving?");
-  }
-  if (blueprint.weaknesses) {
-    callouts.push(`Your self-identified weakness: "${blueprint.weaknesses}". Plan around it.`);
-  }
-  return callouts.slice(0, 5);
+
+  return callouts;
 }
 
 export default Blueprint;

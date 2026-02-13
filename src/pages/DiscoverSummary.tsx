@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { FunnelStepper } from "@/components/shared/FunnelStepper";
 import { FounderPortrait } from "@/components/discover/FounderPortrait";
 import { InsightCard, InsightPills } from "@/components/discover/InsightCard";
 import type { InterviewInsights } from "@/types/interviewInsights";
@@ -255,6 +256,22 @@ export default function DiscoverSummary() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
+      {/* FunnelStepper replaces sidebar during guided funnel */}
+      <FunnelStepper currentStep="summary" />
+
+      {/* Minimal Header */}
+      <header className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <Link
+          to="/discover"
+          className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
+          aria-label="Back to discover"
+        >
+          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
+        </Link>
+        <span className="font-semibold text-lg">TrueBlazer</span>
+        <div className="w-8" /> {/* spacer for centering */}
+      </header>
+
       {/* Updated animation overlay */}
       {showUpdatedAnimation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-fade-in">
@@ -266,30 +283,6 @@ export default function DiscoverSummary() {
           </div>
         </div>
       )}
-
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/discover"
-            className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
-            aria-label="Back to interview"
-          >
-            <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Compass className="h-4 w-4 text-primary" />
-            </div>
-            <span className="font-semibold text-lg">TrueBlazer</span>
-          </div>
-        </div>
-        {isEditMode && (
-          <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
-            Edit mode
-          </span>
-        )}
-      </header>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto pb-32">

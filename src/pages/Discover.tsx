@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { DiscoverChatContainer } from "@/components/discover/DiscoverChatContainer";
 import { DiscoverResumeModal } from "@/components/discover/DiscoverResumeModal";
+import { FunnelStepper } from "@/components/shared/FunnelStepper";
 import type { InterviewTurn } from "@/types/founderInterview";
 
 type InterviewState = "loading" | "resume_prompt" | "active" | "complete";
@@ -217,23 +218,25 @@ export default function Discover() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Minimal Header */}
+      {/* FunnelStepper replaces sidebar during guided funnel */}
+      <FunnelStepper currentStep="discover" />
+
+      {/* Minimal Header with back link */}
       <header className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/dashboard"
-            className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
-            aria-label="Back to dashboard"
-          >
-            <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Compass className="h-4 w-4 text-primary" />
-            </div>
-            <span className="font-semibold text-lg">TrueBlazer</span>
+        <Link
+          to="/dashboard"
+          className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
+          aria-label="Back to dashboard"
+        >
+          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
+        </Link>
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <Compass className="h-4 w-4 text-primary" />
           </div>
+          <span className="font-semibold text-lg">TrueBlazer</span>
         </div>
+        <div className="w-8" /> {/* spacer for centering */}
       </header>
 
       {/* Resume Modal */}
