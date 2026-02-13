@@ -493,6 +493,10 @@ serve(async (req) => {
       }
     }
 
+    // Parse request body for ideaId
+    const reqBody = await req.json().catch(() => ({}));
+    const requestedIdeaId = reqBody.ideaId ?? null;
+
     // Load founder profile
     const { data: founderProfile, error: founderError } = await supabase
       .from("founder_profiles")
@@ -504,16 +508,36 @@ serve(async (req) => {
       console.error("[generate-blueprint] Error loading founder_profile:", founderError);
     }
 
-    // Load chosen idea (status = 'chosen')
-    const { data: chosenIdea, error: ideaError } = await supabase
-      .from("ideas")
-      .select("id, title, description, target_customer, business_model_type")
-      .eq("user_id", userId)
-      .eq("status", "chosen")
-      .maybeSingle();
+    // Load the specific idea by ID if provided, otherwise fall back to status='chosen'
+    let chosenIdea: any = null;
+    if (requestedIdeaId) {
+      const { data, error: ideaError } = await supabase
+        .from("ideas")
+        .select("id, title, description, target_customer, business_model_type")
+        .eq("id", requestedIdeaId)
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    if (ideaError) {
-      console.error("[generate-blueprint] Error loading chosen idea:", ideaError);
+      if (ideaError) {
+        console.error("[generate-blueprint] Error loading idea by ID:", ideaError);
+      } else {
+        chosenIdea = data;
+      }
+    }
+
+    if (!chosenIdea) {
+      const { data, error: ideaError } = await supabase
+        .from("ideas")
+        .select("id, title, description, target_customer, business_model_type")
+        .eq("user_id", userId)
+        .eq("status", "chosen")
+        .maybeSingle();
+
+      if (ideaError) {
+        console.error("[generate-blueprint] Error loading chosen idea:", ideaError);
+      } else {
+        chosenIdea = data;
+      }
     }
 
     // Load idea analysis if chosen idea exists

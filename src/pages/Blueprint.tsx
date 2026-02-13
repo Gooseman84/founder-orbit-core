@@ -183,13 +183,14 @@ const Blueprint = () => {
 
     (async () => {
       try {
-        const { data, error } = await invokeAuthedFunction<FounderBlueprint>(
+        const { data, error } = await invokeAuthedFunction<any>(
           "generate-blueprint",
           { body: { ideaId: venture.idea_id } }
         );
         if (error) throw error;
-        if (data) {
-          setGeneratedBlueprint(data);
+        const blueprintResult: FounderBlueprint | null = data?.blueprint ?? data ?? null;
+        if (blueprintResult) {
+          setGeneratedBlueprint(blueprintResult);
           // Show reveal animation for fresh visits
           if (isFreshVisit) {
             setShowReveal(true);
