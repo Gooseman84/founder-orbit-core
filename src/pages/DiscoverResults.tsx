@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
+import { FunnelStepper } from "@/components/shared/FunnelStepper";
 import { DiscoverResultsLoading } from "@/components/discover/DiscoverResultsLoading";
 import { RecommendationCard } from "@/components/discover/RecommendationCard";
 import { RegeneratePanel } from "@/components/discover/RegeneratePanel";
@@ -312,23 +313,20 @@ export default function DiscoverResults() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* Header */}
+      {/* FunnelStepper replaces sidebar during guided funnel */}
+      <FunnelStepper currentStep="results" />
+
+      {/* Minimal Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/discover/summary"
-            className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
-            aria-label="Back to summary"
-          >
-            <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Compass className="h-4 w-4 text-primary" />
-            </div>
-            <span className="font-semibold text-lg">TrueBlazer</span>
-          </div>
-        </div>
+        <Link
+          to="/discover/summary"
+          className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
+          aria-label="Back to summary"
+        >
+          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
+        </Link>
+        <span className="font-semibold text-lg">TrueBlazer</span>
+        <div className="w-8" /> {/* spacer for centering */}
       </header>
 
       {/* Main Content */}

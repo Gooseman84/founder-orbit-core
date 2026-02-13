@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveVenture } from "@/hooks/useActiveVenture";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useAuth } from "@/hooks/useAuth";
+import { FunnelStepper } from "@/components/shared/FunnelStepper";
 import type { CommitmentWindowDays, CommitmentFull } from "@/types/venture";
 import { addDays, format } from "date-fns";
 import { ArrowLeft, Check, Rocket, Sparkles } from "lucide-react";
@@ -23,14 +24,8 @@ const WINDOW_OPTIONS: { value: CommitmentWindowDays; label: string }[] = [
   { value: 90, label: "90 days" },
 ];
 
-const STEPS = [
-  { label: "Interview", done: true },
-  { label: "Profile", done: true },
-  { label: "Ideas", done: true },
-  { label: "Commit", active: true },
-  { label: "Blueprint", done: false },
-  { label: "Build", done: false },
-];
+// Removed: STEPS array — now using FunnelStepper component
+
 
 interface IdeaRow {
   id: string;
@@ -184,6 +179,9 @@ export default function Commit() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* FunnelStepper replaces sidebar during guided funnel */}
+      <FunnelStepper currentStep="commit" />
+
       {/* Active venture warning */}
       {hasConflictingVenture && (
         <div className="w-full bg-destructive/10 border-b border-destructive/20 px-4 py-3">
@@ -202,46 +200,6 @@ export default function Commit() {
           <ArrowLeft className="h-4 w-4" />
           Back to results
         </Link>
-      </div>
-
-      {/* Progress stepper */}
-      <div className="w-full max-w-2xl mx-auto px-4 pt-6 pb-2">
-        <div className="flex items-center justify-between">
-          {STEPS.map((step, i) => (
-            <div key={step.label} className="flex items-center">
-              <div className="flex flex-col items-center">
-                <div
-                  className={cn(
-                    "w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors",
-                    step.done && "bg-primary/20 text-primary",
-                    step.active && "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background",
-                    !step.done && !step.active && "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {step.done ? <Check className="h-3.5 w-3.5" /> : i + 1}
-                </div>
-                <span
-                  className={cn(
-                    "text-[10px] sm:text-xs mt-1 text-center",
-                    step.active ? "text-foreground font-medium" : "text-muted-foreground"
-                  )}
-                >
-                  {step.label}
-                </span>
-              </div>
-              {i < STEPS.length - 1 && (
-                <div
-                  className={cn(
-                    "h-px w-4 sm:w-8 mx-1",
-                    i < STEPS.findIndex((s) => s.active)
-                      ? "bg-primary/40"
-                      : "bg-border"
-                  )}
-                />
-              )}
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Main content */}
