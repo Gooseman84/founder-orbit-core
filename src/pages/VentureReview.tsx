@@ -52,11 +52,13 @@ const VentureReview = () => {
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const invalidateQueries = () => {
-    queryClient.invalidateQueries({ queryKey: ["ventures"] });
-    queryClient.invalidateQueries({ queryKey: ["north-star-venture"] });
-    queryClient.invalidateQueries({ queryKey: ["active-venture"] });
-    queryClient.invalidateQueries({ queryKey: ["venture-state"] });
+  const invalidateAllVentureQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["ventures"] }),
+      queryClient.invalidateQueries({ queryKey: ["north-star-venture"] }),
+      queryClient.invalidateQueries({ queryKey: ["active-venture"] }),
+      queryClient.invalidateQueries({ queryKey: ["venture-state"] }),
+    ]);
   };
 
   // Show loading state
@@ -129,9 +131,9 @@ const VentureReview = () => {
 
       if (error) throw error;
 
-      toast({ title: "Commitment Renewed", description: "Starting a new execution window." });
-      invalidateQueries();
-      navigate("/tasks");
+      toast({ title: "Commitment Renewed!", description: "Let's keep building. 🔥" });
+      await invalidateAllVentureQueries();
+      navigate("/dashboard");
     } catch (err) {
       toast({
         title: "Error",
@@ -159,14 +161,14 @@ const VentureReview = () => {
 
       if (error) throw error;
 
+      await invalidateAllVentureQueries();
+
       if (pendingAction === "pivot") {
-        toast({ title: "Venture Pivoted", description: "Returning to Blueprint to refine your approach." });
-        invalidateQueries();
-        navigate(`/blueprint`);
+        toast({ title: "Venture Pivoted", description: "Venture archived. Let's find your next big idea." });
+        navigate("/ideas");
       } else if (pendingAction === "kill") {
-        toast({ title: "Venture Killed", description: "This venture has been archived." });
-        invalidateQueries();
-        navigate("/north-star");
+        toast({ title: "Venture Killed", description: "Venture archived. Let's find your next big idea." });
+        navigate("/ideas");
       }
     } catch (err) {
       toast({

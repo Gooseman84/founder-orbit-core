@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import type { 
@@ -15,106 +16,82 @@ import {
   canGenerateExecutionAdvice,
   canEditIdeaFundamentals,
   canAccessIdeationTools,
-  isValidCommitmentDraft,
   isValidCommitmentFull,
 } from "@/types/venture";
 
+export const VENTURE_STATE_QUERY_KEY = "venture-state";
+
 interface UseVentureStateResult {
-  // Current active venture (if any)
   activeVenture: Venture | null;
   isLoading: boolean;
   error: Error | null;
 
-  // State checks
   canGenerateTasks: boolean;
   canGenerateExecutionAdvice: boolean;
   canEditIdeaFundamentals: boolean;
   canAccessIdeationTools: boolean;
 
-  // State transition methods
-  // For 'executing': pass CommitmentFull (window + metric + start/end timestamps)
   transitionTo: (
     ventureId: string, 
     targetState: VentureState, 
     commitmentData?: CommitmentDraft | CommitmentFull
   ) => Promise<boolean>;
   
-  // Refresh active venture
   refresh: () => Promise<void>;
 
-  // Guard helpers that return error messages
   guardTaskGeneration: () => string | null;
   guardExecutionAdvice: () => string | null;
   guardIdeaEdit: () => string | null;
   guardIdeationAccess: () => string | null;
 }
 
+async function fetchActiveVenture(userId: string): Promise<Venture | null> {
+  const { data, error } = await supabase
+    .from("ventures")
+    .select("*")
+    .eq("user_id", userId)
+    .in("venture_state", ["executing", "reviewed"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (data) {
+    return {
+      ...data,
+      venture_state: data.venture_state as VentureState,
+      commitment_window_days: data.commitment_window_days as CommitmentWindowDays | null,
+    } as Venture;
+  }
+  return null;
+}
+
 export function useVentureState(): UseVentureStateResult {
   const { user } = useAuth();
-  const [activeVenture, setActiveVenture] = useState<Venture | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
 
-  // Fetch the user's active venture (if any)
+  const { data: activeVenture = null, isLoading, error: queryError } = useQuery({
+    queryKey: [VENTURE_STATE_QUERY_KEY, user?.id],
+    queryFn: () => fetchActiveVenture(user!.id),
+    enabled: !!user,
+    staleTime: 10_000,
+  });
+
+  const error = queryError as Error | null;
+
   const refresh = useCallback(async () => {
-    if (!user) {
-      setActiveVenture(null);
-      setIsLoading(false);
-      return;
-    }
+    await queryClient.invalidateQueries({ queryKey: [VENTURE_STATE_QUERY_KEY] });
+  }, [queryClient]);
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Find the active venture (executing or reviewed state)
-      const { data, error: fetchError } = await supabase
-        .from("ventures")
-        .select("*")
-        .eq("user_id", user.id)
-        .in("venture_state", ["executing", "reviewed"])
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (fetchError) throw fetchError;
-
-      if (data) {
-        // Cast the data to Venture type, handling the venture_state from DB
-        setActiveVenture({
-          ...data,
-          venture_state: data.venture_state as VentureState,
-          commitment_window_days: data.commitment_window_days as CommitmentWindowDays | null,
-        } as Venture);
-      } else {
-        setActiveVenture(null);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Failed to fetch active venture"));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user]);
-
-  // Load active venture on mount and when user changes
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  // Transition a venture to a new state
-  // For 'executing': requires CommitmentFull (window + metric + timestamps)
   const transitionTo = useCallback(async (
     ventureId: string,
     targetState: VentureState,
     commitmentData?: CommitmentDraft | CommitmentFull
   ): Promise<boolean> => {
-    if (!user) {
-      setError(new Error("Not authenticated"));
-      return false;
-    }
+    if (!user) return false;
 
     try {
-      // First, fetch the current venture to validate transition
       const { data: currentVenture, error: fetchError } = await supabase
         .from("ventures")
         .select("*")
@@ -127,24 +104,20 @@ export function useVentureState(): UseVentureStateResult {
 
       const currentState = currentVenture.venture_state as VentureState;
 
-      // Validate transition is allowed
       if (!canTransitionTo(currentState, targetState)) {
         throw new Error(`Invalid state transition: ${currentState} -> ${targetState}`);
       }
 
-      // Validate commitment data based on target state
       if (targetState === "executing") {
         if (!commitmentData || !isValidCommitmentFull(commitmentData)) {
           throw new Error("All commitment fields (window, metric, start/end dates) are required to enter executing state");
         }
       }
 
-      // Build the update payload
       const updateData: Record<string, unknown> = {
         venture_state: targetState,
       };
 
-      // Include full commitment data for executing state
       if (targetState === "executing" && commitmentData && isValidCommitmentFull(commitmentData)) {
         updateData.commitment_window_days = commitmentData.commitment_window_days;
         updateData.commitment_start_at = commitmentData.commitment_start_at;
@@ -160,16 +133,15 @@ export function useVentureState(): UseVentureStateResult {
 
       if (updateError) throw updateError;
 
-      // Refresh to get updated state
       await refresh();
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error("Failed to transition venture state"));
-      return false;
+      console.error("[useVentureState] transitionTo error:", err);
+      throw err;
     }
   }, [user, refresh]);
 
-  // Compute permissions based on active venture state
+  // Compute permissions
   const ventureState = activeVenture?.venture_state ?? "inactive";
   const hasActiveVenture = activeVenture !== null && isActiveVentureState(ventureState);
 
@@ -180,37 +152,28 @@ export function useVentureState(): UseVentureStateResult {
     canAccessIdeationTools: !hasActiveVenture || canAccessIdeationTools(ventureState),
   };
 
-  // Guard functions that return error messages (null if allowed)
   const guardTaskGeneration = useCallback((): string | null => {
-    if (!hasActiveVenture) {
-      return "You need to commit to a venture before generating tasks.";
-    }
-    if (ventureState !== "executing") {
-      return `Cannot generate tasks while venture is in "${ventureState}" state. Tasks can only be generated during active execution.`;
-    }
+    if (!hasActiveVenture) return "You need to commit to a venture before generating tasks.";
+    if (ventureState !== "executing") return `Cannot generate tasks while venture is in "${ventureState}" state.`;
     return null;
   }, [hasActiveVenture, ventureState]);
 
   const guardExecutionAdvice = useCallback((): string | null => {
-    if (!hasActiveVenture) {
-      return "You need to commit to a venture before getting execution advice.";
-    }
-    if (ventureState !== "executing") {
-      return `Cannot get execution advice while venture is in "${ventureState}" state. Advice is only available during active execution.`;
-    }
+    if (!hasActiveVenture) return "You need to commit to a venture before getting execution advice.";
+    if (ventureState !== "executing") return `Cannot get execution advice while venture is in "${ventureState}" state.`;
     return null;
   }, [hasActiveVenture, ventureState]);
 
   const guardIdeaEdit = useCallback((): string | null => {
     if (hasActiveVenture && !canEditIdeaFundamentals(ventureState)) {
-      return `Cannot edit idea fundamentals while venture is in "${ventureState}" state. Complete or kill your current venture first.`;
+      return `Cannot edit idea fundamentals while venture is in "${ventureState}" state.`;
     }
     return null;
   }, [hasActiveVenture, ventureState]);
 
   const guardIdeationAccess = useCallback((): string | null => {
     if (hasActiveVenture && !canAccessIdeationTools(ventureState)) {
-      return "Ideation tools are locked while you're actively executing a venture. Focus on your current commitment.";
+      return "Ideation tools are locked while you're actively executing a venture.";
     }
     return null;
   }, [hasActiveVenture, ventureState]);
