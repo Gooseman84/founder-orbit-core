@@ -4,23 +4,25 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, FileText, Loader2 } from "lucide-react";
+import { Clock, ArrowRight, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
 import { supabase } from "@/integrations/supabase/client";
 import { recordXpEvent } from "@/lib/xpEngine";
+import { getTaskPromptDefaults } from "@/lib/taskPromptDefaults";
 import { toast } from "sonner";
 import type { DailyTask } from "@/hooks/useDailyExecution";
 
 interface ExecutionTaskCardProps {
   task: DailyTask;
   ventureId?: string;
+  ventureName?: string;
   onToggle: (completed: boolean) => void;
   disabled?: boolean;
 }
 
-export function ExecutionTaskCard({ task, ventureId, onToggle, disabled }: ExecutionTaskCardProps) {
+export function ExecutionTaskCard({ task, ventureId, ventureName, onToggle, disabled }: ExecutionTaskCardProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { refresh: refreshXp } = useXP();
@@ -38,6 +40,14 @@ export function ExecutionTaskCard({ task, ventureId, onToggle, disabled }: Execu
     setIsWorkspaceProcessing(true);
 
     try {
+      // Generate AI prompt from task metadata or defaults
+      const ventureContext = {
+        ventureName: ventureName || "my venture",
+      };
+      const defaults = getTaskPromptDefaults(task.title, task.description, ventureContext);
+      const aiPrompt = task.ai_prompt || defaults.aiPrompt;
+      const linkedSection = task.linked_section ?? defaults.linkedSection;
+
       // Check for existing document linked to this task
       const { data: existingDoc } = await supabase
         .from("workspace_documents")
@@ -47,45 +57,56 @@ export function ExecutionTaskCard({ task, ventureId, onToggle, disabled }: Execu
         .eq("source_id", task.id)
         .maybeSingle();
 
+      let targetDocId: string;
+
       if (existingDoc) {
-        await recordXpEvent(user.id, "workspace_opened", 10, {
-          source: "execution_task",
-          taskId: task.id,
-        });
-        refreshXp();
-        toast.success(`Workspace ready for: ${task.title}`);
-        navigate(`/workspace/${existingDoc.id}`);
-        return;
+        targetDocId = existingDoc.id;
+      } else {
+        // Create new document for this task
+        const { data: newDoc, error } = await supabase
+          .from("workspace_documents")
+          .insert({
+            user_id: user.id,
+            venture_id: ventureId || null,
+            source_type: "execution_task",
+            source_id: task.id,
+            doc_type: "task-work",
+            title: task.title,
+            content: `## ${task.title}\n\n**Category:** ${task.category}\n**Estimated Time:** ${task.estimatedMinutes} minutes\n\n### Description\n${task.description}\n\n### Notes\n\n`,
+            status: "draft",
+            metadata: { taskId: task.id },
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        targetDocId = newDoc.id;
       }
-
-      // Create new document for this task
-      // Note: Don't use linked_task_id here - execution tasks are stored in venture_daily_tasks (JSONB),
-      // not in the tasks table, so the foreign key constraint would fail
-      const { data: newDoc, error } = await supabase
-        .from("workspace_documents")
-        .insert({
-          user_id: user.id,
-          venture_id: ventureId || null,
-          source_type: "execution_task",
-          source_id: task.id,
-          doc_type: "task-work",
-          title: task.title,
-          content: `## ${task.title}\n\n**Category:** ${task.category}\n**Estimated Time:** ${task.estimatedMinutes} minutes\n\n### Description\n${task.description}\n\n### Notes\n\n`,
-          status: "draft",
-          metadata: { taskId: task.id },
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
 
       await recordXpEvent(user.id, "workspace_opened", 10, {
         source: "execution_task",
         taskId: task.id,
       });
       refreshXp();
-      toast.success(`Workspace ready for: ${task.title}`);
-      navigate(`/workspace/${newDoc.id}`);
+
+      toast.success(`Opening workspace for: ${task.title}`);
+
+      // Navigate with deep-link state for AI panel + task completion
+      navigate(`/workspace/${targetDocId}`, {
+        state: {
+          executionTask: {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            category: task.category,
+            estimatedMinutes: task.estimatedMinutes,
+            completed: task.completed,
+            aiPrompt,
+            linkedSection,
+            ventureId,
+          },
+        },
+      });
     } catch (error) {
       console.error("Error opening workspace:", error);
       toast.error("Failed to open workspace");
@@ -93,6 +114,21 @@ export function ExecutionTaskCard({ task, ventureId, onToggle, disabled }: Execu
       setIsWorkspaceProcessing(false);
     }
   };
+
+  // Check if a workspace document already exists for this task
+  const [hasDoc, setHasDoc] = useState<boolean | null>(null);
+  // Lazy check on first render
+  useState(() => {
+    if (!user) return;
+    supabase
+      .from("workspace_documents")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("source_type", "execution_task")
+      .eq("source_id", task.id)
+      .maybeSingle()
+      .then(({ data }) => setHasDoc(!!data));
+  });
 
   return (
     <Card className={cn(
@@ -131,10 +167,10 @@ export function ExecutionTaskCard({ task, ventureId, onToggle, disabled }: Execu
                 {task.estimatedMinutes} min
               </span>
               
-              {/* Work on This button */}
+              {/* Work on This / Revisit button */}
               <Button
                 size="sm"
-                variant="outline"
+                variant={task.completed ? "outline" : "default"}
                 onClick={handleOpenWorkspace}
                 disabled={isWorkspaceProcessing}
                 className="h-7 text-xs gap-1 ml-auto"
@@ -142,9 +178,14 @@ export function ExecutionTaskCard({ task, ventureId, onToggle, disabled }: Execu
                 {isWorkspaceProcessing ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
-                  <FileText className="h-3 w-3" />
+                  <>
+                    {hasDoc && !task.completed && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    )}
+                    {task.completed ? "Revisit" : "Work on This"}
+                    <ArrowRight className="h-3 w-3" />
+                  </>
                 )}
-                Work on This
               </Button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { FileText, CheckCircle2, Download, Archive, Menu, Plus, FolderPlus } from 'lucide-react';
+import { FileText, CheckCircle2, Download, Archive, Menu, Plus, FolderPlus, X, CheckSquare, Square } from 'lucide-react';
 import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
@@ -29,6 +29,7 @@ import { PLAN_FEATURES } from '@/config/plans';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { PaywallReasonCode } from '@/config/paywallCopy';
 import type { TaskContext } from '@/types/tasks';
+import type { Json } from '@/integrations/supabase/types';
 
 interface WorkspaceFolder {
   id: string;
@@ -38,6 +39,19 @@ interface WorkspaceFolder {
   parent_folder_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Deep-link state from ExecutionTaskCard "Work on This"
+interface ExecutionTaskDeepLink {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  estimatedMinutes: number;
+  completed: boolean;
+  aiPrompt: string;
+  linkedSection: string | null;
+  ventureId?: string;
 }
 
 export default function Workspace() {
@@ -52,6 +66,7 @@ export default function Workspace() {
   const { blueprint } = useBlueprint();
   const isMobile = useIsMobile();
   const isPro = plan === 'pro' || plan === 'founder';
+  const deepLinkProcessed = useRef(false);
 
   // Initialize workspace with venture scoping
   const {
@@ -83,7 +98,6 @@ export default function Workspace() {
         .eq('user_id', user.id)
         .order('name');
       
-      // Filter by venture if in venture scope
       if (scope === 'current_venture' && activeVenture?.id) {
         query = query.or(`venture_id.eq.${activeVenture.id},venture_id.is.null`);
       }
@@ -114,12 +128,115 @@ export default function Workspace() {
   const [aiPanelCollapsed, setAiPanelCollapsed] = useState(true);
   const { track } = useAnalytics();
   
+  // Execution task deep-link state
+  const [executionTask, setExecutionTask] = useState<ExecutionTaskDeepLink | null>(null);
+  const [taskIndicatorDismissed, setTaskIndicatorDismissed] = useState(false);
+
   // Get workspace doc limit for free users
   const maxWorkspaceDocs = isPro ? Infinity : PLAN_FEATURES.trial.maxWorkspaceDocs;
 
-  // Extract taskContext from navigation state
+  // Extract taskContext from navigation state (legacy path)
   const taskContext = (location.state as { taskContext?: TaskContext } | null)?.taskContext;
 
+  // Extract execution task deep-link from navigation state
+  useEffect(() => {
+    const state = location.state as { executionTask?: ExecutionTaskDeepLink } | null;
+    if (state?.executionTask && !deepLinkProcessed.current) {
+      const et = state.executionTask;
+      setExecutionTask(et);
+      setTaskCompleted(et.completed);
+      setTaskIndicatorDismissed(false);
+      
+      // Auto-open AI panel
+      setAiPanelCollapsed(false);
+      
+      deepLinkProcessed.current = true;
+
+      // Clear the navigation state so refresh doesn't re-trigger
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [location.state, location.pathname]);
+
+  // Reset deep-link processed flag when navigating to a different doc
+  useEffect(() => {
+    deepLinkProcessed.current = false;
+  }, [documentId]);
+
+  // Build a TaskContext from executionTask for the AI panel
+  const effectiveTaskContext: TaskContext | undefined = taskContext || (executionTask ? {
+    id: executionTask.id,
+    title: executionTask.title,
+    description: executionTask.description,
+    category: executionTask.category,
+    estimated_minutes: executionTask.estimatedMinutes,
+    xp_reward: 10,
+  } : undefined);
+
+  // Handle completing an execution task (JSONB in venture_daily_tasks)
+  const handleCompleteExecutionTask = async () => {
+    if (!user || !executionTask) return;
+
+    setCompletingTask(true);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const ventureId = executionTask.ventureId;
+      if (!ventureId) throw new Error("No venture ID for task");
+
+      // Fetch current daily tasks
+      const { data: dailyRow, error: fetchError } = await supabase
+        .from("venture_daily_tasks")
+        .select("tasks")
+        .eq("venture_id", ventureId)
+        .eq("task_date", today)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+      if (!dailyRow) throw new Error("No daily tasks found for today");
+
+      const tasks = dailyRow.tasks as unknown as Array<Record<string, unknown>>;
+      const updatedTasks = tasks.map((t) =>
+        t.id === executionTask.id ? { ...t, completed: !taskCompleted } : t
+      );
+
+      const { error: updateError } = await supabase
+        .from("venture_daily_tasks")
+        .update({ tasks: JSON.parse(JSON.stringify(updatedTasks)) as Json })
+        .eq("venture_id", ventureId)
+        .eq("task_date", today);
+
+      if (updateError) throw updateError;
+
+      const newCompleted = !taskCompleted;
+      setTaskCompleted(newCompleted);
+      setExecutionTask(prev => prev ? { ...prev, completed: newCompleted } : prev);
+
+      if (newCompleted) {
+        await recordXpEvent(user.id, 'task_completed_from_workspace', 10, {
+          taskId: executionTask.id,
+          task_title: executionTask.title,
+        });
+        await refreshXp();
+      }
+
+      toast({
+        title: newCompleted ? 'Task completed! 🎉' : 'Task uncompleted',
+        description: newCompleted
+          ? `You earned 10 XP for finishing "${executionTask.title}".`
+          : `"${executionTask.title}" marked as incomplete.`,
+      });
+    } catch (err) {
+      console.error('Error completing execution task:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to update task status. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCompletingTask(false);
+    }
+  };
+
+  // Legacy task completion handler (for tasks table)
   const handleCompleteLinkedTask = async () => {
     if (!user || !taskContext) return;
 
@@ -171,7 +288,6 @@ export default function Workspace() {
   useEffect(() => {
     if (documentId) {
       loadDocument(documentId);
-      // Close mobile drawer when selecting a doc
       if (isMobile) setMobileDrawerOpen(false);
     }
   }, [documentId, loadDocument, isMobile]);
@@ -206,7 +322,6 @@ export default function Workspace() {
       return;
     }
 
-    // Check workspace document limit for FREE users
     if (!isPro && documents.length >= maxWorkspaceDocs) {
       setPaywallReason("WORKSPACE_LIMIT");
       setShowPaywall(true);
@@ -214,7 +329,6 @@ export default function Workspace() {
       return;
     }
 
-    // Associate document with active venture and folder if set
     const doc = await createDocument({
       doc_type: newDocType,
       title: newDocTitle.trim(),
@@ -257,7 +371,7 @@ export default function Workspace() {
     if (!currentDocument?.ai_suggestions) return;
     
     setAiLoading(true);
-    const result = await requestAISuggestion(currentDocument.id, taskContext, {
+    const result = await requestAISuggestion(currentDocument.id, effectiveTaskContext, {
       previousSuggestion: currentDocument.ai_suggestions,
       refinementType,
     });
@@ -269,7 +383,7 @@ export default function Workspace() {
         description: `Applied "${refinementType}" refinement to the suggestion.`,
       });
     }
-  }, [currentDocument, taskContext, requestAISuggestion, toast]);
+  }, [currentDocument, effectiveTaskContext, requestAISuggestion, toast]);
 
   const handleApplySuggestion = useCallback(async (mode: 'insert' | 'replace') => {
     if (!currentDocument?.ai_suggestions) return;
@@ -279,24 +393,21 @@ export default function Workspace() {
     if (mode === 'replace') {
       newContent = currentDocument.ai_suggestions;
     } else {
-      // For insert, append at the end
       newContent = (currentDocument.content || '') + '\n\n' + currentDocument.ai_suggestions;
     }
 
     try {
-      // Update both content and clear the AI suggestion
       const { error } = await supabase
         .from('workspace_documents')
         .update({ 
           content: newContent,
-          ai_suggestions: null, // Clear suggestion after applying
+          ai_suggestions: null,
           updated_at: new Date().toISOString()
         })
         .eq('id', currentDocument.id);
 
       if (error) throw error;
 
-      // Reload document to reflect changes in editor
       await loadDocument(currentDocument.id);
 
       toast({
@@ -306,7 +417,6 @@ export default function Workspace() {
           : 'AI content added to document',
       });
 
-      // Collapse AI panel on mobile
       if (isMobile) {
         setAiPanelCollapsed(true);
       }
@@ -324,20 +434,17 @@ export default function Workspace() {
     if (!currentDocument) return;
     
     try {
-      // Clear the AI suggestion from the database
       await supabase
         .from('workspace_documents')
         .update({ ai_suggestions: null })
         .eq('id', currentDocument.id);
       
-      // Refresh the document to show cleared suggestion
       await loadDocument(currentDocument.id);
       
       toast({
         title: 'Suggestion dismissed',
       });
       
-      // Collapse AI panel on mobile
       if (isMobile) {
         setAiPanelCollapsed(true);
       }
@@ -363,7 +470,6 @@ export default function Workspace() {
       if (error) throw error;
 
       await refreshList();
-      // Navigate to workspace root after archiving
       navigate('/workspace');
       toast({
         title: 'Document archived',
@@ -415,7 +521,6 @@ export default function Workspace() {
         description: `Created "${newFolderName.trim()}"`,
       });
       
-      // Refresh to update UI
       await refreshList();
     } catch (err) {
       console.error('Error creating folder:', err);
@@ -429,7 +534,6 @@ export default function Workspace() {
     }
   };
 
-  // Handle creating document in a specific folder
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
 
   const handleOpenNewDocDialog = (folderId?: string) => {
@@ -464,8 +568,46 @@ export default function Workspace() {
     />
   );
 
+  // Floating task indicator for execution tasks
+  const showTaskIndicator = executionTask && !taskIndicatorDismissed;
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+      {/* Floating execution task indicator */}
+      {showTaskIndicator && (
+        <div className="mx-2 mt-1 mb-0 md:mx-3 shrink-0">
+          <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+            <button
+              onClick={handleCompleteExecutionTask}
+              disabled={completingTask}
+              className="shrink-0 text-primary hover:text-primary/80 transition-colors"
+              aria-label={taskCompleted ? "Mark task incomplete" : "Mark task complete"}
+            >
+              {taskCompleted ? (
+                <CheckSquare className="h-4 w-4" />
+              ) : (
+                <Square className="h-4 w-4" />
+              )}
+            </button>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-medium truncate ${taskCompleted ? 'line-through text-muted-foreground' : ''}`}>
+                {taskCompleted ? '✓ ' : 'Working on: '}{executionTask.title}
+              </p>
+            </div>
+            {taskCompleted && (
+              <span className="text-xs text-muted-foreground shrink-0">Completed</span>
+            )}
+            <button
+              onClick={() => setTaskIndicatorDismissed(true)}
+              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Dismiss task indicator"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Header with hamburger menu */}
       {isMobile && (
         <div className="flex items-center gap-2 px-3 py-2 border-b bg-background shrink-0">
@@ -649,7 +791,7 @@ export default function Workspace() {
         {/* Right Panel - AI Assistant (hidden on mobile, shown below editor) */}
         {currentDocument && !isMobile && (
           <aside className="w-72 shrink-0 min-w-0 flex flex-col gap-2 overflow-hidden">
-            {/* Linked Task Card */}
+            {/* Linked Task Card (legacy tasks table path) */}
             {taskContext && (
               <Card className="border-primary/20 bg-primary/5 shrink-0">
                 <CardContent className="p-3">
@@ -683,6 +825,18 @@ export default function Workspace() {
                 </CardContent>
               </Card>
             )}
+
+            {/* AI prompt context label for execution tasks */}
+            {executionTask?.aiPrompt && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 shrink-0">
+                <p className="text-xs font-medium text-primary mb-1">
+                  Suggested prompt for: {executionTask.title}
+                </p>
+                <p className="text-xs text-muted-foreground line-clamp-3">
+                  {executionTask.aiPrompt}
+                </p>
+              </div>
+            )}
             
             <div className="flex-1 min-h-0 overflow-y-auto">
               <WorkspaceAssistantPanel
@@ -692,17 +846,16 @@ export default function Workspace() {
                 onApplySuggestion={handleApplySuggestion}
                 onDismissSuggestion={handleDismissSuggestion}
                 onRefineSuggestion={handleRefineSuggestion}
-                taskContext={taskContext}
+                taskContext={effectiveTaskContext}
               />
             </div>
           </aside>
         )}
       </div>
 
-      {/* Mobile: AI Assistant as a bottom sheet (prevents cutoff behind bottom nav) */}
+      {/* Mobile: AI Assistant as a bottom sheet */}
       {currentDocument && isMobile && (
         <>
-          {/* Collapsed trigger button */}
           <div className="p-2 pt-0">
             <WorkspaceAssistantPanel
               document={currentDocument}
@@ -711,7 +864,7 @@ export default function Workspace() {
               onApplySuggestion={handleApplySuggestion}
               onDismissSuggestion={handleDismissSuggestion}
               onRefineSuggestion={handleRefineSuggestion}
-              taskContext={taskContext}
+              taskContext={effectiveTaskContext}
               isCollapsed={aiPanelCollapsed}
               onToggleCollapse={() => setAiPanelCollapsed(!aiPanelCollapsed)}
             />
@@ -736,7 +889,7 @@ export default function Workspace() {
                     onApplySuggestion={handleApplySuggestion}
                     onDismissSuggestion={handleDismissSuggestion}
                     onRefineSuggestion={handleRefineSuggestion}
-                    taskContext={taskContext}
+                    taskContext={effectiveTaskContext}
                     isCollapsed={false}
                     onToggleCollapse={() => setAiPanelCollapsed(true)}
                   />
