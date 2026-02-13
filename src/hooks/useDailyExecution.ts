@@ -13,6 +13,8 @@ export interface DailyTask {
   category: string;
   estimatedMinutes: number;
   completed: boolean;
+  ai_prompt?: string;
+  linked_section?: string | null;
 }
 
 export interface DailyCheckin {

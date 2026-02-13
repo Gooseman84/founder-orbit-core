@@ -211,6 +211,7 @@ const Tasks = () => {
                   key={task.id}
                   task={task}
                   ventureId={activeVenture?.id}
+                  ventureName={activeVenture?.name}
                   onToggle={(completed) => markTaskCompleted(task.id, completed)}
                   disabled={false} // Allow toggling even after check-in for corrections
                 />
