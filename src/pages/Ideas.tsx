@@ -116,10 +116,6 @@ const Ideas = () => {
   const [dismissedBannerSession, setDismissedBannerSession] = useState(() => {
     return sessionStorage.getItem("tb-active-venture-banner-dismissed") === "true";
   });
-  
-  const [dismissedBannerSession, setDismissedBannerSession] = useState(() => {
-    return sessionStorage.getItem("tb-active-venture-banner-dismissed") === "true";
-  });
 
   // Show paywall when plan errors occur
   useEffect(() => {
