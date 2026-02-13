@@ -6,7 +6,6 @@ import { NavLink } from "@/components/NavLink";
 import {
   Home,
   Lightbulb,
-  Compass,
   Map,
   FileText,
   Target,
@@ -14,8 +13,11 @@ import {
   CreditCard,
   LogOut,
   ChevronRight,
+  Search,
+  GitMerge,
+  FolderOpen,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { Separator } from "@/components/ui/separator";
@@ -29,6 +31,8 @@ const linkClass =
   "flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-md text-foreground/80 hover:bg-secondary hover:text-foreground transition-colors";
 const activeClass =
   "bg-primary text-primary-foreground font-semibold ring-1 ring-primary/40 hover:bg-primary/90";
+
+const RESEARCH_TOOLS_KEY = "tb-research-tools-open";
 
 export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const { signOut } = useAuth();
@@ -45,7 +49,19 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
     : "/blueprint";
   const ventureName = activeVenture?.name ?? "My Venture";
 
-  const [discoveryOpen, setDiscoveryOpen] = useState(false);
+  const [researchOpen, setResearchOpen] = useState(() => {
+    try {
+      return localStorage.getItem(RESEARCH_TOOLS_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(RESEARCH_TOOLS_KEY, String(researchOpen));
+    } catch {}
+  }, [researchOpen]);
 
   const handleSignOut = () => {
     signOut();
@@ -71,16 +87,42 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
             <span className="truncate">Blueprint</span>
           </NavLink>
           <NavLink to="/workspace" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
-            <FileText className="w-4 h-4 shrink-0" />
+            <FolderOpen className="w-4 h-4 shrink-0" />
             <span className="truncate">Workspace</span>
           </NavLink>
 
           <Separator className="my-2" />
 
-          <NavLink to="/ideas" onClick={onNavigate} className={cn(linkClass, "opacity-50")} activeClassName={activeClass}>
-            <Lightbulb className="w-4 h-4 shrink-0" />
-            <span className="truncate">Idea Lab</span>
-          </NavLink>
+          {/* Research Tools — collapsible section */}
+          <button
+            onClick={() => setResearchOpen((o) => !o)}
+            className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors w-full"
+          >
+            <Search className="w-3.5 h-3.5 shrink-0" />
+            <span>Research Tools</span>
+            <ChevronRight
+              className={cn(
+                "w-3 h-3 ml-auto transition-transform duration-200",
+                researchOpen && "rotate-90"
+              )}
+            />
+          </button>
+          {researchOpen && (
+            <div className="ml-4 space-y-0.5">
+              <NavLink to="/ideas" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
+                <Lightbulb className="w-4 h-4 shrink-0" />
+                <span className="truncate">Idea Lab</span>
+              </NavLink>
+              <NavLink to="/radar" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
+                <Search className="w-4 h-4 shrink-0" />
+                <span className="truncate">Niche Radar</span>
+              </NavLink>
+              <NavLink to="/fusion-lab" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
+                <GitMerge className="w-4 h-4 shrink-0" />
+                <span className="truncate">Fusion Lab</span>
+              </NavLink>
+            </div>
+          )}
         </>
       ) : (
         /* ── DISCOVERY MODE ── */
@@ -93,31 +135,14 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
             <Lightbulb className="w-4 h-4 shrink-0" />
             <span className="truncate">Idea Lab</span>
           </NavLink>
-
-          {/* Discovery Tools — lightweight inline toggle */}
-          <button
-            onClick={() => setDiscoveryOpen((o) => !o)}
-            className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-md text-foreground/80 hover:bg-secondary hover:text-foreground transition-colors w-full"
-          >
-            <Compass className="w-4 h-4 shrink-0" />
-            <span className="truncate">Discovery Tools</span>
-            <ChevronRight
-              className={cn(
-                "w-3 h-3 ml-auto transition-transform duration-200",
-                discoveryOpen && "rotate-90"
-              )}
-            />
-          </button>
-          {discoveryOpen && (
-            <div className="ml-4 space-y-0.5">
-              <NavLink to="/fusion-lab" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
-                <span className="truncate">Fusion Lab</span>
-              </NavLink>
-              <NavLink to="/radar" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
-                <span className="truncate">Niche Radar</span>
-              </NavLink>
-            </div>
-          )}
+          <NavLink to="/radar" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
+            <Search className="w-4 h-4 shrink-0" />
+            <span className="truncate">Niche Radar</span>
+          </NavLink>
+          <NavLink to="/fusion-lab" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
+            <GitMerge className="w-4 h-4 shrink-0" />
+            <span className="truncate">Fusion Lab</span>
+          </NavLink>
         </>
       )}
 
