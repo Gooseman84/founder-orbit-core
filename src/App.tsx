@@ -22,23 +22,14 @@ import IdeaDetail from "./pages/IdeaDetail";
 import CompareIdeas from "./pages/CompareIdeas";
 import FusionLab from "./pages/FusionLab";
 import NorthStar from "./pages/NorthStar";
-import Feed from "./pages/Feed";
 import Tasks from "./pages/Tasks";
-import Pulse from "./pages/Pulse";
-import PulseHistory from "./pages/PulseHistory";
-import DailyReflection from "./pages/DailyReflection";
-import ReflectionHistory from "./pages/ReflectionHistory";
-import WeeklyReview from "./pages/WeeklyReview";
 import Radar from "./pages/Radar";
 import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import Workspace from "./pages/Workspace";
-import DailyStreak from "./pages/DailyStreak";
 import Billing from "./pages/Billing";
 import Blueprint from "./pages/Blueprint";
-import ContextInspector from "./pages/ContextInspector";
 import VentureReview from "./pages/VentureReview";
-import CodeArchitectTest from "./pages/CodeArchitectTest";
 import FeaturePlanner from "./pages/FeaturePlanner";
 import Commit from "./pages/Commit";
 import NotFound from "./pages/NotFound";
@@ -144,71 +135,11 @@ const App = () => (
               }
             />
             <Route
-              path="/feed"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <Feed />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/tasks"
               element={
                 <ProtectedRoute>
                   <MainLayout>
                     <Tasks />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pulse"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <Pulse />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pulse/history"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <PulseHistory />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/daily-reflection"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <DailyReflection />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/weekly-review"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <WeeklyReview />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reflection/history"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <ReflectionHistory />
                   </MainLayout>
                 </ProtectedRoute>
               }
@@ -264,16 +195,6 @@ const App = () => (
               }
             />
             <Route
-              path="/streak"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <DailyStreak />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/billing"
               element={
                 <ProtectedRoute>
@@ -292,31 +213,11 @@ const App = () => (
               }
             />
             <Route
-              path="/context-inspector"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <ContextInspector />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/venture-review"
               element={
                 <ProtectedRoute>
                   <MainLayout>
                     <VentureReview />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/code-architect-test"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <CodeArchitectTest />
                   </MainLayout>
                 </ProtectedRoute>
               }
