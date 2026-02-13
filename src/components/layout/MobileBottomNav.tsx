@@ -1,19 +1,44 @@
 import { useLocation, Link } from "react-router-dom";
-import { Home, Lightbulb, CheckSquare, FolderKanban } from "lucide-react";
+import { Home, Lightbulb, Map, FolderKanban, Target, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TrialStatusBadge } from "@/components/shared/TrialStatusBadge";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { useVentureState } from "@/hooks/useVentureState";
 
-const tabs = [
-  { label: "Dashboard", path: "/dashboard", icon: Home },
-  { label: "Ideas", path: "/ideas", icon: Lightbulb },
-  { label: "Tasks", path: "/tasks", icon: CheckSquare },
-  { label: "Workspace", path: "/workspace", icon: FolderKanban },
-];
+interface NavTab {
+  label: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
 
 export function MobileBottomNav() {
   const location = useLocation();
   const { isTrialing, isTrialExpired, isLockedOut, daysRemaining, hasPro } = useFeatureAccess();
+  const { activeVenture } = useVentureState();
+  
+  // Determine mode
+  const ventureState = activeVenture?.venture_state ?? null;
+  const isExecutionMode = ventureState === "executing" || ventureState === "reviewed";
+  const ventureName = activeVenture?.name ?? "My Venture";
+  
+  // Get tabs based on mode
+  const getTabs = (): NavTab[] => {
+    if (isExecutionMode) {
+      return [
+        { label: ventureName, path: "/dashboard", icon: Target },
+        { label: "Blueprint", path: "/blueprint", icon: Map },
+        { label: "Workspace", path: "/workspace", icon: FolderKanban },
+      ];
+    }
+    
+    return [
+      { label: "Home", path: "/dashboard", icon: Home },
+      { label: "Ideas", path: "/ideas", icon: Lightbulb },
+      { label: "Profile", path: "/profile", icon: User },
+    ];
+  };
+  
+  const tabs = getTabs();
   
   // Show trial banner if: expired, locked out, or trial with ≤2 days
   const showTrialBanner = !hasPro && (isTrialExpired || isLockedOut || (isTrialing && daysRemaining !== null && daysRemaining <= 2));
@@ -62,7 +87,7 @@ export function MobileBottomNav() {
                     <span className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-[#FF6A00]" />
                   )}
                 </div>
-                <span className="text-[11px] font-medium mt-1">{label}</span>
+                <span className="text-[11px] font-medium mt-1 truncate max-w-[70px]">{label}</span>
               </Link>
             );
           })}
