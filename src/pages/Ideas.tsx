@@ -113,6 +113,13 @@ const Ideas = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [newlyImportedIds, setNewlyImportedIds] = useState<string[]>([]);
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
+  const [dismissedBannerSession, setDismissedBannerSession] = useState(() => {
+    return sessionStorage.getItem("tb-active-venture-banner-dismissed") === "true";
+  });
+  
+  const [dismissedBannerSession, setDismissedBannerSession] = useState(() => {
+    return sessionStorage.getItem("tb-active-venture-banner-dismissed") === "true";
+  });
 
   // Show paywall when plan errors occur
   useEffect(() => {
@@ -135,6 +142,12 @@ const Ideas = () => {
     clearGenPlanError();
     clearSavePlanError();
   };
+
+  const handleDismissBanner = () => {
+    setDismissedBannerSession(true);
+    sessionStorage.setItem("tb-active-venture-banner-dismissed", "true");
+  };
+  
 
   const handleProModeClick = (mode: IdeaMode) => {
     setPaywallReasonCode("MODE_REQUIRES_PRO");
