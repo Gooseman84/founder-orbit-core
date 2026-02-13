@@ -6,8 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 const Dashboard = () => {
   const { activeVenture, isLoading } = useVentureState();
   
-  // During execution, show focused execution dashboard
-  const isExecuting = activeVenture?.venture_state === "executing";
+  // During execution or review, show focused execution dashboard
+  const isExecuting = activeVenture?.venture_state === "executing" || activeVenture?.venture_state === "reviewed";
 
   if (isLoading) {
     return (

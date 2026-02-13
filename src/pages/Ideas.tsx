@@ -542,6 +542,22 @@ const Ideas = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {/* Info banner when user has an active venture */}
+      {activeVenture && !dismissedBannerSession && (
+        <Alert variant="default" className="border-blue-500/50 bg-blue-500/10 relative">
+          <AlertDescription className="text-blue-700 dark:text-blue-300 pr-8">
+            You're currently building <strong>{activeVenture.name}</strong>. Browsing ideas won't affect your active venture. To switch ventures, visit your Command Center and choose Pivot or Kill.
+          </AlertDescription>
+          <button
+            onClick={handleDismissBanner}
+            className="absolute top-3 right-3 text-blue-500 hover:text-blue-700 dark:hover:text-blue-300"
+            aria-label="Dismiss banner"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </Alert>
+      )}
+
       {/* Venture state warning - ideation locked during executing */}
       {!canAccessIdeationTools && activeVenture && (
         <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
@@ -903,7 +919,8 @@ const Ideas = () => {
                     key={idea.id} 
                     idea={idea} 
                     onPromote={handlePromoteLibraryIdea}
-                    onSetNorthStar={handleSetNorthStar}
+                    onSetNorthStar={!activeVenture ? handleSetNorthStar : undefined}
+                    hasActiveVenture={!!activeVenture}
                   />
                 ))}
               </div>
