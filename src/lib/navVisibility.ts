@@ -2,7 +2,6 @@ import type { VentureState } from "@/types/venture";
 
 export type NavSection = 
   | "home"
-  | "daily-pulse" 
   | "tasks"
   | "idea-lab"
   | "fusion-lab"
@@ -37,7 +36,6 @@ export function getNavVisibility(ventureState: VentureState | null): NavVisibili
 // Default sections available to all states
   const commonSections: NavSection[] = [
     "home",
-    "daily-pulse",
     "profile",
     "billing",
   ];
