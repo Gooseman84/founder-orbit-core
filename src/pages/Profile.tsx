@@ -159,7 +159,7 @@ const Profile = () => {
             </div>
             <Button 
               variant={hasExtended ? "outline" : "default"}
-              onClick={() => navigate("/onboarding/extended")}
+              onClick={() => navigate("/discover")}
             >
               {hasExtended ? "Edit Deep Dive" : "Start Deep Dive"}
               <ChevronRight className="h-4 w-4 ml-1" />
@@ -181,7 +181,7 @@ const Profile = () => {
                 </p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => navigate("/onboarding/interview")}>
+            <Button variant="outline" onClick={() => navigate("/discover")}>
               Start Conversation
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
@@ -522,8 +522,8 @@ const Profile = () => {
                <p className="text-muted-foreground mb-4">
                  Complete the onboarding to create your founder profile.
                </p>
-               <Button onClick={() => navigate("/onboarding")}>
-                 Start Onboarding
+               <Button onClick={() => navigate("/discover")}>
+                 Start Discovery
                </Button>
              </div>
            </CardContent>

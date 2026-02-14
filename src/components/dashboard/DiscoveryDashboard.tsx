@@ -296,7 +296,7 @@ export function DiscoveryDashboard() {
         </Card>
 
         {/* Reflection Streak */}
-        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate("/daily-reflection")}>
+        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate("/dashboard")}>
           <CardContent className="py-4">
             <div className="flex items-center gap-2 mb-2">
               <Flame className={`h-4 w-4 ${reflectionStreak > 0 ? "text-orange-500" : "text-muted-foreground"}`} />
