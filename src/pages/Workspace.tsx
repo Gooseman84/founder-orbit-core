@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useVentureState } from '@/hooks/useVentureState';
@@ -17,7 +17,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { FileText, CheckCircle2, Download, Archive, Menu, Plus, FolderPlus, X, CheckSquare, Square } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FileText, CheckCircle2, Download, Archive, Menu, Plus, FolderPlus, X, CheckSquare, Square, Rocket } from 'lucide-react';
 import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
@@ -27,6 +28,7 @@ import { ProUpgradeModal } from '@/components/billing/ProUpgradeModal';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { PLAN_FEATURES } from '@/config/plans';
 import { useIsMobile } from '@/hooks/use-mobile';
+import FeaturePlanner from '@/pages/FeaturePlanner';
 import type { PaywallReasonCode } from '@/config/paywallCopy';
 import type { TaskContext } from '@/types/tasks';
 import type { Json } from '@/integrations/supabase/types';
@@ -58,6 +60,7 @@ export default function Workspace() {
   const { id: documentId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { user } = useAuth();
   const { refresh: refreshXp } = useXP();
@@ -67,6 +70,13 @@ export default function Workspace() {
   const isMobile = useIsMobile();
   const isPro = plan === 'pro' || plan === 'founder';
   const deepLinkProcessed = useRef(false);
+
+  // Tab state from URL search params
+  const activeTab = searchParams.get('tab') === 'feature-builder' ? 'feature-builder' : 'documents';
+
+  const handleTabChange = (tab: string) => {
+    setSearchParams(tab === 'documents' ? {} : { tab }, { replace: true });
+  };
 
   // Initialize workspace with venture scoping
   const {
@@ -573,6 +583,29 @@ export default function Workspace() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+      {/* Workspace Tab Bar */}
+      <div className="px-3 pt-2 shrink-0">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsList className="h-9">
+            <TabsTrigger value="documents" className="gap-1.5 text-xs">
+              <FileText className="w-3.5 h-3.5" />
+              Documents
+            </TabsTrigger>
+            <TabsTrigger value="feature-builder" className="gap-1.5 text-xs">
+              <Rocket className="w-3.5 h-3.5" />
+              Feature Builder
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Feature Builder Tab */}
+      {activeTab === 'feature-builder' ? (
+        <div className="flex-1 overflow-y-auto p-2 md:p-4">
+          <FeaturePlanner />
+        </div>
+      ) : (
+      <>
       {/* Floating execution task indicator */}
       {showTaskIndicator && (
         <div className="mx-2 mt-1 mb-0 md:mx-3 shrink-0">
@@ -1010,6 +1043,8 @@ export default function Workspace() {
         >
           <Plus className="w-6 h-6" />
         </Button>
+      )}
+      </>
       )}
     </div>
   );

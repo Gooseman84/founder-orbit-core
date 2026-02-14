@@ -30,7 +30,6 @@ import Workspace from "./pages/Workspace";
 import Billing from "./pages/Billing";
 import Blueprint from "./pages/Blueprint";
 import VentureReview from "./pages/VentureReview";
-import FeaturePlanner from "./pages/FeaturePlanner";
 import Commit from "./pages/Commit";
 import NotFound from "./pages/NotFound";
 
@@ -234,16 +233,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/feature-builder"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <FeaturePlanner />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/feature-builder" element={<Navigate to="/workspace?tab=feature-builder" replace />} />
+            <Route path="/feature-planner" element={<Navigate to="/workspace?tab=feature-builder" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
               </Routes>
