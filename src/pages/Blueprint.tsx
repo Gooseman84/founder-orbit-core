@@ -438,40 +438,6 @@ const Blueprint = () => {
         <VentureDNASection ideaId={venture.idea_id} ventureId={venture.id} />
       )}
 
-      {/* Misalignment Callouts */}
-      {misalignmentCallouts.length > 0 && (
-        <Card className="mb-6 border-amber-500/30 bg-amber-500/5">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              <CardTitle className="text-lg">What you need to be honest about</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {misalignmentCallouts.map((callout, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm">
-                  <span className="text-amber-500 mt-1">•</span>
-                  <span className="text-muted-foreground">{callout}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Implementation Kit */}
-      {displayBlueprint && (
-        <div className="mb-6">
-          <GenerateKitButton
-            blueprintId={displayBlueprint.id}
-            ventureId={venture.id}
-            hasExistingKit={!!existingKit}
-            onGenerate={() => setShowTechStackDialog(true)}
-          />
-        </div>
-      )}
-
       {/* ─── 30-Day Action Plan ─── */}
       <div className="mb-6 mt-10">
         <div className="flex items-center gap-2 mb-4">
