@@ -9,7 +9,6 @@ export type NavSection =
   | "radar"
   | "blueprint"
   | "workspace"
-  | "context-inspector"
   | "profile"
   | "billing"
   | "venture-review"
@@ -41,7 +40,6 @@ export function getNavVisibility(ventureState: VentureState | null): NavVisibili
     "daily-pulse",
     "profile",
     "billing",
-    "context-inspector",
   ];
 
   // ALWAYS accessible sections - these are needed to select/create ventures
@@ -125,11 +123,10 @@ const pathToSection: Record<string, NavSection> = {
   // Build section
   "/blueprint": "blueprint",
   "/workspace": "workspace",
-  
+   
    // System section (always allowed)
-  "/context-inspector": "context-inspector",
-  "/profile": "profile",
-  "/billing": "billing",
+   "/profile": "profile",
+   "/billing": "billing",
 };
 
 /**

@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LevelBadge } from "@/components/shared/LevelBadge";
 import { XpProgressBar } from "@/components/shared/XpProgressBar";
 import { ProfileEditDrawer, ProfileSection } from "@/components/profile/ProfileEditDrawer";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import ContextInspector from "@/pages/ContextInspector";
 import { 
   User, 
   Heart, 
@@ -21,7 +23,9 @@ import {
   Lightbulb,
   Edit,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  Info
 } from "lucide-react";
 
 const ARCHETYPE_LABELS: Record<string, string> = {
@@ -65,6 +69,7 @@ const Profile = () => {
   
   const [editSection, setEditSection] = useState<ProfileSection | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
 
   const openEditor = (section: ProfileSection) => {
     setEditSection(section);
@@ -508,24 +513,54 @@ const Profile = () => {
       )}
 
       {/* No Profile State */}
-      {!hasCore && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">No Profile Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Complete the onboarding to create your founder profile.
-              </p>
-              <Button onClick={() => navigate("/onboarding")}>
-                Start Onboarding
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+       {!hasCore && (
+         <Card>
+           <CardContent className="pt-6">
+             <div className="text-center py-8">
+               <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+               <h3 className="font-semibold mb-2">No Profile Yet</h3>
+               <p className="text-muted-foreground mb-4">
+                 Complete the onboarding to create your founder profile.
+               </p>
+               <Button onClick={() => navigate("/onboarding")}>
+                 Start Onboarding
+               </Button>
+             </div>
+           </CardContent>
+         </Card>
+       )}
 
-      {/* Edit Drawer */}
+       {/* What TrueBlazer Knows About You - Context Inspector Section */}
+       <Collapsible open={contextOpen} onOpenChange={setContextOpen}>
+         <Card>
+           <CollapsibleTrigger asChild>
+             <button className="w-full text-left">
+               <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-secondary/50 transition-colors">
+                 <div className="flex items-center gap-3">
+                   <div className="p-2 rounded-lg bg-primary/10">
+                     <Eye className="h-5 w-5 text-primary" />
+                   </div>
+                   <div>
+                     <CardTitle className="text-lg">What TrueBlazer Knows About You</CardTitle>
+                     <CardDescription className="flex items-center gap-1 mt-1">
+                       <Info className="h-3.5 w-3.5" />
+                       The data TrueBlazer uses to personalize your experience
+                     </CardDescription>
+                   </div>
+                 </div>
+                 <ChevronRight className={`h-5 w-5 transition-transform duration-200 ${contextOpen ? 'rotate-90' : ''}`} />
+               </CardHeader>
+             </button>
+           </CollapsibleTrigger>
+           <CollapsibleContent>
+             <CardContent className="pt-0 pb-6">
+               <ContextInspector />
+             </CardContent>
+           </CollapsibleContent>
+         </Card>
+       </Collapsible>
+
+       {/* Edit Drawer */}
       <ProfileEditDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
