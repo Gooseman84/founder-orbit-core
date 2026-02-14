@@ -25,6 +25,7 @@ import {
 import type { Venture } from "@/types/venture";
 import { useDailyExecution } from "@/hooks/useDailyExecution";
 import { ImplementationKitCard } from "@/components/implementationKit/ImplementationKitCard";
+import { VentureDNACard } from "@/components/dashboard/VentureDNACard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -90,8 +91,8 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
 
   return (
     <div className="space-y-5">
-      {/* 1. VENTURE HEADER */}
-      <VentureHeader venture={venture} commitmentProgress={commitmentProgress} />
+      {/* 1. VENTURE DNA — motivational hero card */}
+      <VentureDNACard venture={venture} commitmentProgress={commitmentProgress} />
 
       {/* 2. TODAY'S FOCUS — inline check-in */}
       <TodaysFocus
