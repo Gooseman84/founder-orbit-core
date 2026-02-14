@@ -637,10 +637,24 @@ const Ideas = () => {
             <span className="sm:hidden">Fusion</span>
           </Button>
           {libraryIdeas.length >= 2 && (
-            <Button onClick={() => navigate("/ideas/compare")} variant="outline" size="sm" className="gap-2">
+            <Button 
+              onClick={() => {
+                if (!hasPro) {
+                  setPaywallReasonCode("COMPARE_REQUIRES_PRO");
+                  setShowPaywall(true);
+                  return;
+                }
+                navigate("/ideas/compare");
+              }} 
+              variant="outline" 
+              size="sm" 
+              className="gap-2"
+              title={!hasPro ? "Upgrade to Pro to compare ideas" : undefined}
+            >
+              {!hasPro && <Lock className="w-3 h-3" />}
               <Scale className="w-4 h-4" />
-              <span className="hidden sm:inline">Compare Ideas</span>
-              <span className="sm:hidden">Compare</span>
+              <span className="hidden sm:inline">Compare ({libraryIdeas.length})</span>
+              <span className="sm:hidden">Compare ({libraryIdeas.length})</span>
             </Button>
           )}
         </div>
