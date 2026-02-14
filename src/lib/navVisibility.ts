@@ -9,7 +9,6 @@ export type NavSection =
   | "radar"
   | "blueprint"
   | "workspace"
-  | "north-star"
   | "context-inspector"
   | "profile"
   | "billing"
@@ -54,7 +53,6 @@ export function getNavVisibility(ventureState: VentureState | null): NavVisibili
     "idea-lab",
     "fusion-lab", 
     "radar",
-    "north-star",
   ];
 
   // When executing: focused on execution but flexible
@@ -133,10 +131,7 @@ const pathToSection: Record<string, NavSection> = {
   "/workspace": "workspace",
   "/feature-builder": "workspace",
   
-  // Align section
-  "/north-star": "north-star",
-  
-  // System section (always allowed)
+   // System section (always allowed)
   "/context-inspector": "context-inspector",
   "/profile": "profile",
   "/billing": "billing",
@@ -224,7 +219,7 @@ export function isRouteAllowed(path: string, ventureState: VentureState | null):
  */
 export function isIdeationRoute(path: string): boolean {
   const section = findSectionForPath(path);
-  const ideationSections: NavSection[] = ["idea-lab", "fusion-lab", "radar", "north-star"];
+  const ideationSections: NavSection[] = ["idea-lab", "fusion-lab", "radar"];
   return section !== null && ideationSections.includes(section);
 }
 
