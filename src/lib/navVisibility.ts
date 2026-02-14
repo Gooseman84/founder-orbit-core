@@ -125,7 +125,6 @@ const pathToSection: Record<string, NavSection> = {
   // Build section
   "/blueprint": "blueprint",
   "/workspace": "workspace",
-  "/feature-builder": "workspace",
   
    // System section (always allowed)
   "/context-inspector": "context-inspector",
