@@ -22,6 +22,7 @@ import { GenerateKitButton, TechStackDialog } from "@/components/implementationK
 import { useImplementationKitByBlueprint, useCreateImplementationKit } from "@/hooks/useImplementationKit";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { EditBlueprintDrawer } from "@/components/blueprint/EditBlueprintDrawer";
+import { VentureDNASection } from "@/components/blueprint/VentureDNASection";
 import {
   Target,
   AlertTriangle,
@@ -316,6 +317,11 @@ const Blueprint = () => {
             />
           </CardContent>
         </Card>
+      )}
+
+      {/* Venture DNA — Master Prompt Section */}
+      {venture?.idea_id && (
+        <VentureDNASection ideaId={venture.idea_id} ventureId={venture.id} />
       )}
 
       {/* Misalignment Callouts */}
