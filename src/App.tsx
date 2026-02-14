@@ -21,7 +21,7 @@ import Ideas from "./pages/Ideas";
 import IdeaDetail from "./pages/IdeaDetail";
 import CompareIdeas from "./pages/CompareIdeas";
 import FusionLab from "./pages/FusionLab";
-import NorthStarRedirect from "./pages/NorthStarRedirect";
+import NorthStar from "./pages/NorthStar";
 import Tasks from "./pages/Tasks";
 import Radar from "./pages/Radar";
 import Profile from "./pages/Profile";
@@ -128,7 +128,9 @@ const App = () => (
               path="/north-star"
               element={
                 <ProtectedRoute>
-                  <NorthStarRedirect />
+                  <MainLayout>
+                    <NorthStar />
+                  </MainLayout>
                 </ProtectedRoute>
               }
             />
