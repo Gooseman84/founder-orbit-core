@@ -67,12 +67,13 @@ export function VentureDNACard({ venture, commitmentProgress }: VentureDNACardPr
       if (!user) return null;
       const { data } = await supabase
         .from("founder_profiles")
-        .select("future_vision, entry_trigger, success_vision")
+        .select("entry_trigger, future_vision, success_vision")
         .eq("user_id", user.id)
         .maybeSingle();
       if (!data) return null;
       // Priority: entry_trigger → future_vision → success_vision
-      return data.entry_trigger || data.future_vision || data.success_vision || null;
+      const quote = data.entry_trigger || data.future_vision || data.success_vision;
+      return quote && typeof quote === 'string' ? quote : null;
     },
     enabled: !!user,
     staleTime: 10 * 60 * 1000,
