@@ -138,9 +138,9 @@ const IdeaDetail = () => {
       await updateIdeaStatus.mutateAsync("chosen");
       toast({
         title: "Success!",
-        description: "This is now your main idea. Redirecting to North Star...",
+        description: "This is now your main idea. Redirecting to Blueprint...",
       });
-      setTimeout(() => navigate("/north-star"), 1500);
+      setTimeout(() => navigate("/blueprint"), 1500);
     } catch (error) {
       toast({
         title: "Error",
