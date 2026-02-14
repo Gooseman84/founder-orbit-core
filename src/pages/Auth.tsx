@@ -50,7 +50,7 @@ const Auth = () => {
           if (data) {
             navigate("/dashboard");
           } else {
-            navigate("/onboarding");
+            navigate("/discover");
           }
         } catch (error) {
           console.error("Error checking profile:", error);
@@ -148,7 +148,7 @@ const Auth = () => {
         if (profile) {
           navigate("/dashboard");
         } else {
-          navigate("/onboarding");
+          navigate("/discover");
         }
       }
     } catch (error: any) {

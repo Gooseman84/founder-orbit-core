@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { VentureStateGuard } from "@/components/auth/VentureStateGuard";
@@ -124,6 +124,20 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Safety Redirects for Legacy Routes */}
+            <Route path="/onboarding" element={<Navigate to="/discover" replace />} />
+            <Route path="/onboarding/*" element={<Navigate to="/discover" replace />} />
+            <Route path="/pulse" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/pulse/history" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/daily-reflection" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/reflection-history" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/streak" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/daily-streak" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/weekly-review" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/feed" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/code-architect-test" element={<Navigate to="/dashboard" replace />} />
+            
+            {/* NorthStar Redirect */}
             <Route
               path="/north-star"
               element={

@@ -28,9 +28,6 @@ const PUBLIC_ROUTES = [
   "/reset-password",
   "/terms",
   "/privacy",
-  "/onboarding",
-  "/onboarding/extended",
-  "/onboarding/interview",
 ];
 
 /**
@@ -117,7 +114,6 @@ export function getNavVisibility(ventureState: VentureState | null): NavVisibili
 const pathToSection: Record<string, NavSection> = {
   // Now section
   "/dashboard": "home",
-  "/daily-reflection": "daily-pulse",
   "/tasks": "tasks",
   "/venture-review": "venture-review",
   
@@ -135,14 +131,6 @@ const pathToSection: Record<string, NavSection> = {
   "/context-inspector": "context-inspector",
   "/profile": "profile",
   "/billing": "billing",
-  
-  // Other protected routes that should map to existing sections
-  "/feed": "home",
-  "/pulse": "daily-pulse",
-  "/pulse/history": "daily-pulse",
-  "/reflection/history": "daily-pulse",
-  "/weekly-review": "daily-pulse",
-  "/streak": "home",
 };
 
 /**
