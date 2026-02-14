@@ -34,7 +34,11 @@ import {
   ArrowRight,
   Check,
   Calendar,
+  FileDown,
+  Lock,
 } from "lucide-react";
+import { exportBlueprintToPdf } from "@/lib/blueprintPdfExport";
+import { PaywallModal } from "@/components/paywall/PaywallModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -81,6 +85,11 @@ const Blueprint = () => {
 
   // Edit drawer state
   const [editSection, setEditSection] = useState<string | null>(null);
+
+  // PDF export state
+  const [pdfExporting, setPdfExporting] = useState(false);
+  const [pdfSuccess, setPdfSuccess] = useState(false);
+  const [showExportPaywall, setShowExportPaywall] = useState(false);
 
   // Handle tech stack submission
   const handleGenerateKit = (techStack: TechStack) => {
@@ -191,6 +200,84 @@ const Blueprint = () => {
     }
   };
 
+  // Handle PDF download
+  const handleDownloadPdf = async () => {
+    if (!hasPro) {
+      setShowExportPaywall(true);
+      return;
+    }
+    if (!venture || !displayBlueprint) return;
+
+    setPdfExporting(true);
+    try {
+      // Fetch strategy prompt
+      let strategyPrompt: string | null = null;
+      if (user) {
+        const { data: promptData } = await supabase
+          .from("master_prompts")
+          .select("prompt_body")
+          .eq("user_id", user.id)
+          .eq("idea_id", venture.idea_id!)
+          .eq("platform_mode", "strategy")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        strategyPrompt = promptData?.prompt_body ?? null;
+      }
+
+      // Compute FVS
+      const fvsScore = displayBlueprint.income_target
+        ? Math.min(85, 50 + (displayBlueprint.income_target / 10000) * 10)
+        : 65;
+      const fvsBreakdown = {
+        marketSize: 70,
+        unitEconomics: displayBlueprint.income_target ? Math.min(90, 60 + (displayBlueprint.income_target / 20000) * 30) : 60,
+        timeToRevenue: displayBlueprint.time_available_hours_per_week ? Math.min(85, 40 + displayBlueprint.time_available_hours_per_week * 2) : 55,
+        competition: 65,
+        capitalRequirements: displayBlueprint.capital_available ? Math.min(90, 50 + Math.log10(displayBlueprint.capital_available + 1) * 15) : 50,
+        founderMarketFit: 75,
+      };
+
+      // Map tasks
+      const pdfTasks: Record<number, Array<{ title: string; status?: string }>> = {};
+      if (tasksByWeek) {
+        for (const [week, tasks] of Object.entries(tasksByWeek)) {
+          pdfTasks[Number(week)] = (tasks as any[]).map((t: any) => ({
+            title: t.title || t.name || "Untitled task",
+            status: t.status,
+          }));
+        }
+      }
+
+      exportBlueprintToPdf({
+        venture: {
+          name: venture.name,
+          success_metric: venture.success_metric,
+          commitment_window_days: venture.commitment_window_days,
+        },
+        blueprint: displayBlueprint,
+        founderName: user?.user_metadata?.full_name || user?.email?.split("@")[0],
+        strategyPrompt,
+        fvsScore,
+        fvsBreakdown,
+        tasksByWeek: Object.keys(pdfTasks).length > 0 ? pdfTasks : undefined,
+        hasImplementationKit: !!existingKit,
+      });
+
+      setPdfSuccess(true);
+      setTimeout(() => setPdfSuccess(false), 2000);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      toast({
+        title: "Failed to generate PDF",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPdfExporting(false);
+    }
+  };
+
   // Loading state
   if (ventureLoading || blueprintLoading) {
     return renderWrapper(isFreshVisit, (
@@ -263,9 +350,36 @@ const Blueprint = () => {
       )}
 
       {/* Header */}
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2">Your Blueprint</h1>
-        <p className="text-muted-foreground">
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-3xl font-bold">Your Blueprint</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleDownloadPdf}
+            disabled={pdfExporting || !displayBlueprint}
+          >
+            {pdfExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="hidden sm:inline">Generating PDF…</span>
+              </>
+            ) : pdfSuccess ? (
+              <>
+                <Check className="h-4 w-4" />
+                <span className="hidden sm:inline">Downloaded ✓</span>
+              </>
+            ) : (
+              <>
+                {!hasPro && <Lock className="h-3 w-3" />}
+                <FileDown className="h-4 w-4" />
+                <span className="hidden sm:inline">Download PDF</span>
+              </>
+            )}
+          </Button>
+        </div>
+        <p className="text-muted-foreground text-center">
           {isReadOnly
             ? "Reference your plan while building."
             : "This is where thinking ends and building begins."}
@@ -437,6 +551,14 @@ const Blueprint = () => {
           }}
         />
       )}
+
+      {/* Export Paywall Modal */}
+      <PaywallModal
+        featureName="Blueprint PDF Export"
+        open={showExportPaywall}
+        onClose={() => setShowExportPaywall(false)}
+        errorCode="EXPORT_REQUIRES_PRO"
+      />
     </div>
   );
 
