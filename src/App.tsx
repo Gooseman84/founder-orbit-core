@@ -135,6 +135,7 @@ const App = () => (
             <Route path="/weekly-review" element={<Navigate to="/dashboard" replace />} />
             <Route path="/feed" element={<Navigate to="/dashboard" replace />} />
             <Route path="/code-architect-test" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/context-inspector" element={<Navigate to="/profile" replace />} />
             
             {/* NorthStar Redirect */}
             <Route
