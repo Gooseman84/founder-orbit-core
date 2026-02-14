@@ -649,7 +649,7 @@ const Ideas = () => {
               variant="outline" 
               size="sm" 
               className="gap-2"
-              title={!hasPro ? "Upgrade to Pro to compare ideas" : undefined}
+              title={!hasPro ? "Pro feature" : undefined}
             >
               {!hasPro && <Lock className="w-3 h-3" />}
               <Scale className="w-4 h-4" />

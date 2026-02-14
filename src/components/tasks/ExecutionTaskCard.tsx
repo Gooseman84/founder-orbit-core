@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -118,7 +118,7 @@ export function ExecutionTaskCard({ task, ventureId, ventureName, onToggle, disa
   // Check if a workspace document already exists for this task
   const [hasDoc, setHasDoc] = useState<boolean | null>(null);
   // Lazy check on first render
-  useState(() => {
+  useEffect(() => {
     if (!user) return;
     supabase
       .from("workspace_documents")
@@ -128,7 +128,7 @@ export function ExecutionTaskCard({ task, ventureId, ventureName, onToggle, disa
       .eq("source_id", task.id)
       .maybeSingle()
       .then(({ data }) => setHasDoc(!!data));
-  });
+  }, [user, task.id]);
 
   return (
     <Card className={cn(
