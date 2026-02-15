@@ -15,10 +15,12 @@ import {
   AlertCircle,
   ArrowRight 
 } from "lucide-react";
-import { useImplementationKitByBlueprint } from "@/hooks/useImplementationKit";
+import { useImplementationKitByBlueprint, useCreateImplementationKit } from "@/hooks/useImplementationKit";
 import { useBlueprint } from "@/hooks/useBlueprint";
 import { downloadAsMarkdown } from "@/lib/documentExport";
 import { useToast } from "@/hooks/use-toast";
+import { TechStackDialog } from "./TechStackDialog";
+import type { TechStack } from "@/types/implementationKit";
 
 interface ImplementationKitCardProps {
   ventureId: string;
@@ -76,11 +78,50 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
   const { toast } = useToast();
   const { hasPro } = useFeatureAccess();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showTechStackDialog, setShowTechStackDialog] = useState(false);
   const { blueprint, loading: blueprintLoading } = useBlueprint();
   const blueprintId = blueprint?.id;
   
   const { data: kit, isLoading: kitLoading } = useImplementationKitByBlueprint(blueprintId);
+  const createKit = useCreateImplementationKit();
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+
+  const handleGenerateClick = () => {
+    // Pro gating
+    if (!hasPro) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    // If kit already exists and is complete, navigate to workspace
+    if (kit?.status === 'complete') {
+      navigate('/workspace');
+      return;
+    }
+
+    // Open tech stack selection
+    setShowTechStackDialog(true);
+  };
+
+  const handleTechStackSubmit = (techStack: TechStack) => {
+    if (!blueprintId) {
+      toast({
+        title: "Blueprint required",
+        description: "Please generate a Blueprint first before creating an Implementation Kit.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createKit.mutate(
+      { blueprintId, ventureId, techStack },
+      {
+        onSuccess: () => {
+          setShowTechStackDialog(false);
+        },
+      }
+    );
+  };
 
   const handleDownload = async (docId: string, filename: string) => {
     if (!hasPro) {
@@ -124,29 +165,44 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
   // No kit exists - show CTA to generate
   if (!kit) {
     return (
-      <Card className="border-dashed border-primary/20">
-        <CardContent className="py-5">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Package className="h-5 w-5 text-primary" />
+      <>
+        <Card className="border-dashed border-primary/20">
+          <CardContent className="py-5">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Package className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">Implementation Kit</p>
+                <p className="text-xs text-muted-foreground">
+                  Get tech specs, architecture, and a roadmap for your venture
+                </p>
+              </div>
+              <Button 
+                size="sm"
+                onClick={handleGenerateClick}
+                className="shrink-0"
+              >
+                Generate
+                <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">Implementation Kit</p>
-              <p className="text-xs text-muted-foreground">
-                Get tech specs, architecture, and a roadmap for your venture
-              </p>
-            </div>
-            <Button 
-              size="sm"
-              onClick={() => navigate(`/blueprint?ventureId=${ventureId}`)}
-              className="shrink-0"
-            >
-              Generate
-              <ArrowRight className="h-3 w-3 ml-1" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <TechStackDialog
+          open={showTechStackDialog}
+          onOpenChange={setShowTechStackDialog}
+          onSubmit={handleTechStackSubmit}
+          isGenerating={createKit.isPending}
+        />
+
+        <ProUpgradeModal
+          open={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          reasonCode="IMPLEMENTATION_KIT_REQUIRES_PRO"
+        />
+      </>
     );
   }
 
@@ -172,32 +228,47 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
   // Kit has error
   if (kit.status === 'error') {
     return (
-      <Card className="border-destructive/20 bg-destructive/5">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm text-destructive">Kit Generation Failed</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {kit.error_message || "An error occurred"}
-              </p>
+      <>
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm text-destructive">Kit Generation Failed</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {kit.error_message || "An error occurred"}
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleGenerateClick}
+              >
+                Retry
+              </Button>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => navigate(`/blueprint?ventureId=${ventureId}`)}
-            >
-              Retry
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <TechStackDialog
+          open={showTechStackDialog}
+          onOpenChange={setShowTechStackDialog}
+          onSubmit={handleTechStackSubmit}
+          isGenerating={createKit.isPending}
+        />
+
+        <ProUpgradeModal
+          open={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          reasonCode="IMPLEMENTATION_KIT_REQUIRES_PRO"
+        />
+      </>
     );
   }
 
   // Kit is complete - show document list
-  if (kit.status === 'complete') {
-    return (
+  return (
+    <>
       <Card className="border-primary/20">
         <CardHeader className="pb-2 pt-4 px-4">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -229,14 +300,12 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
           </div>
         </CardContent>
       </Card>
-    );
-  }
 
-  return (
-    <ProUpgradeModal
-      open={showUpgradeModal}
-      onClose={() => setShowUpgradeModal(false)}
-      reasonCode="EXPORT_REQUIRES_PRO"
-    />
+      <ProUpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        reasonCode="EXPORT_REQUIRES_PRO"
+      />
+    </>
   );
 }
