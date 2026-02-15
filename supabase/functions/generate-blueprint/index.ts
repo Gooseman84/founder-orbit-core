@@ -132,6 +132,169 @@ OUTPUT SCHEMA (STRICT JSON ONLY)
 }
 
 ---
+CONDITIONAL INTELLIGENCE SECTIONS
+---
+
+Based on the idea characteristics, you MUST include relevant additional sections in the ai_recommendations array. These are not optional — if the pattern matches, generate the recommendation. Each conditional section becomes one or more entries in ai_recommendations with specific content.
+
+DETECTION RULES:
+- VERTICAL SAAS: The idea targets a specific industry (restaurants, HVAC, dental, real estate, healthcare, insurance, construction, legal, etc.)
+- MARKETPLACE: The idea connects two sides (buyers/sellers, providers/clients)
+- SERVICE: The idea involves selling expertise, labor, or manual delivery
+- AI-POWERED: The idea includes any AI, ML, or automation features
+- LOW WORKFLOW DEPTH: The founder could not describe the end-to-end industry workflow in detail (infer from available context)
+
+=== SECTION: FIELDWORK PLAN ===
+ACTIVATE WHEN: Vertical SaaS idea AND workflow depth appears low or unclear
+
+Add this ai_recommendation:
+{
+  "title": "Complete Operator Fieldwork Before Building",
+  "description": "You need to map the real workflow in this vertical before writing any code. Target 10-20 operator interviews. Walk through their actual week — every screen, spreadsheet, phone call, and form. Map the flow from 'lead appears' to 'job done and paid' to 'books closed.' At each step, mark whether it is manual, semi-automated, or fully automated. Score each manual step on time spent per week and financial impact. The goal is not to validate your idea — it is to discover the real workflow so your idea can be specific enough to be useful.",
+  "priority": "high",
+  "time_horizon": "this_week",
+  "category": "validation",
+  "suggested_task_count": 5
+}
+
+=== SECTION: WEDGE STRATEGY ===
+ACTIVATE WHEN: Any vertical SaaS idea
+
+Add this ai_recommendation:
+{
+  "title": "Define Your Wedge: One Workflow, One Win",
+  "description": "Define the ONE painful, frequent workflow this tool owns first. Not a category — a specific task. Why this wedge: frequency, pain level, and financial impact on the operator. What V1 does vs. what it explicitly does NOT (scope boundaries prevent creep). Success metric: hours saved, errors reduced, faster payment, or cost eliminated. Time-to-value target: the user should experience their first meaningful win within 14 days of signing up. If the wedge requires longer than 14 days to show value, it is either too complex for V1 or needs a faster quick-win layered on top.",
+  "priority": "high",
+  "time_horizon": "this_week",
+  "category": "validation",
+  "suggested_task_count": 3
+}
+
+=== SECTION: INTEGRATION MAP ===
+ACTIVATE WHEN: Any vertical SaaS idea
+
+Add this ai_recommendation:
+{
+  "title": "Map the Existing Tool Landscape",
+  "description": "Identify the 2-3 systems operators already live in (POS, CRM, EHR, accounting, scheduling, etc.). Determine whether the recommended approach is integrate-with or replace. For V1, almost always recommend integration unless no established system of record exists. Identify the specific APIs or data sources needed for the V1 wedge. Define the minimum viable integration — the simplest connection that delivers wedge value.",
+  "priority": "medium",
+  "time_horizon": "this_month",
+  "category": "systems",
+  "suggested_task_count": 2
+}
+
+=== SECTION: AI DESIGN PRINCIPLES ===
+ACTIVATE WHEN: Idea involves any AI, ML, or automation features
+
+Add this ai_recommendation:
+{
+  "title": "Design Your AI for Trust: Augment First, Automate Later",
+  "description": "Six principles for reliable AI features: (1) Clear task definitions — every AI feature needs explicit inputs, outputs, and goals. (2) Human-in-the-loop by default — for V1, every AI output should be reviewed by a human before it takes effect. Build approve/edit/reject flows. (3) Augmentation before autonomy — start with AI that drafts, suggests, and classifies. Do not let it act autonomously in V1. (4) Least privilege — AI touches only the data it needs, and logs every action. (5) Compound failure awareness — every additional AI step multiplies error rates. Add human checkpoints between AI steps. (6) Graceful degradation — when the AI is wrong or unavailable, it should say 'I'm not sure' and route to a human, not guess.",
+  "priority": "high",
+  "time_horizon": "this_month",
+  "category": "systems",
+  "suggested_task_count": 3
+}
+
+=== SECTION: GTM / DISTRIBUTION STRATEGY ===
+ACTIVATE WHEN: Vertical SaaS or marketplace idea
+
+Add this ai_recommendation:
+{
+  "title": "Build Your Vertical Distribution Plan",
+  "description": "Building the product is not enough — vertical SaaS lives and dies on distribution. Define your ICP with specifics: industry segment, company size, buyer role, 3-5 observable signals that indicate a prospect is a great fit. First 5 customers: identify where operators gather (associations, conferences, Facebook groups, subreddits, trade publications), find the connectors (consultants, vendors, advisors who serve this vertical), and draft a 3-sentence cold outreach message specific to this vertical's pain. First 50: identify platform partners, integration-as-distribution channels, and plan your first 2-3 case studies with concrete metrics.",
+  "priority": "high",
+  "time_horizon": "this_month",
+  "category": "distribution",
+  "suggested_task_count": 4
+}
+
+=== SECTION: MARKETPLACE LAUNCH PLAYBOOK ===
+ACTIVATE WHEN: Marketplace business model
+
+Add this ai_recommendation:
+{
+  "title": "Solve the Cold-Start: Supply First, One Market",
+  "description": "Marketplaces fail on supply, not demand. Your playbook: (1) Build supply first — recruit providers before buyers arrive. (2) Can you start as a single-player tool? Deliver value to one side before the network exists. (3) Constrain geographically or by niche — better to be dense in one city/segment than thin everywhere. (4) Define minimum viable liquidity: how many providers and buyers do you need in one market for the experience to work? Be specific. (5) Concierge-match early transactions manually to ensure quality. (6) Do not monetize until liquidity is proven — premature monetization kills marketplaces.",
+  "priority": "high",
+  "time_horizon": "this_month",
+  "category": "validation",
+  "suggested_task_count": 4
+}
+
+=== SECTION: PRODUCTIZATION ROADMAP ===
+ACTIVATE WHEN: Service or productized service business model
+
+Add this ai_recommendation:
+{
+  "title": "Map Your Path from Service to Product",
+  "description": "The service IS your validation. Four stages: Stage 1 (Weeks 1-8) — deliver entirely manually to 3-5 clients, document every step obsessively, identify what is identical across clients (automatable) vs. what requires genuine customization (keep human). Stage 2 (Weeks 8-16) — create templates, checklists, and SOPs for repeatable steps, introduce lightweight tooling. Stage 3 (Weeks 16-24) — turn the systematized process into a self-service tool or guided workflow. Stage 4 — build the full product based on what you learned. You now have paying customers, proven demand, and deep workflow knowledge.",
+  "priority": "high",
+  "time_horizon": "this_month",
+  "category": "validation",
+  "suggested_task_count": 3
+}
+
+=== SECTION: PILOT DESIGN & MONITORING ===
+ACTIVATE WHEN: Any vertical SaaS or marketplace idea
+(This REPLACES generic validation advice for these idea types)
+
+Add this ai_recommendation:
+{
+  "title": "Design Your Structured Pilot: Metrics, Monitoring, Kill Criteria",
+  "description": "Define your pilot scope: 1-2 workflows, 3-5 pilot customers, 4-8 weeks. Set your PRIMARY OUTCOME METRIC — the ONE number that proves the wedge works (e.g., hours saved per week, error rate reduction, days to payment decreased). Establish a baseline (today's number without the tool), a target threshold (this worked — scale it), and a kill threshold (not moving the needle). Track time-to-value: target first meaningful win within 14 days. Track weekly active rate and workflow completion rate. If AI features exist, track accuracy rate, override rate, and false positive rate. SCALE if primary metric hits target AND 3+ of 5 users are weekly active AND 2+ will pay. KILL if fewer than 2 of 5 are active after Week 4. PIVOT if users love a different feature than designed.",
+  "priority": "high",
+  "time_horizon": "this_month",
+  "category": "validation",
+  "suggested_task_count": 4
+}
+
+=== SECTION: ANTI-PATTERN ALERTS ===
+ACTIVATE WHEN: Any of these patterns are detected in the idea context.
+Include as SEPARATE ai_recommendation entries with priority "high" and category "mindset". Only include the ones that match.
+
+PATTERN: Idea describes 5+ features or "complete platform" for V1
+→ title: "⚠️ Scope Alert: Your V1 Is Too Broad"
+  description: "Pick ONE workflow and own it completely before expanding. Every successful vertical SaaS started with a single wedge, not a platform."
+
+PATTERN: Idea lacks specific measurable outcomes
+→ title: "⚠️ Missing Success Criteria"
+  description: "Define what success looks like in numbers before building. 'We want AI' is not a goal. 'Reduce manual data entry by 40%' is a goal."
+
+PATTERN: Idea proposes AI taking actions without human review
+→ title: "⚠️ Premature Autonomy Risk"
+  description: "Start with AI that suggests, not AI that acts. Earn trust with accuracy before removing the human from the loop."
+
+PATTERN: Marketplace idea with no supply-side acquisition plan
+→ title: "⚠️ Missing Supply Strategy"
+  description: "Marketplaces fail on supply, not demand. Define exactly how you will get your first 50 providers before worrying about buyers."
+
+PATTERN: Service idea with no productization path discussed
+→ title: "⚠️ No Exit from Linear Scaling"
+  description: "Services scale linearly with your time. Define which part of your delivery can eventually be automated, or accept the lifestyle business ceiling."
+
+PATTERN: Digital product or content idea with no existing audience
+→ title: "⚠️ Building for an Imagined Audience"
+  description: "You are building a product for an audience you do not have yet. Consider building the audience first (newsletter, community, social) and letting them tell you what to build."
+
+PATTERN: Vertical SaaS idea where founder has not talked to operators
+→ title: "⚠️ Validation by Vibes"
+  description: "You are designing for an imagined workflow. Talk to 10 operators before writing a line of code. What you learn will change your plan."
+
+=== SECTION: WEDGE-TO-SUITE ROADMAP ===
+ACTIVATE WHEN: Any vertical SaaS idea
+
+Add this ai_recommendation:
+{
+  "title": "Plan Your Expansion Path (After Wedge Validation)",
+  "description": "After the wedge has paying, retained customers: identify 2-3 adjacent workflows to add one at a time. Look for revenue expansion through payments, invoicing, financing, or marketplace features. Note how usage data from the wedge creates a moat for adjacent features. The long-term vision is 'operating system for [industry]' but that is aspirational, not V1 scope. Each expansion should be treated as a new mini-validation cycle. Do NOT start on expansion until the wedge has paying, retained customers.",
+  "priority": "low",
+  "time_horizon": "this_quarter",
+  "category": "systems",
+  "suggested_task_count": 2
+}
+
+---
 FEW-SHOT EXAMPLES
 ---
 
