@@ -160,9 +160,11 @@ serve(async (req) => {
 
       // Build system prompt with founder context
       const systemPrompt = buildSystemPrompt(founderContext);
+      console.log("[mavrik-interview] System prompt length:", systemPrompt.length, "Contains intelligence layers:", systemPrompt.includes("INTELLIGENCE DETECTION LAYERS"));
 
       // Call Anthropic API
       const aiResponse = await callAnthropic(anthropicApiKey, systemPrompt, [], "Begin the interview.");
+      console.log("[mavrik-interview] AI response preview:", aiResponse.content?.substring(0, 200));
 
       if (aiResponse.error) {
         return new Response(
@@ -253,9 +255,11 @@ serve(async (req) => {
 
     // Build system prompt
     const systemPrompt = buildSystemPrompt(founderContext);
+    console.log("[mavrik-interview] System prompt length:", systemPrompt.length, "Contains intelligence layers:", systemPrompt.includes("INTELLIGENCE DETECTION LAYERS"));
 
     // Call Anthropic with full transcript
     const aiResponse = await callAnthropic(anthropicApiKey, systemPrompt, transcript, null);
+    console.log("[mavrik-interview] AI response preview:", aiResponse.content?.substring(0, 200));
 
     if (aiResponse.error) {
       // If JSON parsing failed on completion, ask for retry
