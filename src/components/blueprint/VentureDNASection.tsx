@@ -277,7 +277,7 @@ export function VentureDNASection({ ideaId, ventureId }: VentureDNASectionProps)
                           <div className="text-center space-y-3">
                             <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
                             <p className="text-sm text-muted-foreground">
-                              Generating your {PLATFORM_MODE_LABELS[mode].toLowerCase()}…
+                              Generating your Venture DNA… This may take a moment.
                             </p>
                           </div>
                         </div>
