@@ -113,6 +113,7 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
         onToggle={markTaskCompleted}
         onGenerate={() => generateDailyTasks()}
         ventureId={venture.id}
+        ventureName={venture.name}
       />
 
       {/* 4. QUICK ACCESS cards */}
@@ -306,8 +307,9 @@ function TodaysTasks({
   onToggle,
   onGenerate,
   ventureId,
+  ventureName,
 }: {
-  tasks: { id: string; title: string; completed: boolean }[];
+  tasks: { id: string; title: string; description: string; category: string; estimatedMinutes: number; completed: boolean }[];
   isLoading: boolean;
   isGenerating: boolean;
   completedTasks: number;
@@ -316,10 +318,13 @@ function TodaysTasks({
   onToggle: (id: string, completed: boolean) => void;
   onGenerate: () => void;
   ventureId: string;
+  ventureName?: string;
 }) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [newTask, setNewTask] = useState("");
   const [adding, setAdding] = useState(false);
+  const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
 
   const handleAddTask = async () => {
     if (!newTask.trim() || !user) return;
@@ -338,6 +343,71 @@ function TodaysTasks({
     } finally {
       setAdding(false);
     }
+  };
+
+  const handleWorkOnThis = async (task: { id: string; title: string; description: string; category: string; estimatedMinutes: number; completed: boolean }) => {
+    if (!user || processingTaskId) return;
+    setProcessingTaskId(task.id);
+
+    try {
+      const { data: existingDoc } = await supabase
+        .from("workspace_documents")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("source_type", "execution_task")
+        .eq("source_id", task.id)
+        .maybeSingle();
+
+      let targetDocId: string;
+
+      if (existingDoc) {
+        targetDocId = existingDoc.id;
+      } else {
+        const { data: newDoc, error } = await supabase
+          .from("workspace_documents")
+          .insert({
+            user_id: user.id,
+            venture_id: ventureId,
+            source_type: "execution_task",
+            source_id: task.id,
+            doc_type: "task-work",
+            title: task.title,
+            content: `## ${task.title}\n\n**Category:** ${task.category}\n**Estimated Time:** ${task.estimatedMinutes} minutes\n\n### Description\n${task.description}\n\n### Notes\n\n`,
+            status: "draft",
+            metadata: { taskId: task.id },
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        targetDocId = newDoc.id;
+      }
+
+      navigate(`/workspace/${targetDocId}`, {
+        state: {
+          executionTask: {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            category: task.category,
+            estimatedMinutes: task.estimatedMinutes,
+            completed: task.completed,
+            ventureId,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error opening workspace:", error);
+    } finally {
+      setProcessingTaskId(null);
+    }
+  };
+
+  const categoryColors: Record<string, string> = {
+    validation: "text-blue-500",
+    build: "text-purple-500",
+    marketing: "text-green-500",
+    ops: "text-orange-500",
   };
 
   return (
@@ -377,26 +447,52 @@ function TodaysTasks({
         ) : (
           <>
             {tasks.map((task) => (
-              <label
+              <div
                 key={task.id}
                 className={cn(
-                  "flex items-center gap-2.5 py-2 px-2 rounded-md cursor-pointer hover:bg-secondary/50 transition-colors",
+                  "flex items-start gap-2.5 py-2 px-2 rounded-md hover:bg-secondary/50 transition-colors",
                   task.completed && "opacity-50"
                 )}
               >
                 <Checkbox
                   checked={task.completed}
                   onCheckedChange={(checked) => onToggle(task.id, !!checked)}
+                  className="mt-0.5"
                 />
-                <span
-                  className={cn(
-                    "text-sm flex-1",
-                    task.completed && "line-through text-muted-foreground"
-                  )}
-                >
-                  {task.title}
-                </span>
-              </label>
+                <div className="flex-1 min-w-0">
+                  <span
+                    className={cn(
+                      "text-sm block",
+                      task.completed && "line-through text-muted-foreground"
+                    )}
+                  >
+                    {task.title}
+                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    {task.category && (
+                      <span className={cn("text-[10px] font-medium", categoryColors[task.category] || "text-muted-foreground")}>
+                        {task.category}
+                      </span>
+                    )}
+                    {task.estimatedMinutes > 0 && (
+                      <span className="text-[10px] text-muted-foreground">{task.estimatedMinutes}m</span>
+                    )}
+                    <button
+                      onClick={() => handleWorkOnThis(task)}
+                      disabled={processingTaskId === task.id}
+                      className="text-[10px] text-primary hover:underline ml-auto flex items-center gap-0.5 disabled:opacity-50"
+                    >
+                      {processingTaskId === task.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <>
+                          {task.completed ? "Revisit" : "Work on This"} →
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
             ))}
 
             {/* Inline add task */}

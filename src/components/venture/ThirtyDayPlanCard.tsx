@@ -1,9 +1,15 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, CheckCircle2, Clock, Target, ArrowRight } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, Target, ArrowRight, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { recordXpEvent } from "@/lib/xpEngine";
+import { useXP } from "@/hooks/useXP";
+import { toast } from "sonner";
 import type { VenturePlan } from "@/types/venture";
 
 interface VentureTask {
@@ -40,6 +46,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export function ThirtyDayPlanCard({ plan, tasksByWeek, ventureId }: ThirtyDayPlanCardProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { refresh: refreshXp } = useXP();
+  const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
 
   // Parse AI raw data for week themes
   const aiRaw = plan.ai_raw as {
@@ -56,6 +65,74 @@ export function ThirtyDayPlanCard({ plan, tasksByWeek, ventureId }: ThirtyDayPla
 
   const getCompletedCount = (tasks: VentureTask[]) => {
     return tasks.filter((t) => t.status === "completed").length;
+  };
+
+  const handleWorkOnThis = async (task: VentureTask) => {
+    if (!user || processingTaskId) return;
+    setProcessingTaskId(task.id);
+
+    try {
+      // Check for existing workspace document linked to this task
+      const { data: existingDoc } = await supabase
+        .from("workspace_documents")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("source_type", "task")
+        .eq("source_id", task.id)
+        .maybeSingle();
+
+      let targetDocId: string;
+
+      if (existingDoc) {
+        targetDocId = existingDoc.id;
+      } else {
+        const { data: newDoc, error } = await supabase
+          .from("workspace_documents")
+          .insert({
+            user_id: user.id,
+            venture_id: ventureId,
+            source_type: "task",
+            source_id: task.id,
+            linked_task_id: task.id,
+            doc_type: "task-work",
+            title: task.title,
+            content: task.description || "",
+            status: "draft",
+            metadata: { taskId: task.id },
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        targetDocId = newDoc.id;
+      }
+
+      await recordXpEvent(user.id, "workspace_opened", 10, {
+        source: "blueprint_task",
+        taskId: task.id,
+      });
+      refreshXp();
+
+      toast.success(`Opening workspace for: ${task.title}`);
+      navigate(`/workspace/${targetDocId}`, {
+        state: {
+          executionTask: {
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            category: task.category,
+            estimatedMinutes: task.estimated_minutes,
+            completed: task.status === "completed",
+            ventureId,
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error opening workspace:", error);
+      toast.error("Failed to open workspace");
+    } finally {
+      setProcessingTaskId(null);
+    }
   };
 
   return (
@@ -147,7 +224,7 @@ export function ThirtyDayPlanCard({ plan, tasksByWeek, ventureId }: ThirtyDayPla
                           >
                             {task.title}
                           </p>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {task.category && (
                               <Badge
                                 variant="secondary"
@@ -164,6 +241,22 @@ export function ThirtyDayPlanCard({ plan, tasksByWeek, ventureId }: ThirtyDayPla
                                 {task.estimated_minutes}m
                               </span>
                             )}
+                            <Button
+                              size="sm"
+                              variant={task.status === "completed" ? "ghost" : "outline"}
+                              className="h-6 text-[10px] gap-1 ml-auto px-2"
+                              onClick={() => handleWorkOnThis(task)}
+                              disabled={processingTaskId === task.id}
+                            >
+                              {processingTaskId === task.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <>
+                                  {task.status === "completed" ? "Revisit" : "Work on This"}
+                                  <ArrowRight className="h-3 w-3" />
+                                </>
+                              )}
+                            </Button>
                           </div>
                         </div>
                       </div>
