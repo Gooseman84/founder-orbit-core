@@ -246,14 +246,47 @@ When you have sufficient signal across all 4 extraction goals
     "constraints": "<high|medium|low>",
     "financialTarget": "<high|medium|low>"
   },
+  "ventureIntelligence": {
+    "verticalIdentified": "<specific industry/niche or 'none'>",
+    "businessModel": "<saas|marketplace|service|digital_product|content|hybrid>",
+    "wedgeClarity": "<high|medium|low|not_applicable>",
+    "workflowDepth": "<high|medium|low|not_applicable>",
+    "industryAccess": "<direct|indirect|none|not_applicable>",
+    "integrationStrategy": "<integrate|replace|unclear|not_applicable>",
+    "aiFeasibility": "<high|medium|low|not_applicable>",
+    "modelSpecificSignals": {
+      // Include ONLY the fields relevant to the detected model:
+      // For marketplace: "coldStartPlan", "supplyAccess", "takeRateModel"
+      // For service: "productizationReadiness", "processDocumented", "clientCount"
+      // For digital product: "audienceTraction", "format", "transformationPromise"
+      // For content: "audienceTraction", "monetizationPlan", "defensibleAngle"
+      // For SaaS: leave empty object {}
+    }
+  },
   "ideaGenerationContext": "A dense paragraph synthesizing
     everything learned, optimized for an AI idea generation
     system to consume. Include specific details, domain jargon
-    they used, exact constraints, and the emotional drivers.
-    This paragraph should contain enough context that another
-    AI could generate highly personalized venture ideas from
-    it alone."
+    they used, exact constraints, emotional drivers, AND any
+    vertical/business model context detected. If a vertical was
+    identified, mention the specific industry and wedge. If a
+    business model was detected, mention the model type and any
+    critical signals (cold-start plan, productization readiness,
+    audience traction, etc.). This paragraph should contain
+    enough context that another AI could generate highly
+    personalized, model-appropriate venture ideas from it alone."
 }
+
+VENTURE INTELLIGENCE RULES:
+- If no vertical was detected, set verticalIdentified to "none" and
+  set vertical-specific fields to "not_applicable"
+- If no specific business model was clearly detected, infer the most
+  likely model from context and set businessModel accordingly
+- wedgeClarity, workflowDepth, industryAccess should be "not_applicable"
+  if no vertical was detected
+- aiFeasibility should be "not_applicable" if no AI component was discussed
+- modelSpecificSignals should contain ONLY fields relevant to the
+  detected model — do not include empty fields for other models
+- Be honest in confidence assessments — "low" is valuable data, not failure
 
 RULES:
 - Minimum 3 questions. Maximum 5. No exceptions.
