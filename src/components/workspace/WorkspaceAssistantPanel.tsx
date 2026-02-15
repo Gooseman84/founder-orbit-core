@@ -64,7 +64,7 @@ export function WorkspaceAssistantPanel({
         className="w-full h-12 flex items-center justify-center gap-2"
       >
         <Sparkles className="w-4 h-4" />
-        <span>AI Assistant</span>
+        <span>Mavrik</span>
         {hasSuggestions && (
           <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary text-xs rounded">
             New suggestion
@@ -82,9 +82,9 @@ export function WorkspaceAssistantPanel({
           <div className="flex-1 min-w-0">
             <CardTitle className="text-lg flex items-center gap-2">
               <Sparkles className="w-5 h-5 shrink-0" />
-              AI Assistant
+              Mavrik
             </CardTitle>
-            <CardDescription className="mt-1">Get AI-powered suggestions for your content</CardDescription>
+            <CardDescription className="mt-1">Get Mavrik's suggestions for your content</CardDescription>
           </div>
           {/* Close/Collapse buttons for mobile */}
           {isMobile && (
@@ -174,7 +174,7 @@ export function WorkspaceAssistantPanel({
           ) : (
             <>
               <Sparkles className="w-4 h-4 mr-2" />
-              {taskContext ? 'Ask AI to help with this task' : 'Ask AI to help expand this'}
+              {taskContext ? 'Ask Mavrik to help with this task' : 'Ask Mavrik to expand this'}
             </>
           )}
         </Button>
@@ -306,8 +306,8 @@ export function WorkspaceAssistantPanel({
               <Sparkles className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
                 {taskContext
-                  ? 'Click above to get AI help completing this task'
-                  : 'Click the button above to generate AI suggestions'}
+                  ? 'Click above to get Mavrik to help with this task'
+                  : 'Click the button above to get Mavrik\'s suggestions'}
               </p>
             </div>
           </div>
