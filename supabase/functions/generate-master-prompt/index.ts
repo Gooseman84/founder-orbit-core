@@ -89,7 +89,7 @@ async function buildMasterPromptContext(
       .maybeSingle()
   ]);
 
-  // Validate required data
+  // Validate required data (profile and idea are required; analysis is optional)
   if (profileResult.error || !profileResult.data) {
     console.error('Error fetching profile:', profileResult.error);
     return null;
@@ -98,10 +98,12 @@ async function buildMasterPromptContext(
     console.error('Error fetching idea:', ideaResult.error);
     return null;
   }
-  if (analysisResult.error || !analysisResult.data) {
-    console.error('Error fetching analysis:', analysisResult.error);
-    return null;
+
+  // Analysis is optional — new ventures may not have run Opportunity Score yet
+  if (analysisResult.error) {
+    console.log('Analysis not available (expected for new ventures):', analysisResult.error?.message);
   }
+  const ideaAnalysis = analysisResult.data || null;
 
   // Extract data with graceful fallbacks
   const recentDocs = docsResult.data || [];
@@ -135,7 +137,7 @@ async function buildMasterPromptContext(
   return {
     founderProfile: profileResult.data,
     chosenIdea: ideaResult.data,
-    ideaAnalysis: analysisResult.data,
+    ideaAnalysis,
     extendedIntake: extendedIntakeResult.data || null,
     recentDocs,
     recentReflections,
@@ -234,7 +236,7 @@ CHOSEN IDEA:
 ${JSON.stringify(chosenIdea, null, 2)}
 
 IDEA ANALYSIS:
-${JSON.stringify(ideaAnalysis, null, 2)}
+${ideaAnalysis ? JSON.stringify(ideaAnalysis, null, 2) : 'Not yet analyzed — run Opportunity Score for deeper market and competitive insights. For now, sections like MARKET POSITIONING and FINANCIAL VIABILITY should state "Not yet analyzed" but still appear as section headers.'}
 
 ${blueprintSummary ? `BLUEPRINT SUMMARY:
 - North Star: ${blueprintSummary.north_star_one_liner || 'Not set'}
@@ -258,18 +260,26 @@ Respond with STRICT JSON only:
   "idea_id": "string"
 }
 
-The prompt_body should be a SINGLE TEXT BLOCK that is highly structured and skimmable, and must:
+The prompt_body should be a SINGLE TEXT BLOCK (4,000-8,000 characters), highly structured and skimmable, and MUST include ALL of these 10 numbered sections (even if some data is sparse — use "Not yet analyzed" or "Not yet available" placeholders):
+
+1. VENTURE IDENTITY: Name, one-liner, problem being solved, solution
+2. FOUNDER CONTEXT: Background, skills, unfair advantages, constraints (time, capital, risk)
+3. TARGET CUSTOMER: Psychographics, pain points, willingness to pay
+4. MARKET POSITIONING: Competitors, differentiation, moat (say "Not yet analyzed — run Opportunity Score" if analysis data is unavailable)
+5. BUSINESS MODEL: Revenue model, pricing strategy, unit economics
+6. EXECUTION FRAMEWORK: Current phase, validation approach, milestones, 90-day plan, weekly sprint structure
+7. FINANCIAL VIABILITY: FVS score and breakdown if available, otherwise "Not yet analyzed — generate Financial Viability Score for projections"
+8. CONSTRAINTS & GUARDRAILS: Hard limits, what NOT to do, founder preferences
+9. SUCCESS METRICS: KPIs, how success is measured for current phase
+10. AI ASSISTANT INSTRUCTIONS: How the AI should behave when using this prompt
+
+Additional requirements:
 - Start with a clear title line for the whole plan.
-- Use numbered section headers in all caps (e.g. "1. FOUNDER IDENTITY", "2. CHOSEN IDEA", "3. PROBLEM → SOLUTION → EXECUTION").
-- Within each section, use short paragraphs and bullet points where helpful.
-- Insert a blank line between sections and major bullet groups for readability.
-- Clearly separate: founder identity, idea summary, problem/solution, business model, go-to-market, 90-day plan, weekly sprint structure, risks, assumptions, KPIs, and usage instructions for the AI assistant.
-- Include a "RECENT PROGRESS" section summarizing current momentum, wins, and blockers.
+- Use numbered section headers in all caps.
+- Within each section, use short paragraphs and bullet points.
+- Include a "RECENT PROGRESS" sub-section under EXECUTION FRAMEWORK summarizing current momentum, wins, and blockers.
+- Include an "UNHINGED EDGE" sub-section under MARKET POSITIONING with exactly 3 bold, unconventional growth/virality experiments.
 - Keep everything in one contiguous text block (no JSON, no markdown code fences).
-- Include constraints and preferences and initial steps for execution.
-
-IMPORTANT: Include an "UNHINGED EDGE" section with exactly 3 bold, unconventional growth/virality experiments tailored to this specific idea. These should be creative, boundary-pushing ideas that could accelerate growth even if risky.
-
 - End with this exact sentence on its own line: "Always ask me clarifying questions before generating answers."
 
 Return strictly JSON. Do not include markdown or commentary outside the JSON.`;
@@ -335,11 +345,11 @@ CHOSEN IDEA:
 - Complexity: ${chosenIdea.complexity || 'Medium'}
 
 IDEA ANALYSIS:
-- Elevator Pitch: ${ideaAnalysis.elevator_pitch || 'Not generated'}
+${ideaAnalysis ? `- Elevator Pitch: ${ideaAnalysis.elevator_pitch || 'Not generated'}
 - Ideal Customer: ${ideaAnalysis.ideal_customer_profile || 'Not defined'}
 - Problem Intensity: ${ideaAnalysis.problem_intensity || 'Unknown'}
 - Competition: ${ideaAnalysis.competition_snapshot || 'Unknown'}
-- Pricing Power: ${ideaAnalysis.pricing_power || 'Unknown'}
+- Pricing Power: ${ideaAnalysis.pricing_power || 'Unknown'}` : 'Not yet analyzed — analysis data will be available after running Opportunity Score.'}
 
 ${blueprintSummary ? `NORTH STAR:
 ${blueprintSummary.north_star_one_liner || chosenIdea.title}` : ''}
@@ -489,7 +499,7 @@ serve(async (req) => {
     
     if (!context) {
       return new Response(
-        JSON.stringify({ error: 'Failed to build context. Ensure you have a profile, idea, and analysis.' }),
+        JSON.stringify({ error: 'Failed to build context. Ensure you have a profile and a chosen idea.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
