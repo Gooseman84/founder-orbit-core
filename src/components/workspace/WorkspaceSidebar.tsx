@@ -33,6 +33,8 @@ import { WorkspaceSearch, SearchResultsInfo } from './WorkspaceSearch';
 import { useImplementationKitByBlueprint } from '@/hooks/useImplementationKit';
 import { downloadAsMarkdown } from '@/lib/documentExport';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
+import { ProUpgradeModal } from '@/components/billing/ProUpgradeModal';
 import { GripVertical } from 'lucide-react';
 import type { WorkspaceDocument } from '@/lib/workspaceEngine';
 import type { WorkspaceScope } from '@/hooks/useWorkspace';
@@ -67,12 +69,18 @@ interface WorkspaceSidebarProps {
 // Collapsible Implementation Kit quick access for sidebar
 function ImplementationKitQuickAccess({ blueprintId }: { blueprintId?: string }) {
   const { toast } = useToast();
+  const { hasPro } = useFeatureAccess();
   const [isOpen, setIsOpen] = useState(true);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
   const { data: kit, isLoading } = useImplementationKitByBlueprint(blueprintId);
 
   const handleDownload = async (docId: string, filename: string) => {
+    if (!hasPro) {
+      setShowUpgradeModal(true);
+      return;
+    }
     setDownloadingDoc(docId);
     try {
       await downloadAsMarkdown(docId, filename);
@@ -163,6 +171,11 @@ function ImplementationKitQuickAccess({ blueprintId }: { blueprintId?: string })
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
+      <ProUpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        reasonCode="EXPORT_REQUIRES_PRO"
+      />
     </Card>
   );
 }

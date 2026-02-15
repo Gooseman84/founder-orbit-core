@@ -74,11 +74,11 @@ export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
     microcopy: "Build with direction. Create with momentum.",
   },
   EXPORT_REQUIRES_PRO: {
-    headline: "Ready to share your vision? That's a Pro move.",
+    headline: "Document Export is a Pro feature.",
     subhead:
-      "Export Blueprints, share plans, and generate presentation-ready assets with Pro tools designed for real execution.",
-    cta: "Upgrade to Pro — Export Your Work",
-    microcopy: "Your future should be something you can hold in your hands.",
+      "Export your Blueprint, workspace documents, and reports as professional PDFs with TrueBlazer branding.",
+    cta: "Unlock Exports",
+    microcopy: "Your work deserves a professional format.",
   },
   MULTI_BLUEPRINT_TASKS: {
     headline: "One Blueprint gets you started. Pro takes you further.",

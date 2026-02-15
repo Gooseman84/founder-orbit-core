@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +74,8 @@ function DocumentRow({ documentId, name, onDownload, isDownloading }: DocumentRo
 export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasPro } = useFeatureAccess();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const { blueprint, loading: blueprintLoading } = useBlueprint();
   const blueprintId = blueprint?.id;
   
@@ -79,6 +83,10 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
 
   const handleDownload = async (docId: string, filename: string) => {
+    if (!hasPro) {
+      setShowUpgradeModal(true);
+      return;
+    }
     setDownloadingDoc(docId);
     try {
       await downloadAsMarkdown(docId, filename);
@@ -224,5 +232,11 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
     );
   }
 
-  return null;
+  return (
+    <ProUpgradeModal
+      open={showUpgradeModal}
+      onClose={() => setShowUpgradeModal(false)}
+      reasonCode="EXPORT_REQUIRES_PRO"
+    />
+  );
 }
