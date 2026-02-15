@@ -111,10 +111,13 @@ export default function Radar() {
       refreshXp();
     } catch (error: any) {
       console.error("Error generating radar signals:", error);
-      if (error.message?.includes("profile") || error.message?.includes("chosen idea")) {
+      if (error?.message?.includes("profile") || error?.message?.includes("chosen idea")) {
         toast.error("Please complete onboarding and choose an idea first");
+      } else if (error?.name === "SubscriptionRequiredError" || error?.status === 402 || error?.status === 403) {
+        setPaywallReason("RADAR_REQUIRES_PRO");
+        setShowUpgradeModal(true);
       } else {
-        toast.error("Failed to generate radar signals");
+        toast.error("Failed to generate radar signals. Please try again.");
       }
     } finally {
       setGenerating(false);

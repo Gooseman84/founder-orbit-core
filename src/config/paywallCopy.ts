@@ -18,7 +18,10 @@ export type PaywallReasonCode =
   | "IMPORT_REQUIRES_PRO"
   | "MARKET_SIGNAL_REQUIRES_PRO"
   | "IMPLEMENTATION_KIT_REQUIRES_PRO"
-  | "PROMPT_TYPE_REQUIRES_PRO";
+  | "PROMPT_TYPE_REQUIRES_PRO"
+  | "VARIANT_REQUIRES_PRO"
+  | "ANALYZE_REQUIRES_PRO"
+  | "FINANCIAL_SCORE_REQUIRES_PRO";
 
 export interface PaywallCopy {
   headline: string;
@@ -168,6 +171,27 @@ export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
       "Get implementation-ready prompts for Lovable, Cursor, and v0 to accelerate your build. Copy-paste and start building immediately.",
     cta: "Upgrade to Pro",
     microcopy: "Build faster with AI-ready prompts.",
+  },
+  VARIANT_REQUIRES_PRO: {
+    headline: "Idea Variants is a Pro feature.",
+    subhead:
+      "Explore wild new angles on your ideas with AI-powered variants. Unlock Chaos, Money Printer, Memetic, Creator, Automation, and Persona variants.",
+    cta: "Unlock Idea Variants",
+    microcopy: "Transform one idea into many possibilities.",
+  },
+  ANALYZE_REQUIRES_PRO: {
+    headline: "Idea Analysis is a Pro feature.",
+    subhead:
+      "Get deep AI-powered analysis of your ideas including market insight, competition snapshot, risks, and an elevator pitch.",
+    cta: "Unlock Idea Analysis",
+    microcopy: "Know exactly what you're building before you build it.",
+  },
+  FINANCIAL_SCORE_REQUIRES_PRO: {
+    headline: "Financial Viability Score is a Pro feature.",
+    subhead:
+      "Get detailed financial projections and viability scores for your ideas. Understand revenue potential, costs, and profitability.",
+    cta: "Unlock Financial Scoring",
+    microcopy: "Make financially informed decisions.",
   },
 };
 
