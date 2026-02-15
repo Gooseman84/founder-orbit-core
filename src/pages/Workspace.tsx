@@ -369,10 +369,10 @@ export default function Workspace() {
 
     if (result) {
       toast({
-        title: 'AI suggestions ready',
+        title: 'Mavrik suggestions ready',
         description: ctx
           ? 'Your cofounder drafted ideas to move this task forward.'
-          : 'Check the AI Assistant panel',
+          : 'Check the Mavrik panel',
       });
     }
   };
@@ -423,8 +423,8 @@ export default function Workspace() {
       toast({
         title: mode === 'replace' ? 'Content replaced' : 'Suggestion applied',
         description: mode === 'replace' 
-          ? 'Editor content replaced with AI suggestion' 
-          : 'AI content added to document',
+          ? 'Editor content replaced with Mavrik\'s suggestion' 
+          : 'Mavrik\'s content added to document',
       });
 
       if (isMobile) {
@@ -821,7 +821,7 @@ export default function Workspace() {
           )}
         </div>
 
-        {/* Right Panel - AI Assistant (hidden on mobile, shown below editor) */}
+        {/* Right Panel - Mavrik (hidden on mobile, shown below editor) */}
         {currentDocument && !isMobile && (
           <aside className="w-72 shrink-0 min-w-0 flex flex-col gap-2 overflow-hidden">
             {/* Linked Task Card (legacy tasks table path) */}
@@ -886,7 +886,7 @@ export default function Workspace() {
         )}
       </div>
 
-      {/* Mobile: AI Assistant as a bottom sheet */}
+      {/* Mobile: Mavrik as a bottom sheet */}
       {currentDocument && isMobile && (
         <>
           <div className="p-2 pt-0">
