@@ -80,6 +80,17 @@ Some fields may be null. Do the best you can with available data.
 OUTPUT SCHEMA (STRICT JSON ONLY)
 ---
 
+TASK RATIONALE RULE:
+Every ai_recommendation MUST include a "why_now" field. This transforms a task list into a narrative. When a user reads their recommendations and asks "why should I do this now?" the answer should be built into the recommendation itself.
+
+BAD why_now: "This is important for your business."
+GOOD why_now: "You have talked to 5 potential customers and have enough signal to define features based on their actual needs, not your assumptions. Doing this before customer interviews would be premature; doing it after building would be wasteful."
+
+The why_now should reference:
+- What the user should have completed before this recommendation
+- What this recommendation enables next
+- Why doing this earlier would be premature OR later would be wasteful
+
 {
   "life_vision": string | null,           // 2-3 sentences: how they want life to look
   "life_time_horizon": string | null,     // e.g. "3 years", "5 years"
@@ -119,14 +130,15 @@ OUTPUT SCHEMA (STRICT JSON ONLY)
   ],
 
   "ai_summary": string | null,            // 2-4 sentences on founder + idea state
-  "ai_recommendations": [                 // 3-7 high-impact recommendations
+  "ai_recommendations": [                 // 3-7 high-impact recommendations + 2-3 decision points
     {
-      "title": string,                    // short action title
-      "description": string,              // 1-2 sentences why + how
+      "title": string,                    // short action title (or "📍 Decision Point: [title]" for decision points)
+      "description": string,              // 1-2 sentences why + how (for decision points: question + if_yes/if_no/if_mixed paths)
       "priority": "high" | "medium" | "low",
       "time_horizon": "today" | "this_week" | "this_month" | "this_quarter",
       "category": "validation" | "audience" | "offer" | "distribution" | "systems" | "mindset",
-      "suggested_task_count": number      // 1-5 sub-tasks this could spawn
+      "suggested_task_count": number,     // 1-5 sub-tasks this could spawn
+      "why_now": string                   // 1-2 sentences: why this matters at this specific point, what it depends on, what it enables next
     }
   ]
 }
@@ -294,6 +306,39 @@ Add this ai_recommendation:
   "suggested_task_count": 2
 }
 
+DECISION POINTS RULE:
+Generate exactly 2-3 decision points as entries in ai_recommendations with titles prefixed by "📍 Decision Point:". These are pre-planned moments where the founder pauses, evaluates real results, and chooses a path forward.
+
+Format each decision point as an ai_recommendation entry:
+{
+  "title": "📍 Decision Point: [title]",
+  "description": "[yes/no question]\n\nIF YES: [what to do next]\nIF NO: [constructive alternative]\nIF MIXED: [what to do with ambiguous results]",
+  "priority": "high",
+  "time_horizon": "[map day to: this_week / this_month]",
+  "category": "validation",
+  "suggested_task_count": 1,
+  "why_now": "This is a pre-planned checkpoint. Pause here, evaluate your real results, and choose the right path forward before investing more time."
+}
+
+REQUIRED DECISION POINTS:
+
+Decision Point 1 (~Day 7-10): PROBLEM VALIDATION
+- Based on customer interviews, market research, or audience feedback
+- Determines: proceed with current direction OR revisit the problem/wedge
+- For vertical SaaS: reference operator interviews and wedge validation
+- For marketplaces: reference supply-side recruitment results
+- For services: reference whether first 3 manual deliveries were repeatable
+
+Decision Point 2 (~Day 18-21): SOLUTION VALIDATION
+- Based on pilot results, concierge delivery, MVP testing, or pre-orders
+- Determines: proceed to launch prep OR iterate on solution OR pivot
+
+Decision Point 3 (~Day 28-30): COMMITMENT CHECK (optional)
+- Based on overall progress, paying users, and founder energy
+- Determines: continue scaling OR graduate to next phase OR kill and start new
+
+Decision points should feel like a thoughtful advisor saying "pause here and take stock" — not like a test. The if_no path should ALWAYS offer a constructive next step, never just "quit."
+
 ---
 FEW-SHOT EXAMPLES
 ---
@@ -374,7 +419,8 @@ Output:
       "priority": "high",
       "time_horizon": "this_week",
       "category": "audience",
-      "suggested_task_count": 3
+      "suggested_task_count": 3,
+      "why_now": "Podcast guesting is highest-leverage because it builds your email list and authority simultaneously, with zero content creation overhead. Do this before creating course content so your audience tells you what they need."
     },
     {
       "title": "Create a lead magnet: '5-Minute Calm-Down for Parents'",
@@ -382,7 +428,8 @@ Output:
       "priority": "high",
       "time_horizon": "this_week",
       "category": "audience",
-      "suggested_task_count": 2
+      "suggested_task_count": 2,
+      "why_now": "You need a way to capture interest from podcast listeners before they forget you. Without a lead magnet, podcast appearances generate awareness but not email subscribers you can sell to later."
     },
     {
       "title": "Run 5 beta calls with anxious parents",
@@ -390,7 +437,8 @@ Output:
       "priority": "high",
       "time_horizon": "this_month",
       "category": "validation",
-      "suggested_task_count": 2
+      "suggested_task_count": 2,
+      "why_now": "You have clinical expertise but haven't validated what paying parents actually want in a self-paced format. These calls prevent you from building a course based on therapist assumptions rather than parent needs."
     },
     {
       "title": "Outline the MVP course in 6 modules",
@@ -398,7 +446,26 @@ Output:
       "priority": "medium",
       "time_horizon": "this_month",
       "category": "offer",
-      "suggested_task_count": 3
+      "suggested_task_count": 3,
+      "why_now": "Only start this after beta calls confirm what parents want. The outline should reflect real feedback, not your initial assumptions. Doing this before validation risks building the wrong course."
+    },
+    {
+      "title": "📍 Decision Point: Audience Signal Check",
+      "description": "Do you have 100+ email subscribers and at least 3 podcast appearances booked?\n\nIF YES: Proceed to course outline. Your audience is building and you have enough signal to know what resonates.\nIF NO: Double down on outreach. Pitch 10 more podcasts and test 2 different lead magnets. Do not start creating course content yet.\nIF MIXED: You are getting traction but slowly. Consider narrowing your niche — 'new parents with anxiety' may be too broad. Try 'first-time moms with postpartum anxiety' for sharper positioning.",
+      "priority": "high",
+      "time_horizon": "this_week",
+      "category": "validation",
+      "suggested_task_count": 1,
+      "why_now": "This is a pre-planned checkpoint at ~Day 10. Pause here, evaluate your real results, and choose the right path forward before investing more time."
+    },
+    {
+      "title": "📍 Decision Point: Pre-Sale Validation",
+      "description": "Have at least 5 people pre-ordered or committed to buy the course at the stated price?\n\nIF YES: Build the course. You have paying customers waiting.\nIF NO: The topic resonates but the offer may not. Test a different format (workshop, 1:1 coaching package) or price point before investing in full course production.\nIF MIXED: You have interest but not commitment. Run a live workshop as a low-risk test of the material before recording a full course.",
+      "priority": "high",
+      "time_horizon": "this_month",
+      "category": "validation",
+      "suggested_task_count": 1,
+      "why_now": "This is a pre-planned checkpoint at ~Day 21. Pause here, evaluate your real results, and choose the right path forward before investing more time."
     }
   ]
 }
