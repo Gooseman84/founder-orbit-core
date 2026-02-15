@@ -125,6 +125,22 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
+    // Extract decision points from blueprint recommendations
+    let blueprintDecisionPoints = "";
+    if (blueprint?.ai_recommendations) {
+      const recs = Array.isArray(blueprint.ai_recommendations) 
+        ? blueprint.ai_recommendations 
+        : [];
+      const decisionPoints = recs.filter((r: any) => 
+        r.title && r.title.includes("Decision Point")
+      );
+      if (decisionPoints.length > 0) {
+        blueprintDecisionPoints = decisionPoints
+          .map((dp: any) => `- ${dp.title}: ${dp.description}`)
+          .join("\n");
+      }
+    }
+
     // Fetch venture plan
     const { data: venturePlan } = await supabaseService
       .from("venture_plans")
@@ -215,6 +231,7 @@ serve(async (req) => {
       planSummary: venturePlan?.summary || null,
       ideaTitle: idea?.title || null,
       ideaDescription: idea?.description || null,
+      blueprintDecisionPoints,
     };
 
     console.log("[generate-daily-execution-tasks] Context:", JSON.stringify(context, null, 2));
@@ -276,6 +293,19 @@ WORKSPACE AWARENESS RULES:
 - Use workspace doc titles as context clues for what's already in progress
 - Suggest tasks that BUILD ON existing workspace work, not restart it
 
+WHY NOW CONTEXT:
+Every task MUST include a "why_now" field that explains why this specific task matters TODAY given where the founder is in their journey.
+
+Good why_now examples:
+- "Day 3 of your commitment. You defined your target customer yesterday — today's interview script builds directly on that definition."
+- "Your last check-in mentioned a blocker with customer outreach. This task directly addresses that blocker with a specific, small action."
+- "You are approaching your Day 10 decision point. You need 2 more customer conversations before you can make a confident proceed/pivot decision."
+
+Bad why_now examples:
+- "This is important for your business." (generic)
+- "You should do this soon." (no reasoning)
+- "This task will help you succeed." (empty motivation)
+
 STRICT RULES:
 - Tasks MUST be derived from the venture's blueprint, plan, or success metric
 - NO brainstorming or ideation tasks
@@ -290,6 +320,7 @@ Return a JSON array of tasks with this structure:
     "id": "uuid-string",
     "title": "Short action-oriented title",
     "description": "Specific what-to-do description. Reference existing workspace docs if relevant.",
+    "why_now": "1-2 sentences: why this task matters today specifically, what it depends on, and what it enables next. Never generic — always reference the venture's current state, day in commitment, or recent progress.",
     "category": "validation|build|marketing|ops",
     "estimatedMinutes": 30-120,
     "completed": false
@@ -321,7 +352,11 @@ Day ${context.dayInCommitment} of ${context.commitmentDays}-day commitment
 ${context.blueprintSummary ? `Blueprint Summary: ${context.blueprintSummary}` : ""}
 ${context.planSummary ? `Plan Summary: ${context.planSummary}` : ""}
 ${context.ideaTitle ? `Idea: ${context.ideaTitle} - ${context.ideaDescription}` : ""}
-
+${context.blueprintDecisionPoints ? `
+UPCOMING DECISION POINTS:
+${context.blueprintDecisionPoints}
+If the founder is approaching a decision point (within 3 days), generate at least one task that gathers the data needed to make that decision.
+` : ""}
 Generate ${taskCount} focused execution tasks for today.${appendContext}`
           }
         ],
