@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import type { PaywallReasonCode } from "@/config/paywallCopy";
+
 import { 
   Zap, 
   DollarSign, 
@@ -47,6 +49,7 @@ export const IdeaVariantGenerator = ({
 }: IdeaVariantGeneratorProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { hasPro } = useFeatureAccess();
   const [generatingMode, setGeneratingMode] = useState<VariantMode | null>(null);
   const [variants, setVariants] = useState<any[]>([]);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -54,8 +57,14 @@ export const IdeaVariantGenerator = ({
   const [paywallReasonCode, setPaywallReasonCode] = useState<PaywallReasonCode | undefined>();
 
   const handleGenerateVariant = async (mode: VariantMode) => {
-    setGeneratingMode(mode);
+    // Pre-check: all variant modes are Pro-only
+    if (!hasPro) {
+      setPaywallReasonCode("VARIANT_REQUIRES_PRO");
+      setShowPaywall(true);
+      return;
+    }
 
+    setGeneratingMode(mode);
     try {
       // Build focus_area from current idea
       const focusArea = `Based on this existing idea: "${idea.title}" - ${idea.description || ""}. 
@@ -98,9 +107,17 @@ Generate a ${mode.replace("_", " ")} variant that transforms or evolves this con
       });
     } catch (error: any) {
       console.error("Error generating variants:", error);
+      // Check for subscription-related errors from server
+      if (error?.status === 402 || error?.status === 403 || 
+          error?.message?.includes("Pro") || error?.message?.includes("upgrade") ||
+          error?.message?.includes("REQUIRES_PRO") || error?.message?.includes("LIMIT_REACHED")) {
+        setPaywallReasonCode("VARIANT_REQUIRES_PRO");
+        setShowPaywall(true);
+        return;
+      }
       toast({
         title: "Error",
-        description: error.message || "Failed to generate variants.",
+        description: "Failed to generate variants. Please try again.",
         variant: "destructive",
       });
     } finally {

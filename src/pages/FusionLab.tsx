@@ -183,7 +183,15 @@ const FusionLab = () => {
       }
     } catch (error: any) {
       console.error("Fusion error:", error);
-      toast({ title: "Fusion Failed", description: error.message || "Please try again.", variant: "destructive" });
+      // Check for subscription-related errors
+      if (error?.status === 402 || error?.status === 403 ||
+          error?.message?.includes("Pro") || error?.message?.includes("upgrade") ||
+          error?.message?.includes("FUSION") || error?.message?.includes("LIMIT")) {
+        setPaywallReason("FUSION_LIMIT_REACHED");
+        setShowUpgradeModal(true);
+        return;
+      }
+      toast({ title: "Fusion Failed", description: "Please try again.", variant: "destructive" });
     } finally {
       setIsFusing(false);
     }

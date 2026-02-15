@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
+import type { PaywallReasonCode } from "@/config/paywallCopy";
 import { Combine, Sparkles, X, ExternalLink, Library } from "lucide-react";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
 import type { BusinessIdeaV6 } from "@/types/businessIdea";
@@ -25,10 +28,13 @@ export const IdeaFusionPanel = ({
 }: IdeaFusionPanelProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { hasPro } = useFeatureAccess();
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isFusing, setIsFusing] = useState(false);
   const [fusedIdea, setFusedIdea] = useState<any>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<PaywallReasonCode>("FUSION_REQUIRES_PRO");
 
   const toggleSelection = (ideaId: string) => {
     setSelectedIds((prev) => {
@@ -50,6 +56,14 @@ export const IdeaFusionPanel = ({
 
   const handleFuse = async () => {
     if (!user?.id) return;
+
+    // Pre-check Pro access
+    if (!hasPro) {
+      setPaywallReason("FUSION_REQUIRES_PRO");
+      setShowPaywall(true);
+      return;
+    }
+
     if (selectedIds.size < 2) {
       toast({
         title: "Select at least 2 ideas",
@@ -83,9 +97,17 @@ export const IdeaFusionPanel = ({
       }
     } catch (error: any) {
       console.error("Fusion error:", error);
+      // Check for subscription-related errors
+      if (error?.status === 402 || error?.status === 403 ||
+          error?.message?.includes("Pro") || error?.message?.includes("upgrade") ||
+          error?.message?.includes("FUSION") || error?.message?.includes("LIMIT")) {
+        setPaywallReason("FUSION_REQUIRES_PRO");
+        setShowPaywall(true);
+        return;
+      }
       toast({
         title: "Fusion Failed",
-        description: error.message || "Could not fuse ideas. Try again.",
+        description: "Could not fuse ideas. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -155,6 +177,7 @@ export const IdeaFusionPanel = ({
   );
 
   return (
+    <>
     <Card className="border-dashed border-primary/30">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
@@ -275,5 +298,13 @@ export const IdeaFusionPanel = ({
         )}
       </CardContent>
     </Card>
+
+      <ProUpgradeModal
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        reasonCode={paywallReason}
+        context={{ feature: "fusion_lab" }}
+      />
+    </>
   );
 };
