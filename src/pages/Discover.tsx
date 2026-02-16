@@ -208,7 +208,8 @@ export default function Discover() {
 
   // Calculate progress
   const aiQuestionCount = transcript.filter((t) => t.role === "ai").length;
-  const estimatedTotal = 5;
+  const estimatedTotal = 6;
+  const displayQuestionNumber = aiQuestionCount > 6 ? -1 : aiQuestionCount; // -1 signals "wrapping up"
   const progressPercent = Math.min((aiQuestionCount / estimatedTotal) * 100, 100);
   const canFinalize = aiQuestionCount >= 3;
 
@@ -264,7 +265,7 @@ export default function Discover() {
           transcript={transcript}
           isThinking={isThinking}
           progressPercent={progressPercent}
-          questionNumber={aiQuestionCount}
+          questionNumber={displayQuestionNumber}
           estimatedTotal={estimatedTotal}
           canFinalize={canFinalize}
           isComplete={interviewState === "complete"}
