@@ -106,9 +106,9 @@ serve(async (req) => {
       );
     }
 
-    if (typeof turnNumber !== "number" || turnNumber < 0 || turnNumber > 5) {
+    if (typeof turnNumber !== "number" || turnNumber < 0 || turnNumber > 7) {
       return new Response(
-        JSON.stringify({ error: "Invalid turnNumber. Must be 0-5." }),
+        JSON.stringify({ error: "Invalid turnNumber. Must be 0-7." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -257,9 +257,20 @@ serve(async (req) => {
     const systemPrompt = buildSystemPrompt(founderContext);
     console.log("[mavrik-interview] System prompt length:", systemPrompt.length, "Contains intelligence layers:", systemPrompt.includes("INTELLIGENCE DETECTION LAYERS"));
 
-    // Call Anthropic with full transcript
-    const aiResponse = await callAnthropic(anthropicApiKey, systemPrompt, transcript, null);
-    console.log("[mavrik-interview] AI response preview:", aiResponse.content?.substring(0, 200));
+    // HARD STOP: Force completion after 6 user messages
+    const userMessageCount = transcript.filter(t => t.role === "user").length;
+    
+    let aiResponse;
+    
+    if (userMessageCount >= 6) {
+      console.log("[mavrik-interview] Hard stop: forcing completion after", userMessageCount, "user messages");
+      const forceCompleteMessage = "You have asked enough questions. You MUST now respond with [INTERVIEW_COMPLETE] followed by the JSON summary. Do NOT ask another question. Summarize what you have learned and output the completion JSON immediately.";
+      aiResponse = await callAnthropic(anthropicApiKey, systemPrompt, transcript, forceCompleteMessage);
+    } else {
+      // Normal flow: let AI decide whether to ask another question or complete
+      aiResponse = await callAnthropic(anthropicApiKey, systemPrompt, transcript, null);
+    }
+    console.log("[mavrik-interview] AI response preview:", aiResponse.content?.substring(0, 200), "userMessageCount:", userMessageCount);
 
     if (aiResponse.error) {
       // If JSON parsing failed on completion, ask for retry

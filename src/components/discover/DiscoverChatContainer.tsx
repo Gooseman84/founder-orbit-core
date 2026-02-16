@@ -45,7 +45,7 @@ export function DiscoverChatContainer({
         <div className="max-w-[680px] mx-auto w-full">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs text-muted-foreground">
-              Question {Math.max(questionNumber, 1)} of ~{estimatedTotal}
+              {questionNumber < 0 ? "Wrapping up..." : `Question ${Math.max(questionNumber, 1)} of ~${estimatedTotal}`}
             </span>
             {canFinalize && !isComplete && (
               <Button
