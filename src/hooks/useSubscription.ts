@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useCallback } from "react";
 import type { PlanId } from "@/config/plans";
+import { TRIAL_DURATION_DAYS } from "@/config/plans";
 
 interface SubscriptionData {
   plan: PlanId;
@@ -19,6 +20,7 @@ interface UseSubscriptionReturn {
   cancelAt: Date | null;
   renewalPeriod: string | null;
   isTrialing: boolean;
+  isTrialExpired: boolean;
   daysUntilTrialEnd: number | null;
   loading: boolean;
   error: string | null;
@@ -100,8 +102,31 @@ export const useSubscription = (): UseSubscriptionReturn => {
     });
   }, [queryClient, user?.id]);
 
-  // Calculate trial info
-  const isTrialing = subscription?.status === "trialing";
+  // Determine if user has an active paid plan
+  const plan = subscription?.plan || "trial";
+  const status = subscription?.status || "active";
+  const hasPaidSubscription = (plan === "pro" || plan === "founder") && status === "active";
+
+  // Time-based trial expiration from account creation date
+  const userCreatedAt = user?.created_at ? new Date(user.created_at) : null;
+  const trialEndDate = userCreatedAt 
+    ? new Date(userCreatedAt.getTime() + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000)
+    : null;
+
+  const isTrialing = !hasPaidSubscription && plan === "trial";
+  
+  let daysUntilTrialEnd: number | null = null;
+  let isTrialExpired = false;
+
+  if (isTrialing && trialEndDate) {
+    const now = new Date();
+    const diffTime = trialEndDate.getTime() - now.getTime();
+    daysUntilTrialEnd = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (daysUntilTrialEnd < 0) daysUntilTrialEnd = 0;
+    isTrialExpired = daysUntilTrialEnd <= 0;
+  }
+
+  // Stripe-based period end (for paid subscriptions)
   const currentPeriodEnd = subscription?.currentPeriodEnd 
     ? new Date(subscription.currentPeriodEnd) 
     : null;
@@ -109,21 +134,14 @@ export const useSubscription = (): UseSubscriptionReturn => {
     ? new Date(subscription.cancelAt) 
     : null;
 
-  let daysUntilTrialEnd: number | null = null;
-  if (isTrialing && currentPeriodEnd) {
-    const now = new Date();
-    const diffTime = currentPeriodEnd.getTime() - now.getTime();
-    daysUntilTrialEnd = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (daysUntilTrialEnd < 0) daysUntilTrialEnd = 0;
-  }
-
   return {
-    plan: subscription?.plan || "trial",
-    status: subscription?.status || "active",
+    plan,
+    status,
     currentPeriodEnd,
     cancelAt,
     renewalPeriod: subscription?.renewalPeriod || null,
     isTrialing,
+    isTrialExpired,
     daysUntilTrialEnd,
     loading: isLoading,
     error: error instanceof Error ? error.message : null,

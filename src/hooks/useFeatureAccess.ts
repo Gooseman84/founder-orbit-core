@@ -31,14 +31,13 @@ export const useFeatureAccess = (): UseFeatureAccessReturn => {
     status, 
     loading, 
     isTrialing, 
-    currentPeriodEnd,
+    isTrialExpired: subscriptionTrialExpired,
     daysUntilTrialEnd
   } = useSubscription();
   
   // Compute derived state
   const derivedState = useMemo(() => {
     // Normalize plan to valid PlanId
-    // "free" from old data maps to "trial"
     const plan: PlanId = (rawPlan === "pro" || rawPlan === "founder") 
       ? rawPlan 
       : "trial";
@@ -48,17 +47,13 @@ export const useFeatureAccess = (): UseFeatureAccessReturn => {
     const hasFounder = plan === "founder" && status === "active";
     
     // Trial-specific states
-    const hasTrialAccess = isTrialing && (daysUntilTrialEnd ?? 0) > 0;
+    const hasTrialAccess = isTrialing && !subscriptionTrialExpired;
     
-    // Trial expired: was trialing but no days left OR status indicates expired
-    const isTrialExpired = (
-      (isTrialing && (daysUntilTrialEnd ?? 0) <= 0) ||
-      (status === "canceled" && !hasPaidPlan(plan)) ||
-      (status === "incomplete_expired")
-    );
+    // Trial expired: time-based from useSubscription
+    const isTrialExpired = subscriptionTrialExpired && !hasPro && !hasFounder;
     
     // Locked out: trial expired and no active subscription
-    const isLockedOut = isTrialExpired && !hasPro && !hasFounder;
+    const isLockedOut = isTrialExpired;
     
     // Days remaining in trial
     const daysRemaining = isTrialing ? daysUntilTrialEnd : null;
@@ -77,7 +72,7 @@ export const useFeatureAccess = (): UseFeatureAccessReturn => {
       features,
       planInfo,
     };
-  }, [rawPlan, status, isTrialing, daysUntilTrialEnd]);
+  }, [rawPlan, status, isTrialing, subscriptionTrialExpired, daysUntilTrialEnd]);
 
   const gate = (featureName: string): boolean => {
     // Locked out users can't access any features

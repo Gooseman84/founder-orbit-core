@@ -290,6 +290,10 @@ function mapTranscriptToMessages(transcript: InterviewTurn[]) {
   });
 }
 
+// Rate limiting: track calls per interview
+const interviewCallCounts = new Map<string, number>();
+const MAX_CALLS_PER_INTERVIEW = 15;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -408,6 +412,20 @@ serve(async (req) => {
     }
 
     interviewId = interviewRow.id as string;
+
+    // Rate limit check
+    const currentCalls = interviewCallCounts.get(interviewId) ?? 0;
+    if (currentCalls >= MAX_CALLS_PER_INTERVIEW) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Maximum interview calls exceeded. Please start a new interview.",
+          code: "RATE_LIMITED"
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    interviewCallCounts.set(interviewId, currentCalls + 1);
+
     let transcript: InterviewTurn[] = Array.isArray(interviewRow.transcript)
       ? (interviewRow.transcript as InterviewTurn[])
       : [];
