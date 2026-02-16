@@ -120,6 +120,8 @@ export default function Discover() {
         const { data, error } = await invokeAuthedFunction<{
           transcript: InterviewTurn[];
           interviewId: string;
+          forceComplete?: boolean;
+          canFinalize?: boolean;
         }>("dynamic-founder-interview", {
           body: {
             interview_id: activeInterviewId || undefined,
@@ -130,6 +132,17 @@ export default function Discover() {
 
         if (error) throw error;
         if (!data) throw new Error("No response from interview engine");
+
+        // Handle hard stop - interview has hit max questions
+        if (data.forceComplete) {
+          console.log("Interview reached question limit, auto-generating summary");
+          setInterviewId(data.interviewId);
+          setTranscript(data.transcript || optimisticTranscript);
+          setInterviewState("complete");
+          // Auto-trigger finalization
+          await handleFinalize(data.interviewId);
+          return;
+        }
 
         // Filter out AI messages that are raw JSON (summary artifacts)
         const newTranscript = (data.transcript as InterviewTurn[]).filter(
@@ -166,8 +179,9 @@ export default function Discover() {
     await fetchNextQuestion(message, interviewId, transcript);
   };
 
-  const handleFinalize = async () => {
-    if (!user || !interviewId) return;
+  const handleFinalize = async (overrideInterviewId?: string) => {
+    const finalInterviewId = overrideInterviewId || interviewId;
+    if (!user || !finalInterviewId) return;
     
     setIsThinking(true);
     try {
@@ -175,14 +189,14 @@ export default function Discover() {
       const { data: summaryData, error: summaryError } = await invokeAuthedFunction<{
         contextSummary: any;
       }>("dynamic-founder-interview", {
-        body: { interview_id: interviewId, mode: "summary" },
+        body: { interview_id: finalInterviewId, mode: "summary" },
       });
 
       if (summaryError) throw summaryError;
 
       // Finalize profile
       await invokeAuthedFunction("finalize-founder-profile", {
-        body: { interview_id: interviewId },
+        body: { interview_id: finalInterviewId },
       });
 
       toast({
