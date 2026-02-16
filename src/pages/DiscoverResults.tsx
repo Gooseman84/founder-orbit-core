@@ -219,35 +219,50 @@ export default function DiscoverResults() {
     setCommittingId(recommendation.name);
 
     try {
-      const { data, error } = await supabase.from("ideas").insert([{
-        user_id: user.id,
-        title: recommendation.name,
-        description: recommendation.oneLiner,
-        source_type: "generated" as const,
-        source_meta: {
-          source: "mavrik_recommendation",
-          whyThisFounder: recommendation.whyThisFounder,
-          targetCustomer: recommendation.targetCustomer,
-          revenueModel: recommendation.revenueModel,
-          timeToFirstRevenue: recommendation.timeToFirstRevenue,
-          capitalRequired: recommendation.capitalRequired,
-          fitScore: recommendation.fitScore,
-          fitBreakdown: {
-            founderMarketFit: recommendation.fitBreakdown.founderMarketFit,
-            feasibility: recommendation.fitBreakdown.feasibility,
-            revenueAlignment: recommendation.fitBreakdown.revenueAlignment,
-            marketTiming: recommendation.fitBreakdown.marketTiming,
+      // Check if this idea already exists (from auto-save)
+      let ideaId: string;
+      const { data: existing } = await supabase
+        .from("ideas")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("title", recommendation.name)
+        .eq("source_type", "generated")
+        .maybeSingle();
+
+      if (existing) {
+        ideaId = existing.id;
+      } else {
+        const { data, error } = await supabase.from("ideas").insert([{
+          user_id: user.id,
+          title: recommendation.name,
+          description: recommendation.oneLiner,
+          source_type: "generated" as const,
+          source_meta: {
+            source: "mavrik_recommendation",
+            whyThisFounder: recommendation.whyThisFounder,
+            targetCustomer: recommendation.targetCustomer,
+            revenueModel: recommendation.revenueModel,
+            timeToFirstRevenue: recommendation.timeToFirstRevenue,
+            capitalRequired: recommendation.capitalRequired,
+            fitScore: recommendation.fitScore,
+            fitBreakdown: {
+              founderMarketFit: recommendation.fitBreakdown.founderMarketFit,
+              feasibility: recommendation.fitBreakdown.feasibility,
+              revenueAlignment: recommendation.fitBreakdown.revenueAlignment,
+              marketTiming: recommendation.fitBreakdown.marketTiming,
+            },
+            keyRisk: recommendation.keyRisk,
+            firstStep: recommendation.firstStep,
           },
-          keyRisk: recommendation.keyRisk,
-          firstStep: recommendation.firstStep,
-        },
-        overall_fit_score: recommendation.fitScore,
-        status: "candidate",
-      }]).select("id").single();
+          overall_fit_score: recommendation.fitScore,
+          status: "candidate",
+        }]).select("id").single();
 
-      if (error || !data) throw error || new Error("Failed to save idea");
+        if (error || !data) throw error || new Error("Failed to save idea");
+        ideaId = data.id;
+      }
 
-      navigate(`/commit/${data.id}`);
+      navigate(`/commit/${ideaId}`);
     } catch (e: any) {
       console.error("Failed to save idea for commit:", e);
       toast({
@@ -267,6 +282,24 @@ export default function DiscoverResults() {
     setSavingId(recommendation.name);
 
     try {
+      // Check if already auto-saved
+      const { data: existing } = await supabase
+        .from("ideas")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("title", recommendation.name)
+        .eq("source_type", "generated")
+        .maybeSingle();
+
+      if (existing) {
+        toast({
+          title: "Already in your library",
+          description: `"${recommendation.name}" is already in your Idea Lab.`,
+        });
+        return;
+      }
+
+      // Fallback insert if not auto-saved
       const { error } = await supabase.from("ideas").insert([{
         user_id: user.id,
         title: recommendation.name,

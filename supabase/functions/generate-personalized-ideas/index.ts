@@ -201,6 +201,20 @@ Deno.serve(async (req) => {
     // Sort by fitScore descending
     response.recommendations.sort((a, b) => b.fitScore - a.fitScore);
 
+    // Clean up any previously auto-saved ideas from this interview
+    // so regeneration doesn't create duplicates
+    const { error: cleanupError } = await supabaseAuth
+      .from("ideas")
+      .delete()
+      .eq("user_id", userId)
+      .eq("source_type", "generated")
+      .filter("source_meta->>source", "eq", "mavrik_recommendation")
+      .filter("source_meta->>interview_id", "eq", interviewId);
+
+    if (cleanupError) {
+      console.warn("Failed to clean up old auto-saved ideas:", cleanupError);
+    }
+
     // Store results in personalized_recommendations
     const { data: savedRec, error: saveError } = await supabaseAuth
       .from("personalized_recommendations")
@@ -215,7 +229,41 @@ Deno.serve(async (req) => {
 
     if (saveError) {
       console.error("Failed to save recommendations:", saveError);
-      // Continue anyway - return the recommendations to the user
+    }
+
+    // Auto-save each recommendation as an idea in the ideas table
+    const ideaInserts = response.recommendations.map((rec: Recommendation) => ({
+      user_id: userId,
+      title: rec.name,
+      description: rec.oneLiner,
+      source_type: "generated" as const,
+      source_meta: {
+        source: "mavrik_recommendation",
+        interview_id: interviewId,
+        recommendation_id: savedRec?.id || null,
+        whyThisFounder: rec.whyThisFounder,
+        targetCustomer: rec.targetCustomer,
+        revenueModel: rec.revenueModel,
+        timeToFirstRevenue: rec.timeToFirstRevenue,
+        capitalRequired: rec.capitalRequired,
+        fitScore: rec.fitScore,
+        fitBreakdown: rec.fitBreakdown,
+        keyRisk: rec.keyRisk,
+        firstStep: rec.firstStep,
+      },
+      overall_fit_score: rec.fitScore,
+      target_customer: rec.targetCustomer,
+      status: "candidate",
+    }));
+
+    const { error: ideasInsertError } = await supabaseAuth
+      .from("ideas")
+      .insert(ideaInserts);
+
+    if (ideasInsertError) {
+      console.error("Failed to auto-save ideas to library:", ideasInsertError);
+    } else {
+      console.log(`Auto-saved ${ideaInserts.length} Mavrik ideas to ideas table`);
     }
 
     const generationTimeMs = Date.now() - startTime;
