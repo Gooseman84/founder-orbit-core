@@ -95,7 +95,17 @@ When asked to summarize, return ONLY this JSON structure:
     "constraints": "high",
     "financialTarget": "low"
   },
-  "ideaGenerationContext": "Dense paragraph optimized for ideation engine with key signals: skills, markets, constraints, goals."
+  "ventureIntelligence": {
+    "verticalIdentified": "specific industry/niche or 'none'",
+    "businessModel": "saas|marketplace|service|digital_product|content|hybrid",
+    "wedgeClarity": "high|medium|low|not_applicable",
+    "workflowDepth": "high|medium|low|not_applicable",
+    "industryAccess": "direct|indirect|none|not_applicable",
+    "integrationStrategy": "integrate|replace|unclear|not_applicable",
+    "aiFeasibility": "high|medium|low|not_applicable",
+    "modelSpecificSignals": {}
+  },
+  "ideaGenerationContext": "Dense paragraph optimized for ideation engine with key signals: skills, markets, constraints, goals. If a vertical was identified, include the specific industry and wedge. If a business model was detected, include the model type and critical signals (cold-start plan, productization readiness, audience traction, etc.)."
 }
 
 SUMMARY RULES:
@@ -107,7 +117,67 @@ SUMMARY RULES:
 - type must be one of: "side_income", "salary_replacement", "wealth_building".
 - founderSummary should be personal and specific, not generic.
 
+VENTURE INTELLIGENCE RULES:
+- If no vertical was detected, set verticalIdentified to "none" and set vertical-specific fields to "not_applicable".
+- If no specific business model was clearly detected, infer the most likely model from context.
+- wedgeClarity, workflowDepth, industryAccess should be "not_applicable" if no vertical was detected.
+- aiFeasibility should be "not_applicable" if no AI component was discussed.
+- modelSpecificSignals should contain ONLY fields relevant to the detected model:
+  - Marketplace: coldStartPlan, supplyAccess, takeRateModel
+  - Service: productizationReadiness, processDocumented, clientCount
+  - Digital product: audienceTraction, format, transformationPromise
+  - Content: audienceTraction, monetizationPlan, defensibleAngle
+  - SaaS: empty object {}
+
 Stay sharp. Extract signal. Help them win.`;
+
+const INTELLIGENCE_LAYERS = `
+═══════════════════════════════════════════════════════════════════════════════
+INTELLIGENCE DETECTION LAYERS
+═══════════════════════════════════════════════════════════════════════════════
+
+These activate based on what the user describes. They change WHAT you
+ask about, not how many questions you ask.
+
+LAYER 1 — VERTICAL SAAS DETECTION:
+If the user describes an idea targeting a specific industry or niche
+(restaurants, HVAC, dental, real estate, freight, construction,
+healthcare, insurance, legal, fitness, salons, property management,
+logistics, agriculture, etc.), activate vertical probing:
+
+1. WEDGE SPECIFICITY: Do not accept "software for [industry]." Probe
+   for the ONE painful workflow they will own first. Ask: "What's the
+   one task in that business that still runs on spreadsheets or paper?"
+
+2. WORKFLOW DEPTH: How well do they understand the end-to-end workflow?
+   From "lead appears" to "job done and paid" to "books closed."
+
+3. INDUSTRY ACCESS: Do they have direct access to operators? Worked in
+   it, served it, or have warm relationships?
+
+4. SYSTEM OF RECORD: What tools do operators currently use? Will this
+   integrate with or replace those tools?
+
+5. AI FEASIBILITY: If AI is involved, what data exists in this workflow
+   today? Structured or unstructured? Enough volume?
+
+LAYER 2 — BUSINESS MODEL DETECTION:
+Identify the business model type and adjust probing:
+
+IF MARKETPLACE: Which side do they understand better? How will they
+solve cold-start? Can this start as a single-player tool?
+
+IF SERVICE: What's manual today? What's repeatable vs custom? Is there
+a path to software?
+
+IF DIGITAL PRODUCT: Do they have an existing audience? What format?
+What's the transformation promise?
+
+IF CONTENT: Existing audience traction? Monetization plan? Defensible
+angle?
+
+These probes REPLACE generic questions. Keep probing conversational.
+If they can't answer, that's valuable data — acknowledge warmly.`;
 
 const MODE_A_ADDON = `
 ═══════════════════════════════════════════════════════════════════════════════
@@ -117,9 +187,14 @@ MODE A: STRUCTURED ONBOARDING CONTEXT AVAILABLE
 The founder has already answered 7 baseline questions. You will receive this
 context in the next message. Use it to ask TARGETED, EFFICIENT follow-ups.
 
-You MUST complete the interview in exactly 3-5 questions. After your 5th
-question AT MOST, you MUST append [INTERVIEW_COMPLETE] to your response
-regardless of how the conversation is going. No exceptions.
+You MUST complete the interview in exactly 3-5 questions. HARD LIMIT.
+You MUST track your question count internally. After asking your 5th
+question, you MUST stop regardless of signal quality. Incomplete signal
+is acceptable — note low confidence in confidenceLevel fields.
+
+After question 3, actively look for reasons to COMPLETE rather than
+reasons to ask more. If you have medium-or-better signal on at least
+3 of the 4 extraction goals, complete immediately.
 
 Ask only **3-5 questions** that fill gaps:
 1. Specific unfair advantages (unique access, insider knowledge, rare skills)
@@ -138,6 +213,7 @@ DO ask about:
 - "Given your vision of [future_vision], what's the biggest constraint holding you back?"
 - "What would you absolutely NEVER want your business to require?"
 - "Which customer groups do you understand from the inside?"
+${INTELLIGENCE_LAYERS}
 
 GOOD OPENER (reference their onboarding data):
 "You mentioned you're interested in [business_type_preference] - what gives you an edge in that space?"
@@ -156,9 +232,10 @@ MODE B: NO PRIOR CONTEXT - STARTING FROM SCRATCH
 This founder has NOT completed structured onboarding. You have NO prior context
 about them. You need to cover more ground.
 
-You MUST complete the interview in exactly 5-7 questions. After your 7th
-question AT MOST, you MUST append [INTERVIEW_COMPLETE] to your response
-regardless of how the conversation is going. No exceptions.
+You MUST complete the interview in exactly 5-7 questions. HARD LIMIT — 6
+questions maximum recommended. After your 6th question, actively look for
+reasons to complete. After your 7th question AT MOST, you MUST stop
+regardless of signal quality. No exceptions.
 
 Ask **5-7 questions** that cover these areas in order of priority:
 1. Why they're exploring entrepreneurship (motivation and trigger)
@@ -168,6 +245,11 @@ Ask **5-7 questions** that cover these areas in order of priority:
 5. Specific unfair advantages (insider knowledge, rare skills, unique access)
 6. Real constraints (time available, capital, family responsibilities)
 7. Hard "no" filters (things they'll absolutely never do)
+${INTELLIGENCE_LAYERS}
+
+These layers activate during questions 3-7 when the user has described
+enough context for detection. Questions 1-2 should still cover motivation
+and vision as specified above.
 
 YOUR FIRST QUESTION MUST BE warm and inviting since this is your first
 interaction with them. Example opener:
@@ -358,6 +440,7 @@ serve(async (req) => {
 
       // Build messages array - determine mode based on structured onboarding data
       let systemPrompt = SYSTEM_PROMPT_BASE;
+      let isModeA = false;
       const messages: { role: "system" | "user" | "assistant"; content: string }[] = [];
 
       // If this is a NEW interview (empty transcript), fetch structured onboarding context
@@ -383,6 +466,7 @@ serve(async (req) => {
           // MODE A: Has structured onboarding context
           console.log("dynamic-founder-interview: MODE A - structured onboarding context available");
           systemPrompt = SYSTEM_PROMPT_BASE + MODE_A_ADDON;
+          isModeA = true;
           messages.push({ role: "system" as const, content: systemPrompt });
 
           const contextMessage = `Before you begin the interview, here's what the founder already shared:
@@ -405,13 +489,42 @@ Now ask your first targeted question based on this context. Reference something 
           messages.push({ role: "system" as const, content: systemPrompt });
         }
       } else {
-        // Existing interview - use base prompt (mode was set at start)
+        // Existing interview - detect mode from transcript
+        const firstMessage = transcript[0];
+        isModeA = firstMessage?.content?.includes("Before you begin the interview") || false;
         messages.push({ role: "system" as const, content: systemPrompt });
       }
 
       // Add transcript history
       messages.push(...mapTranscriptToMessages(transcript));
-      
+
+      // ===== HARD STOP: Check question limit BEFORE calling AI =====
+      const aiQuestionCount = transcript.filter(t => t.role === "ai").length;
+      const userAnswerCount = transcript.filter(t => t.role === "user").length;
+      const maxQuestions = isModeA ? 5 : 6;
+
+      if (userAnswerCount >= maxQuestions) {
+        console.log(`dynamic-founder-interview: HARD STOP - ${userAnswerCount} user answers, max is ${maxQuestions}. Forcing completion.`);
+
+        // Save transcript as-is
+        await supabase
+          .from("founder_interviews")
+          .update({ transcript })
+          .eq("id", interviewId);
+
+        return new Response(
+          JSON.stringify({
+            interviewId,
+            question: null,
+            transcript,
+            canFinalize: true,
+            forceComplete: true,
+            message: "Interview complete. Generating your profile summary...",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Add instruction to generate next question
       messages.push({
         role: "user" as const,
@@ -475,12 +588,13 @@ Now ask your first targeted question based on this context. Reference something 
         console.error("dynamic-founder-interview: error updating transcript", updateError);
       }
 
-      // Calculate question count for canFinalize (allow ending after 3+ questions)
-      const aiQuestionCount = transcript.filter(t => t.role === "ai").length;
-      const canFinalize = aiQuestionCount >= 3;
+      // Recalculate after adding AI question
+      const updatedAiCount = transcript.filter(t => t.role === "ai").length;
+      const canFinalize = updatedAiCount >= 3;
+      const approachingLimit = updatedAiCount >= (maxQuestions - 1);
 
       return new Response(
-        JSON.stringify({ interviewId, question, transcript, canFinalize }),
+        JSON.stringify({ interviewId, question, transcript, canFinalize, approachingLimit }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -492,7 +606,7 @@ Now ask your first targeted question based on this context. Reference something 
       {
         role: "user" as const,
         content:
-          "Summarize this interview into the contextSummary JSON object defined in your system prompt. Return ONLY valid JSON.",
+          "Summarize this interview into the contextSummary JSON object defined in your system prompt. Return ONLY valid JSON. Include the ventureIntelligence field with vertical and business model detection results.",
       },
     ];
 
