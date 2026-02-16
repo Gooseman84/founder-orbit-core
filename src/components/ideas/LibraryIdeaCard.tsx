@@ -83,6 +83,11 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar, has
               </span>
             )}
             <SourceTypeBadge sourceType={(idea as any).source_type} size="sm" />
+            {(idea as any).source_meta?.source === "mavrik_recommendation" && (
+              <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+                From Mavrik
+              </span>
+            )}
           </div>
           <ModeBadge mode={idea.mode} size="sm" />
         </div>
