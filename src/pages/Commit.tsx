@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveVenture } from "@/hooks/useActiveVenture";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { FunnelStepper } from "@/components/shared/FunnelStepper";
+import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import type { CommitmentWindowDays, CommitmentFull } from "@/types/venture";
 import { addDays, format } from "date-fns";
-import { ArrowLeft, Check, Rocket, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, Lock, Rocket, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +45,8 @@ export default function Commit() {
   const { user } = useAuth();
   const { ensureVentureForIdea } = useActiveVenture();
   const { transitionTo, activeVenture, isLoading: ventureLoading } = useVentureState();
+  const { hasPro, hasFounder } = useFeatureAccess();
+  const canUseExtendedDurations = hasPro || hasFounder;
 
   const [idea, setIdea] = useState<IdeaRow | null>(null);
   const [oppScore, setOppScore] = useState<number | null>(null);
@@ -50,19 +54,21 @@ export default function Commit() {
   const [submitting, setSubmitting] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
-  const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(30);
+  const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(7);
   const [successMetric, setSuccessMetric] = useState("");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Check if there's already an active executing venture (for a different idea)
   const hasConflictingVenture = activeVenture && activeVenture.venture_state === "executing" && activeVenture.idea_id !== ideaId;
 
   // Check for active venture on mount and redirect if exists (safety net)
+  // Only redirect if the active venture is for a DIFFERENT idea
   useEffect(() => {
-    if (activeVenture && !ventureLoading) {
+    if (activeVenture && !ventureLoading && activeVenture.idea_id !== ideaId) {
       toast.error("You have an active venture. Complete, pivot, or kill it before starting a new one.");
       navigate("/dashboard");
     }
-  }, [activeVenture, ventureLoading, navigate]);
+  }, [activeVenture, ventureLoading, navigate, ideaId]);
 
   // Fetch idea + opportunity score
   useEffect(() => {
@@ -244,23 +250,36 @@ export default function Commit() {
               </Label>
               <RadioGroup
                 value={String(windowDays)}
-                onValueChange={(v) => setWindowDays(Number(v) as CommitmentWindowDays)}
+                onValueChange={(v) => {
+                  const days = Number(v) as CommitmentWindowDays;
+                  if (days > 7 && !canUseExtendedDurations) {
+                    setShowUpgradeModal(true);
+                    return;
+                  }
+                  setWindowDays(days);
+                }}
                 className="grid grid-cols-2 sm:grid-cols-4 gap-2"
               >
-                {WINDOW_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.value}
-                    className={cn(
-                      "flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors text-sm",
-                      windowDays === opt.value
-                        ? "border-primary bg-primary/10 text-foreground"
-                        : "border-border bg-muted/30 text-muted-foreground hover:border-primary/40"
-                    )}
-                  >
-                    <RadioGroupItem value={String(opt.value)} className="sr-only" />
-                    {opt.label}
-                  </label>
-                ))}
+                {WINDOW_OPTIONS.map((opt) => {
+                  const isLocked = opt.value > 7 && !canUseExtendedDurations;
+                  return (
+                    <label
+                      key={opt.value}
+                      className={cn(
+                        "flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors text-sm",
+                        isLocked
+                          ? "border-border bg-muted/20 text-muted-foreground/60 cursor-pointer"
+                          : windowDays === opt.value
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-muted/30 text-muted-foreground hover:border-primary/40"
+                      )}
+                    >
+                      <RadioGroupItem value={String(opt.value)} className="sr-only" />
+                      {opt.label}
+                      {isLocked && <Lock className="h-3 w-3 text-muted-foreground/60" />}
+                    </label>
+                  );
+                })}
               </RadioGroup>
             </div>
 
@@ -308,6 +327,11 @@ export default function Commit() {
           </CardContent>
         </Card>
       </div>
+      {/* Pro Upgrade Modal for locked durations */}
+      <ProUpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+      />
     </div>
   );
 }
