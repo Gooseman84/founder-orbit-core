@@ -88,6 +88,11 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar, has
                 From Mavrik
               </span>
             )}
+            {(idea as any).source_meta?.whyThisFounder?.includes("Adjacent Opportunity") && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded-full">
+                💡 Cross-Industry
+              </span>
+            )}
           </div>
           <ModeBadge mode={idea.mode} size="sm" />
         </div>

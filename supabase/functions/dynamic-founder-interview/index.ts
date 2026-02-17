@@ -22,6 +22,9 @@ Before each question, silently assess which gaps remain:
    - What have they been paid to do? (actual track record)
    - What do they know that most people don't?
    - Where do they have insider access or credibility?
+   - What is the UNDERLYING PATTERN of their expertise? (e.g., "automated
+     rule-based optimization under regulatory constraints" not just
+     "tax-loss harvesting")
 
 2. CONSTRAINTS (Hard Limits)
    - Hours per week available?
@@ -37,6 +40,9 @@ Before each question, silently assess which gaps remain:
 4. MARKET KNOWLEDGE
    - Which customer groups do they understand from the inside?
    - What problems have they personally experienced?
+   - Are there ADJACENT industries with similar workflow problems,
+     customer pain, or regulatory complexity that this founder's
+     expertise could transfer to?
 
 5. VISION
    - What does success look like in 3 years?
@@ -86,7 +92,15 @@ When asked to summarize, return ONLY this JSON structure:
     },
     "hardNoFilters": ["managing employees", "cold calling", "physical products"],
     "emotionalDrivers": ["freedom", "autonomy", "creative expression"],
-    "domainExpertise": ["fintech", "healthcare SaaS", "developer tools"]
+    "domainExpertise": ["fintech", "healthcare SaaS", "developer tools"],
+    "transferablePatterns": [
+      {
+        "abstractSkill": "the underlying capability described at a meta level",
+        "sourceContext": "the specific domain where they developed this",
+        "adjacentIndustries": ["industry 1", "industry 2", "industry 3"],
+        "transferRationale": "why this skill translates to these industries"
+      }
+    ]
   },
   "founderSummary": "A 2-3 sentence portrait of this founder - who they are, what drives them, and their unique edge.",
   "confidenceLevel": {
@@ -103,7 +117,9 @@ When asked to summarize, return ONLY this JSON structure:
     "industryAccess": "direct|indirect|none|not_applicable",
     "integrationStrategy": "integrate|replace|unclear|not_applicable",
     "aiFeasibility": "high|medium|low|not_applicable",
-    "modelSpecificSignals": {}
+    "modelSpecificSignals": {},
+    "patternTransferPotential": "high|medium|low",
+    "abstractExpertise": "one sentence describing the transferable pattern"
   },
   "ideaGenerationContext": "Dense paragraph optimized for ideation engine with key signals: skills, markets, constraints, goals. If a vertical was identified, include the specific industry and wedge. If a business model was detected, include the model type and critical signals (cold-start plan, productization readiness, audience traction, etc.)."
 }
@@ -116,6 +132,15 @@ SUMMARY RULES:
 - minimumMonthlyRevenue must be a number or the string "unspecified".
 - type must be one of: "side_income", "salary_replacement", "wealth_building".
 - founderSummary should be personal and specific, not generic.
+- transferablePatterns: Identify 1-3 abstract skills from the interview.
+  For each, list 2-4 adjacent industries where the same underlying
+  problem exists but may not have been solved with this approach.
+  Be creative but grounded — adjacencies should share structural
+  similarities (similar workflow patterns, regulatory complexity,
+  customer pain shape, or data characteristics), not just surface
+  similarities.
+- If the founder explicitly mentioned adjacent industries, include
+  those. If not, infer from the abstract skill pattern.
 
 VENTURE INTELLIGENCE RULES:
 - If no vertical was detected, set verticalIdentified to "none" and set vertical-specific fields to "not_applicable".
@@ -177,7 +202,46 @@ IF CONTENT: Existing audience traction? Monetization plan? Defensible
 angle?
 
 These probes REPLACE generic questions. Keep probing conversational.
-If they can't answer, that's valuable data — acknowledge warmly.`;
+If they can't answer, that's valuable data — acknowledge warmly.
+
+LAYER 3 — PATTERN TRANSFER DETECTION:
+After you understand the founder's core expertise (usually by question
+2-3), silently assess: what is the ABSTRACT version of their skill?
+
+Examples of abstraction:
+- "Tax-loss harvesting for RIAs" → "automated financial optimization
+  under regulatory constraints"
+- "Restaurant inventory management" → "perishable supply chain
+  optimization with variable demand"
+- "Insurance claims processing" → "document-to-decision workflows
+  with compliance requirements"
+- "Real estate deal analysis" → "multi-variable investment evaluation
+  with illiquid assets"
+
+Once you've identified the abstract pattern, ask ONE question that
+probes for adjacent awareness. Choose the best option:
+
+IF they described a narrow vertical problem:
+"That's a very specific expertise. Have you ever noticed other
+industries struggling with a similar type of problem — maybe not
+the same details, but the same underlying challenge?"
+
+IF they described a process/workflow skill:
+"The way you described [their process] — I can think of other
+industries where that same type of workflow exists but nobody's
+optimized it yet. Have you noticed that too?"
+
+IF they haven't thought about it (answer is vague or "no"):
+That's fine — note it as a signal. Don't push. The idea generator
+will handle cross-pollination even without the founder's awareness.
+Many disruptors didn't realize their skill was transferable until
+someone pointed it out.
+
+This probe is OPTIONAL and counts toward the question limit. Only
+ask it if you have enough remaining questions AND you've already
+filled your core extraction goals (skills, constraints, market
+knowledge). If you're at question 4 of 5, skip it — the pattern
+extraction will still happen in the summary phase.`;
 
 const MODE_A_ADDON = `
 ═══════════════════════════════════════════════════════════════════════════════

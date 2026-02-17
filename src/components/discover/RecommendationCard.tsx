@@ -111,6 +111,11 @@ export function RecommendationCard({
         <CardContent className="pt-0 animate-in fade-in slide-in-from-top-2 duration-300">
           {/* Why This Founder - Most Important Section */}
           <div className="bg-primary/5 rounded-lg p-4 mb-4 border border-primary/10">
+            {recommendation.whyThisFounder.includes("Adjacent Opportunity") && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full mb-2">
+                💡 Cross-Industry Insight
+              </span>
+            )}
             <h4 className="font-medium text-sm text-primary mb-2 flex items-center gap-2">
               <Target className="h-4 w-4" />
               Why this fits you
