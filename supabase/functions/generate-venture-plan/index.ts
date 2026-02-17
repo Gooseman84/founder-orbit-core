@@ -18,13 +18,25 @@ Transform founder context + idea into a concrete 30-day execution plan with week
 4. CONSTRAINT REALITY: What will actually block progress? Time, skills, money, fear?
 5. WEEKLY ARCS: How should momentum build? What's the right pacing for this specific founder?
 6. TASK SIZING: Are tasks completable in 15-45 min? Do they match skill level?
+7. FOUNDER LEVERAGE: If founderIntelligence is provided, how can tasks leverage the founder's specific insider knowledge, existing relationships, and industry access? Tasks should say "Call your 3 contacts at [industry]" not "Research the [industry] market."
+8. HARD NO COMPLIANCE: If hardNoFilters exist, NO task should require the founder to do anything on that list. If they said "no cold calling," all outreach tasks must be warm or async.
+9. CROSS-INDUSTRY VALIDATION: If this is a pattern transfer idea (transferablePatterns present), Week 1 should include tasks that validate whether the pattern actually applies in the target industry.
 
 ## INPUT SCHEMA
 {
   "venture": { "id": string, "name": string, "idea_id": string | null },
-  "idea": { "title": string, "description": string, "target_customer": string, "business_model_type": string } | null,
+  "idea": { "title": string, "description": string, "target_customer": string, "business_model_type": string, "source_meta": object | null } | null,
   "founderProfile": { "hoursPerWeek": number, "availableCapital": number, "riskTolerance": string, "skillSpikes": [], "energyGivers": [], "energyDrainers": [] },
-  "startDate": "YYYY-MM-DD"
+  "startDate": "YYYY-MM-DD",
+  "founderIntelligence": {
+    "insiderKnowledge": string[],
+    "customerIntimacy": string[],
+    "hardNoFilters": string[],
+    "constraints": object,
+    "founderSummary": string,
+    "ventureIntelligence": { "verticalIdentified": string, "businessModel": string, "industryAccess": string, "wedgeClarity": string },
+    "transferablePatterns": [{ "abstractSkill": string, "adjacentIndustries": string[] }]
+  } | null
 }
 
 ## OUTPUT SCHEMA (strict JSON)
@@ -201,6 +213,16 @@ OUTPUT:
 8. **HONEST TIMELINES**: If the goal seems unrealistic for this founder's constraints, say so in summary and adjust target.
 9. **EXACTLY 4 WEEKS**: Always generate exactly 4 weeks with 5-8 tasks each (more tasks for founders with more hours).
 
+## FOUNDER INTELLIGENCE RULES
+When founderIntelligence is present in the input, apply these rules:
+- LEVERAGE INSIDER ACCESS: If insiderKnowledge mentions specific expertise or customerIntimacy mentions specific customer groups, tasks should directly reference those assets. "Interview 3 dental practice owners you've worked with" beats "Find dental practices to interview."
+- RESPECT HARD NOs: Every task must be checked against hardNoFilters. If "cold calling" is a hard no, use async outreach instead. If "managing employees" is a hard no, keep everything solo-founder.
+- VERTICAL SPECIFICITY: If ventureIntelligence.verticalIdentified is set, tasks should reference specific tools, workflows, and terminology from that vertical — not generic business advice.
+- INDUSTRY ACCESS: If ventureIntelligence.industryAccess is "direct", tasks can assume warm introductions. If "indirect" or "none", tasks must build access from scratch.
+- PATTERN TRANSFER: If transferablePatterns exist and this appears to be a cross-industry play, include explicit validation tasks in Week 1: "Interview 3 people in [target industry] to confirm they face the same [abstract problem] you solved in [source industry]."
+
+When founderIntelligence is null, generate tasks using only the idea and founderProfile (standard behavior).
+
 ## OUTPUT
 Return ONLY valid JSON matching the schema. No markdown, no explanation, no preamble.`;
 
@@ -299,6 +321,19 @@ serve(async (req) => {
       );
     }
 
+    // Fetch Mavrik interview for enriched plan generation
+    const { data: interviewData } = await supabase
+      .from("founder_interviews")
+      .select("context_summary")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const interviewContext = interviewData?.context_summary as any || null;
+    console.log("generate-venture-plan: hasInterviewContext =", !!interviewContext);
+
     // Calculate start date (default: today)
     const planStartDate = startDate || new Date().toISOString().split("T")[0];
     const endDateObj = new Date(planStartDate);
@@ -312,9 +347,21 @@ serve(async (req) => {
         name: venture.name,
         idea_id: venture.idea_id,
       },
-      idea,
+      idea: idea ? {
+        ...idea,
+        source_meta: idea.source_meta || null,
+      } : null,
       founderProfile: profileRow.profile,
       startDate: planStartDate,
+      founderIntelligence: interviewContext ? {
+        insiderKnowledge: interviewContext.extractedInsights?.insiderKnowledge || [],
+        customerIntimacy: interviewContext.extractedInsights?.customerIntimacy || [],
+        hardNoFilters: interviewContext.extractedInsights?.hardNoFilters || [],
+        constraints: interviewContext.extractedInsights?.constraints || {},
+        founderSummary: interviewContext.founderSummary || "",
+        ventureIntelligence: interviewContext.ventureIntelligence || {},
+        transferablePatterns: interviewContext.extractedInsights?.transferablePatterns || [],
+      } : null,
     };
 
     console.log("generate-venture-plan: calling AI with payload", JSON.stringify(payload).slice(0, 500));

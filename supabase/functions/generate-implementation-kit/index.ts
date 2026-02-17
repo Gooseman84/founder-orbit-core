@@ -97,6 +97,19 @@ serve(async (req) => {
       );
     }
 
+    // Fetch Mavrik interview for enriched implementation context
+    const { data: interviewData } = await supabase
+      .from("founder_interviews")
+      .select("context_summary")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const interviewContext = interviewData?.context_summary as any || null;
+    console.log('[generate-implementation-kit] hasInterviewContext:', !!interviewContext);
+
     console.log('Creating implementation kit record...');
 
     // Create implementation kit record with 'generating' status
@@ -170,7 +183,8 @@ serve(async (req) => {
       techStack,
       userId,
       ventureId,
-      folder?.id || null
+      folder?.id || null,
+      interviewContext
     );
 
     return response;
@@ -195,7 +209,8 @@ async function generateDocumentsInBackground(
   techStack: any,
   userId: string,
   ventureId: string,
-  folderId: string | null
+  folderId: string | null,
+  interviewContext: any
 ) {
   // Create a new supabase client for background work
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -237,12 +252,37 @@ async function generateDocumentsInBackground(
       validation_stage: blueprint.validation_stage,
       success_metrics: blueprint.success_metrics,
       ai_summary: blueprint.ai_summary,
+      ai_recommendations: blueprint.ai_recommendations,
     }, null, 2);
 
+    // Build founder intelligence context string
+    const founderIntelStr = interviewContext ? `
+
+FOUNDER INTELLIGENCE (from Mavrik interview):
+- Vertical: ${interviewContext.ventureIntelligence?.verticalIdentified || "none"}
+- Business Model: ${interviewContext.ventureIntelligence?.businessModel || "unknown"}
+- Wedge Clarity: ${interviewContext.ventureIntelligence?.wedgeClarity || "unknown"}
+- Workflow Depth: ${interviewContext.ventureIntelligence?.workflowDepth || "unknown"}
+- Industry Access: ${interviewContext.ventureIntelligence?.industryAccess || "unknown"}
+- Integration Strategy: ${interviewContext.ventureIntelligence?.integrationStrategy || "unknown"}
+- AI Feasibility: ${interviewContext.ventureIntelligence?.aiFeasibility || "not_applicable"}
+- Insider Knowledge: ${JSON.stringify(interviewContext.extractedInsights?.insiderKnowledge || [])}
+- Customer Intimacy: ${JSON.stringify(interviewContext.extractedInsights?.customerIntimacy || [])}
+- Founder Summary: ${interviewContext.founderSummary || "N/A"}
+${interviewContext.extractedInsights?.transferablePatterns?.length ? `- Transferable Patterns: ${JSON.stringify(interviewContext.extractedInsights.transferablePatterns)}` : ""}
+
+If FOUNDER INTELLIGENCE is provided above, use it to:
+- Reference specific industry workflows, integrations, and terminology
+- Identify required third-party integrations based on the vertical (e.g., custodian APIs for wealth management, EHR systems for healthcare, POS systems for restaurants)
+- Align the architecture with the founder's integration strategy (integrate vs replace)
+- Account for industry-specific compliance or regulatory requirements
+- If this is a cross-industry pattern transfer, note which components are transferable from the source industry and which need new research
+` : "";
+
     // Build prompts
-    const northStarPrompt = buildNorthStarPrompt(blueprintTitle, blueprintContent, techStack);
-    const contractPrompt = buildArchitecturePrompt(blueprintTitle, techStack);
-    const slicePrompt = buildSlicePlanPrompt(blueprintTitle, blueprintContent, techStack);
+    const northStarPrompt = buildNorthStarPrompt(blueprintTitle, blueprintContent, techStack, founderIntelStr);
+    const contractPrompt = buildArchitecturePrompt(blueprintTitle, techStack, founderIntelStr);
+    const slicePrompt = buildSlicePlanPrompt(blueprintTitle, blueprintContent, techStack, founderIntelStr);
 
     console.log('Generating all 3 documents in parallel...');
 
@@ -316,7 +356,7 @@ async function generateDocumentsInBackground(
 }
 
 // Prompt builders
-function buildNorthStarPrompt(title: string, content: string, techStack: any): string {
+function buildNorthStarPrompt(title: string, content: string, techStack: any, founderIntel: string): string {
   return `You are a product strategy expert. Generate a North Star Spec document.
 
 BLUEPRINT:
@@ -328,7 +368,7 @@ Frontend: ${techStack.frontend}
 Backend: ${techStack.backend}
 AI Tool: ${techStack.aiTool}
 Deployment: ${techStack.deployment}
-
+${founderIntel}
 Generate a North Star Spec following this EXACT structure:
 
 # North Star Spec: ${title}
@@ -409,7 +449,7 @@ These are immutable principles that guide all product decisions:
 Make it specific, actionable, and based on the actual blueprint details. Use markdown formatting. Keep it to 2 pages maximum when printed.`;
 }
 
-function buildArchitecturePrompt(title: string, techStack: any): string {
+function buildArchitecturePrompt(title: string, techStack: any, founderIntel: string): string {
   const supabasePatterns = `### Supabase Patterns
 
 **Simple Operations:** Direct table access via Supabase client
@@ -489,7 +529,7 @@ Frontend: ${techStack.frontend}
 Backend: ${techStack.backend}
 AI Tool: ${techStack.aiTool}
 Deployment: ${techStack.deployment}
-
+${founderIntel}
 Generate an Architecture Contract following this structure:
 
 # Architecture Contract: ${title}
@@ -626,7 +666,7 @@ Before every feature:
 Make it tech-stack-specific and actionable for ${techStack.frontend} + ${techStack.backend}.`;
 }
 
-function buildSlicePlanPrompt(title: string, content: string, techStack: any): string {
+function buildSlicePlanPrompt(title: string, content: string, techStack: any, founderIntel: string): string {
   const supabaseAuth = `1. **Set up Supabase Auth**
    - Enable email/password authentication
    - Configure email templates
@@ -666,7 +706,7 @@ Business: ${title}
 Blueprint: ${content}
 Tech Stack: ${techStack.frontend} + ${techStack.backend}
 Deployment: ${techStack.deployment}
-
+${founderIntel}
 Generate a plan following this structure:
 
 # Thin Vertical Slice Plan: ${title}
