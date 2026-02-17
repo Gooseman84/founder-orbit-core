@@ -32,11 +32,11 @@ export interface PaywallCopy {
 
 export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
   IDEA_LIMIT_REACHED: {
-    headline: "You've used your trial idea generations.",
+    headline: "You're onto something. Keep going.",
     subhead:
-      "You've generated 3 ideas during your trial. Unlock unlimited idea generations and explore every possibility your future could hold.",
-    cta: "Go Pro — Generate Without Limits",
-    microcopy: "Upgrade anytime. Cancel anytime.",
+      "You've generated 3 ideas during your trial. Your best match might be one generation away — unlock unlimited access to find it.",
+    cta: "Unlock Unlimited Ideas",
+    microcopy: "Most founders find their best idea on the 4th or 5th try.",
   },
   LIBRARY_FULL_TRIAL: {
     headline: "Your Library is full because your potential is bigger than the trial.",
@@ -89,11 +89,11 @@ export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
       "Your next breakthrough is waiting in the Blueprint you haven't created yet.",
   },
   TRIAL_EXPIRED: {
-    headline: "Your 7-day trial has ended.",
+    headline: "Your trial is over. Your momentum doesn't have to be.",
     subhead:
-      "You've explored TrueBlazer's potential. Now unlock the full experience with Pro to continue your founder journey.",
-    cta: "Subscribe to Pro",
-    microcopy: "Don't let your momentum stop here.",
+      "Mavrik mapped your expertise to real opportunities. Pro gives you the tools to validate, plan, and build the best one.",
+    cta: "Continue with Pro",
+    microcopy: "Everything you created is still here. Pick up where you left off.",
   },
   FUSION_REQUIRES_PRO: {
     headline: "Idea Fusion is a Pro feature.",
@@ -124,11 +124,11 @@ export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
     microcopy: "Turn intuition into data-driven decisions.",
   },
   FEATURE_REQUIRES_PRO: {
-    headline: "This is a Pro feature.",
+    headline: "This feature is part of TrueBlazer Pro.",
     subhead:
-      "Unlock the full TrueBlazer toolkit with Pro. Get access to advanced features designed to accelerate your founder journey.",
+      "Pro gives you unlimited ideas, CFA-level financial scoring, cross-industry opportunities, build-ready specs, and an AI workspace that knows your domain.",
     cta: "Upgrade to Pro",
-    microcopy: "Upgrade anytime. Cancel anytime.",
+    microcopy: "Cancel anytime. Your work is always saved.",
   },
   IMPORT_REQUIRES_PRO: {
     headline: "Import Ideas is a Pro feature.",
@@ -159,11 +159,11 @@ export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
     microcopy: "Know what's coming before everyone else.",
   },
   IMPLEMENTATION_KIT_REQUIRES_PRO: {
-    headline: "Unlock Your Build Specs",
+    headline: "Your build specs are ready. Unlock them.",
     subhead:
-      "The Implementation Kit includes your North Star Spec, Architecture Contract, and Thin Vertical Slice Plan — everything you need to start building.",
-    cta: "Upgrade to Pro",
-    microcopy: "Turn your idea into implementation-ready specs.",
+      "The Implementation Kit generates a North Star Spec, Architecture Contract, and Vertical Slice Plan customized to your venture and tech stack. Copy, paste, build.",
+    cta: "Unlock Build Specs",
+    microcopy: "Works with Lovable, Cursor, v0, and any AI coding tool.",
   },
   PROMPT_TYPE_REQUIRES_PRO: {
     headline: "Unlock Build Prompts",
@@ -187,21 +187,21 @@ export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
     microcopy: "Know exactly what you're building before you build it.",
   },
   FINANCIAL_SCORE_REQUIRES_PRO: {
-    headline: "Financial Viability Score is a Pro feature.",
+    headline: "Know the numbers before you commit.",
     subhead:
-      "Get detailed financial projections and viability scores for your ideas. Understand revenue potential, costs, and profitability.",
-    cta: "Unlock Financial Scoring",
-    microcopy: "Make financially informed decisions.",
+      "Get a CFA-level financial analysis across 6 dimensions: market size, unit economics, time to revenue, competitive density, capital requirements, and founder-market fit.",
+    cta: "Unlock Financial Analysis",
+    microcopy: "Built with the rigor of a Chartered Financial Analyst.",
   },
 };
 
 // Default fallback copy
 export const DEFAULT_PAYWALL_COPY: PaywallCopy = {
-  headline: "Unlock TrueBlazer Pro",
+  headline: "This feature is part of TrueBlazer Pro.",
   subhead:
-    "Get unlimited ideas, full Blueprints, advanced Workspace, and more.",
+    "Pro gives you unlimited ideas, CFA-level financial scoring, cross-industry opportunities, build-ready specs, and an AI workspace that knows your domain.",
   cta: "Upgrade to Pro",
-  microcopy: "Upgrade anytime. Cancel anytime.",
+  microcopy: "Cancel anytime. Your work is always saved.",
 };
 
 // Helper to get copy with fallback

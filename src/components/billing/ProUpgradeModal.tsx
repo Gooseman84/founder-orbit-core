@@ -22,11 +22,11 @@ import {
 } from "lucide-react";
 
 const PRO_FEATURES = [
-  { icon: Infinity, text: "Unlimited idea generations", highlight: true },
-  { icon: Sparkles, text: "All 10 generation modes (Chaos, Memetic, Fusion...)" },
-  { icon: Target, text: "Unlimited saved ideas & Blueprints" },
-  { icon: Rocket, text: "Full Blueprint breakdowns & Workspace" },
-  { icon: Zap, text: "Tasks, Quests, Daily Pulse & exports" },
+  { icon: Infinity, text: "Unlimited ideas — generate until you find the one", highlight: true },
+  { icon: Sparkles, text: "Cross-industry pattern matching & adjacent opportunities" },
+  { icon: Target, text: "CFA-level Financial Viability Scores on every idea" },
+  { icon: Rocket, text: "Implementation Kit — build specs for Lovable, Cursor, v0" },
+  { icon: Zap, text: "30-day plans, daily tasks, and AI workspace" },
 ];
 
 // Pricing configuration
