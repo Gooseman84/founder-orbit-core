@@ -79,13 +79,13 @@ export const TrialExpiredModal = ({ open, onDismiss }: TrialExpiredModalProps) =
   };
 
   const proFeatures = [
-    { icon: Zap, text: "Unlimited AI-powered idea generations" },
-    { icon: Sparkles, text: "All 10 ideation modes unlocked" },
-    { icon: Target, text: "Opportunity scoring & idea comparison" },
-    { icon: TrendingUp, text: "Market radar & trend insights" },
-    { icon: Compass, text: "Full founder blueprint access" },
-    { icon: FileText, text: "Unlimited workspace documents" },
-    { icon: BarChart3, text: "Advanced analytics & exports" },
+    { icon: Zap, text: "Unlimited idea generation — explore every angle" },
+    { icon: Sparkles, text: "Cross-industry opportunities from your expertise" },
+    { icon: Target, text: "CFA-level Financial Viability Scores" },
+    { icon: TrendingUp, text: "Full Blueprint with 30-day execution plan" },
+    { icon: Compass, text: "Implementation Kit for Lovable, Cursor, or v0" },
+    { icon: FileText, text: "AI workspace that writes in your domain language" },
+    { icon: BarChart3, text: "Market radar, idea fusion & comparison tools" },
   ];
 
   return (
@@ -105,7 +105,7 @@ export const TrialExpiredModal = ({ open, onDismiss }: TrialExpiredModalProps) =
             Your 7-Day Trial Has Ended
           </DialogTitle>
           <DialogDescription className="text-base pt-2">
-            You've explored TrueBlazer's potential. Subscribe to Pro to continue building your founder journey.
+            You've seen what Mavrik found in your expertise. Don't lose that momentum — unlock the full toolkit to go from clarity to execution.
           </DialogDescription>
         </DialogHeader>
 

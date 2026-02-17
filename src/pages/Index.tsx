@@ -84,7 +84,7 @@ const HeroSection = ({ onNavigate }: { onNavigate: () => void }) => {
         
         {/* Subhead */}
         <p className={`text-xl md:text-2xl text-muted-foreground mb-4 max-w-3xl mx-auto leading-relaxed transition-all duration-1000 delay-300 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          The founder intelligence platform that validates your business idea, stress-tests your model, and gives you a clear go/no-go before you write a single line of code.
+          Whether you have 10 ideas or zero, TrueBlazer's AI co-founder interviews you, maps your expertise to the best opportunities — including ones you'd never find on your own — and gives you a financial go/no-go before you invest a single weekend.
         </p>
         
         {/* CTAs */}
@@ -95,7 +95,7 @@ const HeroSection = ({ onNavigate }: { onNavigate: () => void }) => {
             className="text-lg px-10 py-7 group min-h-[60px]" 
             onClick={onNavigate}
           >
-            Validate Your Idea
+            Find What's Worth Building
             <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
           </Button>
           
@@ -120,7 +120,7 @@ const SocialProofSection = () => {
     <section ref={ref} className="py-8 md:py-12 px-6 border-y border-border/20 bg-muted/10">
       <div className={`container mx-auto max-w-4xl text-center transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
         <p className="text-muted-foreground text-sm md:text-base">
-          Built by a <span className="text-foreground font-medium">CFA Charterholder & CFP</span> who evaluates business models for a living.
+          Built by a <span className="text-foreground font-medium">CFA Charterholder & CFP</span> who evaluates business models for a living. Trusted by founders turning side-project weekends into real businesses.
         </p>
       </div>
     </section>
@@ -157,13 +157,13 @@ const ProblemSolutionSection = () => {
             
             <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                AI coding tools made building easy. But <span className="text-foreground font-medium">90% of startups still fail.</span>
+                Cursor, Lovable, and Bolt made building easy. But most founders are still stuck at the same place: <span className="text-foreground font-medium">the blank page.</span>
               </p>
               <p>
-                Why? Because founders skip the most important step: figuring out if their idea is actually worth building.
+                You have the expertise. You see problems everywhere. But you can't tell which idea is worth your limited time — so you build nothing, or worse, you build the wrong thing.
               </p>
-              <p>
-                Every week spent building the wrong thing is a week you'll never get back. And no amount of vibe coding can fix a fundamentally flawed business model.
+              <p className="text-foreground font-medium">
+                The bottleneck isn't code anymore. It's clarity.
               </p>
             </div>
           </div>
@@ -182,13 +182,13 @@ const ProblemSolutionSection = () => {
             
             <div className="space-y-4 text-foreground/80 leading-relaxed">
               <p>
-                <span className="text-foreground font-medium">TrueBlazer is the due diligence layer</span> between having an idea and committing to build it.
+                <span className="text-foreground font-medium">TrueBlazer is an AI co-founder that knows you</span> — your skills, your constraints, your unfair advantages — and uses that to find the business opportunities hiding in your expertise.
               </p>
               <p>
-                We combine AI-powered analysis with the financial rigor of a CFA Charterholder to give you the one thing every founder needs:
+                It doesn't just validate your idea. It discovers opportunities you'd never think of yourself, including in industries you've never worked in.
               </p>
               <p className="text-primary font-semibold text-lg">
-                Confidence that you're building something people will actually pay for.
+                Then it stress-tests every angle with CFA-level financial rigor so you commit with confidence, not hope.
               </p>
             </div>
           </div>
@@ -208,21 +208,21 @@ const TransformationSection = () => {
       label: "DISCOVER",
       icon: Compass,
       title: "Discover What to Build",
-      description: "Our AI co-founder interviews you to uncover your unfair advantages, real constraints, and the ideas hiding in your expertise. No generic brainstorming—personalized recommendations based on who you are."
+      description: "Mavrik, your AI co-founder, interviews you in a 5-minute conversation to map your expertise, insider knowledge, and constraints. It identifies business opportunities in your domain — and in adjacent industries where your skills give you an unfair edge."
     },
     {
       step: "02",
       label: "VALIDATE",
       icon: Target,
       title: "Validate Before You Invest",
-      description: "Stress-test your concept against market demand, unit economics, competitive landscape, and your personal constraints. Get a Financial Viability Score that tells you if this idea can actually make money."
+      description: "Every idea gets a Financial Viability Score built on CFA-level analysis: market size, unit economics, competitive density, capital requirements, and founder-market fit. You'll know which ideas can actually make money before you spend a dime."
     },
     {
       step: "03",
       label: "EXECUTE",
       icon: Rocket,
       title: "Build With Confidence",
-      description: "Get a complete implementation blueprint ready for Lovable, Cursor, or any AI coding tool. Plus your SaaS Vibe Coding Kit with architecture specs, vertical slice plans, and ready-to-paste prompts."
+      description: "Commit to one idea and get a complete execution package: a personalized Blueprint, a 30-day plan with tasks tailored to your schedule and network, and implementation specs ready to paste into Lovable, Cursor, or v0."
     }
   ];
 
@@ -296,22 +296,22 @@ const WhoThisIsForSection = () => {
     {
       icon: Clock,
       title: "The Side-Hustle Strategist",
-      description: "You have 10-15 hours a week and zero room for wasted effort. TrueBlazer finds the idea that fits your schedule, skills, and financial goals."
+      description: "You have 10-15 hours a week and can't afford to waste a single one. TrueBlazer finds the idea that fits your schedule, leverages your existing network, and gets to revenue fastest."
     },
     {
       icon: User,
       title: "The Domain Expert",
-      description: "You've spent years in your industry and see problems everywhere. TrueBlazer turns your insider knowledge into a validated business concept."
+      description: "You've spent years in your industry and see problems everywhere — but you don't know which one is a business. TrueBlazer turns your insider knowledge into scored, validated opportunities, including cross-industry plays you'd never spot alone."
     },
     {
       icon: Target,
       title: "The Analytical Builder",
-      description: "You don't trust gut feelings — you trust data. TrueBlazer gives you financial viability scores, market analysis, and a clear go/no-go before you invest a dime."
+      description: "You don't trust gut feelings. TrueBlazer gives you six-dimension financial viability scores, market analysis, and a clear go/no-go — all built with CFA-level rigor."
     },
     {
       icon: Repeat,
       title: "The Idea Hoarder",
-      description: "You have 47 ideas in a Google Doc and have started none. TrueBlazer forces focus: one venture at a time, validated before you build."
+      description: "You have 47 ideas in a Google Doc and zero clarity on which one to pursue. TrueBlazer scores them all, ranks them by YOUR specific profile, and forces focus: one venture at a time."
     }
   ];
 
@@ -353,11 +353,11 @@ const WeekOneSection = () => {
   const { ref, isVisible } = useScrollAnimation({ threshold: 0.2 });
 
   const deliverables = [
-    "A personalized Mavrik interview that uncovers your unfair advantages",
-    "3-5 venture ideas ranked by how well they fit YOUR specific profile",
-    "Financial Viability Scores on your top ideas",
-    "A validated Blueprint with market analysis and competitive positioning",
-    "Implementation-ready specs for Lovable, Cursor, or your preferred coding tool"
+    "Clarity on exactly what to build — based on your expertise, not generic templates",
+    "5 personalized venture ideas scored across 6 financial dimensions",
+    "Cross-industry opportunities you'd never discover on your own",
+    "A 30-day execution plan with tasks tailored to your schedule and network",
+    "Build-ready specs you can paste directly into Lovable, Cursor, or v0"
   ];
 
   return (
@@ -395,13 +395,13 @@ const PricingSection = ({ onNavigate }: { onNavigate: () => void }) => {
   const { ref, isVisible } = useScrollAnimation({ threshold: 0.2 });
 
   const features = [
-    "Mavrik AI Interview (personalized idea discovery)",
-    "Unlimited Idea Generation & Scoring",
-    "Financial Viability Scores with full breakdown",
-    "Venture Blueprints & Validation",
-    "SaaS Vibe Coding Kit (implementation specs)",
-    "Workspace & Document Library",
-    "Voice-to-Text across all inputs"
+    "Mavrik AI co-founder interview — finds opportunities in your expertise",
+    "Unlimited idea generation across 10 modes",
+    "CFA-level Financial Viability Scores (6 dimensions)",
+    "Personalized Blueprints with 30-day execution plans",
+    "Implementation Kit — specs ready for Lovable, Cursor, and v0",
+    "Cross-industry pattern matching (adjacent opportunities)",
+    "AI workspace that knows your domain and writes in your language"
   ];
 
   return (
@@ -497,12 +497,12 @@ const FinalCTASection = ({ onNavigate }: { onNavigate: () => void }) => {
       
       <div className={`container mx-auto max-w-4xl text-center relative z-10 transition-all duration-1000 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
         <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-8 leading-tight">
-          Your next idea deserves more than{" "}
-          <span className="text-muted-foreground">a Google Doc.</span>
+          Stop researching.{" "}
+          <span className="text-muted-foreground">Start building the right thing.</span>
         </h2>
         
         <p className={`text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto transition-all duration-1000 delay-200 ${isVisible ? "opacity-100" : "opacity-0"}`}>
-          In 7 days, you'll know exactly what to build, why it will work, and how to start. Free.
+          In 7 days, you'll have clarity, a plan, and the confidence to commit. Try it free.
         </p>
         
         <div className={`flex flex-col items-center gap-4 transition-all duration-1000 delay-400 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
@@ -512,7 +512,7 @@ const FinalCTASection = ({ onNavigate }: { onNavigate: () => void }) => {
             className="text-lg px-12 py-8 group min-h-[64px] shadow-2xl shadow-primary/20" 
             onClick={onNavigate}
           >
-            Validate Your Idea
+            Find What's Worth Building
             <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
           </Button>
         </div>
