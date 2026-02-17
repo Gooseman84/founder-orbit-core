@@ -42,17 +42,18 @@ export const useFeatureAccess = (): UseFeatureAccessReturn => {
       ? rawPlan 
       : "trial";
     
-    // Check if user has paid Pro subscription (not trialing)
-    const hasPro = hasPaidPlan(plan) && status === "active";
-    const hasFounder = plan === "founder" && status === "active";
+    // Check if user has paid Pro subscription (including Stripe trialing)
+    const hasPro = hasPaidPlan(plan) && (status === "active" || status === "trialing");
+    const hasFounder = plan === "founder" && (status === "active" || status === "trialing");
     
     // Trial-specific states
     const hasTrialAccess = isTrialing && !subscriptionTrialExpired;
     
-    // Trial expired: time-based from useSubscription
-    const isTrialExpired = subscriptionTrialExpired && !hasPro && !hasFounder;
+    // Only locked out if on app-side trial (no card) and expired
+    // Stripe trial users can't be "locked out" — they have a card on file
+    const isTrialExpired = subscriptionTrialExpired && plan === "trial";
     
-    // Locked out: trial expired and no active subscription
+    // Locked out: app-side trial expired and no active subscription
     const isLockedOut = isTrialExpired;
     
     // Days remaining in trial

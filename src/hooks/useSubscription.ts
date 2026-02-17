@@ -11,6 +11,7 @@ interface SubscriptionData {
   currentPeriodEnd: string | null;
   cancelAt: string | null;
   renewalPeriod: string | null;
+  trialEnd: string | null;
 }
 
 interface UseSubscriptionReturn {
@@ -48,7 +49,7 @@ export const useSubscription = (): UseSubscriptionReturn => {
     queryKey: ["user-subscription", user?.id],
     queryFn: async (): Promise<SubscriptionData> => {
       if (!user) {
-        return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
+        return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null, trialEnd: null };
       }
 
       try {
@@ -60,7 +61,7 @@ export const useSubscription = (): UseSubscriptionReturn => {
 
         if (queryError) {
           console.error("[useSubscription] RPC error:", queryError);
-          return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
+          return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null, trialEnd: null };
         }
 
         // RPC returns an array, take first result
@@ -71,6 +72,7 @@ export const useSubscription = (): UseSubscriptionReturn => {
             current_period_end: string | null;
             cancel_at: string | null;
             renewal_period: string | null;
+            trial_end: string | null;
           };
           return {
             plan: normalizePlan(sub.plan),
@@ -78,14 +80,15 @@ export const useSubscription = (): UseSubscriptionReturn => {
             currentPeriodEnd: sub.current_period_end || null,
             cancelAt: sub.cancel_at || null,
             renewalPeriod: sub.renewal_period || null,
+            trialEnd: sub.trial_end || null,
           };
         }
 
         // No subscription found, use defaults
-        return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
+        return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null, trialEnd: null };
       } catch (err) {
         console.error("[useSubscription] Unexpected error:", err);
-        return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null };
+        return { plan: "trial", status: "active", currentPeriodEnd: null, cancelAt: null, renewalPeriod: null, trialEnd: null };
       }
     },
     enabled: !!user,
@@ -105,25 +108,39 @@ export const useSubscription = (): UseSubscriptionReturn => {
   // Determine if user has an active paid plan
   const plan = subscription?.plan || "trial";
   const status = subscription?.status || "active";
-  const hasPaidSubscription = (plan === "pro" || plan === "founder") && status === "active";
+  const hasPaidSubscription = (plan === "pro" || plan === "founder") && (status === "active" || status === "trialing");
 
-  // Time-based trial expiration from account creation date
-  const userCreatedAt = user?.created_at ? new Date(user.created_at) : null;
-  const trialEndDate = userCreatedAt 
-    ? new Date(userCreatedAt.getTime() + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000)
-    : null;
+  // Stripe-managed trial: plan=pro, status=trialing
+  const isStripeTrialing = plan === "pro" && status === "trialing";
+  // App-side trial: plan=trial (no Stripe subscription)
+  const isAppTrialing = plan === "trial" && !hasPaidSubscription;
+  const isTrialing = isStripeTrialing || isAppTrialing;
 
-  const isTrialing = !hasPaidSubscription && plan === "trial";
-  
   let daysUntilTrialEnd: number | null = null;
   let isTrialExpired = false;
 
-  if (isTrialing && trialEndDate) {
+  if (isStripeTrialing && subscription?.trialEnd) {
+    // Stripe-managed trial — compute from trial_end
+    const trialEnd = new Date(subscription.trialEnd);
     const now = new Date();
-    const diffTime = trialEndDate.getTime() - now.getTime();
+    const diffTime = trialEnd.getTime() - now.getTime();
     daysUntilTrialEnd = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     if (daysUntilTrialEnd < 0) daysUntilTrialEnd = 0;
-    isTrialExpired = daysUntilTrialEnd <= 0;
+    isTrialExpired = false; // Can't expire while Stripe says "trialing"
+  } else if (isAppTrialing) {
+    // App-side fallback for users without Stripe subscription
+    const userCreatedAt = user?.created_at ? new Date(user.created_at) : null;
+    const trialEndDate = userCreatedAt 
+      ? new Date(userCreatedAt.getTime() + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000)
+      : null;
+    
+    if (trialEndDate) {
+      const now = new Date();
+      const diffTime = trialEndDate.getTime() - now.getTime();
+      daysUntilTrialEnd = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (daysUntilTrialEnd < 0) daysUntilTrialEnd = 0;
+      isTrialExpired = daysUntilTrialEnd <= 0;
+    }
   }
 
   // Stripe-based period end (for paid subscriptions)

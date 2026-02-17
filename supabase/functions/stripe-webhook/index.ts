@@ -94,7 +94,7 @@ serve(async (req) => {
         const sub = event.data.object as Stripe.Subscription;
         const customerId = sub.customer as string;
 
-        console.log("[stripe-webhook] Subscription created:", sub.id, "Status:", sub.status);
+        console.log("[stripe-webhook] Subscription created:", sub.id, "Status:", sub.status, "Trial end:", sub.trial_end);
 
         const { error } = await supabase
           .from("user_subscriptions")
@@ -105,6 +105,7 @@ serve(async (req) => {
             current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
             cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
             renewal_period: sub.items.data[0]?.plan?.interval || null,
+            trial_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
           })
           .eq("stripe_customer_id", customerId);
 
@@ -138,6 +139,7 @@ serve(async (req) => {
             current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
             cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
             renewal_period: sub.items.data[0]?.plan?.interval || null,
+            trial_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
           })
           .eq("stripe_customer_id", customerId);
 
