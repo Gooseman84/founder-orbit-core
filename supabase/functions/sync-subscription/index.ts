@@ -153,16 +153,21 @@ const toIsoOrNull = (unixSeconds: unknown): string | null => {
      }
  
      // Update or insert subscription record
+      // Handle trial_end
+      const rawTrialEnd = (activeSub as any).trial_end ?? (activeSub as any).trialEnd;
+      const trialEnd = toIsoOrNull(rawTrialEnd);
+
       const upsertData = {
-        user_id: userId,
-        plan,
-        status,
-        stripe_customer_id: customerId,
-        stripe_subscription_id: activeSub.id,
-        current_period_end: currentPeriodEnd,
-        cancel_at: cancelAt,
-        renewal_period: renewalPeriod,
-      };
+         user_id: userId,
+         plan,
+         status,
+         stripe_customer_id: customerId,
+         stripe_subscription_id: activeSub.id,
+         current_period_end: currentPeriodEnd,
+         cancel_at: cancelAt,
+         renewal_period: renewalPeriod,
+         trial_end: trialEnd,
+       };
       
       logStep("Upserting subscription data", upsertData);
       

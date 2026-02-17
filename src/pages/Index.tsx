@@ -476,7 +476,7 @@ const PricingSection = ({ onNavigate }: { onNavigate: () => void }) => {
               </Button>
               
               <p className="text-sm text-muted-foreground">
-                No credit card required. Cancel in 2 clicks.
+                7 days free. Cancel anytime before you're charged.
               </p>
             </div>
           </div>
@@ -502,7 +502,7 @@ const FinalCTASection = ({ onNavigate }: { onNavigate: () => void }) => {
         </h2>
         
         <p className={`text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto transition-all duration-1000 delay-200 ${isVisible ? "opacity-100" : "opacity-0"}`}>
-          In 7 days, you'll have clarity, a plan, and the confidence to commit. Try it free.
+          Start your 7-day free trial — no charge until you're ready.
         </p>
         
         <div className={`flex flex-col items-center gap-4 transition-all duration-1000 delay-400 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>

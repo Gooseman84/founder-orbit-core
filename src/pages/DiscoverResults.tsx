@@ -5,12 +5,14 @@ import { ArrowLeft, Compass, Info, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { FunnelStepper } from "@/components/shared/FunnelStepper";
 import { DiscoverResultsLoading } from "@/components/discover/DiscoverResultsLoading";
 import { RecommendationCard } from "@/components/discover/RecommendationCard";
 import { RegeneratePanel } from "@/components/discover/RegeneratePanel";
+import { Button } from "@/components/ui/button";
 import type { Recommendation, GenerationResult } from "@/types/recommendation";
 
 export default function DiscoverResults() {
@@ -18,6 +20,7 @@ export default function DiscoverResults() {
   const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { hasPro, hasFounder } = useFeatureAccess();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -427,6 +430,44 @@ export default function DiscoverResults() {
                 </div>
               ))}
             </div>
+
+            {/* Trial CTA - show only if user doesn't have Pro */}
+            {!hasPro && !hasFounder && (
+              <div className="mt-8 p-6 rounded-2xl bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <h3 className="text-xl font-bold mb-2">
+                  Your ideas are ready. Go deeper for free.
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  Start your 7-day free trial to unlock Financial Viability Scores, full Blueprints, and implementation specs. Your card won't be charged for 7 days.
+                </p>
+                <Button 
+                  variant="gradient" 
+                  size="lg" 
+                  onClick={async () => {
+                    try {
+                      const { data, error } = await invokeAuthedFunction<{ url: string }>("create-checkout-session", {
+                        body: { plan: "yearly" },
+                      });
+                      if (error || !data?.url) throw error || new Error("No URL returned");
+                      window.location.href = data.url;
+                    } catch (e: any) {
+                      toast({
+                        title: "Failed to start trial",
+                        description: e?.message || "Please try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="px-8"
+                >
+                  Start 7-Day Free Trial
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Cancel anytime before your trial ends. No charge.
+                </p>
+              </div>
+            )}
 
             {/* Browse all link */}
             <div className="text-center mb-8">

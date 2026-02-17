@@ -195,7 +195,11 @@ serve(async (req) => {
       );
     }
 
-    console.log("[create-checkout-session] Creating checkout session for customer:", customerId);
+    // Check if this user has ever had a paid subscription (prevent trial abuse)
+    const hasHadSubscription = sub.stripe_subscription_id || 
+      sub.plan === "pro" || sub.plan === "founder";
+
+    console.log("[create-checkout-session] Creating checkout session for customer:", customerId, "hasHadSubscription:", !!hasHadSubscription);
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -207,7 +211,11 @@ serve(async (req) => {
         metadata: {
           supabase_user_id: userId,
         },
+        // 7-day free trial for new subscribers only
+        ...(hasHadSubscription ? {} : { trial_period_days: 7 }),
       },
+      // Always collect payment method upfront
+      payment_method_collection: "always",
       allow_promotion_codes: true,
     });
 
