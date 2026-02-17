@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const buildSystemPrompt = (hasExtendedIntake: boolean, businessTypeHint: string, difficultyGuidance: string) => `You are TrueBlazer.AI, the world's greatest business ideation engine for founders. You analyze founder profiles deeply and generate highly personalized, actionable business ideas that are realistic and well-matched to the founder's unique situation.
+const buildSystemPrompt = (hasExtendedIntake: boolean, businessTypeHint: string, difficultyGuidance: string, hasInterviewContext: boolean) => `You are TrueBlazer.AI, the world's greatest business ideation engine for founders. You analyze founder profiles deeply and generate highly personalized, actionable business ideas that are realistic and well-matched to the founder's unique situation.
 
 You will receive a JSON object containing a founder profile with these fields:
 
@@ -90,7 +90,41 @@ Guidelines:
 ${hasExtendedIntake ? `- If they want autopilot income, prioritize passive/semi-passive models
 - If they want to be the face, suggest personal brand opportunities
 - If they prefer structure, suggest businesses with clear frameworks
-- Match business archetypes to their stated preferences` : ''}`;
+- Match business archetypes to their stated preferences` : ''}
+${hasInterviewContext ? `
+**MAVRIK INTERVIEW INTELLIGENCE:**
+The founder has completed a Mavrik discovery interview. The profile data 
+includes a "mavrik_interview" object with deeply extracted insights. 
+This is your HIGHEST-QUALITY signal — prioritize it over the basic 
+profile fields when they conflict.
+
+Key fields to use:
+- extractedInsights.insiderKnowledge: Their specific unfair advantages
+- extractedInsights.customerIntimacy: Customer groups they truly understand
+- extractedInsights.transferablePatterns: Abstract skills that apply to adjacent industries
+- ventureIntelligence.verticalIdentified: Detected industry vertical
+- ventureIntelligence.businessModel: Detected business model type
+- ventureIntelligence.abstractExpertise: The meta-level transferable skill
+- ideaGenerationContext: Dense summary optimized for ideation
+
+PATTERN TRANSFER REQUIREMENT:
+If transferablePatterns are present, AT LEAST 1 of your generated ideas 
+MUST be a cross-industry pattern transfer — applying the founder's core 
+expertise to an adjacent industry they may not have considered.
+
+For pattern transfer ideas:
+- Clearly explain WHY their skill translates (structural similarity, not surface similarity)
+- Start the why_it_fits field with "💡 Adjacent Opportunity: " so the UI can badge these ideas
+- Set is_pattern_transfer to true
+- Fill transfer_from and transfer_to fields
+- Be specific about the target industry and customer
+- Don't just pick a random industry — use the adjacentIndustries from transferablePatterns
+
+For all ideas when interview context is available:
+- Reference specific insider knowledge, not generic skills
+- Use the ventureIntelligence to match business model type
+- If a vertical was identified, include ideas that go deeper into that vertical
+- Blend interview insights with profile data for maximum personalization` : ''}`;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -170,6 +204,24 @@ serve(async (req) => {
     const hasExtendedIntake = !!extendedIntake;
     console.log("generate-ideas: hasExtendedIntake =", hasExtendedIntake);
 
+    // Fetch latest completed Mavrik interview for enriched context
+    const { data: latestInterview, error: interviewError } = await supabase
+      .from("founder_interviews")
+      .select("context_summary")
+      .eq("user_id", resolvedUserId)
+      .eq("status", "completed")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (interviewError) {
+      console.log("generate-ideas: error fetching interview context (non-fatal):", interviewError);
+    }
+
+    const interviewContext = latestInterview?.context_summary as any || null;
+    const hasInterviewContext = !!interviewContext;
+    console.log("generate-ideas: hasInterviewContext =", hasInterviewContext);
+
     // Prepare structured onboarding context hints
     const businessTypeHint = !profile.business_type_preference || profile.business_type_preference === 'not-sure' 
       ? 'Show diverse business types'
@@ -218,6 +270,17 @@ serve(async (req) => {
       };
     }
 
+    // Add Mavrik interview context if available
+    if (interviewContext) {
+      profileData.mavrik_interview = {
+        extractedInsights: interviewContext.extractedInsights || {},
+        founderSummary: interviewContext.founderSummary || "",
+        ideaGenerationContext: interviewContext.ideaGenerationContext || "",
+        ventureIntelligence: interviewContext.ventureIntelligence || {},
+        transferablePatterns: interviewContext.extractedInsights?.transferablePatterns || [],
+      };
+    }
+
     const userPrompt = `Generate business ideas for this founder profile:\n\n${JSON.stringify(profileData, null, 2)}`;
 
     // Get Lovable API key
@@ -231,7 +294,7 @@ serve(async (req) => {
     }
 
     // Build dynamic system prompt based on available data
-    const systemPrompt = buildSystemPrompt(hasExtendedIntake, businessTypeHint, difficultyGuidance);
+    const systemPrompt = buildSystemPrompt(hasExtendedIntake, businessTypeHint, difficultyGuidance, hasInterviewContext);
 
     // Call Lovable AI with tool calling for structured output
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -296,6 +359,18 @@ serve(async (req) => {
                           required: ["passion", "skills", "constraints", "lifestyle"],
                           additionalProperties: false,
                         },
+                        is_pattern_transfer: { 
+                          type: "boolean",
+                          description: "True if this idea applies the founder's expertise to an adjacent industry"
+                        },
+                        transfer_from: {
+                          type: "string",
+                          description: "The source industry/skill being transferred (only if is_pattern_transfer is true)"
+                        },
+                        transfer_to: {
+                          type: "string", 
+                          description: "The target adjacent industry (only if is_pattern_transfer is true)"
+                        },
                       },
                       required: [
                         "title",
@@ -311,7 +386,7 @@ serve(async (req) => {
                         "first_three_steps",
                         "fit_scores",
                       ],
-                      additionalProperties: false,
+                      // additionalProperties not set — allows optional pattern transfer fields
                     },
                   },
                 },
@@ -402,6 +477,19 @@ serve(async (req) => {
         lifestyle_fit_score: idea.fit_scores.lifestyle,
         overall_fit_score: overallFitScore,
         status: "candidate",
+        source_type: "generated",
+        source_meta: {
+          source: "v6_idea_lab",
+          why_it_fits: idea.why_it_fits,
+          how_it_makes_money: idea.how_it_makes_money,
+          first_three_steps: idea.first_three_steps,
+          difficulty_level: idea.difficulty_level,
+          time_intensity_hours_per_week: idea.time_intensity_hours_per_week,
+          is_pattern_transfer: idea.is_pattern_transfer || false,
+          transfer_from: idea.transfer_from || null,
+          transfer_to: idea.transfer_to || null,
+          had_interview_context: hasInterviewContext,
+        },
       };
     });
 
