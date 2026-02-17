@@ -313,6 +313,12 @@ ONBOARDING DATA:
 EXTRACTED INSIGHTS:
 ${JSON.stringify(extractedInsights, null, 2)}
 
+TRANSFERABLE PATTERNS:
+${JSON.stringify(extractedInsights?.transferablePatterns || [], null, 2)}
+
+PATTERN TRANSFER POTENTIAL: ${contextSummary?.ventureIntelligence?.patternTransferPotential || 'not assessed'}
+ABSTRACT EXPERTISE: ${contextSummary?.ventureIntelligence?.abstractExpertise || 'not identified'}
+
 CONFIDENCE LEVELS:
 ${JSON.stringify(confidenceLevel, null, 2)}
 
@@ -345,11 +351,24 @@ For EACH idea, provide:
 RANKING: Order by fitScore descending.
 
 CRITICAL RULES:
-- Every idea MUST connect to something specific from the interview. No generic "build an AI tool" suggestions.
-- Ideas must be feasible within the founder's stated constraints (hours/week, capital)
+- Every idea MUST connect to the founder's specific expertise. No generic
+  "build an AI tool" suggestions.
+- At least 1 idea (and ideally 2) should be a PATTERN TRANSFER idea —
+  applying the founder's core skill to an ADJACENT industry they may
+  not have considered. Use the transferablePatterns from the interview
+  summary to identify these.
+- Pattern transfer ideas should clearly explain WHY the founder's
+  expertise translates (don't just name a random industry — show the
+  structural similarity).
+- Label pattern transfer ideas with a "💡 Adjacent Opportunity" tag in
+  the whyThisFounder field so the founder understands this is a
+  cross-industry play.
+- The remaining ideas should be within the founder's primary domain.
+- Ideas must be feasible within the founder's stated constraints
 - If the founder said they won't do something, don't recommend it
 - Revenue timelines must be realistic, not optimistic
-- Include at least one "safe bet" (lower risk, faster revenue) and one "swing for the fences" (higher risk, bigger potential)
+- Include at least one "safe bet" (lower risk, faster revenue) and
+  one "swing for the fences" (higher risk, bigger potential)
 
 Return ONLY valid JSON with this exact structure:
 {
