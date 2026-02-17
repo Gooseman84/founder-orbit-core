@@ -743,7 +743,7 @@ serve(async (req) => {
     if (requestedIdeaId) {
       const { data, error: ideaError } = await supabase
         .from("ideas")
-        .select("id, title, description, target_customer, business_model_type")
+        .select("id, title, description, target_customer, business_model_type, source_meta, overall_fit_score")
         .eq("id", requestedIdeaId)
         .eq("user_id", userId)
         .maybeSingle();
@@ -758,7 +758,7 @@ serve(async (req) => {
     if (!chosenIdea) {
       const { data, error: ideaError } = await supabase
         .from("ideas")
-        .select("id, title, description, target_customer, business_model_type")
+        .select("id, title, description, target_customer, business_model_type, source_meta, overall_fit_score")
         .eq("user_id", userId)
         .eq("status", "chosen")
         .maybeSingle();
@@ -786,6 +786,19 @@ serve(async (req) => {
       }
     }
 
+    // Fetch Mavrik interview for venture intelligence
+    const { data: interviewData } = await supabase
+      .from("founder_interviews")
+      .select("context_summary")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const interviewContext = interviewData?.context_summary as any || null;
+    console.log("[generate-blueprint] hasInterviewContext:", !!interviewContext);
+
     // Build AI input payload
     const payload = {
       founder_profile: founderProfile
@@ -804,6 +817,10 @@ serve(async (req) => {
             id: chosenIdea.id,
             title: chosenIdea.title,
             summary: chosenIdea.description,
+            target_customer: chosenIdea.target_customer,
+            business_model_type: chosenIdea.business_model_type,
+            source_meta: chosenIdea.source_meta || null,
+            overall_fit_score: chosenIdea.overall_fit_score || null,
           }
         : null,
       idea_analysis: ideaAnalysis
@@ -815,6 +832,13 @@ serve(async (req) => {
             channels: ideaAnalysis.market_insight ?? null,
           }
         : null,
+      venture_intelligence: interviewContext?.ventureIntelligence || null,
+      founder_insights: interviewContext ? {
+        extractedInsights: interviewContext.extractedInsights || {},
+        founderSummary: interviewContext.founderSummary || "",
+        transferablePatterns: interviewContext.extractedInsights?.transferablePatterns || [],
+        ideaGenerationContext: interviewContext.ideaGenerationContext || "",
+      } : null,
     };
 
     console.log("[generate-blueprint] Calling Lovable AI gateway with payload");

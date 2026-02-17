@@ -101,6 +101,29 @@ serve(async (req) => {
     const isPro = subscription?.plan === "pro" && subscription?.status === "active";
     logStep("Subscription checked", { isPro });
 
+    // Fetch Mavrik interview context for enriched scoring
+    const { data: latestInterview } = await adminClient
+      .from("founder_interviews")
+      .select("context_summary")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const interviewContext = latestInterview?.context_summary as any || null;
+
+    // Fetch enriched idea data including source_meta
+    const { data: fullIdea } = await adminClient
+      .from("ideas")
+      .select("source_meta, overall_fit_score")
+      .eq("id", ideaId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const sourceMeta = fullIdea?.source_meta as any || null;
+    logStep("Enriched context fetched", { hasInterview: !!interviewContext, hasSourceMeta: !!sourceMeta });
+
     // Build context string for AI
     const contextParts: string[] = [];
     if (ideaContext.title) contextParts.push(`Title: ${ideaContext.title}`);
@@ -116,6 +139,51 @@ serve(async (req) => {
       if (bp.time_available_hours_per_week) contextParts.push(`Hours/Week: ${bp.time_available_hours_per_week}`);
       if (bp.target_audience) contextParts.push(`Target Audience: ${bp.target_audience}`);
       if (bp.problem_statement) contextParts.push(`Problem: ${bp.problem_statement}`);
+    }
+
+    // Add Mavrik interview intelligence
+    if (interviewContext) {
+      const vi = interviewContext.ventureIntelligence;
+      const insights = interviewContext.extractedInsights;
+      
+      if (vi) {
+        if (vi.verticalIdentified && vi.verticalIdentified !== "none")
+          contextParts.push(`Vertical: ${vi.verticalIdentified}`);
+        if (vi.businessModel)
+          contextParts.push(`Business Model Type: ${vi.businessModel}`);
+        if (vi.wedgeClarity)
+          contextParts.push(`Wedge Clarity: ${vi.wedgeClarity}`);
+        if (vi.workflowDepth)
+          contextParts.push(`Workflow Depth: ${vi.workflowDepth}`);
+        if (vi.industryAccess)
+          contextParts.push(`Industry Access: ${vi.industryAccess}`);
+        if (vi.aiFeasibility && vi.aiFeasibility !== "not_applicable")
+          contextParts.push(`AI Feasibility: ${vi.aiFeasibility}`);
+      }
+
+      if (insights) {
+        if (insights.insiderKnowledge?.length)
+          contextParts.push(`Founder Insider Knowledge: ${insights.insiderKnowledge.join(", ")}`);
+        if (insights.customerIntimacy?.length)
+          contextParts.push(`Customer Intimacy: ${insights.customerIntimacy.join(", ")}`);
+        if (insights.constraints)
+          contextParts.push(`Founder Constraints: ${JSON.stringify(insights.constraints)}`);
+      }
+
+      if (interviewContext.founderSummary)
+        contextParts.push(`Founder Summary: ${interviewContext.founderSummary}`);
+    }
+
+    // Add enriched idea source_meta
+    if (sourceMeta) {
+      if (sourceMeta.whyThisFounder)
+        contextParts.push(`Why This Founder: ${sourceMeta.whyThisFounder}`);
+      if (sourceMeta.why_it_fits)
+        contextParts.push(`Why This Fits: ${sourceMeta.why_it_fits}`);
+      if (sourceMeta.keyRisk)
+        contextParts.push(`Key Risk (from ideation): ${sourceMeta.keyRisk}`);
+      if (sourceMeta.is_pattern_transfer)
+        contextParts.push(`This is a cross-industry pattern transfer from ${sourceMeta.transfer_from} to ${sourceMeta.transfer_to}`);
     }
 
     const ideaContextStr = contextParts.join("\n");
