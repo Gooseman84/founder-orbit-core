@@ -190,7 +190,32 @@ serve(async (req) => {
       .order("updated_at", { ascending: false })
       .limit(10);
 
-    // --- NEW: Build founder state context ---
+    // Fetch Mavrik interview context for personalized task guidance
+    const { data: interviewData } = await supabaseService
+      .from("founder_interviews")
+      .select("context_summary")
+      .eq("user_id", user.id)
+      .eq("status", "completed")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const interviewContext = interviewData?.context_summary as any || null;
+
+    // Fetch enriched idea source_meta
+    let ideaSourceMeta: any = null;
+    if (idea?.id) {
+      const { data: fullIdea } = await supabaseService
+        .from("ideas")
+        .select("source_meta")
+        .eq("id", idea.id)
+        .maybeSingle();
+      ideaSourceMeta = fullIdea?.source_meta as any || null;
+    }
+
+    console.log("[generate-daily-execution-tasks] hasInterviewContext:", !!interviewContext, "hasIdeaSourceMeta:", !!ideaSourceMeta);
+
+    // --- Build founder state context ---
     const founderState = {
       latestEnergy: recentReflections?.[0]?.energy_level ?? null,
       latestStress: recentReflections?.[0]?.stress_level ?? null,
@@ -244,7 +269,7 @@ serve(async (req) => {
       ? `\n\nIMPORTANT: The user has already completed these tasks today: ${existingTaskTitles}\nGenerate DIFFERENT tasks that build on or complement what they've done. Do NOT repeat similar tasks.`
       : "";
 
-    // --- ENHANCED: System prompt with smart calibration + workspace awareness ---
+    // --- ENHANCED: System prompt with smart calibration + workspace awareness + interview intelligence ---
     const systemPrompt = `You are an execution-focused task generator for founders. Generate ${taskCount} concrete, actionable tasks for TODAY only.
 
 FOUNDER STATE (use to calibrate strategically):
@@ -254,6 +279,23 @@ FOUNDER STATE (use to calibrate strategically):
 - Yesterday's Explanation: ${founderState.yesterdayExplanation ?? 'none'}
 - Current Blockers: ${founderState.latestBlockers ?? 'none stated'}
 - Top Priority: ${founderState.topPriority ?? 'not specified'}
+
+FOUNDER INTELLIGENCE (from Mavrik interview):
+${interviewContext ? `
+- Insider Knowledge: ${JSON.stringify(interviewContext.extractedInsights?.insiderKnowledge || [])}
+- Customer Intimacy: ${JSON.stringify(interviewContext.extractedInsights?.customerIntimacy || [])}
+- Hard No Filters: ${JSON.stringify(interviewContext.extractedInsights?.hardNoFilters || [])}
+- Founder Summary: ${interviewContext.founderSummary || "N/A"}
+${interviewContext.ventureIntelligence?.verticalIdentified ? `- Vertical: ${interviewContext.ventureIntelligence.verticalIdentified}` : ""}
+${interviewContext.ventureIntelligence?.industryAccess ? `- Industry Access: ${interviewContext.ventureIntelligence.industryAccess}` : ""}
+` : "No interview context available"}
+
+${ideaSourceMeta ? `IDEA CONTEXT:
+- Why This Founder: ${ideaSourceMeta.whyThisFounder || ideaSourceMeta.why_it_fits || "N/A"}
+- Key Risk: ${ideaSourceMeta.keyRisk || "N/A"}
+- First Step: ${ideaSourceMeta.firstStep || ideaSourceMeta.first_three_steps?.[0] || "N/A"}
+${ideaSourceMeta.is_pattern_transfer ? `- Cross-Industry Transfer: from ${ideaSourceMeta.transfer_from} to ${ideaSourceMeta.transfer_to}` : ""}
+` : ""}
 
 WORKSPACE CONTEXT (use to avoid duplicate work):
 Recent Workspace Documents:
@@ -305,6 +347,12 @@ Bad why_now examples:
 - "This is important for your business." (generic)
 - "You should do this soon." (no reasoning)
 - "This task will help you succeed." (empty motivation)
+
+FOUNDER-SPECIFIC TASK RULES:
+- If the founder has insider knowledge or industry access, tasks should LEVERAGE those connections (e.g., "Reach out to 3 RIAs in your network" not "Research the RIA market")
+- If there are hard-no filters, NEVER generate tasks that violate them
+- If this is a cross-industry pattern transfer, early tasks should validate that the pattern actually applies in the target industry
+- Reference specific expertise when possible (not "validate your idea" but "validate that dental practices face the same scheduling pain you saw in HVAC")
 
 STRICT RULES:
 - Tasks MUST be derived from the venture's blueprint, plan, or success metric
