@@ -109,20 +109,89 @@ serve(async (req) => {
 
     const currentContent: string = doc.content || "";
 
-    // 2) Build prompts with TASK COPILOT framing
+    // Fetch Mavrik interview for personalized suggestions
+    const { data: interviewData } = await supabase
+      .from("founder_interviews")
+      .select("context_summary")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const interviewContext = interviewData?.context_summary as any || null;
+
+    // Fetch active venture for context
+    const { data: ventureData } = await supabase
+      .from("ventures")
+      .select("name, idea_id")
+      .eq("user_id", userId)
+      .in("venture_state", ["executing", "committed"])
+      .limit(1)
+      .maybeSingle();
+
+    // Fetch linked idea if venture exists
+    let ideaContext: any = null;
+    if (ventureData?.idea_id) {
+      const { data: ideaData } = await supabase
+        .from("ideas")
+        .select("title, description, source_meta")
+        .eq("id", ventureData.idea_id)
+        .maybeSingle();
+      ideaContext = ideaData;
+    }
+
+    // Build founder context for personalized suggestions
+    let founderContextBlock = "";
+    if (interviewContext || ideaContext) {
+      const parts: string[] = [];
+      
+      if (interviewContext?.founderSummary)
+        parts.push(`Founder: ${interviewContext.founderSummary}`);
+      
+      if (interviewContext?.ventureIntelligence?.verticalIdentified && 
+          interviewContext.ventureIntelligence.verticalIdentified !== "none")
+        parts.push(`Industry: ${interviewContext.ventureIntelligence.verticalIdentified}`);
+      
+      if (interviewContext?.extractedInsights?.insiderKnowledge?.length)
+        parts.push(`Expertise: ${interviewContext.extractedInsights.insiderKnowledge.join(", ")}`);
+      
+      if (interviewContext?.extractedInsights?.customerIntimacy?.length)
+        parts.push(`Customers: ${interviewContext.extractedInsights.customerIntimacy.join(", ")}`);
+      
+      if (ideaContext?.title)
+        parts.push(`Venture: ${ideaContext.title}`);
+      
+      if (ideaContext?.description)
+        parts.push(`Idea: ${ideaContext.description}`);
+      
+      if (ideaContext?.source_meta?.keyRisk)
+        parts.push(`Key Risk: ${ideaContext.source_meta.keyRisk}`);
+      
+      if (interviewContext?.extractedInsights?.hardNoFilters?.length)
+        parts.push(`Hard Nos: ${interviewContext.extractedInsights.hardNoFilters.join(", ")}`);
+      
+      founderContextBlock = `
+FOUNDER CONTEXT (use this to personalize your suggestions):
+${parts.join("\n")}
+`;
+    }
 
     const systemPrompt = `
 You are an AI cofounder helping an ambitious founder complete one task at a time.
-
+${founderContextBlock}
 Your job:
 - Look at the current task (if provided) and the current document content.
 - Help the founder make tangible progress on THAT task, not generic advice.
 - Suggest structure, drafts, and concrete next steps that can be directly pasted into the document.
+- Use the FOUNDER CONTEXT above to make suggestions specific to their industry, expertise, and customers. Reference their insider knowledge and specific terminology when relevant.
+- If they have hard-no filters, never suggest approaches that violate them.
 
 Tone:
 - Direct, practical, supportive.
 - No fluffy self-help language.
 - Write as if you're sitting next to them in a working session, pushing the work forward.
+- Use industry-specific language they'd recognize from their domain.
 
 Output:
 - Return plain text only: a mix of short commentary plus concrete content, outlines, or drafts they can paste into the doc.
