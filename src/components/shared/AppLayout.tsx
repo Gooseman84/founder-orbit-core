@@ -1,5 +1,4 @@
 import { NavLink } from "@/components/NavLink";
-import { TrueBlazerLogo } from "@/components/shared/TrueBlazerLogo";
 import { 
   LayoutDashboard, 
   Lightbulb, 
@@ -24,7 +23,7 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Sidebar */}
       <aside className="fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border">
         <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
-          <TrueBlazerLogo />
+          <h1 className="text-xl font-bold text-primary">TrueBlazer.AI</h1>
         </div>
         <nav className="flex flex-col gap-1 p-4">
           {navigation.map((item) => (

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { TrueBlazerLogo } from "@/components/shared/TrueBlazerLogo";
 import { useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,7 @@ export function AppShell({ children }: AppShellProps) {
             <Menu className="w-6 h-6" />
           </Button>
           
-          <TrueBlazerLogo size="sm" />
+          <h1 className="text-lg font-bold text-primary">TrueBlazer.AI</h1>
           
           <div className="w-10 flex justify-end">
             {loading ? (
@@ -67,7 +66,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* Desktop Top Bar - visible on md+ */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 hidden md:block">
         <div className="flex items-center justify-between h-full px-6">
-          <TrueBlazerLogo />
+          <h1 className="text-xl font-bold text-primary">TrueBlazer.AI</h1>
           
           <div className="flex items-center gap-3">
             {loading ? (
