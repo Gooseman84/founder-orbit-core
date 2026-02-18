@@ -283,20 +283,22 @@ If FOUNDER INTELLIGENCE is provided above, use it to:
     const northStarPrompt = buildNorthStarPrompt(blueprintTitle, blueprintContent, techStack, founderIntelStr);
     const contractPrompt = buildArchitecturePrompt(blueprintTitle, techStack, founderIntelStr);
     const slicePrompt = buildSlicePlanPrompt(blueprintTitle, blueprintContent, techStack, founderIntelStr);
+    const launchPrompt = buildLaunchPlaybookPrompt(blueprintTitle, blueprintContent, techStack, founderIntelStr);
 
-    console.log('Generating all 3 documents in parallel...');
+    console.log('Generating all 4 documents in parallel...');
 
-    // Generate all 3 documents in parallel
-    const [northStarSpec, architectureContract, verticalSlicePlan] = await Promise.all([
+    // Generate all 4 documents in parallel
+    const [northStarSpec, architectureContract, verticalSlicePlan, launchPlaybook] = await Promise.all([
       callAI(northStarPrompt),
       callAI(contractPrompt),
       callAI(slicePrompt),
+      callAI(launchPrompt),
     ]);
 
     console.log('All documents generated, saving to database...');
 
-    // Save all 3 documents in parallel
-    const [northStarResult, contractResult, sliceResult] = await Promise.all([
+    // Save all 4 documents in parallel
+    const [northStarResult, contractResult, sliceResult, launchResult] = await Promise.all([
       supabase.from('workspace_documents').insert({
         user_id: userId,
         venture_id: ventureId,
@@ -324,6 +326,15 @@ If FOUNDER INTELLIGENCE is provided above, use it to:
         content: verticalSlicePlan,
         status: 'final',
       }).select().single(),
+      supabase.from('workspace_documents').insert({
+        user_id: userId,
+        venture_id: ventureId,
+        folder_id: folderId,
+        title: 'Launch Playbook',
+        doc_type: 'launch_playbook',
+        content: launchPlaybook,
+        status: 'final',
+      }).select().single(),
     ]);
 
     console.log('Documents saved, updating kit status...');
@@ -335,6 +346,7 @@ If FOUNDER INTELLIGENCE is provided above, use it to:
         north_star_spec_id: northStarResult.data?.id,
         architecture_contract_id: contractResult.data?.id,
         vertical_slice_plan_id: sliceResult.data?.id,
+        launch_playbook_id: launchResult.data?.id,
         status: 'complete',
       })
       .eq('id', kitId);
@@ -933,4 +945,205 @@ Once this is done, you can:
 But ship THIS first. Everything else can wait.
 
 Make it specific and actionable for ${techStack.frontend} + ${techStack.backend} + ${techStack.deployment}.`;
+}
+
+function buildLaunchPlaybookPrompt(
+  title: string, 
+  content: string, 
+  techStack: any, 
+  founderIntel: string
+): string {
+  return `You are a startup launch strategist who specializes in helping solo founders get their first 10 paying customers. You understand that non-technical founders building with AI coding tools have a specific challenge: they can ship fast, but they don't know how to get anyone to care.
+
+BLUEPRINT:
+Title: ${title}
+Content: ${content}
+
+TECH STACK:
+Frontend: ${techStack.frontend}
+Backend: ${techStack.backend}
+Deployment: ${techStack.deployment}
+
+${founderIntel}
+
+Generate a Launch Playbook following this EXACT structure:
+
+# Launch Playbook: ${title}
+
+## Phase 0: Pre-Launch Foundation (Before You Ship)
+
+### Landing Page
+Build this BEFORE you build the product. It validates demand and captures early interest.
+
+**Required elements:**
+1. [Headline — one sentence that states the problem you solve, tailored to the specific target customer from the blueprint]
+2. [Subhead — one sentence about the solution, written for the target customer's language level]
+3. [3 benefit bullets — outcomes, not features]
+4. [Email capture — "Get early access" or "Join the waitlist"]
+5. [Social proof placeholder — "Built by a [credential]" or "Trusted by [N] early users"]
+
+**Where to build it:**
+- If using ${techStack.frontend}: add a "/" route with the landing page as the default for non-authenticated users
+- Alternative: use Carrd.co ($19/year) for a standalone page if you want to test messaging before building
+
+**Analytics setup (required before launch):**
+- Install Plausible, PostHog, or Vercel Analytics
+- Track these specific events:
+  1. page_view (landing page)
+  2. waitlist_signup (email captured)
+  3. signup_started (auth flow begun)
+  4. signup_completed (account created)
+  5. core_action_completed (the main value-delivery action)
+  6. upgrade_clicked (Pro/paid CTA)
+  7. payment_completed (first payment)
+
+**Conversion funnel to monitor:**
+Landing page visitors → Waitlist signups → Account signups → Core action completed → Payment
+
+Target: 30%+ of waitlist → signup, 20%+ of signup → core action.
+
+### Legal Minimum (don't skip this)
+- Terms of Service (use a generator like Termly or iubenda)
+- Privacy Policy (required if collecting email/data)
+- Cookie notice (if using analytics)
+- Add links in footer before launch
+
+---
+
+## Phase 1: Launch Week Plan
+
+### Day -3 to -1: Soft Launch
+- Send the app to 5 people you trust (friends, colleagues, mentors)
+- Ask them to complete the core workflow and report friction
+- Fix the top 3 issues they find
+- Do NOT publicly launch until these are fixed
+
+### Day 0: Launch Day
+
+**Where to post (in this order):**
+
+1. **Your existing network first.**
+   [If FOUNDER INTELLIGENCE shows direct industry access or customer intimacy, list specific outreach tactics here. E.g., "You have direct relationships with RIAs — send a personal message to 5-10 of them: 'I built something to solve [specific pain]. Would you try it and tell me what's missing?'"]
+   
+   [If no direct access: "Post on your personal LinkedIn with a story about WHY you built this. People buy the founder's journey before they buy the product."]
+
+2. **One community where your target customers already hang out.**
+   [Based on the target customer from the blueprint, identify 1-2 specific communities. E.g., for RIAs: "Kitces.com forums, r/financialplanning, RIA Slack groups." For restaurants: "r/restaurateur, Restaurant Owner Facebook groups." For developers: "Hacker News Show HN, r/SideProject, IndieHackers."]
+   
+   Do NOT post a sales pitch. Post a problem story:
+   "I've worked in [industry] for [X] years and always hated [pain]. So I built [product] to fix it. Here's what it does. Would love feedback from people who deal with this."
+
+3. **Product Hunt (optional, only if B2B SaaS).**
+   - Best posted Tuesday-Thursday, 12:01 AM PT
+   - Prepare: tagline, 3 screenshots, 60-second demo video (Loom)
+   - Don't obsess over ranking — it's for backlinks and credibility
+
+### Day 1-3: Respond to Everything
+- Reply to every comment, email, and DM within 2 hours
+- Ask every early user: "What's the one thing that would make you pay for this?"
+- Log every piece of feedback in a simple spreadsheet
+
+### Day 4-7: Iterate on Feedback
+- Identify the #1 requested feature or fix
+- Ship it by day 7
+- Post an update: "You asked for [X], we shipped it in 3 days"
+- This builds trust faster than any marketing
+
+---
+
+## Phase 2: First 10 Customers (Days 8-30)
+
+### Customer Acquisition Channels
+
+[CRITICAL: Personalize this section using FOUNDER INTELLIGENCE. The channels should match the founder's strengths and avoid their hard-no filters.]
+
+**If founder has DIRECT industry access:**
+Your fastest path to revenue is warm outreach to people who already know and trust you. This is not sales — it's solving a problem for people you care about.
+
+Specific tactics:
+1. Make a list of 20 people in your network who experience the problem your product solves
+2. Send a personal message (not a mass email): "I built [product] to solve [pain]. I'd love to give you free access for a month and get your honest feedback. If it saves you time, I'll ask you to pay $[price] after that."
+3. Goal: 10 conversations → 5 trials → 2-3 paying customers
+
+**If founder has INDIRECT access (knows the industry but not the customers directly):**
+1. Find where your target customers ask for help (forums, subreddits, Slack groups, Facebook groups)
+2. Answer questions genuinely for 1 week before mentioning your product
+3. When someone posts a problem your product solves, respond with help AND mention your tool: "I actually built something for this — happy to give you free access"
+4. Goal: 50 helpful responses → 5 trials → 2-3 paying customers
+
+**If founder has NO industry access (pattern transfer / cross-industry play):**
+1. You need to build credibility from scratch in the target industry
+2. Write 3 LinkedIn posts about the problem from an outsider's perspective: "I spent 8 years in [source industry] solving [abstract problem]. I just realized [target industry] has the exact same problem — and nobody's solving it."
+3. DM 10 people who engage with your posts
+4. Offer free beta access in exchange for 15-minute feedback calls
+5. Goal: 3 posts → 10 DMs → 5 calls → 2-3 pilot users
+
+[If hard-no filters include "cold calling" or similar, explicitly state: "All outreach is async — messages, posts, and DMs only. No calls unless the prospect requests one."]
+
+### Pricing Activation
+- Launch with a simple pricing page: Free tier + one paid tier
+- First 10 customers: offer a "founding member" discount (30-50% off for life) in exchange for feedback and a testimonial
+- Don't optimize pricing until you have 20+ paying customers
+- Track: time from signup to first payment (your activation metric)
+
+### Content Flywheel (start simple)
+Pick ONE format you'll do weekly:
+- If you like writing: 1 LinkedIn post per week about a problem your product solves
+- If you like talking: 1 short Loom video per week showing a use case
+- If you like neither: 1 tweet thread per week (takes 15 minutes)
+
+Rule: every piece of content must end with a link to your product. Not a hard sell — just "I built [product] to fix this → [link]."
+
+---
+
+## Phase 3: Metrics That Matter
+
+### Week 1 Dashboard
+Track these numbers daily:
+| Metric | Target | How to Measure |
+|--------|--------|---------------|
+| Landing page visits | 100+ | Analytics |
+| Signups | 15+ | Auth table count |
+| Core action completed | 8+ | Event tracking |
+| Feedback received | 5+ | Manual count |
+
+### Month 1 Dashboard
+| Metric | Target | How to Measure |
+|--------|--------|---------------|
+| Total signups | 50+ | Auth table count |
+| Active users (used in last 7 days) | 15+ | Event tracking |
+| Paying customers | 3-5 | Stripe dashboard |
+| MRR | $100+ | Stripe dashboard |
+| NPS / satisfaction | 8+ | Ask 5 users |
+
+### Red Flags (pivot signals)
+- 0 signups after 100+ landing page visits → messaging problem
+- Signups but 0 core actions → onboarding problem
+- Core actions but 0 payments → pricing or value problem
+- Payments but immediate churn → retention problem
+
+Each problem has a different fix. Don't change everything at once.
+
+---
+
+## Launch Checklist
+
+Before you go live, verify:
+
+- [ ] Landing page live with clear value proposition
+- [ ] Analytics tracking all 7 events listed above
+- [ ] Payment flow works end-to-end (test with Stripe test mode)
+- [ ] Error tracking active (Sentry or similar)
+- [ ] Terms of Service and Privacy Policy linked in footer
+- [ ] 5 beta testers have completed the core workflow
+- [ ] Top 3 friction points from beta testing are fixed
+- [ ] You have a list of 20 people to message on launch day
+- [ ] You've written your launch post/message
+- [ ] Customer support channel exists (even if it's just an email)
+
+---
+
+Make every section specific to this business, this target customer, and this founder's situation. Use the FOUNDER INTELLIGENCE to personalize the customer acquisition tactics. Reference the specific industry, the specific customer relationships, and the specific expertise. Do NOT give generic advice.
+
+Keep the total document to 3-4 pages when printed. Use markdown formatting.`;
 }

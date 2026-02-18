@@ -1,0 +1,1 @@
+ALTER TABLE public.implementation_kits ADD COLUMN IF NOT EXISTS launch_playbook_id UUID;

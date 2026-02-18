@@ -861,6 +861,7 @@ export type Database = {
           frontend_framework: string
           id: string
           implementation_folder_id: string | null
+          launch_playbook_id: string | null
           north_star_spec_id: string | null
           status: string | null
           updated_at: string | null
@@ -879,6 +880,7 @@ export type Database = {
           frontend_framework: string
           id?: string
           implementation_folder_id?: string | null
+          launch_playbook_id?: string | null
           north_star_spec_id?: string | null
           status?: string | null
           updated_at?: string | null
@@ -897,6 +899,7 @@ export type Database = {
           frontend_framework?: string
           id?: string
           implementation_folder_id?: string | null
+          launch_playbook_id?: string | null
           north_star_spec_id?: string | null
           status?: string | null
           updated_at?: string | null
