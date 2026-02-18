@@ -13,7 +13,7 @@ Input JSON example:
   "founder_profile": { ... },
   "idea": { ... },
   "analysis": { ... },
-  "doc_type": "outline" | "offer" | "script" | "plan" | "brain_dump",
+  "doc_type": "outline" | "offer" | "script" | "plan" | "brain_dump" | "customer_research" | "outreach" | "landing_page",
   "title": "string",
   "current_content": "string",
   "trigger_context": {

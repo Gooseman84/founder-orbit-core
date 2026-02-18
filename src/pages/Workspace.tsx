@@ -967,6 +967,9 @@ export default function Workspace() {
                   <SelectItem value="offer">Offer</SelectItem>
                   <SelectItem value="script">Script</SelectItem>
                   <SelectItem value="plan">Plan</SelectItem>
+                  <SelectItem value="customer_research">Customer Research</SelectItem>
+                  <SelectItem value="outreach">Outreach</SelectItem>
+                  <SelectItem value="landing_page">Landing Page Copy</SelectItem>
                 </SelectContent>
               </Select>
             </div>

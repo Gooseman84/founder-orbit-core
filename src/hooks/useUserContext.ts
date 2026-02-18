@@ -111,7 +111,7 @@ function buildContextHistory(
 
   // Document events (important types only)
   const importantDocs = docs.filter(
-    (d) => ["strategy", "offer", "vision", "outline", "plan"].includes(d.doc_type)
+    (d) => ["strategy", "offer", "vision", "outline", "plan", "customer_research", "outreach", "landing_page"].includes(d.doc_type)
   );
   importantDocs.slice(0, 5).forEach((doc) => {
     const isNew = new Date(doc.created_at).getTime() === new Date(doc.updated_at).getTime();
