@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { TrueBlazerLogo } from "@/components/shared/TrueBlazerLogo";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,11 +21,7 @@ const Index = () => {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold">
-            <span className="bg-gradient-to-r from-amber-500 to-amber-300 bg-clip-text text-transparent">True</span>
-            <span className="text-foreground">Blazer</span>
-            <span className="text-foreground">.AI</span>
-          </h1>
+          <TrueBlazerLogo />
           <Button variant="ghost" onClick={() => navigate("/auth")} className="text-muted-foreground hover:text-foreground">
             Sign In
           </Button>
