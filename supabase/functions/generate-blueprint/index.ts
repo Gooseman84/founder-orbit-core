@@ -6,6 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Robust JSON cleaning for AI responses that may be wrapped in markdown fences
+function cleanAIJsonResponse(text: string): string {
+  let cleaned = text.trim();
+  const jsonFenceRegex = /^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/;
+  const match = cleaned.match(jsonFenceRegex);
+  if (match) {
+    cleaned = match[1].trim();
+  }
+  return cleaned;
+}
+
 // Full system prompt embedded (edge functions cannot read from src/prompts)
 const SYSTEM_PROMPT = `
 You are TrueBlazer's Blueprint Generator — a focused, honest, supportive co-founder who synthesizes a founder's life goals and business idea into one actionable blueprint.
@@ -903,19 +914,12 @@ serve(async (req) => {
 
     let blueprintData: any;
     try {
-      // Clean potential markdown code blocks
-      let cleaned = raw.trim();
-      if (cleaned.startsWith("```json")) {
-        cleaned = cleaned.slice(7);
-      } else if (cleaned.startsWith("```")) {
-        cleaned = cleaned.slice(3);
-      }
-      if (cleaned.endsWith("```")) {
-        cleaned = cleaned.slice(0, -3);
-      }
-      blueprintData = JSON.parse(cleaned.trim());
+      const cleaned = cleanAIJsonResponse(raw);
+      console.log("[generate-blueprint] First 100 chars after cleaning:", cleaned.substring(0, 100));
+      blueprintData = JSON.parse(cleaned);
     } catch (err) {
-      console.error("[generate-blueprint] Failed to parse AI JSON:", raw);
+      console.error("[generate-blueprint] Failed to parse AI JSON. First 200 chars:", raw.substring(0, 200));
+      console.error("[generate-blueprint] Last 100 chars:", raw.substring(raw.length - 100));
       return new Response(JSON.stringify({ error: "AI JSON parse error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
