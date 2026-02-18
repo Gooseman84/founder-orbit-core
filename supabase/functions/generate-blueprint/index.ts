@@ -9,10 +9,19 @@ const corsHeaders = {
 // Robust JSON cleaning for AI responses that may be wrapped in markdown fences
 function cleanAIJsonResponse(text: string): string {
   let cleaned = text.trim();
-  const jsonFenceRegex = /^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/;
+  // Try greedy regex first (handles nested content correctly)
+  const jsonFenceRegex = /^```(?:json)?\s*\n?([\s\S]*)\n?\s*```\s*$/;
   const match = cleaned.match(jsonFenceRegex);
   if (match) {
     cleaned = match[1].trim();
+  }
+  // Fallback: if still starts with ``` or doesn't start with {, extract between first { and last }
+  if (!cleaned.startsWith('{') && !cleaned.startsWith('[')) {
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+    }
   }
   return cleaned;
 }

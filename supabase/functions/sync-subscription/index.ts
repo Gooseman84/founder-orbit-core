@@ -35,10 +35,15 @@ const toIsoOrNull = (unixSeconds: unknown): string | null => {
    try {
      logStep("Function started");
  
-     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-     if (!stripeKey) {
-       throw new Error("STRIPE_SECRET_KEY is not set");
-     }
+      // Use mode-aware Stripe key selection (same logic as stripe-webhook)
+      const isTestMode = Deno.env.get("STRIPE_TEST_MODE") === "true";
+      const stripeKey = isTestMode
+        ? (Deno.env.get("STRIPE_SECRET_KEY_TEST") || Deno.env.get("STRIPE_SECRET_KEY")!)
+        : (Deno.env.get("STRIPE_SECRET_KEY_LIVE") || Deno.env.get("STRIPE_SECRET_KEY")!);
+      if (!stripeKey) {
+        throw new Error("STRIPE_SECRET_KEY is not set");
+      }
+      logStep("Using Stripe key prefix", { prefix: stripeKey.substring(0, 8), isTestMode });
  
      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
