@@ -135,7 +135,7 @@ export default function Discover() {
 
         // Handle hard stop - interview has hit max questions
         if (data.forceComplete) {
-          console.log("Interview reached question limit, auto-generating summary");
+          // Interview hit max questions — auto-generating summary
           setInterviewId(data.interviewId);
           setTranscript(data.transcript || optimisticTranscript);
           setInterviewState("complete");

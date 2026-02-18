@@ -37,7 +37,7 @@ export function VentureStateGuard({ children }: VentureStateGuardProps) {
       const redirectTo = getRedirectPath(ventureState);
       const isIdeation = isIdeationRoute(currentPath);
       
-      console.log(`[VentureStateGuard] Route "${currentPath}" not in allowed list (state: ${ventureState}, ideation: ${isIdeation})`);
+      
       
       // SOFT GUIDANCE: Only redirect for truly blocked routes (like venture-review when not executing)
       // For ideation routes, show toast but DON'T block - let users access them

@@ -154,7 +154,7 @@ export const useFounderIdeas = (): UseFounderIdeasResult => {
         const rawIdeas = data.pass_a_raw_ideas || [];
         const refinedIdeas = data.final_ranked_ideas || [];
         setTwoPassData(rawIdeas, refinedIdeas, data.generation_version);
-        console.log(`v7 generation: ${rawIdeas.length} raw ideas → ${refinedIdeas.length} refined`);
+        
       }
 
       const ideasData = data?.ideas ?? [];

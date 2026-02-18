@@ -312,7 +312,7 @@ export function exportBlueprintToPdf(data: BlueprintPdfData) {
     pdf.setFont("helvetica", "italic");
     pdf.setTextColor(...SUBTLE_RGB);
     pdf.text(
-      "Use this prompt with any AI assistant to maintain consistent context about your venture.",
+      "Use this prompt with Mavrik or any AI coding tool to maintain consistent context about your venture.",
       MARGIN,
       y
     );
