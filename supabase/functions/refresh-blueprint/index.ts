@@ -6,6 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Robust JSON cleaning for AI responses that may be wrapped in markdown fences
+function cleanAIJsonResponse(text: string): string {
+  let cleaned = text.trim();
+  const jsonFenceRegex = /^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/;
+  const match = cleaned.match(jsonFenceRegex);
+  if (match) {
+    cleaned = match[1].trim();
+  }
+  return cleaned;
+}
+
 // --- Context Builder (embedded for edge function) ----------------
 
 interface UserContext {
@@ -530,20 +541,12 @@ Return ONLY the JSON with ai_summary and ai_recommendations.`;
     // Parse AI response
     let parsed;
     try {
-      let cleanContent = content.trim();
-      if (cleanContent.startsWith("```json")) {
-        cleanContent = cleanContent.slice(7);
-      } else if (cleanContent.startsWith("```")) {
-        cleanContent = cleanContent.slice(3);
-      }
-      if (cleanContent.endsWith("```")) {
-        cleanContent = cleanContent.slice(0, -3);
-      }
-      cleanContent = cleanContent.trim();
-      
+      const cleanContent = cleanAIJsonResponse(content);
+      console.log("[refresh-blueprint] First 100 chars after cleaning:", cleanContent.substring(0, 100));
       parsed = JSON.parse(cleanContent);
     } catch (parseError) {
-      console.error("[refresh-blueprint] Failed to parse AI response:", content);
+      console.error("[refresh-blueprint] Failed to parse AI response. First 200 chars:", content.substring(0, 200));
+      console.error("[refresh-blueprint] Last 100 chars:", content.substring(content.length - 100));
       throw new Error("Failed to parse AI response");
     }
 
