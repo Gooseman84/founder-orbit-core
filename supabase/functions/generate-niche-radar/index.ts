@@ -15,7 +15,10 @@ async function buildRadarInput(supabaseClient: any, userId: string) {
       .maybeSingle();
 
     if (profileError) throw profileError;
-    if (!profile) return null;
+    if (!profile) {
+      console.error("buildRadarInput: no founder profile for user", userId);
+      return { missing: "profile" };
+    }
 
     const { data: idea, error: ideaError } = await supabaseClient
       .from("ideas")
@@ -25,7 +28,10 @@ async function buildRadarInput(supabaseClient: any, userId: string) {
       .maybeSingle();
 
     if (ideaError) throw ideaError;
-    if (!idea) return null;
+    if (!idea) {
+      console.error("buildRadarInput: no chosen idea for user", userId);
+      return { missing: "chosen_idea" };
+    }
 
     const { data: analysis, error: analysisError } = await supabaseClient
       .from("idea_analysis")
@@ -37,7 +43,10 @@ async function buildRadarInput(supabaseClient: any, userId: string) {
       .maybeSingle();
 
     if (analysisError) throw analysisError;
-    if (!analysis) return null;
+    if (!analysis) {
+      console.error("buildRadarInput: no analysis for chosen idea", idea.id);
+      return { missing: "analysis" };
+    }
 
     return {
       founder_profile: profile,
@@ -405,9 +414,15 @@ serve(async (req) => {
     }
 
     const inputData = await buildRadarInput(supabaseAdmin, userId);
-    if (!inputData) {
+    if (!inputData || inputData.missing) {
+      const missing = inputData?.missing || "unknown";
+      const messages: Record<string, string> = {
+        profile: "Please complete onboarding first",
+        chosen_idea: "Please choose a North Star idea first",
+        analysis: "Please analyze your chosen idea first",
+      };
       return new Response(
-        JSON.stringify({ error: "Could not build input" }),
+        JSON.stringify({ error: messages[missing] || "Could not build input", missing }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

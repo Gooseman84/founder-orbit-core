@@ -111,8 +111,8 @@ export default function Radar() {
       refreshXp();
     } catch (error: any) {
       console.error("Error generating radar signals:", error);
-      if (error?.message?.includes("profile") || error?.message?.includes("chosen idea")) {
-        toast.error("Please complete onboarding and choose an idea first");
+      if (error?.message?.includes("profile") || error?.message?.includes("chosen idea") || error?.message?.includes("North Star")) {
+        toast.error(error.message || "Please complete onboarding and choose an idea first");
       } else if (error?.name === "SubscriptionRequiredError" || error?.status === 402 || error?.status === 403) {
         setPaywallReason("RADAR_REQUIRES_PRO");
         setShowUpgradeModal(true);
