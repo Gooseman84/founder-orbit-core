@@ -161,7 +161,7 @@ export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
   IMPLEMENTATION_KIT_REQUIRES_PRO: {
     headline: "Your build specs are ready. Unlock them.",
     subhead:
-      "The Implementation Kit generates a North Star Spec, Architecture Contract, and Vertical Slice Plan customized to your venture and tech stack. Copy, paste, build.",
+      "The Implementation Kit includes your North Star Spec, Architecture Contract, Vertical Slice Plan, and Launch Playbook — everything from build specs to your first 10 paying customers.",
     cta: "Unlock Build Specs",
     microcopy: "Works with Lovable, Cursor, v0, and any AI coding tool.",
   },

@@ -297,6 +297,12 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
               onDownload={handleDownload}
               isDownloading={downloadingDoc === kit.vertical_slice_plan_id}
             />
+            <DocumentRow 
+              documentId={(kit as any).launch_playbook_id} 
+              name="Launch Playbook"
+              onDownload={handleDownload}
+              isDownloading={downloadingDoc === (kit as any).launch_playbook_id}
+            />
           </div>
         </CardContent>
       </Card>

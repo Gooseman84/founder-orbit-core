@@ -399,7 +399,7 @@ const PricingSection = ({ onNavigate }: { onNavigate: () => void }) => {
     "Unlimited idea generation across 10 modes",
     "CFA-level Financial Viability Scores (6 dimensions)",
     "Personalized Blueprints with 30-day execution plans",
-    "Implementation Kit — specs ready for Lovable, Cursor, and v0",
+    "Implementation Kit — build specs + Launch Playbook for first customers",
     "Cross-industry pattern matching (adjacent opportunities)",
     "AI workspace that knows your domain and writes in your language"
   ];

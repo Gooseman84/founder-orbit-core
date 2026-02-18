@@ -28,6 +28,7 @@ export interface ImplementationKit {
   north_star_spec_id: string | null;
   architecture_contract_id: string | null;
   vertical_slice_plan_id: string | null;
+  launch_playbook_id: string | null;
   implementation_folder_id: string | null;
   created_at: string;
   updated_at: string;
