@@ -41,7 +41,7 @@ export async function recordXpEvent(
     }
 
     if (data?.success) {
-      console.log(`Recorded ${amount} XP for ${eventType} to user ${userId}`);
+      
     } else {
       console.error("XP event recording failed:", data);
     }

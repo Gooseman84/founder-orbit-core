@@ -152,13 +152,13 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
       setIsScoring(true);
       setScoringError(null);
       
-      console.log("useIdeaDetail: triggering lazy scoring via score-idea-fit for", ideaId);
+      
       
       try {
         const result = await invokeScoreIdeaFit(ideaId);
         
         if (result.success) {
-          console.log("useIdeaDetail: scoring complete", result.scores);
+          
           // Refresh the idea data to get updated scores
           await refetchIdea();
           // Invalidate related queries
@@ -207,7 +207,7 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
       const result = await invokeScoreIdeaFit(ideaId, true); // force=true
       
       if (result.success) {
-        console.log("useIdeaDetail: re-score complete", result.scores);
+        
         await refetchIdea();
         queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
         queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });

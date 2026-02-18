@@ -160,8 +160,8 @@ export async function getFeedItemsForUser(userId: string): Promise<FeedItem[]> {
 }
 
 /**
- * Generate mock feed items based on user context
- * TODO: Replace with AI-generated content from edge function
+ * Generate mock feed items based on user context.
+ * Feed content is static for v1.
  */
 function generateMockFeedItems(context: FeedContext): FeedItem[] {
   const items: FeedItem[] = [];
@@ -284,7 +284,6 @@ function generateMockFeedItems(context: FeedContext): FeedItem[] {
 
 /**
  * Get a single feed item by ID
- * TODO: Implement if needed for individual item actions
  */
 export async function getFeedItemById(itemId: string): Promise<FeedItem | null> {
   // Mock implementation - in production this might fetch from a feed_items table

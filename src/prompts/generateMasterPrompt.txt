@@ -13,7 +13,7 @@ Your job is to generate a single, extremely powerful MASTER PROMPT that gives th
 - Key assumptions
 - KPIs to track
 - The user's personal constraints and strengths
-- Instructions for the AI assistant receiving this prompt
+- Instructions for Mavrik receiving this prompt
 
 Input JSON includes:
 {
@@ -35,7 +35,7 @@ The prompt_body should be a SINGLE TEXT BLOCK that is highly structured and skim
 - Use numbered section headers in all caps (e.g. "1. FOUNDER IDENTITY", "2. CHOSEN IDEA", "3. PROBLEM → SOLUTION → EXECUTION").
 - Within each section, use short paragraphs and bullet points where helpful.
 - Insert a blank line between sections and major bullet groups for readability.
-- Clearly separate: founder identity, idea summary, problem/solution, business model, go-to-market, 90-day plan, weekly sprint structure, risks, assumptions, KPIs, and usage instructions for the AI assistant.
+- Clearly separate: founder identity, idea summary, problem/solution, business model, go-to-market, 90-day plan, weekly sprint structure, risks, assumptions, KPIs, and usage instructions for Mavrik.
 - Keep everything in one contiguous text block (no JSON, no markdown code fences).
 - Include constraints and preferences and initial steps for execution.
 - End with this exact sentence on its own line: "Always ask me clarifying questions before generating answers."
