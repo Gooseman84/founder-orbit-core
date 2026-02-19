@@ -9,13 +9,15 @@ const corsHeaders = {
 // Robust JSON cleaning for AI responses that may be wrapped in markdown fences
 function cleanAIJsonResponse(text: string): string {
   let cleaned = text.trim();
-  // Try greedy regex first (handles nested content correctly)
+  
+  // Strip markdown code fences
   const jsonFenceRegex = /^```(?:json)?\s*\n?([\s\S]*)\n?\s*```\s*$/;
   const match = cleaned.match(jsonFenceRegex);
   if (match) {
     cleaned = match[1].trim();
   }
-  // Fallback: if still starts with ``` or doesn't start with {, extract between first { and last }
+  
+  // Fallback: extract between first { and last }
   if (!cleaned.startsWith('{') && !cleaned.startsWith('[')) {
     const firstBrace = cleaned.indexOf('{');
     const lastBrace = cleaned.lastIndexOf('}');
@@ -23,19 +25,51 @@ function cleanAIJsonResponse(text: string): string {
       cleaned = cleaned.substring(firstBrace, lastBrace + 1);
     }
   }
-  // CRITICAL: Sanitize control characters inside JSON string values
-  // These are illegal in JSON and cause "Bad control character in string literal" errors
-  cleaned = cleaned.replace(/[\x00-\x1F\x7F]/g, (char) => {
-    switch (char) {
-      case '\n': return '\\n';
-      case '\r': return '\\r';
-      case '\t': return '\\t';
-      case '\b': return '\\b';
-      case '\f': return '\\f';
-      default: return '';
+  
+  // Fix control characters ONLY inside JSON string values.
+  let result = '';
+  let inString = false;
+  let escaped = false;
+  
+  for (let i = 0; i < cleaned.length; i++) {
+    const char = cleaned[i];
+    const code = cleaned.charCodeAt(i);
+    
+    if (escaped) {
+      result += char;
+      escaped = false;
+      continue;
     }
-  });
-  return cleaned;
+    
+    if (char === '\\' && inString) {
+      result += char;
+      escaped = true;
+      continue;
+    }
+    
+    if (char === '"' && !escaped) {
+      inString = !inString;
+      result += char;
+      continue;
+    }
+    
+    // Only sanitize control characters INSIDE strings
+    if (inString && code >= 0 && code <= 31) {
+      switch (char) {
+        case '\n': result += '\\n'; break;
+        case '\r': result += '\\r'; break;
+        case '\t': result += '\\t'; break;
+        case '\b': result += '\\b'; break;
+        case '\f': result += '\\f'; break;
+        default: result += ''; break;
+      }
+      continue;
+    }
+    
+    result += char;
+  }
+  
+  return result;
 }
 
 // --- Context Builder (embedded for edge function) ----------------

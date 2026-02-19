@@ -68,6 +68,7 @@ const Blueprint = () => {
   // Auto-generation state
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedBlueprint, setGeneratedBlueprint] = useState<FounderBlueprint | null>(null);
+  const [generationFailed, setGenerationFailed] = useState(false);
   const [showReveal, setShowReveal] = useState(false);
 
   // The blueprint to display (generated or fetched)
@@ -153,7 +154,7 @@ const Blueprint = () => {
   useEffect(() => {
     if (ventureLoading || blueprintLoading) return;
     if (!venture || !user) return;
-    if (blueprint || generatedBlueprint || isGenerating) return;
+    if (blueprint || generatedBlueprint || isGenerating || generationFailed) return;
 
     // No blueprint exists — trigger generation
     setIsGenerating(true);
@@ -176,16 +177,17 @@ const Blueprint = () => {
         }
       } catch (err) {
         console.error("Blueprint generation failed:", err);
+        setGenerationFailed(true);
         toast({
           title: "Blueprint generation failed",
-          description: err instanceof Error ? err.message : "Please try again.",
+          description: err instanceof Error ? err.message : "Something went wrong. Please try again.",
           variant: "destructive",
         });
       } finally {
         setIsGenerating(false);
       }
     })();
-  }, [ventureLoading, blueprintLoading, venture, user, blueprint, generatedBlueprint, isGenerating, isFreshVisit, toast]);
+  }, [ventureLoading, blueprintLoading, venture, user, blueprint, generatedBlueprint, isGenerating, generationFailed, isFreshVisit, toast]);
 
   const isReadOnly = venture?.venture_state === "executing" || venture?.venture_state === "reviewed";
 
@@ -292,6 +294,22 @@ const Blueprint = () => {
     return renderWrapper(true, (
       <div className="container mx-auto py-8 px-4">
         <BlueprintGenerationAnimation isGenerating />
+      </div>
+    ));
+  }
+
+  // Generation failed state — show retry button instead of looping
+  if (generationFailed && !isGenerating && !displayBlueprint) {
+    return renderWrapper(isFreshVisit, (
+      <div className="container mx-auto py-8 px-4 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <p className="text-destructive text-lg font-semibold">Blueprint generation failed</p>
+        <p className="text-muted-foreground text-sm">Something went wrong. Please try again.</p>
+        <Button
+          onClick={() => setGenerationFailed(false)}
+          variant="default"
+        >
+          Retry Blueprint Generation
+        </Button>
       </div>
     ));
   }
