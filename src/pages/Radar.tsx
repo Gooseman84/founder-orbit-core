@@ -77,14 +77,11 @@ export default function Radar() {
   const handleGenerateSignals = async () => {
     if (!user) return;
 
-    // Check Pro access before generating
+    // Block trial users entirely (maxRadarScans = 0)
     if (!hasPro) {
-      // Check if trial user has hit their scan limit (1)
-      if (scanCount >= 1) {
-        setPaywallReason("RADAR_LIMIT_REACHED");
-        setShowUpgradeModal(true);
-        return;
-      }
+      setPaywallReason("RADAR_REQUIRES_PRO");
+      setShowUpgradeModal(true);
+      return;
     }
 
     try {
