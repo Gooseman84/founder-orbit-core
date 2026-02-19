@@ -1,45 +1,45 @@
 
 
-## Problem
+## Fix: Blueprint generation fails despite JSON cleaning
 
-The "Interview ID not found" error occurs because the summary page receives interview insights via navigation state but **without** the interview ID. This happens when the Mavrik interview finishes and navigates to `/discover/summary` -- it passes the `insights` object but omits the `interviewId`. Since insights are found in navigation state, the code skips the database fetch entirely (line 52-56), leaving `interviewId` as `null`. When you click "Update & show me ideas", the correction handler checks for `interviewId` and throws the error.
+### Problem
 
-## Fix
+The edge function logs prove that `cleanAIJsonResponse` IS working -- the cleaned text starts with `{` (valid JSON start). But `JSON.parse` still throws. This means:
 
-**File: `src/pages/DiscoverSummary.tsx`** (lines 47-57)
+- The markdown fence stripping works fine
+- The JSON **content itself** is malformed (likely trailing commas, unescaped characters, or other subtle syntax errors that the AI produces)
+- The current code also doesn't log the actual parse error message (`err` is caught but never logged), making debugging harder
 
-Update the `loadInsights` function so that when insights come from navigation state but the interview ID is missing, it fetches the interview ID from the database:
+### Solution
 
-```typescript
-const loadInsights = async () => {
-  const stateInsights = location.state?.insights as InterviewInsights | undefined;
-  const stateInterviewId = location.state?.interviewId as string | undefined;
+Two-pronged fix applied to both `generate-blueprint` and `refresh-blueprint`:
 
-  if (stateInsights) {
-    setInsights(stateInsights);
+**1. Add `response_format: { type: "json_object" }` to the AI API call**
 
-    if (stateInterviewId) {
-      setInterviewId(stateInterviewId);
-    } else {
-      // Insights came from nav state but no interview ID -- fetch it from DB
-      const { data } = await supabase
-        .from("founder_interviews")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("status", "completed")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+This is an OpenAI-compatible parameter supported by the Lovable AI gateway. It instructs the model to:
+- Return raw, valid JSON (no markdown fences)
+- Enforce JSON syntax correctness at the token level
 
-      setInterviewId(data?.id || null);
-    }
-    setIsLoading(false);
-    return;
-  }
+This eliminates the root cause entirely -- no more fence stripping needed, no more malformed JSON.
 
-  // ... rest of DB fetch stays the same
-};
-```
+**2. Keep `cleanAIJsonResponse` as a safety net + log the actual error**
 
-This is a one-file, ~10-line change. The correction flow will work because the interview ID will always be resolved before the user can tap "Update & show me ideas."
+If the model somehow still returns wrapped JSON, the cleaning catches it. Additionally, the actual `err.message` from `JSON.parse` will be logged so we can see exactly what character/position fails.
+
+### Files Changed
+
+**`supabase/functions/generate-blueprint/index.ts`**
+- Add `response_format: { type: "json_object" }` to the API request body (around line 873)
+- Log `err.message` in the catch block (line 929)
+
+**`supabase/functions/refresh-blueprint/index.ts`**
+- Add `response_format: { type: "json_object" }` to the API request body
+- Log `parseError.message` in the catch block
+
+Both functions will be redeployed after changes.
+
+### Verification
+- Blueprint generation should complete without parse errors
+- Logs should show clean JSON without ` ```json ` fences
+- The "Building Your Blueprint" stepper should complete all 8 steps and redirect to the Blueprint page
 
