@@ -136,53 +136,32 @@ const Profile = () => {
         </Card>
       )}
 
-      {/* Deep Dive Profile - Optional Enhancement */}
-      <Card className={hasExtended ? "border-border" : "border-primary/50 bg-primary/5"}>
+      {/* Talk to Mavrik - Profile Enhancement */}
+      <Card className="border-primary/50 hover:border-primary transition-colors bg-gradient-to-r from-primary/5 to-transparent">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <Sparkles className={`h-6 w-6 mt-0.5 ${hasExtended ? "text-muted-foreground" : "text-primary"}`} />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Brain className="h-6 w-6 text-primary" />
+              </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold">Deep Dive Profile</h3>
-                  {hasExtended && (
-                    <Badge variant="secondary" className="text-xs">Completed</Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {hasExtended 
-                    ? "Your extended profile helps generate more personalized ideas."
-                    : "Optional: Share deeper motivations and energy patterns for better idea matching."
+                <h3 className="font-semibold text-lg">Refine Your Profile with Mavrik</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {hasCore
+                    ? "Each conversation helps Mavrik learn more about you — your strengths, preferences, and blind spots get sharper, which means better ideas and more personalized recommendations."
+                    : "Have a conversation with your AI co-founder. Mavrik will map your skills, passions, and constraints to generate personalized venture ideas."
                   }
                 </p>
+                {hasCore && (
+                  <p className="text-xs text-muted-foreground/70 mt-2 flex items-center gap-1">
+                    <Info className="h-3 w-3" />
+                    Your profile data directly powers idea generation, opportunity scoring, and blueprint creation.
+                  </p>
+                )}
               </div>
             </div>
-            <Button 
-              variant={hasExtended ? "outline" : "default"}
-              onClick={() => navigate("/discover")}
-            >
-              {hasExtended ? "Edit Deep Dive" : "Start Deep Dive"}
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Talk to Mavrik CTA */}
-      <Card className="border-border hover:border-primary/50 transition-colors">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <Brain className="h-6 w-6 text-primary mt-0.5" />
-              <div>
-                <h3 className="font-semibold">Talk to Mavrik</h3>
-                <p className="text-sm text-muted-foreground">
-                  Have a conversation with your AI co-founder to discover hidden strengths and refine your profile.
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" onClick={() => navigate("/discover")}>
-              Start Conversation
+            <Button onClick={() => navigate("/discover")} className="shrink-0">
+              {hasCore ? "Talk to Mavrik" : "Start Interview"}
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
@@ -199,7 +178,7 @@ const Profile = () => {
                   <Heart className="h-5 w-5 text-primary" />
                   Passions
                 </CardTitle>
-                <CardDescription>What drives and excites you</CardDescription>
+                <CardDescription>What drives and excites you · Used for idea matching</CardDescription>
               </div>
               <Button variant="ghost" size="sm" onClick={() => openEditor("passions")}>
                 <Edit className="h-4 w-4 mr-1" />
@@ -208,7 +187,10 @@ const Profile = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               {core.passions_text && (
-                <p className="text-foreground">{core.passions_text}</p>
+                <>
+                  <p className="text-foreground">{core.passions_text}</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Auto-populated from your Mavrik interview · Edit to refine</p>
+                </>
               )}
               {core.passions_tags && core.passions_tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
@@ -230,7 +212,7 @@ const Profile = () => {
                   <Briefcase className="h-5 w-5 text-primary" />
                   Skills
                 </CardTitle>
-                <CardDescription>Your expertise and capabilities</CardDescription>
+                <CardDescription>Your expertise and capabilities · Used for founder-fit scoring</CardDescription>
               </div>
               <Button variant="ghost" size="sm" onClick={() => openEditor("skills")}>
                 <Edit className="h-4 w-4 mr-1" />
@@ -239,7 +221,10 @@ const Profile = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               {core.skills_text && (
-                <p className="text-foreground">{core.skills_text}</p>
+                <>
+                  <p className="text-foreground">{core.skills_text}</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Auto-populated from your Mavrik interview · Edit to refine</p>
+                </>
               )}
               {core.skills_tags && core.skills_tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
@@ -262,7 +247,7 @@ const Profile = () => {
                   <Clock className="h-5 w-5 text-primary" />
                   Constraints & Resources
                 </CardTitle>
-                <CardDescription>Your current situation and limits</CardDescription>
+                <CardDescription>Your current situation and limits · Used for feasibility analysis</CardDescription>
               </div>
               <Button variant="ghost" size="sm" onClick={() => openEditor("constraints")}>
                 <Edit className="h-4 w-4 mr-1" />
@@ -299,7 +284,7 @@ const Profile = () => {
                   <Target className="h-5 w-5 text-primary" />
                   Vision & Goals
                 </CardTitle>
-                <CardDescription>What success looks like for you</CardDescription>
+                <CardDescription>What success looks like for you · Used for lifestyle alignment</CardDescription>
               </div>
               <Button variant="ghost" size="sm" onClick={() => openEditor("vision")}>
                 <Edit className="h-4 w-4 mr-1" />
