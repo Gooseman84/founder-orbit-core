@@ -145,16 +145,16 @@ export const PAYWALL_COPY: Record<PaywallReasonCode, PaywallCopy> = {
     microcopy: "The best businesses solve real problems.",
   },
   FUSION_LIMIT_REACHED: {
-    headline: "You've used your 2 trial fusions.",
+    headline: "Fusion Lab is a Pro feature.",
     subhead:
-      "You've combined 2 idea fusions during your trial. Upgrade to Pro for unlimited idea fusions and discover powerful hybrid ventures.",
+      "Fusion Lab is a Pro feature. Upgrade to unlock unlimited idea fusions and discover powerful hybrid ventures you'd never think of on your own.",
     cta: "Unlock Unlimited Fusions",
     microcopy: "The best ideas often come from combining others.",
   },
   RADAR_LIMIT_REACHED: {
-    headline: "You've used your trial radar scan.",
+    headline: "Niche Radar is a Pro feature.",
     subhead:
-      "You've generated 1 radar scan during your trial. Upgrade to Pro for unlimited market research and stay ahead of emerging opportunities.",
+      "Niche Radar is a Pro feature. Upgrade to unlock unlimited market research scans and stay ahead of emerging opportunities.",
     cta: "Unlock Unlimited Radar",
     microcopy: "Know what's coming before everyone else.",
   },

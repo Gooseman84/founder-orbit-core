@@ -138,14 +138,11 @@ const FusionLab = () => {
   };
 
   const handleFuseIdeas = async () => {
-    // Check Pro access first
+    // Block trial users entirely (maxFusions = 0)
     if (!hasPro) {
-      // Check if trial user has hit their fusion limit (2)
-      if (fusionCount >= 2) {
-        setPaywallReason("FUSION_LIMIT_REACHED");
-        setShowUpgradeModal(true);
-        return;
-      }
+      setPaywallReason("FUSION_REQUIRES_PRO");
+      setShowUpgradeModal(true);
+      return;
     }
 
     if (selectedIds.size < 2) {

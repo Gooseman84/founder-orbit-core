@@ -124,7 +124,7 @@ export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
     // Advanced Features - Limited access
     canSeeOpportunityScore: false,
     canCompareIdeas: false,
-    canUseRadar: "basic",
+    canUseRadar: "none",
     canExport: false,
     canSeeFullIdeaDetails: false,
     
@@ -132,11 +132,11 @@ export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
     canUseAdvancedAI: false,
     canUseFusionLab: false,
     
-    // Fusion Lab - 2 fusions during trial
-    maxFusions: 2,
+    // Fusion Lab - Pro only
+    maxFusions: 0,
     
-    // Radar - 1 scan during trial
-    maxRadarScans: 1,
+    // Radar - Pro only
+    maxRadarScans: 0,
     
     // Implementation Kit - Pro only
     canGenerateImplementationKit: false,
