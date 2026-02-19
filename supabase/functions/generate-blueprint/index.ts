@@ -876,6 +876,7 @@ serve(async (req) => {
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: JSON.stringify(payload) },
         ],
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -926,8 +927,9 @@ serve(async (req) => {
       const cleaned = cleanAIJsonResponse(raw);
       console.log("[generate-blueprint] First 100 chars after cleaning:", cleaned.substring(0, 100));
       blueprintData = JSON.parse(cleaned);
-    } catch (err) {
-      console.error("[generate-blueprint] Failed to parse AI JSON. First 200 chars:", raw.substring(0, 200));
+    } catch (err: any) {
+      console.error("[generate-blueprint] Failed to parse AI JSON. Error:", err.message);
+      console.error("[generate-blueprint] First 200 chars:", raw.substring(0, 200));
       console.error("[generate-blueprint] Last 100 chars:", raw.substring(raw.length - 100));
       return new Response(JSON.stringify({ error: "AI JSON parse error" }), {
         status: 500,
