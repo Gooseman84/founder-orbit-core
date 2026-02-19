@@ -516,6 +516,7 @@ Return ONLY the JSON with ai_summary and ai_recommendations.`;
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -553,8 +554,9 @@ Return ONLY the JSON with ai_summary and ai_recommendations.`;
       const cleanContent = cleanAIJsonResponse(content);
       console.log("[refresh-blueprint] First 100 chars after cleaning:", cleanContent.substring(0, 100));
       parsed = JSON.parse(cleanContent);
-    } catch (parseError) {
-      console.error("[refresh-blueprint] Failed to parse AI response. First 200 chars:", content.substring(0, 200));
+    } catch (parseError: any) {
+      console.error("[refresh-blueprint] Failed to parse AI response. Error:", parseError.message);
+      console.error("[refresh-blueprint] First 200 chars:", content.substring(0, 200));
       console.error("[refresh-blueprint] Last 100 chars:", content.substring(content.length - 100));
       throw new Error("Failed to parse AI response");
     }
