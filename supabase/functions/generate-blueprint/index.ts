@@ -23,6 +23,18 @@ function cleanAIJsonResponse(text: string): string {
       cleaned = cleaned.substring(firstBrace, lastBrace + 1);
     }
   }
+  // CRITICAL: Sanitize control characters inside JSON string values
+  // These are illegal in JSON and cause "Bad control character in string literal" errors
+  cleaned = cleaned.replace(/[\x00-\x1F\x7F]/g, (char) => {
+    switch (char) {
+      case '\n': return '\\n';
+      case '\r': return '\\r';
+      case '\t': return '\\t';
+      case '\b': return '\\b';
+      case '\f': return '\\f';
+      default: return '';
+    }
+  });
   return cleaned;
 }
 
