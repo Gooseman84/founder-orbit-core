@@ -51,7 +51,7 @@ export function DiscoverChatContainer({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onFinalize}
+                onClick={() => onFinalize()}
                 disabled={isThinking}
                 className="text-xs h-7 text-primary hover:text-primary"
               >
@@ -96,7 +96,7 @@ export function DiscoverChatContainer({
               <p className="text-sm text-muted-foreground text-center">
                 Interview complete! Ready to discover your ideal ventures.
               </p>
-              <Button onClick={onFinalize} disabled={isThinking} className="w-full sm:w-auto">
+              <Button onClick={() => onFinalize()} disabled={isThinking} className="w-full sm:w-auto">
                 <Sparkles className="h-4 w-4 mr-2" />
                 {isThinking ? "Generating profile..." : "Generate my ideas"}
               </Button>

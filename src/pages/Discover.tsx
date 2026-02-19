@@ -1,7 +1,8 @@
 // src/pages/Discover.tsx
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Compass } from "lucide-react";
+import { ArrowLeft, Compass, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +16,7 @@ type InterviewState = "loading" | "resume_prompt" | "active" | "complete";
 
 export default function Discover() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   
   const [interviewState, setInterviewState] = useState<InterviewState>("loading");
@@ -251,7 +252,15 @@ export default function Discover() {
           </div>
           <span className="font-semibold text-lg">TrueBlazer</span>
         </div>
-        <div className="w-8" /> {/* spacer for centering */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => signOut()}
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Sign out"
+        >
+          <LogOut className="h-4 w-4" />
+        </Button>
       </header>
 
       {/* Resume Modal */}
