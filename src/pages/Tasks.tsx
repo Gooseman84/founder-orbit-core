@@ -13,7 +13,7 @@ import { ImplementationKitStatus } from "@/components/implementationKit/Implemen
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Sparkles, CheckCircle2, AlertTriangle, Inbox, Plus } from "lucide-react";
+import { Loader2, Sparkles, CheckCircle2, AlertTriangle, Inbox, Plus, Calendar } from "lucide-react";
 
 type CheckinPayload = {
   completionStatus: "yes" | "partial" | "no";

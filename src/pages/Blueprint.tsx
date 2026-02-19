@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useVentureBlueprint } from "@/hooks/useVentureBlueprint";
 import { useVenturePlans } from "@/hooks/useVenturePlans";
 import { useVentureTasks } from "@/hooks/useVentureTasks";
-import { useGenerateVenturePlan } from "@/hooks/useGenerateVenturePlan";
+
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useVentureState } from "@/hooks/useVentureState";
@@ -17,7 +17,7 @@ import { FunnelStepper } from "@/components/shared/FunnelStepper";
 import { FinancialViabilityScore } from "@/components/opportunity/FinancialViabilityScore";
 import { BusinessBlueprint } from "@/components/blueprint/BusinessBlueprint";
 import { BlueprintGenerationAnimation } from "@/components/blueprint/BlueprintGenerationAnimation";
-import { ThirtyDayPlanCard } from "@/components/venture/ThirtyDayPlanCard";
+
 import { GenerateKitButton, TechStackDialog } from "@/components/implementationKit";
 import { useImplementationKitByBlueprint, useCreateImplementationKit } from "@/hooks/useImplementationKit";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -27,20 +27,19 @@ import {
   Target,
   AlertTriangle,
   ArrowLeft,
-  Rocket,
   Loader2,
   ClipboardList,
   BarChart3,
-  ArrowRight,
   Check,
   Calendar,
   FileDown,
   Lock,
+  ChevronRight,
 } from "lucide-react";
 import { exportBlueprintToPdf } from "@/lib/blueprintPdfExport";
 import { PaywallModal } from "@/components/paywall/PaywallModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
+
 import { cn } from "@/lib/utils";
 import type { CommitmentWindowDays, Venture, VentureState } from "@/types/venture";
 import type { TechStack } from "@/types/implementationKit";
@@ -74,10 +73,9 @@ const Blueprint = () => {
   // The blueprint to display (generated or fetched)
   const displayBlueprint = generatedBlueprint || blueprint;
 
-  // 30-Day Plan hooks
-  const { latestPlan, isLoading: plansLoading, refetch: refetchPlans } = useVenturePlans(venture?.id ?? null);
-  const { tasksByWeek, isLoading: tasksLoading, refetch: refetchTasks } = useVentureTasks(venture?.id ?? null);
-  const { generate: generatePlan, isPending: planGenerating } = useGenerateVenturePlan();
+  // 30-Day Plan hooks (for summary card link)
+  const { latestPlan } = useVenturePlans(venture?.id ?? null);
+  const { tasksByWeek } = useVentureTasks(venture?.id ?? null);
 
   // Implementation Kit state
   const [showTechStackDialog, setShowTechStackDialog] = useState(false);
@@ -191,16 +189,6 @@ const Blueprint = () => {
 
   const isReadOnly = venture?.venture_state === "executing" || venture?.venture_state === "reviewed";
 
-  // Handle plan generation
-  const handleGeneratePlan = async () => {
-    if (!venture?.id) return;
-    const result = await generatePlan(venture.id, { planType: "30_day" });
-    if (result) {
-      toast({ title: "30-Day Plan generated!", description: `${result.tasksCreated.length} tasks created.` });
-      refetchPlans();
-      refetchTasks();
-    }
-  };
 
   // Handle PDF download
   const handleDownloadPdf = async () => {
@@ -456,51 +444,26 @@ const Blueprint = () => {
         <VentureDNASection ideaId={venture.idea_id} ventureId={venture.id} />
       )}
 
-      {/* ─── 30-Day Action Plan ─── */}
-      <div className="mb-6 mt-10">
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-bold">Your 30-Day Action Plan</h2>
-        </div>
-
-        {plansLoading || tasksLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-lg border bg-card p-4 space-y-2">
-                <Skeleton className="h-4 w-1/3" />
-                <Skeleton className="h-3 w-full" />
+      {/* Link to Execution Plan */}
+      <Card className="mb-6 mt-10 border-primary/20 hover:border-primary/40 transition-colors cursor-pointer" onClick={() => navigate("/tasks")}>
+        <CardContent className="py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-semibold">30-Day Execution Plan</p>
+                <p className="text-sm text-muted-foreground">
+                  {latestPlan
+                    ? `${Object.values(tasksByWeek).flat().filter((t: any) => t.status === 'completed').length} of ${Object.values(tasksByWeek).flat().length} tasks completed`
+                    : "Generate your personalized 30-day roadmap"
+                  }
+                </p>
               </div>
-            ))}
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </div>
-        ) : latestPlan ? (
-          <ThirtyDayPlanCard
-            plan={latestPlan}
-            tasksByWeek={tasksByWeek}
-            ventureId={venture.id}
-          />
-        ) : (
-          <Card className="border-dashed">
-            <CardContent className="py-8 text-center space-y-4">
-              <p className="text-muted-foreground text-sm">
-                No action plan yet. Generate a 30-day roadmap with weekly tasks.
-              </p>
-              <Button onClick={handleGeneratePlan} disabled={planGenerating}>
-                {planGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating plan…
-                  </>
-                ) : (
-                  <>
-                    <Rocket className="mr-2 h-4 w-4" />
-                    Generate Your 30-Day Plan
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
       {/* ─── Start Building CTA ─── */}
       <div className="mt-10 mb-4">
