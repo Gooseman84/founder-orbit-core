@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, CheckCircle2, Download, Archive, Menu, Plus, FolderPlus, X, CheckSquare, Square, Rocket } from 'lucide-react';
+import { FileText, CheckCircle2, Download, Archive, Menu, Plus, FolderPlus, X, CheckSquare, Square, Rocket, Lock } from 'lucide-react';
 import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
@@ -601,9 +601,26 @@ export default function Workspace() {
 
       {/* Feature Builder Tab */}
       {activeTab === 'feature-builder' ? (
-        <div className="flex-1 overflow-y-auto p-2 md:p-4">
-          <FeaturePlanner />
-        </div>
+        !isPro ? (
+          <Card className="border-dashed m-4">
+            <CardContent className="py-12 text-center space-y-4">
+              <Lock className="h-8 w-8 text-muted-foreground mx-auto" />
+              <div>
+                <p className="font-semibold mb-1">Feature Builder is a Pro tool</p>
+                <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                  Plan and scope individual features with AI-powered implementation guides. Upgrade to Pro to start building.
+                </p>
+              </div>
+              <Button onClick={() => navigate("/billing")}>
+                Upgrade to Pro
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-2 md:p-4">
+            <FeaturePlanner />
+          </div>
+        )
       ) : (
       <>
       {/* Floating execution task indicator */}
