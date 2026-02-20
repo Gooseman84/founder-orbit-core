@@ -5,11 +5,14 @@ import { useVentureState } from "@/hooks/useVentureState";
 import { useDailyExecution } from "@/hooks/useDailyExecution";
 import { useBlueprint } from "@/hooks/useBlueprint";
 import { useImplementationKitByBlueprint } from "@/hooks/useImplementationKit";
+import { useVenturePlans } from "@/hooks/useVenturePlans";
+import { useVentureTasks } from "@/hooks/useVentureTasks";
 import { useToast } from "@/hooks/use-toast";
 import { VentureContextHeader } from "@/components/tasks/VentureContextHeader";
 import { ExecutionTaskCard } from "@/components/tasks/ExecutionTaskCard";
 import { DailyCheckinForm } from "@/components/tasks/DailyCheckinForm";
 import { ImplementationKitStatus } from "@/components/implementationKit/ImplementationKitStatus";
+import { ThirtyDayPlanCard } from "@/components/venture/ThirtyDayPlanCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -43,6 +46,10 @@ const Tasks = () => {
     submitCheckin,
     markTaskCompleted,
   } = useDailyExecution(activeVenture);
+
+  // 30-day plan data
+  const { latestPlan, isLoading: planLoading } = useVenturePlans(activeVenture?.id ?? null);
+  const { tasksByWeek, isLoading: planTasksLoading } = useVentureTasks(activeVenture?.id ?? null);
 
   // Redirect if not in executing state - with specific messages per state
   useEffect(() => {
@@ -167,6 +174,37 @@ const Tasks = () => {
           showGenerateButton={false}
           compact={true}
         />
+      )}
+
+      {/* 30-Day Execution Plan Overview */}
+      {latestPlan ? (
+        <ThirtyDayPlanCard
+          plan={latestPlan}
+          tasksByWeek={tasksByWeek}
+          ventureId={activeVenture.id}
+        />
+      ) : !planLoading && !planTasksLoading && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Calendar className="h-5 w-5 text-primary" />
+              30-Day Execution Plan
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center py-6 text-center gap-3">
+            <p className="text-sm text-muted-foreground">
+              Generate a personalized 30-day roadmap with weekly milestones based on your Blueprint.
+            </p>
+            <Button onClick={() => generateDailyTasks()} disabled={isGeneratingTasks} variant="outline">
+              {isGeneratingTasks ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Generate 30-Day Plan
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* Today's Tasks Section */}
