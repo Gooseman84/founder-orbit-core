@@ -148,6 +148,8 @@ Some fields may be null. Do the best you can with available data.
 OUTPUT SCHEMA (STRICT JSON ONLY)
 ---
 
+CRITICAL: You MUST fill in ALL business fields (promise_statement, offer_model, monetization_strategy, distribution_channels, unfair_advantage) based on the chosen_idea data, source_meta, and idea_analysis. NEVER return null for these fields if you have ANY context about the idea. Infer reasonable values from the available data. A null business field means the blueprint is incomplete and useless to the founder.
+
 TASK RATIONALE RULE:
 Every ai_recommendation MUST include a "why_now" field. This transforms a task list into a narrative. When a user reads their recommendations and asks "why should I do this now?" the answer should be built into the recommendation itself.
 
@@ -828,7 +830,9 @@ serve(async (req) => {
         .from("ideas")
         .select("id, title, description, target_customer, business_model_type, source_meta, overall_fit_score")
         .eq("user_id", userId)
-        .eq("status", "chosen")
+        .in("status", ["chosen", "north_star"])
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (ideaError) {
@@ -852,6 +856,24 @@ serve(async (req) => {
       } else {
         ideaAnalysis = data;
       }
+    }
+
+    // Fallback: synthesize idea_analysis from source_meta when no formal analysis exists
+    // This ensures the AI gets structured business context even for ideas that came through
+    // the onboarding flow (where idea_analysis is never populated)
+    if (!ideaAnalysis && chosenIdea?.source_meta) {
+      const meta = chosenIdea.source_meta as any;
+      ideaAnalysis = {
+        ideal_customer_profile: meta.targetCustomer || meta.target_customer || null,
+        problem_intensity: meta.whyThisFounder || meta.keyRisk || null,
+        elevator_pitch: chosenIdea.description || meta.oneLiner || null,
+        pricing_power: meta.revenueModel || meta.revenue_model || null,
+        market_insight: meta.capitalRequired || meta.firstStep || null,
+        founder_fit: meta.fitBreakdown?.founderMarketFit || null,
+        feasibility: meta.fitBreakdown?.feasibility || null,
+        revenue_alignment: meta.fitBreakdown?.revenueAlignment || null,
+      };
+      console.log("[generate-blueprint] Synthesized idea_analysis from source_meta");
     }
 
     // Fetch Mavrik interview for venture intelligence
@@ -885,10 +907,16 @@ serve(async (req) => {
             id: chosenIdea.id,
             title: chosenIdea.title,
             summary: chosenIdea.description,
-            target_customer: chosenIdea.target_customer,
-            business_model_type: chosenIdea.business_model_type,
+            target_customer: chosenIdea.target_customer || (chosenIdea.source_meta as any)?.targetCustomer || null,
+            business_model_type: chosenIdea.business_model_type || null,
+            revenue_model: (chosenIdea.source_meta as any)?.revenueModel || null,
+            capital_required: (chosenIdea.source_meta as any)?.capitalRequired || null,
+            time_to_first_revenue: (chosenIdea.source_meta as any)?.timeToFirstRevenue || null,
+            key_risk: (chosenIdea.source_meta as any)?.keyRisk || null,
+            first_step: (chosenIdea.source_meta as any)?.firstStep || null,
+            why_this_founder: (chosenIdea.source_meta as any)?.whyThisFounder || null,
+            fit_score: chosenIdea.overall_fit_score || (chosenIdea.source_meta as any)?.fitScore || null,
             source_meta: chosenIdea.source_meta || null,
-            overall_fit_score: chosenIdea.overall_fit_score || null,
           }
         : null,
       idea_analysis: ideaAnalysis
