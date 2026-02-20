@@ -5,7 +5,7 @@ import { useActiveVenture } from "@/hooks/useActiveVenture";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
-import { FunnelStepper } from "@/components/shared/FunnelStepper";
+
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import type { CommitmentWindowDays, CommitmentFull } from "@/types/venture";
 import { addDays, format } from "date-fns";
@@ -193,9 +193,6 @@ export default function Commit() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* FunnelStepper replaces sidebar during guided funnel */}
-      <FunnelStepper currentStep="commit" />
-
       {/* Active venture warning */}
       {hasConflictingVenture && (
         <div className="w-full bg-destructive/10 border-b border-destructive/20 px-4 py-3">

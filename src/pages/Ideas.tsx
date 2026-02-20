@@ -511,11 +511,11 @@ const Ideas = () => {
       
       toast({ 
         title: "North Star Set!", 
-        description: "Navigate to North Star page to see your master prompt." 
+        description: "Now commit to your venture to start executing." 
       });
       
-      // Navigate to North Star page
-      navigate("/north-star");
+      // Navigate to Commit page
+      navigate(`/commit/${ideaId}`);
       
     } catch (error: any) {
       console.error("Failed to set North Star:", error);

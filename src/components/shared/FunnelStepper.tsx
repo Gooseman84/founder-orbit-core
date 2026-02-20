@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type FunnelStep = "discover" | "summary" | "results" | "commit" | "blueprint";
+type FunnelStep = "discover" | "summary" | "results" | "blueprint";
 
 interface FunnelStepperProps {
   currentStep: FunnelStep;
@@ -11,7 +11,6 @@ const STEPS: { key: FunnelStep; label: string }[] = [
   { key: "discover", label: "Interview" },
   { key: "summary", label: "Profile" },
   { key: "results", label: "Ideas" },
-  { key: "commit", label: "Commit" },
   { key: "blueprint", label: "Blueprint" },
 ];
 
