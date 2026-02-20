@@ -215,14 +215,14 @@ export default function DiscoverResults() {
     }
   };
 
-  // Handle "This is the one" - save idea then navigate to commit
+  // Handle "This is the one" - set as North Star, save idea, then auto-commit
   const handleCommit = async (recommendation: Recommendation) => {
     if (!user) return;
 
     setCommittingId(recommendation.name);
 
     try {
-      // Check if this idea already exists (from auto-save)
+      // Step 1: Save/find the idea in the library
       let ideaId: string;
       const { data: existing } = await supabase
         .from("ideas")
@@ -265,7 +265,65 @@ export default function DiscoverResults() {
         ideaId = data.id;
       }
 
-      navigate(`/commit/${ideaId}`);
+      // Step 2: Set this idea as North Star (fires the full cascade:
+      // resets other ideas, links blueprint, creates/reuses venture)
+      try {
+        await invokeAuthedFunction("set-north-star-idea", {
+          body: { idea_id: ideaId },
+        });
+      } catch (nsError) {
+        console.error("Failed to set North Star (non-fatal):", nsError);
+        // Don't block the flow — the commit flow will still work
+      }
+
+      // Step 3: Auto-commit with 7-day window for first-time onboarding flow
+      // (Skip the Commit page — reduce friction)
+      try {
+        const { data: ventureData } = await supabase
+          .from("ventures")
+          .select("id, venture_state")
+          .eq("user_id", user.id)
+          .eq("idea_id", ideaId)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (ventureData && (ventureData.venture_state === "inactive" || !ventureData.venture_state)) {
+          // Auto-commit: transition to executing with 7-day window
+          const startDate = new Date();
+          const endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 7);
+
+          const { error: transitionError } = await supabase
+            .from("ventures")
+            .update({
+              venture_state: "executing",
+              commitment_window_days: 7,
+              commitment_start_at: startDate.toISOString(),
+              commitment_end_at: endDate.toISOString(),
+              success_metric: "Complete my Blueprint and review my 30-day plan",
+            })
+            .eq("id", ventureData.id)
+            .eq("user_id", user.id);
+
+          if (transitionError) {
+            console.error("Auto-commit failed, falling back to commit page:", transitionError);
+            navigate(`/commit/${ideaId}`);
+            return;
+          }
+
+          // Go straight to blueprint generation
+          navigate(`/blueprint?ventureId=${ventureData.id}&fresh=1`);
+          return;
+        }
+
+        // Fallback: if venture doesn't exist or is in unexpected state, use commit page
+        navigate(`/commit/${ideaId}`);
+      } catch (autoCommitError) {
+        console.error("Auto-commit error, falling back to commit page:", autoCommitError);
+        navigate(`/commit/${ideaId}`);
+      }
     } catch (e: any) {
       console.error("Failed to save idea for commit:", e);
       toast({

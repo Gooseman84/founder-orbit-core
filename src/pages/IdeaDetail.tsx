@@ -163,7 +163,7 @@ const IdeaDetail = () => {
 
       toast({
         title: "North Star set",
-        description: "This idea is now your primary focus.",
+        description: "Now commit to your venture to start executing.",
       });
 
       // Invalidate all related queries for immediate UI update
@@ -172,6 +172,9 @@ const IdeaDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["ventures"] });
       queryClient.invalidateQueries({ queryKey: ["founder-blueprint"] });
       refetch();
+
+      // Route to Commit page for Idea Lab flow
+      navigate(`/commit/${id}`);
 
     } catch (error: any) {
       console.error("Error setting North Star:", error);
