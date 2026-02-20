@@ -10,6 +10,7 @@ import {
   GitMerge,
   User,
   CreditCard,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TrialStatusBadge } from "@/components/shared/TrialStatusBadge";
@@ -57,6 +58,7 @@ export function MobileBottomNav() {
           path: `/blueprint?ventureId=${ventureId}`,
           icon: Map,
         },
+        { label: "Tasks", path: "/tasks", icon: ClipboardCheck },
         { label: "Workspace", path: "/workspace", icon: FolderOpen },
       ];
     }

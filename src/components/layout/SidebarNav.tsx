@@ -16,6 +16,7 @@ import {
   Search,
   GitMerge,
   FolderOpen,
+  ClipboardCheck,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,10 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
           <NavLink to={blueprintHref} onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
             <Map className="w-4 h-4 shrink-0" />
             <span className="truncate">Blueprint</span>
+          </NavLink>
+          <NavLink to="/tasks" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
+            <ClipboardCheck className="w-4 h-4 shrink-0" />
+            <span className="truncate">Tasks</span>
           </NavLink>
           <NavLink to="/workspace" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
             <FolderOpen className="w-4 h-4 shrink-0" />
