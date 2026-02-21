@@ -269,20 +269,21 @@ MODE A: STRUCTURED ONBOARDING CONTEXT AVAILABLE
 The founder has already answered 7 baseline questions. You will receive this
 context in the next message. Use it to ask TARGETED, EFFICIENT follow-ups.
 
-You MUST complete the interview in exactly 3-5 questions. HARD LIMIT.
-You MUST track your question count internally. After asking your 5th
+You MUST complete the interview in 5-7 questions. HARD LIMIT: 7 questions max.
+You MUST track your question count internally. After asking your 7th
 question, you MUST stop regardless of signal quality. Incomplete signal
 is acceptable — note low confidence in confidenceLevel fields.
 
-After question 3, actively look for reasons to COMPLETE rather than
+After question 5, actively look for reasons to COMPLETE rather than
 reasons to ask more. If you have medium-or-better signal on at least
-3 of the 4 extraction goals, complete immediately.
+4 of the 5 extraction goals (including network), complete immediately.
 
-Ask only **3-5 questions** that fill gaps:
+Ask **5-7 questions** that fill gaps (HARD LIMIT: 7 questions max):
 1. Specific unfair advantages (unique access, insider knowledge, rare skills)
 2. Real constraints (actual time, family responsibilities, financial runway)
 3. Hard "no" filters (things they'll NEVER do)
 4. Market segments they understand from the inside
+5. Network & distribution (REQUIRED — who are their first 10 customers?)
 
 DO NOT ask about:
 - Why they're here (you already know)
@@ -295,6 +296,12 @@ DO ask about:
 - "Given your vision of [future_vision], what's the biggest constraint holding you back?"
 - "What would you absolutely NEVER want your business to require?"
 - "Which customer groups do you understand from the inside?"
+- "Who in your existing world — colleagues, contacts, communities — would be your most likely first 10 customers, and why?"
+
+IMPORTANT: You MUST ask at least one question about the founder's network
+and distribution before concluding. If you reach question 5 without having
+covered network/distribution, your next question MUST be about their first
+10 customers or warm audiences.
 ${INTELLIGENCE_LAYERS}
 
 YOUR FIRST QUESTION:
@@ -344,14 +351,20 @@ questions maximum recommended. After your 6th question, actively look for
 reasons to complete. After your 7th question AT MOST, you MUST stop
 regardless of signal quality. No exceptions.
 
-Ask **5-6 questions** that cover these areas in order of priority:
+Ask **6-8 questions** that cover these areas in order of priority (HARD LIMIT: 8 questions max):
 1. Professional expertise and insider knowledge (what they know that
    others don't)
 2. Customer groups they understand from the inside
 3. Specific frustrations or broken workflows they've observed
 4. Real constraints (time, capital, responsibilities)
 5. Financial target and lifestyle vision
-6. Hard "no" filters (if not yet clear)
+6. Network & distribution — who are their first 10 customers? (REQUIRED)
+7. Hard "no" filters (if not yet clear)
+
+IMPORTANT: You MUST ask at least one question about the founder's network
+and distribution before concluding. If you reach question 6 without having
+covered network/distribution, your next question MUST be about their first
+10 customers or warm audiences.
 ${INTELLIGENCE_LAYERS}
 
 These layers activate during questions 2-6 when the user has described
@@ -648,9 +661,45 @@ Now ask your first targeted question based on this context. Reference something 
       // ===== HARD STOP: Check question limit BEFORE calling AI =====
       const aiQuestionCount = transcript.filter(t => t.role === "ai").length;
       const userAnswerCount = transcript.filter(t => t.role === "user").length;
-      const maxQuestions = isModeA ? 5 : 6;
+      const maxQuestions = isModeA ? 7 : 8;
 
       if (userAnswerCount >= maxQuestions) {
+        // Safety check: did we cover network/distribution?
+        const transcriptText = transcript.map(t => t.content).join(" ").toLowerCase();
+        const hasNetworkCoverage = transcriptText.includes("first 10 customers") ||
+          transcriptText.includes("first ten customers") ||
+          transcriptText.includes("network") ||
+          transcriptText.includes("warm audience") ||
+          transcriptText.includes("email list") ||
+          transcriptText.includes("social following") ||
+          transcriptText.includes("distribution");
+
+        if (!hasNetworkCoverage && userAnswerCount === maxQuestions) {
+          // Inject one final network question instead of completing
+          console.log("dynamic-founder-interview: Network not covered — injecting fallback network question before completion.");
+          const networkFallback = "Before we wrap up — one more thing I'd love to understand: who in your existing world do you think would be your first 10 customers, and why?";
+          transcript = [
+            ...transcript,
+            { role: "ai" as InterviewRole, content: networkFallback, timestamp: new Date().toISOString() },
+          ];
+          await supabase
+            .from("founder_interviews")
+            .update({ transcript })
+            .eq("id", interviewId);
+
+          return new Response(
+            JSON.stringify({
+              interviewId,
+              question: networkFallback,
+              transcript,
+              canFinalize: true,
+              approachingLimit: true,
+              networkFallback: true,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         console.log(`dynamic-founder-interview: HARD STOP - ${userAnswerCount} user answers, max is ${maxQuestions}. Forcing completion.`);
 
         // Save transcript as-is
