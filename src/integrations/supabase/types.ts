@@ -416,6 +416,7 @@ export type Database = {
           life_time_horizon: string | null
           life_vision: string | null
           monetization_strategy: string | null
+          network_advantage: Json | null
           non_negotiables: string | null
           north_star_idea_id: string | null
           north_star_one_liner: string | null
@@ -453,6 +454,7 @@ export type Database = {
           life_time_horizon?: string | null
           life_vision?: string | null
           monetization_strategy?: string | null
+          network_advantage?: Json | null
           non_negotiables?: string | null
           north_star_idea_id?: string | null
           north_star_one_liner?: string | null
@@ -490,6 +492,7 @@ export type Database = {
           life_time_horizon?: string | null
           life_vision?: string | null
           monetization_strategy?: string | null
+          network_advantage?: Json | null
           non_negotiables?: string | null
           north_star_idea_id?: string | null
           north_star_one_liner?: string | null

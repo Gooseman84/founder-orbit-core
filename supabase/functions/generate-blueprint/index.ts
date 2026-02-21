@@ -150,6 +150,13 @@ OUTPUT SCHEMA (STRICT JSON ONLY)
 
 CRITICAL: You MUST fill in ALL business fields (promise_statement, offer_model, monetization_strategy, distribution_channels, unfair_advantage) based on the chosen_idea data, source_meta, and idea_analysis. NEVER return null for these fields if you have ANY context about the idea. Infer reasonable values from the available data. A null business field means the blueprint is incomplete and useless to the founder.
 
+NETWORK ADVANTAGE: You MUST generate the "network_advantage" object if ANY network/distribution data is available in the founder_insights (look for networkDistribution, firstTenCustomers, warmAudiences, priorSalesExperience fields). Generate exactly 4 elements:
+1. "first_ten_customers" — specific, concrete archetypes based on their answer about first 10 customers. Use their actual words where possible.
+2. "distribution_channel" — the most direct path to those customers using their warm audiences.
+3. "credibility_signal" — why their background gives them trust with this audience.
+4. "fvs_impact" — one sentence on how network strength affects their Financial Viability Score.
+Be specific and tactical, not generic. If no network data is available, set network_advantage to null.
+
 TASK RATIONALE RULE:
 Every ai_recommendation MUST include a "why_now" field. This transforms a task list into a narrative. When a user reads their recommendations and asks "why should I do this now?" the answer should be built into the recommendation itself.
 
@@ -210,7 +217,14 @@ The why_now should reference:
       "suggested_task_count": number,     // 1-5 sub-tasks this could spawn
       "why_now": string                   // 1-2 sentences: why this matters at this specific point, what it depends on, what it enables next
     }
-  ]
+  ],
+
+  "network_advantage": {                  // AI-generated network advantage analysis
+    "first_ten_customers": string,        // specific archetypes based on founder's network data
+    "distribution_channel": string,       // most direct path using their warm audiences
+    "credibility_signal": string,         // why their background gives them trust with this audience
+    "fvs_impact": string                  // one sentence on how network strength affects FVS
+  } | null
 }
 
 ---
@@ -933,6 +947,7 @@ serve(async (req) => {
         extractedInsights: interviewContext.extractedInsights || {},
         founderSummary: interviewContext.founderSummary || "",
         transferablePatterns: interviewContext.extractedInsights?.transferablePatterns || [],
+        networkDistribution: interviewContext.extractedInsights?.networkDistribution || null,
         ideaGenerationContext: interviewContext.ideaGenerationContext || "",
       } : null,
     };

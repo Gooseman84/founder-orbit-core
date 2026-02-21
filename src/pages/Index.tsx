@@ -296,7 +296,7 @@ const WhoThisIsForSection = () => {
     {
       icon: Clock,
       title: "The Side-Hustle Strategist",
-      description: "You have 10-15 hours a week and can't afford to waste a single one. TrueBlazer finds the idea that fits your schedule, leverages your existing network, and gets to revenue fastest."
+      description: "You have 10-15 hours a week and can't afford to waste a single one. TrueBlazer identifies how your existing network becomes your unfair distribution advantage — and who your first 10 customers already are."
     },
     {
       icon: User,
