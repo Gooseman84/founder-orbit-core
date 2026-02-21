@@ -16,6 +16,7 @@ import { BlueprintSkeleton } from "@/components/shared/SkeletonLoaders";
 import { FunnelStepper } from "@/components/shared/FunnelStepper";
 import { FinancialViabilityScore } from "@/components/opportunity/FinancialViabilityScore";
 import { BusinessBlueprint } from "@/components/blueprint/BusinessBlueprint";
+import { NetworkAdvantageCard } from "@/components/blueprint/NetworkAdvantageCard";
 import { BlueprintGenerationAnimation } from "@/components/blueprint/BlueprintGenerationAnimation";
 
 import { GenerateKitButton, TechStackDialog } from "@/components/implementationKit";
@@ -409,6 +410,13 @@ const Blueprint = () => {
       {displayBlueprint && (
         <div className="mb-6">
           <BusinessBlueprint blueprint={displayBlueprint} onEditSection={setEditSection} />
+        </div>
+      )}
+
+      {/* Network Advantage Card */}
+      {displayBlueprint && (displayBlueprint as any).network_advantage && (
+        <div className="mb-6">
+          <NetworkAdvantageCard networkAdvantage={(displayBlueprint as any).network_advantage} />
         </div>
       )}
 

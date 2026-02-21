@@ -48,6 +48,13 @@ Before each question, silently assess which gaps remain:
    - What does success look like in 3 years?
    - Income target? Lifestyle goals?
 
+6. NETWORK & DISTRIBUTION
+   - How large/connected is their professional network?
+   - Which industries or communities are represented?
+   - Do they have warm audiences (email list, social following, community)?
+   - Have they ever sold anything to their network before?
+   - Who would be their first 10 customers and why? (MOST IMPORTANT)
+
 ═══════════════════════════════════════════════════════════════════════════════
 INTERVIEW RULES
 ═══════════════════════════════════════════════════════════════════════════════
@@ -93,6 +100,14 @@ When asked to summarize, return ONLY this JSON structure:
     "hardNoFilters": ["managing employees", "cold calling", "physical products"],
     "emotionalDrivers": ["freedom", "autonomy", "creative expression"],
     "domainExpertise": ["fintech", "healthcare SaaS", "developer tools"],
+    "networkDistribution": {
+      "networkSize": "small_tight" | "medium_growing" | "large_broad" | "unclear",
+      "networkIndustries": "industries and communities represented in their network",
+      "warmAudiences": "email lists, social followings, communities they have access to",
+      "priorSalesExperience": "yes" | "no" | "sort_of",
+      "priorSalesDetail": "what they sold, to whom, outcome",
+      "firstTenCustomers": "specific archetypes or named roles of their most likely first 10 customers and why"
+    },
     "transferablePatterns": [
       {
         "abstractSkill": "the underlying capability described at a meta level",
@@ -132,6 +147,9 @@ SUMMARY RULES:
 - minimumMonthlyRevenue must be a number or the string "unspecified".
 - type must be one of: "side_income", "salary_replacement", "wealth_building".
 - founderSummary should be personal and specific, not generic.
+- networkDistribution: Fill in ALL fields based on what the founder shared.
+  If network topics weren't discussed, set networkSize to "unclear" and other fields to empty strings.
+  firstTenCustomers is the MOST IMPORTANT field — be as specific as possible.
 - transferablePatterns: Identify 1-3 abstract skills from the interview.
   For each, list 2-4 adjacent industries where the same underlying
   problem exists but may not have been solved with this approach.
@@ -374,7 +392,9 @@ After vision → "Now let's get real. How many hours per week can you
 actually dedicate, and what's your financial runway?"
 After constraints → "What's the minimum monthly income this needs to
 generate to feel worth your time?"
-After financial → "Last one: what would you absolutely refuse to do,
+After financial → "Who in your existing world — colleagues, contacts,
+communities — would be your most likely first 10 customers, and why?"
+After network → "Last one: what would you absolutely refuse to do,
 even if it made money?"`;
 
 type InterviewRole = "system" | "ai" | "user";
