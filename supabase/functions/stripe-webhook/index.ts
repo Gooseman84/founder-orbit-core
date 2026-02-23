@@ -27,6 +27,19 @@ const stripe = new Stripe(getStripeSecretKey(), {
 
 const webhookSecret = getWebhookSecret();
 
+// Safe timestamp converter - prevents "Invalid time value" crashes
+// Stripe SDK v18 may return null/undefined for timestamp fields
+const toIsoOrNull = (unixSeconds: unknown): string | null => {
+  if (typeof unixSeconds !== "number" || !Number.isFinite(unixSeconds)) {
+    return null;
+  }
+  try {
+    return new Date(unixSeconds * 1000).toISOString();
+  } catch {
+    return null;
+  }
+};
+
 serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -74,10 +87,8 @@ serve(async (req) => {
               stripe_subscription_id: subscriptionId,
               plan: "pro",
               status: subscription.status,
-              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-              cancel_at: subscription.cancel_at 
-                ? new Date(subscription.cancel_at * 1000).toISOString() 
-                : null,
+              current_period_end: toIsoOrNull(subscription.current_period_end),
+              cancel_at: toIsoOrNull(subscription.cancel_at),
             })
             .eq("stripe_customer_id", customerId);
 
@@ -102,10 +113,10 @@ serve(async (req) => {
             stripe_subscription_id: sub.id,
             plan: "pro",
             status: sub.status,
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
-            cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
+            current_period_end: toIsoOrNull(sub.current_period_end),
+            cancel_at: toIsoOrNull(sub.cancel_at),
             renewal_period: sub.items.data[0]?.plan?.interval || null,
-            trial_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+            trial_end: toIsoOrNull(sub.trial_end),
           })
           .eq("stripe_customer_id", customerId);
 
@@ -136,10 +147,10 @@ serve(async (req) => {
             stripe_subscription_id: sub.id,
             plan,
             status: sub.status,
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
-            cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
+            current_period_end: toIsoOrNull(sub.current_period_end),
+            cancel_at: toIsoOrNull(sub.cancel_at),
             renewal_period: sub.items.data[0]?.plan?.interval || null,
-            trial_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+            trial_end: toIsoOrNull(sub.trial_end),
           })
           .eq("stripe_customer_id", customerId);
 
@@ -201,7 +212,7 @@ serve(async (req) => {
       case "customer.subscription.trial_will_end": {
         const sub = event.data.object as Stripe.Subscription;
         const customerId = sub.customer as string;
-        console.log("[stripe-webhook] Trial ending soon for customer:", customerId, "Ends:", new Date(sub.trial_end! * 1000));
+        console.log("[stripe-webhook] Trial ending soon for customer:", customerId, "Ends:", toIsoOrNull(sub.trial_end));
         // Future: Send notification email here
         break;
       }
