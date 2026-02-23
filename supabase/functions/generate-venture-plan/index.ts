@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,9 +19,6 @@ Transform founder context + idea into a concrete 30-day execution plan with week
 4. CONSTRAINT REALITY: What will actually block progress? Time, skills, money, fear?
 5. WEEKLY ARCS: How should momentum build? What's the right pacing for this specific founder?
 6. TASK SIZING: Are tasks completable in 15-45 min? Do they match skill level?
-7. FOUNDER LEVERAGE: If founderIntelligence is provided, how can tasks leverage the founder's specific insider knowledge, existing relationships, and industry access? Tasks should say "Call your 3 contacts at [industry]" not "Research the [industry] market."
-8. HARD NO COMPLIANCE: If hardNoFilters exist, NO task should require the founder to do anything on that list. If they said "no cold calling," all outreach tasks must be warm or async.
-9. CROSS-INDUSTRY VALIDATION: If this is a pattern transfer idea (transferablePatterns present), Week 1 should include tasks that validate whether the pattern actually applies in the target industry.
 
 ## INPUT SCHEMA
 {
@@ -223,6 +221,8 @@ When founderIntelligence is present in the input, apply these rules:
 
 When founderIntelligence is null, generate tasks using only the idea and founderProfile (standard behavior).
 
+{{FRAMEWORKS_INJECTION_POINT}}
+
 ## OUTPUT
 Return ONLY valid JSON matching the schema. No markdown, no explanation, no preamble.`;
 
@@ -334,6 +334,30 @@ serve(async (req) => {
     const interviewContext = interviewData?.context_summary as any || null;
     console.log("generate-venture-plan: hasInterviewContext =", !!interviewContext);
 
+    // Detect business model for framework filtering
+    const detectedModel = idea?.business_model_type || "all";
+    console.log("generate-venture-plan: detectedModel =", detectedModel);
+
+    // Fetch frameworks from database
+    const [coreFrameworks, conditionalFrameworks] = await Promise.all([
+      fetchFrameworks(supabase, {
+        functions: ["generate-venture-plan"],
+        businessModel: detectedModel,
+        injectionRole: "core",
+        maxTokens: 1200,
+      }),
+      fetchFrameworks(supabase, {
+        functions: ["generate-venture-plan"],
+        businessModel: detectedModel,
+        injectionRole: "conditional",
+        maxTokens: 600,
+      }),
+    ]);
+    console.log("generate-venture-plan: frameworks fetched", {
+      coreLength: coreFrameworks.length,
+      conditionalLength: conditionalFrameworks.length,
+    });
+
     // Calculate start date (default: today)
     const planStartDate = startDate || new Date().toISOString().split("T")[0];
     const endDateObj = new Date(planStartDate);
@@ -384,7 +408,13 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: SYSTEM_PROMPT.replace(
+            '{{FRAMEWORKS_INJECTION_POINT}}',
+            [
+              coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}` : '',
+              conditionalFrameworks ? `\n## CONDITIONAL FRAMEWORKS\n${conditionalFrameworks}` : '',
+            ].filter(Boolean).join('\n') || ''
+          ) },
           { role: "user", content: JSON.stringify(payload) },
         ],
       }),
