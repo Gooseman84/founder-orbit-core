@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -189,6 +190,19 @@ serve(async (req) => {
     const ideaContextStr = contextParts.join("\n");
     logStep("Context built", { contextLength: ideaContextStr.length });
 
+    // Detect business model for framework filtering
+    const detectedModel = ideaContext.revenueModel || ideaContext.category || "all";
+    logStep("Business model detected", { detectedModel });
+
+    // Fetch core frameworks from database
+    const coreFrameworks = await fetchFrameworks(adminClient, {
+      functions: ["calculate-financial-viability"],
+      businessModel: detectedModel,
+      injectionRole: "core",
+      maxTokens: 1200,
+    });
+    logStep("Frameworks fetched", { coreLength: coreFrameworks.length });
+
     // Call Lovable AI Gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -202,48 +216,30 @@ SCORE EACH DIMENSION 0-100:
 1. MARKET SIZE (20% weight)
    - Estimated TAM, SAM, SOM
    - Is this a growing, stable, or shrinking market?
-   VERTICAL SAAS ADJUSTMENT: Do not penalize for "small TAM." Many verticals (healthcare, construction, restaurants, insurance) have massive aggregate TAMs that appear small per-niche. Evaluate revenue-per-customer and number of addressable businesses in the specific segment. Example: 50,000 businesses paying $500/month = $300M annual opportunity.
-   MARKETPLACE ADJUSTMENT: Evaluate both sides of the market. A massive demand side with fragmented supply is ideal.
 
 2. UNIT ECONOMICS (25% weight)
    - Estimated price point and gross margin
    - Customer acquisition cost estimate
    - Lifetime value estimate
    - Can this idea generate profit per customer?
-   VERTICAL SAAS ADJUSTMENT: Vertical SaaS typically commands higher ARPU and lower churn than horizontal. Score favorably if the idea targets a daily or weekly workflow (high natural engagement) and if switching costs create retention.
-   SERVICE ADJUSTMENT: Faster path to positive unit economics, but labor dependency caps margins. Score the productization potential — is there a clear path from manual delivery to automated or self-served?
-   MARKETPLACE ADJUSTMENT: Take rate must support economics on BOTH sides. User acquisition cost is effectively doubled (two customer types).
 
 3. TIME TO REVENUE (15% weight)
    - How quickly can a solo founder generate first dollar?
    - Are there upfront build requirements before monetization?
-   VERTICAL SAAS ADJUSTMENT: Often faster than horizontal due to obvious value prop for targeted buyer. Score based on wedge specificity — the more specific the painful workflow, the faster the path.
-   SERVICE ADJUSTMENT: Fastest of all models — can charge from day one. Score very favorably.
-   MARKETPLACE ADJUSTMENT: Usually longer — need liquidity before monetization. Score accordingly unless a single-player mode exists.
-   AI ADJUSTMENT: If the AI component requires a data-collection phase before becoming useful, extend time-to-revenue estimate. If the AI works well from day one with general knowledge (drafting, classification, summarization), do not penalize.
 
 4. COMPETITIVE DENSITY (15% weight)
    - How many direct competitors exist?
    - Are there dominant incumbents?
    - What defensibility does this idea have?
-   VERTICAL SAAS ADJUSTMENT: Check for horizontal tools trying to serve this vertical (weak threat — they lack depth) AND existing vertical-specific incumbents (strong threat). Score the wedge's defensibility, not the category's.
-   AI ADJUSTMENT: If the AI component could be trivially replicated by competitors using the same APIs, note as a defensibility weakness. If the AI improves with proprietary data from the vertical workflow (data flywheel), note as a strength.
-   MARKETPLACE ADJUSTMENT: Network effects are a strong moat once established, but multi-tenanting weakens this in many verticals.
 
 5. CAPITAL REQUIREMENTS (15% weight)
    - Minimum viable investment to launch
    - Can this bootstrap or does it require funding?
-   VERTICAL SAAS ADJUSTMENT: Can often bootstrap because early customers tolerate rough products if they solve real pain. Score favorably if a concierge or manual MVP is viable.
-   SERVICE ADJUSTMENT: Usually very low to start. Score favorably.
-   AI ADJUSTMENT: If requiring custom training data, fine-tuning, or custom model development, increase capital estimate. If using off-the-shelf LLM APIs with good prompting, keep low. If proposing autonomous AI in regulated verticals (healthcare, finance, insurance, legal), factor governance and compliance infrastructure overhead.
 
 6. FOUNDER-MARKET FIT (10% weight)
    - Does the founder have relevant expertise?
    - Do they have access to the target market?
-   VERTICAL SAAS ADJUSTMENT: This dimension matters MORE for vertical SaaS. Be more critical in your assessment. Direct industry experience, warm operator access, or professional domain expertise (e.g., CFA for fintech, RN for health tech) should significantly boost this score. No access to the target industry is a major risk.
-   SERVICE ADJUSTMENT: The founder IS the product initially. Expertise depth matters enormously.
-   MARKETPLACE ADJUSTMENT: Access to the supply side is critical. Most marketplace failures are supply-side acquisition failures.
-
+${coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''}
 RISK AND OPPORTUNITY DETECTION:
 When generating topRisk and topOpportunity, look for these specific patterns:
 
