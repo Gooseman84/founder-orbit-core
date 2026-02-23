@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,10 +50,6 @@ Before each question, silently assess which gaps remain:
    - Income target? Lifestyle goals?
 
 6. NETWORK & DISTRIBUTION
-   - How large/connected is their professional network?
-   - Which industries or communities are represented?
-   - Do they have warm audiences (email list, social following, community)?
-   - Have they ever sold anything to their network before?
    - Who would be their first 10 customers and why? (MOST IMPORTANT)
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -139,6 +136,7 @@ When asked to summarize, return ONLY this JSON structure:
   "ideaGenerationContext": "Dense paragraph optimized for ideation engine with key signals: skills, markets, constraints, goals. If a vertical was identified, include the specific industry and wedge. If a business model was detected, include the model type and critical signals (cold-start plan, productization readiness, audience traction, etc.)."
 }
 
+{{FRAMEWORKS_INJECTION_POINT}}
 SUMMARY RULES:
 - Valid JSON only. No markdown fences.
 - Be specific, not generic.
@@ -796,8 +794,21 @@ Now ask your first targeted question based on this context. Reference something 
     }
 
     // mode === "summary"
+    // Fetch core frameworks for summary generation
+    const coreFrameworks = await fetchFrameworks(supabase, {
+      functions: ["dynamic-founder-interview"],
+      injectionRole: "core",
+      maxTokens: 800,
+    });
+    console.log("dynamic-founder-interview: summary frameworks fetched", { coreLength: coreFrameworks.length });
+
+    const resolvedSummaryPrompt = SYSTEM_PROMPT_BASE.replace(
+      '{{FRAMEWORKS_INJECTION_POINT}}',
+      coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''
+    );
+
     const summaryMessages = [
-      { role: "system" as const, content: SYSTEM_PROMPT_BASE },
+      { role: "system" as const, content: resolvedSummaryPrompt },
       ...mapTranscriptToMessages(transcript),
       {
         role: "user" as const,
