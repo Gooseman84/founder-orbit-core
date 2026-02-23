@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,11 +56,9 @@ Your task is to generate 3-7 business ideas that are:
 2. Deeply aligned with their passions, skills, psychological profile, and goals
 3. Practical and actionable, not overly complex or theoretical
 4. Ethical and legal - NO scams, deceptive practices, or unethical businesses
-5. Matched to their time, capital, and energy constraints
-6. ${hasExtendedIntake ? 'Aligned with their preferred business archetypes and work preferences' : 'Suited to their available resources'}
-7. ${hasExtendedIntake ? 'Designed to leverage energy givers and avoid energy drainers' : 'Designed for sustainable execution'}
-8. Matched to their energy_source (e.g., "solving problems" → technical ideas, "helping people" → service ideas)
+5. Matched to their energy_source (e.g., "solving problems" → technical ideas, "helping people" → service ideas)
 
+{{FRAMEWORKS_INJECTION_POINT}}
 For each idea, you must provide:
 - title: A compelling, concise title (5-10 words)
 - description: A clear 2-3 sentence explanation of the business
@@ -82,15 +81,10 @@ Guidelines:
 - Be realistic about constraints: if they have $1000 and 5 hours/week, don't suggest opening a restaurant
 - Prioritize ideas with 70+ scores across all dimensions
 - Include a mix of complexity levels if constraints allow
-- Consider risk tolerance when suggesting ideas
 - Make descriptions actionable and specific, not generic
 - Ensure time_to_first_dollar reflects realistic market conditions
 - Base scores on genuine alignment, not wishful thinking
 - Focus on proven business models that can start small
-${hasExtendedIntake ? `- If they want autopilot income, prioritize passive/semi-passive models
-- If they want to be the face, suggest personal brand opportunities
-- If they prefer structure, suggest businesses with clear frameworks
-- Match business archetypes to their stated preferences` : ''}
 ${hasInterviewContext ? `
 **MAVRIK INTERVIEW INTELLIGENCE:**
 The founder has completed a Mavrik discovery interview. The profile data 
@@ -294,7 +288,22 @@ serve(async (req) => {
     }
 
     // Build dynamic system prompt based on available data
-    const systemPrompt = buildSystemPrompt(hasExtendedIntake, businessTypeHint, difficultyGuidance, hasInterviewContext);
+    const basePrompt = buildSystemPrompt(hasExtendedIntake, businessTypeHint, difficultyGuidance, hasInterviewContext);
+
+    // Detect business model and fetch frameworks
+    const detectedModel = profile.business_type_preference || "all";
+    const coreFrameworks = await fetchFrameworks(supabase, {
+      functions: ["generate-ideas"],
+      businessModel: detectedModel,
+      injectionRole: "core",
+      maxTokens: 1000,
+    });
+    console.log("generate-ideas: frameworks fetched", { coreLength: coreFrameworks.length });
+
+    const systemPrompt = basePrompt.replace(
+      '{{FRAMEWORKS_INJECTION_POINT}}',
+      coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''
+    );
 
     // Call Lovable AI with tool calling for structured output
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
