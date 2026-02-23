@@ -682,6 +682,69 @@ export type Database = {
         }
         Relationships: []
       }
+      frameworks: {
+        Row: {
+          applies_to_functions: string[] | null
+          applies_to_models: string[] | null
+          applies_to_stages: string[] | null
+          content: string
+          created_at: string | null
+          description: string | null
+          id: string
+          injection_role: string | null
+          is_active: boolean | null
+          notes: string | null
+          priority: number | null
+          slug: string
+          source: string | null
+          tags: string[] | null
+          title: string
+          token_estimate: number | null
+          updated_at: string | null
+          version: number | null
+        }
+        Insert: {
+          applies_to_functions?: string[] | null
+          applies_to_models?: string[] | null
+          applies_to_stages?: string[] | null
+          content: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          injection_role?: string | null
+          is_active?: boolean | null
+          notes?: string | null
+          priority?: number | null
+          slug: string
+          source?: string | null
+          tags?: string[] | null
+          title: string
+          token_estimate?: number | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Update: {
+          applies_to_functions?: string[] | null
+          applies_to_models?: string[] | null
+          applies_to_stages?: string[] | null
+          content?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          injection_role?: string | null
+          is_active?: boolean | null
+          notes?: string | null
+          priority?: number | null
+          slug?: string
+          source?: string | null
+          tags?: string[] | null
+          title?: string
+          token_estimate?: number | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Relationships: []
+      }
       idea_analysis: {
         Row: {
           biggest_risks: Json | null
