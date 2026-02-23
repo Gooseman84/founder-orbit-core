@@ -2,6 +2,7 @@
 // EPIC v7 — TrueBlazer Two-Pass Idea Engine (v6.1 Creativity + v2.0 Commercial Rigor)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,10 +36,7 @@ INTERNAL REASONING (do NOT output, just follow)
 Before generating, mentally run through:
 
 1) FOUNDER ASSETS: What skills/platforms/unfair advantages jump out?
-2) ENERGY CLUES: What energizes vs drains them? Avoid drainers.
-3) CONSTRAINT REALITY: Time/capital limits → what's actually launchable?
-4) CONTRARIAN ANGLES: What's everyone else missing in their niches?
-5) PATTERN BREAKS: Combine 2 unrelated domains for surprise value.
+2) CONTRARIAN ANGLES: What's everyone else missing in their niches?
 
 ═══════════════════════════════════════════════════════════════════
 OUTPUT SCHEMA (exactly this shape)
@@ -86,6 +84,7 @@ FOUNDER: Stay-at-home parent, crafty, TikTok audience, $500 budget
   "mode": "Chaos"
 }
 
+{{FRAMEWORKS_INJECTION_POINT}}
 ═══════════════════════════════════════════════════════════════════
 RULES
 ═══════════════════════════════════════════════════════════════════
@@ -722,6 +721,22 @@ serve(async (req) => {
 
     const modeContext = buildModeContext(mode, focusArea);
 
+    // Detect business model and fetch frameworks
+    const detectedModel = (founderPayload.founderProfile as any)?.business_type_preference || "all";
+    const coreFrameworks = await fetchFrameworks(supabaseAdmin, {
+      functions: ["generate-founder-ideas"],
+      businessModel: detectedModel,
+      injectionRole: "core",
+      maxTokens: 1000,
+    });
+    console.log("generate-founder-ideas: frameworks fetched", { coreLength: coreFrameworks.length });
+
+    // Resolve Pass A prompt with frameworks
+    const resolvedPassAPrompt = PASS_A_SYSTEM_PROMPT.replace(
+      '{{FRAMEWORKS_INJECTION_POINT}}',
+      coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''
+    );
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       console.error("generate-founder-ideas: LOVABLE_API_KEY not configured");
@@ -756,7 +771,7 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
         max_tokens: 8000,
         temperature: 0.9,
         messages: [
-          { role: "system", content: PASS_A_SYSTEM_PROMPT },
+          { role: "system", content: resolvedPassAPrompt },
           { role: "user", content: passAMessage },
         ],
       }),
