@@ -146,7 +146,7 @@ export function PromptViewer({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2 relative z-10">
         {/* Save button - show when editable and has changes */}
         {isEditable && onSave && hasChanges && (
           <Button
@@ -225,6 +225,7 @@ export function PromptViewer({
         </Button>
       </div>
 
+      <div className="mt-1">
       {isEditable ? (
         <Textarea
           value={localContent}
@@ -239,7 +240,7 @@ export function PromptViewer({
           </pre>
         </div>
       )}
-
+      </div>
       {/* Status indicator */}
       {isEditable && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

@@ -215,16 +215,16 @@ export function VentureDNASection({ ideaId, ventureId }: VentureDNASectionProps)
             <CardContent className="pt-0">
               {/* Tabs */}
               <Tabs value={activeMode} onValueChange={handleTabChange}>
-                <TabsList className="grid grid-cols-4 w-full mb-4">
+                <TabsList className="flex w-full mb-4">
                   {(["strategy", "lovable", "cursor", "v0"] as PlatformMode[]).map(
                     (mode) => (
                       <TabsTrigger
                         key={mode}
                         value={mode}
-                        className="text-xs sm:text-sm gap-1"
+                        className="text-xs sm:text-sm gap-1 flex-1 min-w-0 whitespace-nowrap"
                       >
-                        {isLocked(mode) && <Lock className="h-3 w-3" />}
-                        {PLATFORM_MODE_LABELS[mode]}
+                        {isLocked(mode) && <Lock className="h-3 w-3 shrink-0" />}
+                        <span className="truncate">{PLATFORM_MODE_LABELS[mode]}</span>
                       </TabsTrigger>
                     )
                   )}
