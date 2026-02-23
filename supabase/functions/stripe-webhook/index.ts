@@ -81,21 +81,31 @@ serve(async (req) => {
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           
+          // Stripe SDK v18 may use camelCase or snake_case — check both
+          const rawPeriodEnd = (subscription as any).current_period_end ?? (subscription as any).currentPeriodEnd;
+          const rawCancelAt = (subscription as any).cancel_at ?? (subscription as any).cancelAt;
+          const rawTrialEnd = (subscription as any).trial_end ?? (subscription as any).trialEnd;
+          const renewalInterval = subscription.items?.data?.[0]?.price?.recurring?.interval 
+            ?? subscription.items?.data?.[0]?.plan?.interval ?? null;
+
           const { error } = await supabase
             .from("user_subscriptions")
             .update({
               stripe_subscription_id: subscriptionId,
               plan: "pro",
               status: subscription.status,
-              current_period_end: toIsoOrNull(subscription.current_period_end),
-              cancel_at: toIsoOrNull(subscription.cancel_at),
+              current_period_end: toIsoOrNull(rawPeriodEnd),
+              cancel_at: toIsoOrNull(rawCancelAt),
+              trial_end: toIsoOrNull(rawTrialEnd),
+              renewal_period: renewalInterval || null,
             })
             .eq("stripe_customer_id", customerId);
 
           if (error) {
             console.error("[stripe-webhook] Error updating subscription after checkout:", error);
           } else {
-            console.log("[stripe-webhook] Subscription activated for customer:", customerId);
+            console.log("[stripe-webhook] Subscription activated for customer:", customerId,
+              "period_end:", toIsoOrNull(rawPeriodEnd), "trial_end:", toIsoOrNull(rawTrialEnd));
           }
         }
         break;
@@ -105,7 +115,17 @@ serve(async (req) => {
         const sub = event.data.object as Stripe.Subscription;
         const customerId = sub.customer as string;
 
-        console.log("[stripe-webhook] Subscription created:", sub.id, "Status:", sub.status, "Trial end:", sub.trial_end);
+        // Stripe SDK v18 may use camelCase or snake_case — check both
+        const rawPeriodEnd = (sub as any).current_period_end ?? (sub as any).currentPeriodEnd;
+        const rawCancelAt = (sub as any).cancel_at ?? (sub as any).cancelAt;
+        const rawTrialEnd = (sub as any).trial_end ?? (sub as any).trialEnd;
+        const renewalInterval = sub.items?.data?.[0]?.price?.recurring?.interval 
+          ?? sub.items?.data?.[0]?.plan?.interval ?? null;
+
+        console.log("[stripe-webhook] Subscription created:", sub.id, 
+          "Status:", sub.status, 
+          "Raw period_end:", rawPeriodEnd, 
+          "Raw trial_end:", rawTrialEnd);
 
         const { error } = await supabase
           .from("user_subscriptions")
@@ -113,10 +133,10 @@ serve(async (req) => {
             stripe_subscription_id: sub.id,
             plan: "pro",
             status: sub.status,
-            current_period_end: toIsoOrNull(sub.current_period_end),
-            cancel_at: toIsoOrNull(sub.cancel_at),
-            renewal_period: sub.items.data[0]?.plan?.interval || null,
-            trial_end: toIsoOrNull(sub.trial_end),
+            current_period_end: toIsoOrNull(rawPeriodEnd),
+            cancel_at: toIsoOrNull(rawCancelAt),
+            renewal_period: renewalInterval || null,
+            trial_end: toIsoOrNull(rawTrialEnd),
           })
           .eq("stripe_customer_id", customerId);
 
@@ -130,12 +150,15 @@ serve(async (req) => {
         const sub = event.data.object as Stripe.Subscription;
         const customerId = sub.customer as string;
 
+        // Stripe SDK v18 may use camelCase or snake_case — check both
+        const rawPeriodEnd = (sub as any).current_period_end ?? (sub as any).currentPeriodEnd;
+        const rawCancelAt = (sub as any).cancel_at ?? (sub as any).cancelAt;
+        const rawTrialEnd = (sub as any).trial_end ?? (sub as any).trialEnd;
+        const renewalInterval = sub.items?.data?.[0]?.price?.recurring?.interval 
+          ?? sub.items?.data?.[0]?.plan?.interval ?? null;
+
         console.log("[stripe-webhook] Subscription updated:", sub.id, "Status:", sub.status);
 
-        // Determine plan based on status
-        // "trialing" status = user is in Stripe trial, keep plan as "pro" with trialing status
-        // "active" = paid subscription, plan = "pro"
-        // "canceled" or "unpaid" = downgrade to "trial" (not "free")
         let plan = "pro";
         if (sub.status === "canceled" || sub.status === "unpaid") {
           plan = "trial";
@@ -147,10 +170,10 @@ serve(async (req) => {
             stripe_subscription_id: sub.id,
             plan,
             status: sub.status,
-            current_period_end: toIsoOrNull(sub.current_period_end),
-            cancel_at: toIsoOrNull(sub.cancel_at),
-            renewal_period: sub.items.data[0]?.plan?.interval || null,
-            trial_end: toIsoOrNull(sub.trial_end),
+            current_period_end: toIsoOrNull(rawPeriodEnd),
+            cancel_at: toIsoOrNull(rawCancelAt),
+            renewal_period: renewalInterval || null,
+            trial_end: toIsoOrNull(rawTrialEnd),
           })
           .eq("stripe_customer_id", customerId);
 
