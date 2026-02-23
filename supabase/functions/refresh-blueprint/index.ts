@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -239,19 +240,10 @@ Before outputting JSON, work through these steps SILENTLY:
    - Which documents relate to the idea?
    - Are tasks aligned with the idea or scattered?
 
-3. CONSTRAINT SHIFTS: Have their real constraints changed?
-   - Time availability (reflected in task patterns)
-   - Energy patterns (from reflections)
-   - New blockers or breakthroughs
-
-4. GAP ANALYSIS: What's the gap between:
-   - Stated goals (blueprint) vs actual behavior (tasks/docs)
-   - Energy levels (reflections) vs ambition (idea scope)
-   - Skills (profile) vs current challenges (blockers)
-
-5. NEXT MOVES: What are the 3-5 highest-leverage actions for THIS WEEK?
+3. NEXT MOVES: What are the 3-5 highest-leverage actions for THIS WEEK?
 </internal_chain_of_thought>
 
+{{FRAMEWORKS_INJECTION_POINT}}
 <output_schema>
 {
   "ai_summary": "2-4 sentence synthesis of founder's current state. Reference SPECIFIC workspace docs, reflection patterns, and completed tasks. Be concrete about what's changed.",
@@ -547,6 +539,23 @@ Based on ALL this context, generate an updated blueprint that:
 
 Return ONLY the JSON with ai_summary and ai_recommendations.`;
 
+    // Detect business model and fetch frameworks
+    const detectedModel = userContext.chosenIdea?.business_model_type 
+      || userContext.blueprint?.offer_model 
+      || "all";
+    const coreFrameworks = await fetchFrameworks(supabaseAdmin, {
+      functions: ["refresh-blueprint"],
+      businessModel: detectedModel,
+      injectionRole: "core",
+      maxTokens: 1200,
+    });
+    console.log("[refresh-blueprint] frameworks fetched", { coreLength: coreFrameworks.length });
+
+    const resolvedPrompt = SYSTEM_PROMPT.replace(
+      '{{FRAMEWORKS_INJECTION_POINT}}',
+      coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''
+    );
+
     console.log("[refresh-blueprint] Calling AI with enriched context");
 
     // Call Lovable AI
@@ -559,7 +568,7 @@ Return ONLY the JSON with ai_summary and ai_recommendations.`;
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: resolvedPrompt },
           { role: "user", content: userPrompt },
         ],
         response_format: { type: "json_object" },
