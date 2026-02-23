@@ -23,6 +23,7 @@ const Billing = () => {
     cancelAt, 
     renewalPeriod,
     isTrialing,
+    isStripeTrialing,
     daysUntilTrialEnd,
     refresh 
   } = useSubscription();
@@ -37,7 +38,6 @@ const Billing = () => {
   useEffect(() => {
     const status = searchParams.get("status");
     if (status === "success") {
-      // Sync subscription from Stripe before showing success
       setSyncLoading(true);
       invokeAuthedFunction<{ synced?: boolean; error?: string }>("sync-subscription", { body: {} })
         .then(({ data, error }) => {
@@ -54,7 +54,6 @@ const Billing = () => {
               description: "Your subscription is now active. Enjoy all the premium features!",
             });
           } else {
-            // synced: false means no active subscription found yet
             toast({
               title: "Payment processing",
               description: "Your payment is being processed. Please click 'Refresh subscription status' in a moment.",
@@ -203,6 +202,9 @@ const Billing = () => {
     if (isPaidAndActive) {
       return plan === "founder" ? "TrueBlazer Founder" : "TrueBlazer Pro";
     }
+    if (isStripeTrialing) {
+      return "TrueBlazer Pro";
+    }
     if (isTrialing) {
       return "TrueBlazer Pro Trial";
     }
@@ -226,6 +228,14 @@ const Billing = () => {
         <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600">
           <AlertTriangle className="w-3 h-3" />
           Cancels {cancelAt && format(cancelAt, "MMM d, yyyy")}
+        </Badge>
+      );
+    }
+    if (isStripeTrialing && daysUntilTrialEnd !== null) {
+      return (
+        <Badge variant="default" className="gap-1">
+          <CheckCircle className="w-3 h-3" />
+          Pro Trial — {daysUntilTrialEnd} {daysUntilTrialEnd === 1 ? 'day' : 'days'} left
         </Badge>
       );
     }
@@ -260,8 +270,11 @@ const Billing = () => {
     if (isPaidAndActive) {
       return "You have full access to all premium features.";
     }
+    if (isStripeTrialing) {
+      return "Your Pro subscription is confirmed. Enjoy full access — billing begins after your trial.";
+    }
     if (isTrialing) {
-      return "You're enjoying a 7-day trial of TrueBlazer Pro. All premium features are unlocked!";
+      return "You're exploring TrueBlazer. Upgrade to Pro to unlock all features.";
     }
     if (isTrialExpired || isLockedOut) {
       return "Your trial has ended. Subscribe to Pro to continue using premium features.";
@@ -281,8 +294,8 @@ const Billing = () => {
         <p className="text-muted-foreground">Manage your subscription and billing settings</p>
       </div>
 
-      {/* Trial ending warning */}
-      {isTrialing && daysUntilTrialEnd !== null && daysUntilTrialEnd <= 2 && (
+      {/* Trial ending warning — only for app-side trial (no card collected) */}
+      {isTrialing && !isStripeTrialing && daysUntilTrialEnd !== null && daysUntilTrialEnd <= 2 && (
         <Alert className="border-amber-500 bg-amber-500/10">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           <AlertDescription className="text-amber-700 dark:text-amber-400">
@@ -364,7 +377,7 @@ const Billing = () => {
             <div className="space-y-6">
               <div>
                 <h3 className="font-semibold mb-3">
-                  {isTrialing ? "Your Trial Includes" : "Pro Plan Features"}
+                  {isTrialing && !isStripeTrialing ? "Your Trial Includes" : "Pro Plan Features"}
                 </h3>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
@@ -412,8 +425,24 @@ const Billing = () => {
                 </div>
               )}
 
-              {/* Trial end date info */}
-              {isTrialing && currentPeriodEnd && (
+              {/* Stripe trial confirmation box */}
+              {isStripeTrialing && daysUntilTrialEnd !== null && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                    <span className="font-medium">Your subscription is confirmed</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {renewalPeriod === "year" 
+                      ? `Your $199/year plan begins in ${daysUntilTrialEnd} day${daysUntilTrialEnd !== 1 ? 's' : ''}. No action needed.`
+                      : `Your $29/month plan begins in ${daysUntilTrialEnd} day${daysUntilTrialEnd !== 1 ? 's' : ''}. No action needed.`
+                    }
+                  </p>
+                </div>
+              )}
+
+              {/* App-side trial end date info */}
+              {isTrialing && !isStripeTrialing && currentPeriodEnd && (
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="w-4 h-4 text-primary" />
@@ -429,7 +458,32 @@ const Billing = () => {
               <Separator />
 
               <div className="space-y-3">
-                {isTrialing ? (
+                {isStripeTrialing ? (
+                  <>
+                    <Button 
+                      size="lg" 
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={openCustomerPortal}
+                      disabled={portalLoading}
+                    >
+                      {portalLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Opening portal...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-4 h-4" />
+                          Manage Subscription
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Update payment methods, view invoices, or cancel
+                    </p>
+                  </>
+                ) : isTrialing ? (
                   <>
                     <Button 
                       size="lg" 

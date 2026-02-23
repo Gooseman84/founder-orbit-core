@@ -21,6 +21,7 @@ interface UseSubscriptionReturn {
   cancelAt: Date | null;
   renewalPeriod: string | null;
   isTrialing: boolean;
+  isStripeTrialing: boolean;
   isTrialExpired: boolean;
   daysUntilTrialEnd: number | null;
   loading: boolean;
@@ -158,6 +159,7 @@ export const useSubscription = (): UseSubscriptionReturn => {
     cancelAt,
     renewalPeriod: subscription?.renewalPeriod || null,
     isTrialing,
+    isStripeTrialing,
     isTrialExpired,
     daysUntilTrialEnd,
     loading: isLoading,
