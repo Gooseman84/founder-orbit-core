@@ -1552,6 +1552,7 @@ export type Database = {
           created_at: string
           explanation: string | null
           id: string
+          mavrik_response: Json | null
           reflection: string | null
           user_id: string
           venture_id: string
@@ -1562,6 +1563,7 @@ export type Database = {
           created_at?: string
           explanation?: string | null
           id?: string
+          mavrik_response?: Json | null
           reflection?: string | null
           user_id: string
           venture_id: string
@@ -1572,6 +1574,7 @@ export type Database = {
           created_at?: string
           explanation?: string | null
           id?: string
+          mavrik_response?: Json | null
           reflection?: string | null
           user_id?: string
           venture_id?: string
