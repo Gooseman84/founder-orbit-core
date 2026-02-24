@@ -7,7 +7,6 @@ import {
   type PlanId,
   type PlanFeatures 
 } from "@/lib/entitlements";
-import { PLAN_FEATURES, TRIAL_DURATION_DAYS } from "@/config/plans";
 import { useMemo } from "react";
 
 interface UseFeatureAccessReturn {
@@ -30,34 +29,15 @@ export const useFeatureAccess = (): UseFeatureAccessReturn => {
     plan: rawPlan, 
     status, 
     loading, 
-    isTrialing, 
-    isTrialExpired: subscriptionTrialExpired,
-    daysUntilTrialEnd
   } = useSubscription();
   
-  // Compute derived state
   const derivedState = useMemo(() => {
-    // Normalize plan to valid PlanId
     const plan: PlanId = (rawPlan === "pro" || rawPlan === "founder") 
       ? rawPlan 
-      : "trial";
+      : "free";
     
-    // Check if user has paid Pro subscription (including Stripe trialing)
     const hasPro = hasPaidPlan(plan) && (status === "active" || status === "trialing");
     const hasFounder = plan === "founder" && (status === "active" || status === "trialing");
-    
-    // Trial-specific states
-    const hasTrialAccess = isTrialing && !subscriptionTrialExpired;
-    
-    // Only locked out if on app-side trial (no card) and expired
-    // Stripe trial users can't be "locked out" — they have a card on file
-    const isTrialExpired = subscriptionTrialExpired && plan === "trial";
-    
-    // Locked out: app-side trial expired and no active subscription
-    const isLockedOut = isTrialExpired;
-    
-    // Days remaining in trial
-    const daysRemaining = isTrialing ? daysUntilTrialEnd : null;
     
     const features = getPlanFeatures(plan);
     const planInfo = getPlanDisplayInfo(plan);
@@ -66,38 +46,25 @@ export const useFeatureAccess = (): UseFeatureAccessReturn => {
       plan,
       hasPro,
       hasFounder,
-      hasTrialAccess,
-      isTrialExpired,
-      isLockedOut,
-      daysRemaining,
       features,
       planInfo,
     };
-  }, [rawPlan, status, isTrialing, subscriptionTrialExpired, daysUntilTrialEnd]);
+  }, [rawPlan, status]);
 
   const gate = (featureName: string): boolean => {
-    // Locked out users can't access any features
-    if (derivedState.isLockedOut) {
-      return false;
-    }
-    
-    // Pro/Founder users have full access
     if (derivedState.hasPro || derivedState.hasFounder) {
       return canUseFeature(derivedState.plan, featureName);
     }
-    
-    // Active trial users get trial-level access
-    if (derivedState.hasTrialAccess) {
-      return canUseFeature("trial", featureName);
-    }
-    
-    // Default: check trial plan features
-    return canUseFeature("trial", featureName);
+    return canUseFeature("free", featureName);
   };
 
   return {
     ...derivedState,
-    isTrialing,
+    isTrialing: false,
+    hasTrialAccess: false,
+    isTrialExpired: false,
+    isLockedOut: false,
+    daysRemaining: null,
     gate,
     loading,
   };

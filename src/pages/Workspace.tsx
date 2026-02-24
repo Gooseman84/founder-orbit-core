@@ -143,7 +143,7 @@ export default function Workspace() {
   const [taskIndicatorDismissed, setTaskIndicatorDismissed] = useState(false);
 
   // Get workspace doc limit for free users
-  const maxWorkspaceDocs = isPro ? Infinity : PLAN_FEATURES.trial.maxWorkspaceDocs;
+  const maxWorkspaceDocs = isPro ? Infinity : PLAN_FEATURES.free.maxWorkspaceDocs;
 
   // Extract taskContext from navigation state (legacy path)
   const taskContext = (location.state as { taskContext?: TaskContext } | null)?.taskContext;

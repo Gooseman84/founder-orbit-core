@@ -1,7 +1,7 @@
 // Centralized plan definitions and feature entitlements for TrueBlazer.AI
 // This is the single source of truth for what each plan includes.
 
-export type PlanId = "trial" | "pro" | "founder";
+export type PlanId = "free" | "pro" | "founder";
 
 // Standardized error codes for plan limit enforcement
 export const PLAN_ERROR_CODES = {
@@ -13,7 +13,6 @@ export const PLAN_ERROR_CODES = {
   EXPORT_REQUIRES_PRO: "EXPORT_REQUIRES_PRO",
   WORKSPACE_LIMIT: "WORKSPACE_LIMIT",
   MULTI_BLUEPRINT_TASKS: "MULTI_BLUEPRINT_TASKS",
-  TRIAL_EXPIRED: "TRIAL_EXPIRED",
   FUSION_REQUIRES_PRO: "FUSION_REQUIRES_PRO",
   FUSION_LIMIT_REACHED: "FUSION_LIMIT_REACHED",
   COMPARE_REQUIRES_PRO: "COMPARE_REQUIRES_PRO",
@@ -60,17 +59,17 @@ export const IDEA_MODES: ModeConfig[] = [
   { mode: "locker_room", label: "Locker Room", description: "Bold, culture-first, 'shouldn't exist but could'", requiresPro: true },
 ];
 
-// Trial modes for quick lookup
-export const TRIAL_MODES: IdeaMode[] = ["breadth", "focus", "creator"];
+// Free plan modes for quick lookup
+export const FREE_MODES: IdeaMode[] = ["breadth", "focus", "creator"];
 
 // Prompt types for North Star prompts
 export type PromptType = "strategy" | "lovable" | "cursor" | "v0";
-export const TRIAL_PROMPT_TYPES: PromptType[] = ["strategy"];
+export const FREE_PROMPT_TYPES: PromptType[] = ["strategy"];
 export const ALL_PROMPT_TYPES: PromptType[] = ["strategy", "lovable", "cursor", "v0"];
 
 export interface PlanFeatures {
   // Idea Generation
-  maxIdeaGenerationsTotal: number; // Total for trial, Infinity for paid
+  maxIdeaGenerationsTotal: number; // Limited for free, Infinity for paid
   allowedIdeaModes: IdeaMode[] | "all";
   maxSavedIdeas: number;
   
@@ -110,10 +109,10 @@ export interface PlanFeatures {
 }
 
 export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
-  trial: {
-    // Idea Generation - 3 total during trial
+  free: {
+    // Idea Generation - 3 total on free plan
     maxIdeaGenerationsTotal: 3,
-    allowedIdeaModes: TRIAL_MODES,
+    allowedIdeaModes: FREE_MODES,
     maxSavedIdeas: 3,
     
     // Blueprints & Workspace - Very limited
@@ -142,11 +141,11 @@ export const PLAN_FEATURES: Record<PlanId, PlanFeatures> = {
     canGenerateImplementationKit: false,
     
     // North Star Prompts - Strategy only
-    allowedPromptTypes: TRIAL_PROMPT_TYPES,
+    allowedPromptTypes: FREE_PROMPT_TYPES,
     
     // Display
-    displayName: "Trial",
-    description: "7-day trial with limited features",
+    displayName: "Free",
+    description: "Free plan with limited features",
     monthlyPrice: null,
     yearlyPrice: null,
   },
@@ -236,12 +235,12 @@ export function isPaidPlan(plan: PlanId): boolean {
 
 // Check if a mode requires Pro
 export function modeRequiresPro(mode: IdeaMode): boolean {
-  return !TRIAL_MODES.includes(mode);
+  return !FREE_MODES.includes(mode);
 }
 
 // Check if a prompt type requires Pro
 export function promptTypeRequiresPro(promptType: PromptType): boolean {
-  return !TRIAL_PROMPT_TYPES.includes(promptType);
+  return !FREE_PROMPT_TYPES.includes(promptType);
 }
 
 // Get allowed modes for a plan
@@ -275,6 +274,3 @@ export function getProOnlyFeatures(): (keyof PlanFeatures)[] {
     "canGenerateImplementationKit",
   ];
 }
-
-// Trial duration in days
-export const TRIAL_DURATION_DAYS = 7;
