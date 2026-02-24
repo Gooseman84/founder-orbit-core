@@ -5,14 +5,14 @@ export async function fetchFrameworks(
   options: {
     functions?: string[];
     businessModel?: string;
-    stage?: string;
+    stage?: string;           // NEW: execution phase stage (validate | build | launch)
     injectionRole?: "core" | "context" | "conditional" | null;
     maxTokens?: number;
     limit?: number;
   }
 ): Promise<string> {
   try {
-    const { functions: fns, businessModel, injectionRole, maxTokens, limit = 6 } = options;
+    const { functions: fns, businessModel, stage, injectionRole, maxTokens, limit = 6 } = options;
 
     let query = supabase
       .from("frameworks")
@@ -27,6 +27,10 @@ export async function fetchFrameworks(
 
     if (businessModel) {
       query = query.overlaps("applies_to_models", [businessModel, "all"]);
+    }
+
+    if (stage) {
+      query = query.overlaps("applies_to_stages", [stage, "all"]);
     }
 
     if (injectionRole) {
