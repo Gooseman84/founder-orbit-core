@@ -40,7 +40,7 @@ export function DiscoveryDashboard() {
   const { plan } = useSubscription();
   const { isTrialing, isTrialExpired, isLockedOut, daysRemaining, hasPro, hasFounder } = useFeatureAccess();
   const navigate = useNavigate();
-  const isFree = plan === "trial";
+  const isFree = plan === "free";
   
   const [radarStats, setRadarStats] = useState({ recentCount: 0, topSignal: null as any });
   const [loadingRadar, setLoadingRadar] = useState(true);

@@ -48,10 +48,6 @@ const LIMIT_MESSAGES: Record<PlanErrorCode, { title: string; description: string
     title: "Multi-blueprint tasks require Pro",
     description: "Track tasks across multiple blueprints with TrueBlazer Pro.",
   },
-  [PLAN_ERROR_CODES.TRIAL_EXPIRED]: {
-    title: "Trial expired",
-    description: "Your 7-day trial has ended. Subscribe to TrueBlazer Pro to continue your founder journey.",
-  },
   [PLAN_ERROR_CODES.FUSION_REQUIRES_PRO]: {
     title: "Idea Fusion requires Pro",
     description: "Combine multiple ideas into powerful new concepts with TrueBlazer Pro.",
@@ -143,7 +139,7 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
   };
 
   // Determine if trial is expired to adjust CTA text
-  const isExpired = isTrialExpired || errorCode === PLAN_ERROR_CODES.TRIAL_EXPIRED;
+  const isExpired = false;
 
   // Get message based on error code or use default
   const message = errorCode ? LIMIT_MESSAGES[errorCode] : null;
