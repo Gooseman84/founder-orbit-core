@@ -1,221 +1,167 @@
+// supabase/functions/generate-daily-execution-tasks/index.ts
+// Phase-aware daily task generation with framework injection and stagnation detection
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_AI_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+// ── Phase Detection ──────────────────────────────────────────
+function detectExecutionPhase(dayInCommitment: number, totalDays: number): "validate" | "build" | "launch" {
+  const pct = dayInCommitment / totalDays;
+  if (pct <= 0.23) return "validate";   // Days 1–7 of a 30-day window
+  if (pct <= 0.70) return "build";      // Days 8–21
+  return "launch";                       // Days 22–30
+}
 
-// Max append calls per day per venture to prevent abuse
-const MAX_APPEND_COUNT = 3;
+// ── Stagnation Detection ─────────────────────────────────────
+function detectStagnation(recentCheckins: any[]): boolean {
+  if (!recentCheckins || recentCheckins.length < 3) return false;
+  const last3 = recentCheckins.slice(0, 3);
+  const stagnantStatuses = ["partial", "no"];
+  return last3.every((c: any) => stagnantStatuses.includes(c.completion_status));
+}
+
+// ── Day in Commitment ─────────────────────────────────────────
+function calculateDayInCommitment(startAt: string | null): number {
+  if (!startAt) return 1;
+  const start = new Date(startAt);
+  const now = new Date();
+  const diffMs = now.getTime() - start.getTime();
+  return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // Auth check
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization", code: "AUTH_SESSION_MISSING" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const token = authHeader.slice(7).trim();
-    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const LOVABLE_AI_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Invalid token", code: "AUTH_SESSION_MISSING" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    const token = authHeader.slice(7).trim();
+    const { data: { user }, error: authError } = await supabaseService.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const body = await req.json();
     const { ventureId, append = false } = body;
 
     if (!ventureId) {
-      return new Response(
-        JSON.stringify({ error: "Missing ventureId", code: "VALIDATION_ERROR" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "ventureId required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const today = new Date().toISOString().split("T")[0];
 
-    console.log("[generate-daily-execution-tasks] userId:", user.id, "ventureId:", ventureId, "date:", today, "append:", append);
+    // ── Fetch Core Data ───────────────────────────────────────
+    const [
+      { data: venture },
+      { data: blueprint },
+      { data: venturePlan },
+      { data: existingTasksRow },
+      { data: recentReflections },
+      { data: recentCheckins },
+      { data: recentWorkspaceDocs },
+      { data: interviewData },
+    ] = await Promise.all([
+      supabaseService.from("ventures").select("*").eq("id", ventureId).single(),
+      supabaseService.from("founder_blueprints").select("ai_summary, ai_recommendations").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+      supabaseService.from("venture_plans").select("summary").eq("venture_id", ventureId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabaseService.from("venture_daily_tasks").select("*").eq("venture_id", ventureId).eq("task_date", today).maybeSingle(),
+      supabaseService.from("daily_reflections").select("reflection_date, energy_level, stress_level, mood_tags, what_did, blockers, top_priority, ai_summary").eq("user_id", user.id).order("reflection_date", { ascending: false }).limit(7),
+      supabaseService.from("venture_daily_checkins").select("checkin_date, completion_status, explanation, reflection").eq("venture_id", ventureId).order("checkin_date", { ascending: false }).limit(7),
+      supabaseService.from("workspace_documents").select("id, title, doc_type, updated_at, source_type").eq("user_id", user.id).eq("venture_id", ventureId).gte("updated_at", new Date(Date.now() - 7 * 86400000).toISOString()).order("updated_at", { ascending: false }).limit(10),
+      supabaseService.from("founder_interviews").select("context_summary").eq("user_id", user.id).eq("status", "completed").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
 
-    // Check if tasks already exist for today
-    const { data: existingTasksRow } = await supabaseService
-      .from("venture_daily_tasks")
-      .select("*")
-      .eq("venture_id", ventureId)
-      .eq("task_date", today)
-      .maybeSingle();
+    if (!venture) {
+      return new Response(JSON.stringify({ error: "Venture not found" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // If tasks exist and NOT in append mode, return existing
-    if (existingTasksRow && !append) {
-      console.log("[generate-daily-execution-tasks] Tasks already exist for today, returning existing");
+    // ── Return Early if Already Generated (non-append) ───────
+    if (!append && existingTasksRow) {
       return new Response(
         JSON.stringify({ success: true, alreadyGenerated: true, tasks: existingTasksRow.tasks }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // If append mode but no existing tasks, treat as initial generation
-    if (append && !existingTasksRow) {
-      console.log("[generate-daily-execution-tasks] Append mode but no existing tasks, switching to initial generation");
-    }
+    // ── Phase Detection ───────────────────────────────────────
+    const dayInCommitment = calculateDayInCommitment(venture.commitment_start_at);
+    const totalDays = venture.commitment_window_days || 30;
+    const currentPhase = detectExecutionPhase(dayInCommitment, totalDays);
+    const isStagnating = detectStagnation(recentCheckins || []);
 
-    // Check append rate limit if appending
-    if (append && existingTasksRow) {
-      const currentAppendCount = existingTasksRow.append_count || 0;
-      if (currentAppendCount >= MAX_APPEND_COUNT) {
-        console.log("[generate-daily-execution-tasks] Append limit reached:", currentAppendCount);
-        return new Response(
-          JSON.stringify({ 
-            error: "You've generated enough tasks for today. Execute.", 
-            code: "APPEND_LIMIT_REACHED",
-            appendCount: currentAppendCount,
-            maxAppendCount: MAX_APPEND_COUNT
-          }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
+    console.log(`[generate-daily-execution-tasks] Phase: ${currentPhase}, Day: ${dayInCommitment}/${totalDays}, Stagnating: ${isStagnating}`);
 
-    // Fetch venture with validation
-    const { data: venture, error: ventureError } = await supabaseService
-      .from("ventures")
-      .select("*")
-      .eq("id", ventureId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (ventureError || !venture) {
-      return new Response(
-        JSON.stringify({ error: "Venture not found", code: "NOT_FOUND" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (venture.venture_state !== "executing") {
-      return new Response(
-        JSON.stringify({ error: "Venture is not in executing state", code: "INVALID_STATE" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fetch blueprint
-    const { data: blueprint } = await supabaseService
-      .from("founder_blueprints")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    // Extract decision points from blueprint recommendations
-    let blueprintDecisionPoints = "";
-    if (blueprint?.ai_recommendations) {
-      const recs = Array.isArray(blueprint.ai_recommendations) 
-        ? blueprint.ai_recommendations 
-        : [];
-      const decisionPoints = recs.filter((r: any) => 
-        r.title && r.title.includes("Decision Point")
-      );
-      if (decisionPoints.length > 0) {
-        blueprintDecisionPoints = decisionPoints
-          .map((dp: any) => `- ${dp.title}: ${dp.description}`)
-          .join("\n");
-      }
-    }
-
-    // Fetch venture plan
-    const { data: venturePlan } = await supabaseService
-      .from("venture_plans")
-      .select("*")
-      .eq("venture_id", ventureId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    // Fetch idea if linked
-    let idea = null;
-    if (venture.idea_id) {
-      const { data } = await supabaseService
-        .from("ideas")
-        .select("*")
-        .eq("id", venture.idea_id)
-        .single();
-      idea = data;
-    }
-
-    // --- NEW: Fetch recent daily reflections ---
-    const { data: recentReflections } = await supabaseService
-      .from("daily_reflections")
-      .select("reflection_date, energy_level, stress_level, mood_tags, what_did, blockers, top_priority, ai_summary")
-      .eq("user_id", user.id)
-      .order("reflection_date", { ascending: false })
-      .limit(3);
-
-    // --- NEW: Fetch recent venture check-ins ---
-    const { data: recentCheckins } = await supabaseService
-      .from("venture_daily_checkins")
-      .select("checkin_date, completion_status, explanation, reflection")
-      .eq("venture_id", ventureId)
-      .order("checkin_date", { ascending: false })
-      .limit(3);
-
-    // --- NEW: Fetch recent workspace documents for this venture (last 7 days) ---
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const { data: recentWorkspaceDocs } = await supabaseService
-      .from("workspace_documents")
-      .select("id, title, doc_type, updated_at, source_type, linked_task_id")
-      .eq("user_id", user.id)
-      .eq("venture_id", ventureId)
-      .gte("updated_at", sevenDaysAgo.toISOString())
-      .order("updated_at", { ascending: false })
-      .limit(10);
-
-    // Fetch Mavrik interview context for personalized task guidance
-    const { data: interviewData } = await supabaseService
-      .from("founder_interviews")
-      .select("context_summary")
-      .eq("user_id", user.id)
-      .eq("status", "completed")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const interviewContext = interviewData?.context_summary as any || null;
-
-    // Fetch enriched idea source_meta
+    // ── Fetch Idea + Source Meta ──────────────────────────────
+    let idea: any = null;
     let ideaSourceMeta: any = null;
-    if (idea?.id) {
-      const { data: fullIdea } = await supabaseService
-        .from("ideas")
-        .select("source_meta")
-        .eq("id", idea.id)
-        .maybeSingle();
-      ideaSourceMeta = fullIdea?.source_meta as any || null;
+    if (venture.idea_id) {
+      const { data: fullIdea } = await supabaseService.from("ideas").select("*").eq("id", venture.idea_id).single();
+      idea = fullIdea;
+      ideaSourceMeta = fullIdea?.source_meta ?? null;
     }
 
-    console.log("[generate-daily-execution-tasks] hasInterviewContext:", !!interviewContext, "hasIdeaSourceMeta:", !!ideaSourceMeta);
+    // ── Fetch Framework Rows ──────────────────────────────────
+    const businessModel = idea?.business_model_type || "all";
 
-    // --- Build founder state context ---
+    const [phaseFramework, modelOverlay, stagnationFramework] = await Promise.all([
+      // Core phase playbook (validate / build / launch)
+      fetchFrameworks(supabaseService, {
+        functions: ["generate-daily-execution-tasks"],
+        stage: currentPhase,
+        injectionRole: "core",
+        maxTokens: 600,
+        limit: 1,
+      }),
+      // Business model overlay (SaaS / services / marketplace / content)
+      fetchFrameworks(supabaseService, {
+        functions: ["generate-daily-execution-tasks"],
+        businessModel,
+        stage: currentPhase,
+        injectionRole: "conditional",
+        maxTokens: 500,
+        limit: 1,
+      }),
+      // Stagnation intervention (only fetched if needed)
+      isStagnating
+        ? fetchFrameworks(supabaseService, {
+            functions: ["generate-daily-execution-tasks"],
+            injectionRole: "conditional",
+            maxTokens: 400,
+            limit: 1,
+          })
+        : Promise.resolve(""),
+    ]);
+
+    console.log(`[generate-daily-execution-tasks] Frameworks loaded — phase: ${phaseFramework.length}c, model: ${modelOverlay.length}c, stagnation: ${stagnationFramework.length}c`);
+
+    // ── Build Context Objects ─────────────────────────────────
+    const interviewContext = interviewData?.context_summary as any ?? null;
+
     const founderState = {
       latestEnergy: recentReflections?.[0]?.energy_level ?? null,
       latestStress: recentReflections?.[0]?.stress_level ?? null,
@@ -224,63 +170,54 @@ serve(async (req) => {
       topPriority: recentReflections?.[0]?.top_priority ?? null,
       yesterdayCompletion: recentCheckins?.[0]?.completion_status ?? null,
       yesterdayExplanation: recentCheckins?.[0]?.explanation ?? null,
+      last7DaysPattern: recentCheckins?.map((c: any) => c.completion_status).join(", ") ?? "no data",
     };
 
-    // --- NEW: Build workspace context ---
-    const workspaceContext = recentWorkspaceDocs?.map(d => ({
-      title: d.title,
-      docType: d.doc_type,
-      updatedAt: d.updated_at,
-      sourceType: d.source_type,
-    })) ?? [];
+    const workspaceDocsFormatted = recentWorkspaceDocs?.length
+      ? recentWorkspaceDocs.map((d: any) =>
+          `- "${d.title}" (${d.doc_type || "document"}, updated ${new Date(d.updated_at).toLocaleDateString()})`
+        ).join("\n")
+      : "No recent workspace activity";
 
-    const workspaceDocsFormatted = workspaceContext.length > 0
-      ? workspaceContext.map(d => 
-          `- "${d.title}" (${d.docType || 'document'}, last updated ${new Date(d.updatedAt).toLocaleDateString()})`
-        ).join('\n')
-      : 'No recent workspace activity';
+    // Blueprint decision points
+    let blueprintDecisionPoints = "";
+    if (blueprint?.ai_recommendations) {
+      const recs = Array.isArray(blueprint.ai_recommendations) ? blueprint.ai_recommendations : [];
+      const dps = recs.filter((r: any) => r.title?.includes("Decision Point"));
+      if (dps.length > 0) {
+        blueprintDecisionPoints = dps.map((dp: any) => `- ${dp.title}: ${dp.description}`).join("\n");
+      }
+    }
 
-    // Get existing tasks for context in append mode
     const existingTasks = existingTasksRow?.tasks || [];
-    const existingTaskTitles = Array.isArray(existingTasks) 
+    const existingTaskTitles = Array.isArray(existingTasks)
       ? existingTasks.map((t: any) => t.title).join(", ")
       : "";
 
-    // Build context for AI
-    const context = {
-      ventureName: venture.name,
-      successMetric: venture.success_metric,
-      commitmentDays: venture.commitment_window_days,
-      dayInCommitment: calculateDayInCommitment(venture.commitment_start_at),
-      blueprintSummary: blueprint?.ai_summary || null,
-      planSummary: venturePlan?.summary || null,
-      ideaTitle: idea?.title || null,
-      ideaDescription: idea?.description || null,
-      blueprintDecisionPoints,
-    };
-
-    console.log("[generate-daily-execution-tasks] Context:", JSON.stringify(context, null, 2));
-    console.log("[generate-daily-execution-tasks] Founder state:", JSON.stringify(founderState, null, 2));
-    console.log("[generate-daily-execution-tasks] Workspace docs count:", workspaceContext.length);
-
-    // Adjust task count based on append mode
+    // ── Build System Prompt ───────────────────────────────────
     const taskCount = append ? "1-2" : "1-3";
-    const appendContext = append 
-      ? `\n\nIMPORTANT: The user has already completed these tasks today: ${existingTaskTitles}\nGenerate DIFFERENT tasks that build on or complement what they've done. Do NOT repeat similar tasks.`
+    const appendContext = append
+      ? `\n\nIMPORTANT: The user already completed these tasks today: ${existingTaskTitles}. Generate DIFFERENT tasks that build on them. Do NOT repeat.`
       : "";
 
-    // --- ENHANCED: System prompt with smart calibration + workspace awareness + interview intelligence ---
-    const systemPrompt = `You are an execution-focused task generator for founders. Generate ${taskCount} concrete, actionable tasks for TODAY only.
+    const frameworksBlock = [phaseFramework, modelOverlay, stagnationFramework]
+      .filter(Boolean)
+      .join("\n\n---\n\n");
 
-FOUNDER STATE (use to calibrate strategically):
-- Energy Level: ${founderState.latestEnergy ?? 'unknown'}/5
-- Stress Level: ${founderState.latestStress ?? 'unknown'}/5  
-- Yesterday's Completion: ${founderState.yesterdayCompletion ?? 'unknown'}
-- Yesterday's Explanation: ${founderState.yesterdayExplanation ?? 'none'}
-- Current Blockers: ${founderState.latestBlockers ?? 'none stated'}
-- Top Priority: ${founderState.topPriority ?? 'not specified'}
+    const systemPrompt = `You are Mavrik, an execution-focused co-pilot for founders. Generate ${taskCount} concrete, actionable tasks for TODAY only.
 
-FOUNDER INTELLIGENCE (from Mavrik interview):
+${frameworksBlock ? `## EXECUTION PLAYBOOKS\nUse these frameworks to determine what kinds of tasks are appropriate right now:\n\n${frameworksBlock}\n\n---` : ""}
+
+## FOUNDER STATE
+- Energy Level: ${founderState.latestEnergy ?? "unknown"}/5
+- Stress Level: ${founderState.latestStress ?? "unknown"}/5
+- Yesterday's Completion: ${founderState.yesterdayCompletion ?? "unknown"}
+- Yesterday's Explanation: ${founderState.yesterdayExplanation ?? "none"}
+- Current Blockers: ${founderState.latestBlockers ?? "none stated"}
+- Top Priority: ${founderState.topPriority ?? "not specified"}
+- Last 7 Days Pattern: ${founderState.last7DaysPattern}
+
+## FOUNDER INTELLIGENCE (from Mavrik interview)
 ${interviewContext ? `
 - Insider Knowledge: ${JSON.stringify(interviewContext.extractedInsights?.insiderKnowledge || [])}
 - Customer Intimacy: ${JSON.stringify(interviewContext.extractedInsights?.customerIntimacy || [])}
@@ -290,92 +227,55 @@ ${interviewContext.ventureIntelligence?.verticalIdentified ? `- Vertical: ${inte
 ${interviewContext.ventureIntelligence?.industryAccess ? `- Industry Access: ${interviewContext.ventureIntelligence.industryAccess}` : ""}
 ` : "No interview context available"}
 
-${ideaSourceMeta ? `IDEA CONTEXT:
+${ideaSourceMeta ? `## IDEA CONTEXT
 - Why This Founder: ${ideaSourceMeta.whyThisFounder || ideaSourceMeta.why_it_fits || "N/A"}
 - Key Risk: ${ideaSourceMeta.keyRisk || "N/A"}
 - First Step: ${ideaSourceMeta.firstStep || ideaSourceMeta.first_three_steps?.[0] || "N/A"}
 ${ideaSourceMeta.is_pattern_transfer ? `- Cross-Industry Transfer: from ${ideaSourceMeta.transfer_from} to ${ideaSourceMeta.transfer_to}` : ""}
 ` : ""}
 
-WORKSPACE CONTEXT (use to avoid duplicate work):
-Recent Workspace Documents:
+## WORKSPACE CONTEXT (avoid duplicating existing work)
 ${workspaceDocsFormatted}
 
-SMART CALIBRATION (strategic, not just "easier tasks"):
+## SMART CALIBRATION RULES
+Apply these on top of the phase playbook:
 
-1. LOW ENERGY + YESTERDAY INCOMPLETE:
-   - Suggest a simplified, smaller-scoped version of yesterday's unfinished task
-   - Add one quick-win task (5-10 min) for momentum
-   - Avoid introducing new complex work
+1. LOW ENERGY (≤2) OR YESTERDAY INCOMPLETE:
+   - Scope task to a simplified version of what was missed
+   - Add one quick-win (5-10 min) for momentum before anything harder
 
-2. HIGH STRESS (> 3):
-   - Include one "organizational" task (cleanup, documentation, planning review)
+2. HIGH STRESS (>3):
+   - Include one organizational/cleanup task the founder fully controls
    - Avoid tasks with external dependencies or waiting
-   - Focus on tasks the founder fully controls
 
-3. BLOCKERS MENTIONED:
+3. ACTIVE BLOCKER:
    - First task MUST directly address the stated blocker
-   - Keep it small and specific (unblock, not solve everything)
-   - Example: "Schedule 15-min call with X to clarify Y" not "Resolve partnership issues"
+   - Small and specific: "Schedule 15-min call with X" not "Resolve partnership issues"
 
 4. HIGH ENERGY + YESTERDAY COMPLETE:
-   - Push slightly harder with a stretch goal
-   - Include one task that advances long-term positioning
-   - Can suggest more ambitious scope
+   - Push harder with a stretch goal
+   - Can expand scope slightly
 
-5. DEFAULT (no data or neutral state):
-   - Balance between validation, build, and marketing
-   - One quick-win, one medium task, one slightly challenging task
+5. STAGNATION (3+ days of partial/incomplete):
+   - Scope to smallest possible version of the most important thing
+   - ONE task only if necessary
 
-WORKSPACE AWARENESS RULES:
-- If a workspace doc exists for yesterday's task, reference it in today's task description
-  Example: "Continue work on 'Investor Email Draft v2' - finalize and send"
-- Do NOT suggest tasks that duplicate recent workspace activity
-  Example: If "Landing Page Copy" doc exists, don't suggest "Write landing page copy"
-- Use workspace doc titles as context clues for what's already in progress
-- Suggest tasks that BUILD ON existing workspace work, not restart it
+## OUTPUT FORMAT
+Return a JSON array only. No preamble. No markdown fences.
 
-WHY NOW CONTEXT:
-Every task MUST include a "why_now" field that explains why this specific task matters TODAY given where the founder is in their journey.
-
-Good why_now examples:
-- "Day 3 of your commitment. You defined your target customer yesterday — today's interview script builds directly on that definition."
-- "Your last check-in mentioned a blocker with customer outreach. This task directly addresses that blocker with a specific, small action."
-- "You are approaching your Day 10 decision point. You need 2 more customer conversations before you can make a confident proceed/pivot decision."
-
-Bad why_now examples:
-- "This is important for your business." (generic)
-- "You should do this soon." (no reasoning)
-- "This task will help you succeed." (empty motivation)
-
-FOUNDER-SPECIFIC TASK RULES:
-- If the founder has insider knowledge or industry access, tasks should LEVERAGE those connections (e.g., "Reach out to 3 RIAs in your network" not "Research the RIA market")
-- If there are hard-no filters, NEVER generate tasks that violate them
-- If this is a cross-industry pattern transfer, early tasks should validate that the pattern actually applies in the target industry
-- Reference specific expertise when possible (not "validate your idea" but "validate that dental practices face the same scheduling pain you saw in HVAC")
-
-STRICT RULES:
-- Tasks MUST be derived from the venture's blueprint, plan, or success metric
-- NO brainstorming or ideation tasks
-- NO future planning tasks
-- NO pivoting or "explore new directions" tasks
-- Each task should be completable in one focused work session
-- Tasks should directly contribute to the stated success metric
-
-Return a JSON array of tasks with this structure:
 [
   {
-    "id": "uuid-string",
-    "title": "Short action-oriented title",
-    "description": "Specific what-to-do description. Reference existing workspace docs if relevant.",
-    "why_now": "1-2 sentences: why this task matters today specifically, what it depends on, and what it enables next. Never generic — always reference the venture's current state, day in commitment, or recent progress.",
+    "id": "uuid",
+    "title": "Short, action-verb title (max 8 words)",
+    "description": "2-3 sentences. Specific instructions. Name real tools, platforms, or people types.",
+    "why_now": "1-2 sentences: why this task matters today specifically given the venture's current state and phase.",
     "category": "validation|build|marketing|ops",
-    "estimatedMinutes": 30-120,
+    "estimatedMinutes": 30,
     "completed": false
   }
-]`;
+]${appendContext}`;
 
-    // Call Lovable AI to generate tasks
+    // ── Call AI ───────────────────────────────────────────────
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -385,142 +285,109 @@ Return a JSON array of tasks with this structure:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
+          { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Generate today's execution tasks for this venture:
+            content: `Generate today's execution tasks.
 
-Venture: ${context.ventureName}
-Success Metric: ${context.successMetric}
-Day ${context.dayInCommitment} of ${context.commitmentDays}-day commitment
+Venture: ${venture.name}
+Success Metric: ${venture.success_metric}
+Phase: ${currentPhase.toUpperCase()} — Day ${dayInCommitment} of ${totalDays}
+${venture.success_metric ? `Goal: ${venture.success_metric}` : ""}
+${blueprint?.ai_summary ? `Blueprint Summary: ${blueprint.ai_summary}` : ""}
+${venturePlan?.summary ? `Plan Summary: ${venturePlan.summary}` : ""}
+${idea ? `Idea: ${idea.title} — ${idea.description}` : ""}
+${blueprintDecisionPoints ? `\nUpcoming Decision Points:\n${blueprintDecisionPoints}\nIf within 3 days of a decision point, generate at least one task that gathers the needed data.` : ""}
 
-${context.blueprintSummary ? `Blueprint Summary: ${context.blueprintSummary}` : ""}
-${context.planSummary ? `Plan Summary: ${context.planSummary}` : ""}
-${context.ideaTitle ? `Idea: ${context.ideaTitle} - ${context.ideaDescription}` : ""}
-${context.blueprintDecisionPoints ? `
-UPCOMING DECISION POINTS:
-${context.blueprintDecisionPoints}
-If the founder is approaching a decision point (within 3 days), generate at least one task that gathers the data needed to make that decision.
-` : ""}
-Generate ${taskCount} focused execution tasks for today.${appendContext}`
-          }
+Generate ${taskCount} focused execution tasks for today.`,
+          },
         ],
         temperature: 0.7,
-        max_tokens: 1000,
+        max_tokens: 1200,
       }),
     });
 
     if (!aiResponse.ok) {
       const status = aiResponse.status;
-      if (status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limited", code: "RATE_LIMITED" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Credits exhausted", code: "PAYMENT_REQUIRED" }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (status === 429) return new Response(JSON.stringify({ error: "Rate limited", code: "RATE_LIMITED" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (status === 402) return new Response(JSON.stringify({ error: "Credits exhausted", code: "PAYMENT_REQUIRED" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       throw new Error(`AI request failed: ${status}`);
     }
 
     const aiData = await aiResponse.json();
     const content = aiData.choices?.[0]?.message?.content || "[]";
-    
-    // Parse tasks from AI response
-    let newTasks = [];
+
+    // ── Parse Tasks ───────────────────────────────────────────
+    let newTasks: any[] = [];
     try {
       const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        newTasks = JSON.parse(jsonMatch[0]);
-      }
+      if (jsonMatch) newTasks = JSON.parse(jsonMatch[0]);
     } catch (parseError) {
       console.error("[generate-daily-execution-tasks] Parse error:", parseError);
-      newTasks = [];
     }
 
-    // Ensure tasks have valid IDs
     newTasks = newTasks.map((task: any) => ({
       ...task,
       id: task.id || crypto.randomUUID(),
       completed: false,
+      phase: currentPhase,   // Stamp phase onto each task for future analytics
     }));
 
-    console.log("[generate-daily-execution-tasks] Generated tasks:", newTasks.length, "append:", append);
+    console.log(`[generate-daily-execution-tasks] Generated ${newTasks.length} tasks for phase: ${currentPhase}`);
 
-    let finalTasks;
-    let dbError;
+    // ── Persist to DB ─────────────────────────────────────────
+    let finalTasks: any[];
+    let dbError: any;
 
     if (append && existingTasksRow) {
-      // Append mode: merge new tasks with existing
       finalTasks = [...(existingTasks as any[]), ...newTasks];
-      const newAppendCount = (existingTasksRow.append_count || 0) + 1;
-      
       const { error } = await supabaseService
         .from("venture_daily_tasks")
-        .update({ 
+        .update({
           tasks: finalTasks,
-          append_count: newAppendCount,
-          updated_at: new Date().toISOString()
+          append_count: (existingTasksRow.append_count || 0) + 1,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", existingTasksRow.id);
-      
       dbError = error;
-      console.log("[generate-daily-execution-tasks] Appended tasks, new append_count:", newAppendCount);
     } else {
-      // Initial generation
       finalTasks = newTasks;
-      const { error } = await supabaseService
-        .from("venture_daily_tasks")
-        .insert({
-          user_id: user.id,
-          venture_id: ventureId,
-          task_date: today,
-          tasks: finalTasks,
-          append_count: 0,
-        });
+      const { error } = await supabaseService.from("venture_daily_tasks").insert({
+        user_id: user.id,
+        venture_id: ventureId,
+        task_date: today,
+        tasks: finalTasks,
+        append_count: 0,
+        phase: currentPhase,   // Also stamp phase on the row
+      });
       dbError = error;
     }
 
     if (dbError) {
       console.error("[generate-daily-execution-tasks] DB error:", dbError);
-      return new Response(
-        JSON.stringify({ error: "Failed to save tasks", code: "DB_WRITE_FAILED" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Failed to save tasks", code: "DB_WRITE_FAILED" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        alreadyGenerated: false, 
+      JSON.stringify({
+        success: true,
+        alreadyGenerated: false,
         tasks: finalTasks,
+        phase: currentPhase,
         appended: append && !!existingTasksRow,
-        newTasksCount: newTasks.length
+        newTasksCount: newTasks.length,
+        isStagnating,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
     console.error("[generate-daily-execution-tasks] Error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ error: message, code: "INTERNAL_ERROR" }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error", code: "INTERNAL_ERROR" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
-
-function calculateDayInCommitment(startAt: string | null): number {
-  if (!startAt) return 1;
-  const start = new Date(startAt);
-  const now = new Date();
-  const diffMs = now.getTime() - start.getTime();
-  return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-}
