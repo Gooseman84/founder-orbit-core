@@ -14,6 +14,7 @@ import { OpportunityScoreCard } from "@/components/opportunity/OpportunityScoreC
 import { FinancialViabilityScore } from "@/components/opportunity/FinancialViabilityScore";
 import { useFinancialViabilityScore } from "@/hooks/useFinancialViabilityScore";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
+import { PaywallModal } from "@/components/billing/PaywallModal";
 import { IdeaVariantGenerator } from "@/components/ideas/IdeaVariantGenerator";
 import { IdeaOptimizerBar } from "@/components/shared/IdeaOptimizerBar";
 import { V6MetricsGrid } from "@/components/shared/V6MetricBadge";
@@ -33,8 +34,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload, MoreVertical, RefreshCw, Rocket, Heart } from "lucide-react";
+import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload, MoreVertical, RefreshCw, Rocket, Heart, Lock } from "lucide-react";
 import { useVentureState } from "@/hooks/useVentureState";
+import { useRef } from "react";
 
 const getComplexityVariant = (complexity: string | null) => {
   switch (complexity?.toLowerCase()) {
@@ -54,7 +56,7 @@ const IdeaDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { gate } = useFeatureAccess();
+  const { gate, hasPro } = useFeatureAccess();
   const queryClient = useQueryClient();
   const { idea, analysis, isLoading, isScoring, scoringError, analyzeIdea, updateIdeaStatus, refetch, reScore } = useIdeaDetail(id);
   
@@ -72,12 +74,25 @@ const IdeaDetail = () => {
   const [loadingScore, setLoadingScore] = useState(true);
   const [generatingScore, setGeneratingScore] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showFVSPaywall, setShowFVSPaywall] = useState(false);
   const [founderProfile, setFounderProfile] = useState<any>(null);
   const [generatedVariants, setGeneratedVariants] = useState<any[]>([]);
   const [settingNorthStar, setSettingNorthStar] = useState(false);
   const [unsettingNorthStar, setUnsettingNorthStar] = useState(false);
   const { activeVenture: currentActiveVenture } = useVentureState();
   const [savedToLibrary, setSavedToLibrary] = useState(false);
+  const fvsWasCalculating = useRef(false);
+
+  // Trigger FVS paywall when score finishes calculating for free users
+  useEffect(() => {
+    if (fvsCalculating) {
+      fvsWasCalculating.current = true;
+    }
+    if (fvsWasCalculating.current && !fvsCalculating && hasFVS && !hasPro) {
+      fvsWasCalculating.current = false;
+      setShowFVSPaywall(true);
+    }
+  }, [fvsCalculating, hasFVS, hasPro]);
 
   // Helpers for null-safe score rendering
   const scoreValue = (v: number | null | undefined) => (typeof v === "number" ? v : 0);
@@ -662,28 +677,58 @@ const IdeaDetail = () => {
                   onUpgradeClick={() => setShowPaywall(true)}
                 />
                 
-                {/* Summary and Risk/Opportunity for Pro users */}
-                {fvsScore.summary && (
-                  <div className="mt-4 p-4 bg-muted/30 rounded-lg space-y-3">
-                    <p className="text-sm text-muted-foreground">{fvsScore.summary}</p>
-                    {fvsScore.topRisk && (
+                {hasPro ? (
+                  <>
+                    {fvsScore.summary && (
+                      <div className="mt-4 p-4 bg-muted/30 rounded-lg space-y-3">
+                        <p className="text-sm text-muted-foreground">{fvsScore.summary}</p>
+                        {fvsScore.topRisk && (
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                            <div>
+                              <span className="text-xs font-medium text-destructive">Top Risk: </span>
+                              <span className="text-xs text-muted-foreground">{fvsScore.topRisk}</span>
+                            </div>
+                          </div>
+                        )}
+                        {fvsScore.topOpportunity && (
+                          <div className="flex items-start gap-2">
+                            <TrendingUp className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <span className="text-xs font-medium text-green-600">Top Opportunity: </span>
+                              <span className="text-xs text-muted-foreground">{fvsScore.topOpportunity}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="mt-4 relative">
+                    <div className="p-4 bg-muted/30 rounded-lg space-y-3 blur-sm select-none pointer-events-none" aria-hidden="true">
+                      <p className="text-sm text-muted-foreground">This idea scores well on unit economics and time-to-revenue but faces moderate competitive density in its target market...</p>
                       <div className="flex items-start gap-2">
                         <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
                         <div>
                           <span className="text-xs font-medium text-destructive">Top Risk: </span>
-                          <span className="text-xs text-muted-foreground">{fvsScore.topRisk}</span>
+                          <span className="text-xs text-muted-foreground">Market saturation in adjacent categories could limit growth ceiling...</span>
                         </div>
                       </div>
-                    )}
-                    {fvsScore.topOpportunity && (
                       <div className="flex items-start gap-2">
                         <TrendingUp className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <div>
                           <span className="text-xs font-medium text-green-600">Top Opportunity: </span>
-                          <span className="text-xs text-muted-foreground">{fvsScore.topOpportunity}</span>
+                          <span className="text-xs text-muted-foreground">Strong founder-market fit creates a defensible wedge into an underserved niche...</span>
                         </div>
                       </div>
-                    )}
+                    </div>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 rounded-lg">
+                      <Lock className="w-5 h-5 text-muted-foreground mb-2" />
+                      <p className="text-sm font-medium mb-3">Unlock the full analysis</p>
+                      <Button size="sm" onClick={() => setShowFVSPaywall(true)}>
+                        Upgrade to Pro — $29/month
+                      </Button>
+                    </div>
                   </div>
                 )}
                 
@@ -1002,6 +1047,15 @@ const IdeaDetail = () => {
         onClose={() => setShowPaywall(false)}
         reasonCode="OPPORTUNITY_SCORE_REQUIRES_PRO"
       />
+
+      {showFVSPaywall && (
+        <PaywallModal
+          open={showFVSPaywall}
+          onClose={() => setShowFVSPaywall(false)}
+          trigger="fvs_reveal"
+          ideaTitle={idea?.title}
+        />
+      )}
     </div>
   );
 };
