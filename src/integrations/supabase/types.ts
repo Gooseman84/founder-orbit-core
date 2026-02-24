@@ -1545,6 +1545,239 @@ export type Database = {
         }
         Relationships: []
       }
+      validation_evidence: {
+        Row: {
+          assumption_reference: string | null
+          contradicts_assumption: boolean | null
+          created_at: string | null
+          evidence_type: string | null
+          fvs_dimension: string | null
+          guided_answers: Json | null
+          id: string
+          key_insight: string | null
+          raw_notes: string | null
+          sentiment: string | null
+          session_id: string | null
+          signal_strength: number | null
+          user_id: string
+          venture_id: string | null
+        }
+        Insert: {
+          assumption_reference?: string | null
+          contradicts_assumption?: boolean | null
+          created_at?: string | null
+          evidence_type?: string | null
+          fvs_dimension?: string | null
+          guided_answers?: Json | null
+          id?: string
+          key_insight?: string | null
+          raw_notes?: string | null
+          sentiment?: string | null
+          session_id?: string | null
+          signal_strength?: number | null
+          user_id: string
+          venture_id?: string | null
+        }
+        Update: {
+          assumption_reference?: string | null
+          contradicts_assumption?: boolean | null
+          created_at?: string | null
+          evidence_type?: string | null
+          fvs_dimension?: string | null
+          guided_answers?: Json | null
+          id?: string
+          key_insight?: string | null
+          raw_notes?: string | null
+          sentiment?: string | null
+          session_id?: string | null
+          signal_strength?: number | null
+          user_id?: string
+          venture_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_evidence_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "validation_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "validation_evidence_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_missions: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          mission_detail: string | null
+          mission_title: string | null
+          session_id: string | null
+          status: string | null
+          suggested_questions: Json | null
+          target_fvs_dimension: string | null
+          user_id: string
+          venture_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          mission_detail?: string | null
+          mission_title?: string | null
+          session_id?: string | null
+          status?: string | null
+          suggested_questions?: Json | null
+          target_fvs_dimension?: string | null
+          user_id: string
+          venture_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          mission_detail?: string | null
+          mission_title?: string | null
+          session_id?: string | null
+          status?: string | null
+          suggested_questions?: Json | null
+          target_fvs_dimension?: string | null
+          user_id?: string
+          venture_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_missions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "validation_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "validation_missions_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_sessions: {
+        Row: {
+          created_at: string | null
+          hypothesis: string | null
+          id: string
+          status: string | null
+          target_evidence_count: number | null
+          updated_at: string | null
+          user_id: string
+          validation_stage: string | null
+          venture_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          hypothesis?: string | null
+          id?: string
+          status?: string | null
+          target_evidence_count?: number | null
+          updated_at?: string | null
+          user_id: string
+          validation_stage?: string | null
+          venture_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          hypothesis?: string | null
+          id?: string
+          status?: string | null
+          target_evidence_count?: number | null
+          updated_at?: string | null
+          user_id?: string
+          validation_stage?: string | null
+          venture_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_sessions_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_summaries: {
+        Row: {
+          advisor_note: string | null
+          confidence_shift: string | null
+          fvs_delta: Json | null
+          generated_at: string | null
+          id: string
+          negative_count: number | null
+          neutral_count: number | null
+          pattern_summary: string | null
+          positive_count: number | null
+          recommendation: string | null
+          session_id: string | null
+          total_evidence_count: number | null
+          user_id: string
+          venture_id: string | null
+        }
+        Insert: {
+          advisor_note?: string | null
+          confidence_shift?: string | null
+          fvs_delta?: Json | null
+          generated_at?: string | null
+          id?: string
+          negative_count?: number | null
+          neutral_count?: number | null
+          pattern_summary?: string | null
+          positive_count?: number | null
+          recommendation?: string | null
+          session_id?: string | null
+          total_evidence_count?: number | null
+          user_id: string
+          venture_id?: string | null
+        }
+        Update: {
+          advisor_note?: string | null
+          confidence_shift?: string | null
+          fvs_delta?: Json | null
+          generated_at?: string | null
+          id?: string
+          negative_count?: number | null
+          neutral_count?: number | null
+          pattern_summary?: string | null
+          positive_count?: number | null
+          recommendation?: string | null
+          session_id?: string | null
+          total_evidence_count?: number | null
+          user_id?: string
+          venture_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_summaries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "validation_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "validation_summaries_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venture_daily_checkins: {
         Row: {
           checkin_date: string
