@@ -218,6 +218,13 @@ function TodaysFocus({
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [mavrikResponse, setMavrikResponse] = useState<{
+    message: string;
+    tomorrowFocus: string;
+    tone: string;
+    isStagnationIntervention: boolean;
+  } | null>(null);
+  const { user } = useAuth();
 
   const moods = [
     { emoji: "🔥", label: "On fire", status: "yes" as const },
@@ -230,25 +237,80 @@ function TodaysFocus({
     const mood = moods.find((m) => m.label === selectedMood);
     if (!mood) return;
     setSubmitting(true);
-    await submitCheckin({
+
+    const success = await submitCheckin({
       completionStatus: mood.status,
       reflection: `${mood.emoji} ${mood.label}${note ? ` — ${note}` : ""}`,
+      explanation: note || undefined,
     });
+
+    if (success) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const res = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-checkin-response`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                ventureId: venture.id,
+                completionStatus: mood.status,
+                explanation: note || null,
+                reflection: `${mood.emoji} ${mood.label}${note ? ` — ${note}` : ""}`,
+              }),
+            }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data.response) setMavrikResponse(data.response);
+          }
+        }
+      } catch (e) {
+        console.warn("Mavrik response unavailable:", e);
+      }
+    }
+
     setSubmitting(false);
   };
 
   if (hasCheckedInToday && todayCheckin) {
     return (
-      <Card className="border-green-500/20 bg-green-500/5">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Flame className="h-4 w-4 text-orange-500" />
-            <span className="text-sm font-medium">Today's Vibe</span>
-            <CheckCircle2 className="h-3.5 w-3.5 text-green-500 ml-auto" />
-          </div>
-          <p className="text-sm text-muted-foreground line-clamp-2">{todayCheckin.reflection}</p>
-        </CardContent>
-      </Card>
+      <div className="space-y-3">
+        <Card className="border-green-500/20 bg-green-500/5">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Flame className="h-4 w-4 text-orange-500" />
+              <span className="text-sm font-medium">Today's Vibe</span>
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500 ml-auto" />
+            </div>
+            <p className="text-sm text-muted-foreground line-clamp-2">{todayCheckin.reflection}</p>
+          </CardContent>
+        </Card>
+
+        {mavrikResponse && (
+          <Card className="border-primary/20">
+            <CardContent className="py-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-primary">Mavrik</span>
+              </div>
+              <p className="text-sm text-foreground">{mavrikResponse.message}</p>
+              {mavrikResponse.tomorrowFocus && (
+                <div className="pt-1">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium">Tomorrow: </span>
+                    {mavrikResponse.tomorrowFocus}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     );
   }
 
