@@ -264,21 +264,19 @@ const Ideas = () => {
     setSourceTypeFilter("market_signal");
   };
 
-  const handleImportSuccess = (ideas: any[]) => {
+  const handleImportSuccess = async (ideas: any[]) => {
     // Track newly imported idea IDs for banner display
     const importedIds = ideas.map((idea) => idea.id);
     setNewlyImportedIds(importedIds);
     
-    // Refresh library ideas
-    queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] });
+    // Refresh library ideas and wait for cache to settle before navigating
+    await queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] });
     setActiveTab("library");
     setSourceTypeFilter("imported");
     
-    // Auto-navigate to first idea after a short delay
+    // Navigate to first idea after cache has settled
     if (ideas.length > 0) {
-      setTimeout(() => {
-        navigate(`/ideas/${ideas[0].id}`);
-      }, 500);
+      navigate(`/ideas/${ideas[0].id}`);
     }
   };
 
