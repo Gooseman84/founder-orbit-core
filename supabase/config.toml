@@ -161,3 +161,6 @@ verify_jwt = false
 
 [functions.detect-founder-patterns]
 verify_jwt = false
+
+[functions.generate-revenue-stack-brief]
+verify_jwt = false
