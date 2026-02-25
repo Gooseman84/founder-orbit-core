@@ -43,6 +43,7 @@ import {
 import { exportBlueprintToPdf } from "@/lib/blueprintPdfExport";
 import { PaywallModal } from "@/components/paywall/PaywallModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RevenueStackBriefCard } from "@/components/implementationKit/RevenueStackBriefCard";
 
 import { cn } from "@/lib/utils";
 import type { CommitmentWindowDays, Venture, VentureState } from "@/types/venture";
@@ -486,6 +487,13 @@ const Blueprint = () => {
       {venture && (
         <div className="mb-6 mt-6">
           <ValidationSection ventureId={venture.id} />
+        </div>
+      )}
+
+      {/* Revenue Stack Brief */}
+      {venture && (
+        <div className="mb-6">
+          <RevenueStackBriefCard ventureId={venture.id} />
         </div>
       )}
 
