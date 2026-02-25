@@ -199,6 +199,21 @@ GUIDED ANSWERS:
 
     log("Evidence inserted", { evidenceId: evidence.id });
 
+    // === Fire detect-founder-patterns (non-blocking) ===
+    try {
+      const detectUrl = `${supabaseUrl}/functions/v1/detect-founder-patterns`;
+      fetch(detectUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${supabaseServiceKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ venture_id, user_id: userId }),
+      }).catch((e) => log("detect-founder-patterns fire-and-forget error", { error: String(e) }));
+    } catch (e) {
+      log("detect-founder-patterns trigger error (non-fatal)", { error: String(e) });
+    }
+
     return new Response(JSON.stringify(evidence), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
