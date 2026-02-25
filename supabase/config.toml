@@ -158,3 +158,6 @@ verify_jwt = false
 
 [functions.update-fvs-from-validation]
 verify_jwt = false
+
+[functions.detect-founder-patterns]
+verify_jwt = false
