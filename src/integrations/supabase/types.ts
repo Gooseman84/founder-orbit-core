@@ -574,6 +574,62 @@ export type Database = {
         }
         Relationships: []
       }
+      founder_patterns: {
+        Row: {
+          advisor_note: string
+          created_at: string | null
+          dismissed_at: string | null
+          evidence_references: Json | null
+          id: string
+          pattern_description: string
+          pattern_type: string
+          resolved_at: string | null
+          severity: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+          venture_id: string | null
+        }
+        Insert: {
+          advisor_note: string
+          created_at?: string | null
+          dismissed_at?: string | null
+          evidence_references?: Json | null
+          id?: string
+          pattern_description: string
+          pattern_type: string
+          resolved_at?: string | null
+          severity?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          venture_id?: string | null
+        }
+        Update: {
+          advisor_note?: string
+          created_at?: string | null
+          dismissed_at?: string | null
+          evidence_references?: Json | null
+          id?: string
+          pattern_description?: string
+          pattern_type?: string
+          resolved_at?: string | null
+          severity?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          venture_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "founder_patterns_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       founder_profiles: {
         Row: {
           business_type_preference: string | null
