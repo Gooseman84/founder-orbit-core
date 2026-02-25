@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -89,6 +89,51 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
     enabled: !!user && !!venture.idea_id,
   });
 
+  // Validation status for Blueprint tile
+  const { data: validationSummary } = useQuery({
+    queryKey: ["validation-status-tile", venture.id, user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("validation_summaries")
+        .select("confidence_shift, recommendation, total_evidence_count, generated_at")
+        .eq("venture_id", venture.id)
+        .eq("user_id", user.id)
+        .order("generated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!user && !!venture.id,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: evidenceCount } = useQuery({
+    queryKey: ["validation-evidence-count-tile", venture.id, user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+      const { count, error } = await supabase
+        .from("validation_evidence")
+        .select("*", { count: "exact", head: true })
+        .eq("venture_id", venture.id)
+        .eq("user_id", user.id);
+      if (error) return 0;
+      return count ?? 0;
+    },
+    enabled: !!user && !!venture.id,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const confidenceLabel = useMemo(() => {
+    const shift = validationSummary?.confidence_shift;
+    if (!shift || shift === "assumption_based") return { text: "Assumption-Based", cls: "bg-muted text-muted-foreground" };
+    if (shift === "early_signal") return { text: "Early Signal", cls: "bg-amber-500/15 text-amber-500" };
+    if (shift === "partially_validated") return { text: "Partially Validated", cls: "bg-blue-500/15 text-blue-400" };
+    if (shift === "evidence_backed") return { text: "Evidence-Backed", cls: "bg-emerald-500/15 text-emerald-400" };
+    return { text: "Not Started", cls: "bg-muted text-muted-foreground" };
+  }, [validationSummary?.confidence_shift]);
+
   return (
     <div className="space-y-5">
       {/* 1. VENTURE DNA — motivational hero card */}
@@ -129,6 +174,14 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
               <span className="text-[10px] text-muted-foreground">
                 {new Date(blueprintDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
               </span>
+            )}
+            {/* Validation status pill */}
+            {evidenceCount != null && evidenceCount > 0 ? (
+              <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-medium leading-tight", confidenceLabel.cls)}>
+                {confidenceLabel.text}
+              </span>
+            ) : (
+              <span className="text-[9px] text-muted-foreground/60">Validate →</span>
             )}
           </CardContent>
         </Card>
