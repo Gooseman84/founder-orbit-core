@@ -19,6 +19,7 @@ import {
   Sparkles,
   MessageSquareText,
 } from "lucide-react";
+import { LogEvidenceModal } from "./LogEvidenceModal";
 
 interface ValidationMission {
   id: string;
@@ -63,10 +64,12 @@ const DIMENSION_LABELS: Record<string, string> = {
 function MissionCard({
   mission,
   onMarkComplete,
+  onLogEvidence,
   isCompleting,
 }: {
   mission: ValidationMission;
   onMarkComplete: (id: string) => void;
+  onLogEvidence: (mission: ValidationMission) => void;
   isCompleting: boolean;
 }) {
   const [questionsOpen, setQuestionsOpen] = useState(false);
@@ -126,8 +129,7 @@ function MissionCard({
                 variant="outline"
                 size="sm"
                 className="text-xs h-7"
-                disabled
-                title="Coming soon"
+                onClick={() => onLogEvidence(mission)}
               >
                 <ClipboardEdit className="h-3 w-3 mr-1" />
                 Log Evidence
@@ -164,6 +166,7 @@ export function ValidationSection({ ventureId }: ValidationSectionProps) {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [completingMissionId, setCompletingMissionId] = useState<string | null>(null);
+  const [evidenceModalMission, setEvidenceModalMission] = useState<ValidationMission | null>(null);
 
   // Load existing session + missions + evidence count
   const loadExistingData = useCallback(async () => {
@@ -362,10 +365,34 @@ export function ValidationSection({ ventureId }: ValidationSectionProps) {
               key={mission.id}
               mission={mission}
               onMarkComplete={handleMarkComplete}
+              onLogEvidence={(m) => setEvidenceModalMission(m)}
               isCompleting={completingMissionId === mission.id}
             />
           ))}
         </div>
+      )}
+
+      {/* Evidence logging modal */}
+      {evidenceModalMission && session && (
+        <LogEvidenceModal
+          open={!!evidenceModalMission}
+          onOpenChange={(open) => {
+            if (!open) setEvidenceModalMission(null);
+          }}
+          missionTitle={evidenceModalMission.mission_title}
+          sessionId={session.id}
+          ventureId={ventureId}
+          missionId={evidenceModalMission.id}
+          onSuccess={() => {
+            const newCount = evidenceCount + 1;
+            setEvidenceCount(newCount);
+            if (newCount >= (session.target_evidence_count ?? 5)) {
+              invokeAuthedFunction("analyze-validation-session", {
+                body: { session_id: session.id, venture_id: ventureId },
+              }).catch(() => {});
+            }
+          }}
+        />
       )}
     </div>
   );
