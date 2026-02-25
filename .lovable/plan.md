@@ -1,45 +1,47 @@
 
 
-## Fix: Blueprint generation fails despite JSON cleaning
+## Diagnosis: Why Your Imported Idea Disappears from the Library
 
-### Problem
+After investigating the code, the root cause is a **stale cache problem combined with a navigation race condition**:
 
-The edge function logs prove that `cleanAIJsonResponse` IS working -- the cleaned text starts with `{` (valid JSON start). But `JSON.parse` still throws. This means:
+1. When you import an idea, `handleImportSuccess` invalidates the ideas cache AND auto-navigates you to the idea detail page 500ms later
+2. The navigation unmounts the Ideas page before the cache refetch completes
+3. When you vet the idea on the IdeaDetail page, the vetting mutation (`analyzeIdea`) does NOT invalidate the `["ideas", userId]` query -- it only invalidates `["idea-analysis", ideaId]`
+4. When you navigate back to Ideas, React Query may serve the old cached list that was fetched before the import completed
 
-- The markdown fence stripping works fine
-- The JSON **content itself** is malformed (likely trailing commas, unescaped characters, or other subtle syntax errors that the AI produces)
-- The current code also doesn't log the actual parse error message (`err` is caught but never logged), making debugging harder
+Additionally, there's a secondary issue: the `financial_viability_scores` table is **missing an UPDATE RLS policy**, which could cause silent errors during FVS recalculation and potentially block parts of the detail page flow.
 
-### Solution
+## Plan
 
-Two-pronged fix applied to both `generate-blueprint` and `refresh-blueprint`:
+### 1. Fix cache invalidation after vetting (useIdeaDetail.tsx)
 
-**1. Add `response_format: { type: "json_object" }` to the AI API call**
+Add `queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] })` to the `analyzeIdea` mutation's `onSuccess` handler. This ensures the library list refreshes after vetting.
 
-This is an OpenAI-compatible parameter supported by the Lovable AI gateway. It instructs the model to:
-- Return raw, valid JSON (no markdown fences)
-- Enforce JSON syntax correctness at the token level
+### 2. Fix navigation race condition in handleImportSuccess (Ideas.tsx)
 
-This eliminates the root cause entirely -- no more fence stripping needed, no more malformed JSON.
+Instead of blindly navigating after 500ms, wait for the cache invalidation to settle before navigating. Use `await queryClient.invalidateQueries(...)` and then navigate.
 
-**2. Keep `cleanAIJsonResponse` as a safety net + log the actual error**
+### 3. Add missing UPDATE RLS policy on financial_viability_scores
 
-If the model somehow still returns wrapped JSON, the cleaning catches it. Additionally, the actual `err.message` from `JSON.parse` will be logged so we can see exactly what character/position fails.
+Create a database migration to add an UPDATE policy so the `update-fvs-from-validation` flow works correctly:
+```sql
+CREATE POLICY "Users can update their own financial viability scores"
+  ON public.financial_viability_scores FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+```
 
-### Files Changed
+### 4. Force refetch on Ideas page mount
 
-**`supabase/functions/generate-blueprint/index.ts`**
-- Add `response_format: { type: "json_object" }` to the API request body (around line 873)
-- Log `err.message` in the catch block (line 929)
+Add a `refetchOnMount: "always"` option to the `useIdeas` query so that every time the user navigates to the Ideas page, it fetches fresh data rather than relying on potentially stale cache.
 
-**`supabase/functions/refresh-blueprint/index.ts`**
-- Add `response_format: { type: "json_object" }` to the API request body
-- Log `parseError.message` in the catch block
+---
 
-Both functions will be redeployed after changes.
+### Technical Details
 
-### Verification
-- Blueprint generation should complete without parse errors
-- Logs should show clean JSON without ` ```json ` fences
-- The "Building Your Blueprint" stepper should complete all 8 steps and redirect to the Blueprint page
+**Files to modify:**
+- `src/hooks/useIdeaDetail.tsx` -- Add ideas list cache invalidation to `analyzeIdea.onSuccess`
+- `src/hooks/useIdeas.tsx` -- Add `refetchOnMount: "always"` to the query options
+- `src/pages/Ideas.tsx` -- Fix `handleImportSuccess` to await invalidation before navigating
+- Database migration -- Add UPDATE policy on `financial_viability_scores`
 
