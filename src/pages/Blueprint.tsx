@@ -22,6 +22,7 @@ import { BlueprintGenerationAnimation } from "@/components/blueprint/BlueprintGe
 import { GenerateKitButton, TechStackDialog } from "@/components/implementationKit";
 import { useImplementationKitByBlueprint, useCreateImplementationKit } from "@/hooks/useImplementationKit";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { ValidationSection } from "@/components/validation/ValidationSection";
 import { EditBlueprintDrawer } from "@/components/blueprint/EditBlueprintDrawer";
 import { VentureDNASection } from "@/components/blueprint/VentureDNASection";
 import {
@@ -472,6 +473,13 @@ const Blueprint = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Validate Your Assumptions */}
+      {venture && (
+        <div className="mb-6 mt-6">
+          <ValidationSection ventureId={venture.id} />
+        </div>
+      )}
 
       {/* ─── Start Building CTA ─── */}
       <div className="mt-10 mb-4">
