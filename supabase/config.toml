@@ -149,3 +149,9 @@ verify_jwt = false
 
 [functions.generate-checkin-response]
 verify_jwt = false
+
+[functions.log-validation-evidence]
+verify_jwt = false
+
+[functions.analyze-validation-session]
+verify_jwt = false
