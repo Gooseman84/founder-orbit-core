@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload, MoreVertical, RefreshCw, Rocket, Heart, Lock } from "lucide-react";
 import { useVentureState } from "@/hooks/useVentureState";
+import { useValidationDisplayProps } from "@/hooks/useValidationDisplayProps";
 import { useRef } from "react";
 
 const getComplexityVariant = (complexity: string | null) => {
@@ -82,6 +83,10 @@ const IdeaDetail = () => {
   const { activeVenture: currentActiveVenture } = useVentureState();
   const [savedToLibrary, setSavedToLibrary] = useState(false);
   const fvsWasCalculating = useRef(false);
+
+  // Validation display props for FVS (use active venture if idea matches)
+  const ventureIdForValidation = currentActiveVenture?.idea_id === id ? currentActiveVenture?.id : null;
+  const { confidenceShift, lastValidatedAt, dimensionEvidenceCounts } = useValidationDisplayProps(ventureIdForValidation);
 
   // Trigger FVS paywall when score finishes calculating for free users
   useEffect(() => {
@@ -675,6 +680,9 @@ const IdeaDetail = () => {
                   showBreakdown={!!fvsScore.dimensions}
                   size="lg"
                   onUpgradeClick={() => setShowPaywall(true)}
+                  confidenceShift={confidenceShift}
+                  lastValidatedAt={lastValidatedAt}
+                  dimensionEvidenceCounts={dimensionEvidenceCounts}
                 />
                 
                 {hasPro ? (
