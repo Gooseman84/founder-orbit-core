@@ -155,3 +155,6 @@ verify_jwt = false
 
 [functions.analyze-validation-session]
 verify_jwt = false
+
+[functions.update-fvs-from-validation]
+verify_jwt = false
