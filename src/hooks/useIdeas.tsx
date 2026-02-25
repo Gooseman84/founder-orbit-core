@@ -72,6 +72,7 @@ export const useIdeas = () => {
     queryKey: ["ideas", user?.id],
     queryFn: () => fetchIdeas(user!.id),
     enabled: !!user,
+    refetchOnMount: "always",
   });
 
   const generateIdeas = useMutation({

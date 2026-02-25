@@ -236,6 +236,8 @@ export const useIdeaDetail = (ideaId: string | undefined) => {
         await recordXpEvent(user.id, "idea_vetted", 30, { ideaId });
       }
       queryClient.invalidateQueries({ queryKey: ["idea-analysis", ideaId] });
+      // Also refresh the ideas list so library stays in sync
+      queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] });
       // Refresh XP summary
       queryClient.invalidateQueries({ queryKey: ["xp", user?.id] });
     },
