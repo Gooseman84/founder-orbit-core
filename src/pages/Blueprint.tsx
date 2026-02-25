@@ -25,6 +25,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { ValidationSection } from "@/components/validation/ValidationSection";
 import { EditBlueprintDrawer } from "@/components/blueprint/EditBlueprintDrawer";
 import { VentureDNASection } from "@/components/blueprint/VentureDNASection";
+import { MavrikAssessmentCard } from "@/components/blueprint/MavrikAssessmentCard";
 import { useValidationDisplayProps } from "@/hooks/useValidationDisplayProps";
 import {
   Target,
@@ -487,6 +488,9 @@ const Blueprint = () => {
           <ValidationSection ventureId={venture.id} />
         </div>
       )}
+
+      {/* Mavrik Assessment */}
+      {venture && <MavrikAssessmentCard ventureId={venture.id} />}
 
       {/* ─── Start Building CTA ─── */}
       <div className="mt-10 mb-4">
