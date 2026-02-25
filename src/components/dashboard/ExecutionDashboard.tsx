@@ -26,6 +26,7 @@ import type { Venture } from "@/types/venture";
 import { useDailyExecution } from "@/hooks/useDailyExecution";
 import { ImplementationKitCard } from "@/components/implementationKit/ImplementationKitCard";
 import { VentureDNACard } from "@/components/dashboard/VentureDNACard";
+import { FounderPatternCard } from "@/components/patterns/FounderPatternCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -209,7 +210,10 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
         </Card>
       </div>
 
-      {/* 5. IMPLEMENTATION KIT */}
+      {/* 5. FOUNDER PATTERN ALERTS */}
+      <FounderPatternCard ventureId={venture.id} />
+
+      {/* 6. IMPLEMENTATION KIT */}
       <ImplementationKitCard ventureId={venture.id} />
 
       {/* 6. VENTURE CONTROLS */}
