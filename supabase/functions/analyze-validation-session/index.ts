@@ -370,8 +370,8 @@ Analyze all evidence and generate the validation summary.`;
     const validShifts = ["assumption_based", "early_signal", "partially_validated", "evidence_backed"];
     let confidenceShift = latestSummary?.confidence_shift || "assumption_based";
     // Override based on current evidence count
-    if (evidenceRows.length >= 8) confidenceShift = "evidence_backed";
-    else if (evidenceRows.length >= 4) confidenceShift = "partially_validated";
+    if (evidenceRows.length >= 6) confidenceShift = "evidence_backed";
+    else if (evidenceRows.length >= 3) confidenceShift = "partially_validated";
     else if (evidenceRows.length >= 1) confidenceShift = "early_signal";
     else confidenceShift = "assumption_based";
     if (!validShifts.includes(confidenceShift)) confidenceShift = "early_signal";
