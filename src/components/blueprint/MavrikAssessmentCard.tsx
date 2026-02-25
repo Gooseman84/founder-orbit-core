@@ -86,7 +86,7 @@ export function MavrikAssessmentCard({ ventureId }: MavrikAssessmentCardProps) {
       if (!session?.id) return;
 
       await invokeAuthedFunction("analyze-validation-session", {
-        body: { sessionId: session.id },
+        body: { session_id: session.id, venture_id: ventureId },
       });
 
       queryClient.invalidateQueries({ queryKey: ["mavrik-assessment", ventureId] });
