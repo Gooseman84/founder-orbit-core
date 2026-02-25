@@ -236,6 +236,11 @@ export function ValidationSection({ ventureId }: ValidationSectionProps) {
       // Reload to get full data
       await loadExistingData();
 
+      // Fire detect-founder-patterns in background (fire and forget)
+      invokeAuthedFunction("detect-founder-patterns", {
+        body: { venture_id: ventureId },
+      }).catch(() => {});
+
       toast({
         title: "Validation plan created",
         description: "3 missions generated to test your riskiest assumptions.",
