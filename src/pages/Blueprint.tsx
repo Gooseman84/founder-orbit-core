@@ -25,6 +25,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { ValidationSection } from "@/components/validation/ValidationSection";
 import { EditBlueprintDrawer } from "@/components/blueprint/EditBlueprintDrawer";
 import { VentureDNASection } from "@/components/blueprint/VentureDNASection";
+import { useValidationDisplayProps } from "@/hooks/useValidationDisplayProps";
 import {
   Target,
   AlertTriangle,
@@ -86,6 +87,9 @@ const Blueprint = () => {
 
   // Edit drawer state
   const [editSection, setEditSection] = useState<string | null>(null);
+
+  // Validation display props for FVS
+  const { confidenceShift, lastValidatedAt, dimensionEvidenceCounts } = useValidationDisplayProps(venture?.id);
 
   // PDF export state
   const [pdfExporting, setPdfExporting] = useState(false);
@@ -443,6 +447,9 @@ const Blueprint = () => {
               }}
               showBreakdown
               size="md"
+              confidenceShift={confidenceShift}
+              lastValidatedAt={lastValidatedAt}
+              dimensionEvidenceCounts={dimensionEvidenceCounts}
             />
           </CardContent>
         </Card>
