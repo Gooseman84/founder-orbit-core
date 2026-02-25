@@ -299,7 +299,7 @@ export function ValidationSection({ ventureId }: ValidationSectionProps) {
     );
   }
 
-  const targetEvidence = session?.target_evidence_count ?? 5;
+  const targetEvidence = session?.target_evidence_count ?? 3;
   const progressPercent = Math.min(100, (evidenceCount / targetEvidence) * 100);
   const hasActiveSession = !!session && missions.length > 0;
 
@@ -391,7 +391,7 @@ export function ValidationSection({ ventureId }: ValidationSectionProps) {
           onSuccess={() => {
             const newCount = evidenceCount + 1;
             setEvidenceCount(newCount);
-            if (newCount >= (session.target_evidence_count ?? 5)) {
+            if (newCount >= (session.target_evidence_count ?? 3)) {
               invokeAuthedFunction("analyze-validation-session", {
                 body: { session_id: session.id, venture_id: ventureId },
               }).catch(() => {});

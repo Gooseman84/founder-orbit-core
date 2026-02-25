@@ -123,7 +123,7 @@ serve(async (req) => {
         status: "active",
         validation_stage: "initial",
         hypothesis,
-        target_evidence_count: 5,
+        target_evidence_count: 3,
       })
       .select()
       .single();
