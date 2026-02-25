@@ -144,5 +144,8 @@ verify_jwt = false
 [functions.calculate-financial-viability]
 verify_jwt = false
 
+[functions.generate-validation-plan]
+verify_jwt = false
+
 [functions.generate-checkin-response]
 verify_jwt = false
