@@ -1,38 +1,32 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { LevelBadge } from "@/components/shared/LevelBadge";
 import { XpProgressBar } from "@/components/shared/XpProgressBar";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { NorthStarCard } from "./NorthStarCard";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ScoreGauge } from "@/components/opportunity/ScoreGauge";
 import { 
-  AlertCircle, 
-  Target, 
-  Zap, 
-  ListTodo, 
-  TrendingUp, 
-  Activity, 
   Radar, 
   FileText, 
   Flame, 
   BarChart3, 
-  Scale, 
   Crown, 
   Sparkles,
   AlertTriangle,
-  XCircle
+  XCircle,
+  Scale
 } from "lucide-react";
 import { calculateReflectionStreak } from "@/lib/streakEngine";
+
+const DASHBOARD_STALE_TIME = 3 * 60 * 1000; // 3 minutes
 
 export function DiscoveryDashboard() {
   const { user } = useAuth();
@@ -41,15 +35,63 @@ export function DiscoveryDashboard() {
   const { isTrialing, isTrialExpired, isLockedOut, daysRemaining, hasPro, hasFounder } = useFeatureAccess();
   const navigate = useNavigate();
   const isFree = plan === "free";
-  
-  const [radarStats, setRadarStats] = useState({ recentCount: 0, topSignal: null as any });
-  const [loadingRadar, setLoadingRadar] = useState(true);
-  const [workspaceStats, setWorkspaceStats] = useState({ totalDocs: 0, recentDoc: null as any });
-  const [loadingWorkspace, setLoadingWorkspace] = useState(true);
-  const [highestScore, setHighestScore] = useState<any>(null);
-  const [loadingScore, setLoadingScore] = useState(true);
-  const [reflectionStreak, setReflectionStreak] = useState(0);
-  const [loadingReflectionStreak, setLoadingReflectionStreak] = useState(true);
+
+  const { data: radarStats, isLoading: loadingRadar } = useQuery({
+    queryKey: ["dashboard-radar-stats", user?.id],
+    queryFn: async () => {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const { data: allSignals, error } = await supabase
+        .from("niche_radar")
+        .select("*")
+        .eq("user_id", user!.id)
+        .gte("created_at", sevenDaysAgo.toISOString())
+        .order("priority_score", { ascending: false });
+      if (error) throw error;
+      return { recentCount: allSignals?.length || 0, topSignal: allSignals?.[0] || null };
+    },
+    enabled: !!user,
+    staleTime: DASHBOARD_STALE_TIME,
+  });
+
+  const { data: workspaceStats, isLoading: loadingWorkspace } = useQuery({
+    queryKey: ["dashboard-workspace-stats", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("workspace_documents")
+        .select("id, title, updated_at")
+        .eq("user_id", user!.id)
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return { totalDocs: data?.length || 0, recentDoc: data?.[0] || null };
+    },
+    enabled: !!user,
+    staleTime: DASHBOARD_STALE_TIME,
+  });
+
+  const { data: highestScore, isLoading: loadingScore } = useQuery({
+    queryKey: ["dashboard-highest-score", user?.id],
+    queryFn: async () => {
+      const { data: scores, error: scoresError } = await supabase
+        .from("opportunity_scores")
+        .select("*, ideas(id, title)")
+        .eq("user_id", user!.id)
+        .order("total_score", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (scoresError) throw scoresError;
+      return scores && scores.ideas ? scores : null;
+    },
+    enabled: !!user,
+    staleTime: DASHBOARD_STALE_TIME,
+  });
+
+  const { data: reflectionStreak = 0, isLoading: loadingReflectionStreak } = useQuery({
+    queryKey: ["dashboard-reflection-streak", user?.id],
+    queryFn: () => calculateReflectionStreak(user!.id),
+    enabled: !!user,
+    staleTime: DASHBOARD_STALE_TIME,
+  });
 
   // Determine if we should show urgent trial warning
   const showTrialWarning = !hasPro && !hasFounder && (
@@ -57,104 +99,6 @@ export function DiscoveryDashboard() {
     isLockedOut || 
     (isTrialing && daysRemaining !== null && daysRemaining <= 2)
   );
-
-  useEffect(() => {
-    if (user) {
-      fetchRadarStats();
-      fetchWorkspaceStats();
-      fetchHighestScore();
-      fetchReflectionStreak();
-    }
-  }, [user]);
-
-  const fetchRadarStats = async () => {
-    if (!user) return;
-    setLoadingRadar(true);
-    try {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const { data: allSignals, error } = await supabase
-        .from("niche_radar")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("created_at", sevenDaysAgo.toISOString())
-        .order("priority_score", { ascending: false });
-
-      if (error) throw error;
-
-      setRadarStats({
-        recentCount: allSignals?.length || 0,
-        topSignal: allSignals?.[0] || null,
-      });
-    } catch (error) {
-      console.error("Error fetching radar stats:", error);
-    } finally {
-      setLoadingRadar(false);
-    }
-  };
-
-  const fetchWorkspaceStats = async () => {
-    if (!user) return;
-    setLoadingWorkspace(true);
-    try {
-      const { data, error } = await supabase
-        .from("workspace_documents")
-        .select("id, title, updated_at")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false });
-
-      if (error) throw error;
-
-      setWorkspaceStats({
-        totalDocs: data?.length || 0,
-        recentDoc: data?.[0] || null,
-      });
-    } catch (error) {
-      console.error("Error fetching workspace stats:", error);
-    } finally {
-      setLoadingWorkspace(false);
-    }
-  };
-
-  const fetchHighestScore = async () => {
-    if (!user) return;
-    setLoadingScore(true);
-    try {
-      const { data: scores, error: scoresError } = await supabase
-        .from("opportunity_scores")
-        .select("*, ideas(id, title)")
-        .eq("user_id", user.id)
-        .order("total_score", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (scoresError) throw scoresError;
-
-      if (scores && scores.ideas) {
-        setHighestScore(scores);
-      } else {
-        setHighestScore(null);
-      }
-    } catch (error) {
-      console.error("Error fetching highest score:", error);
-    } finally {
-      setLoadingScore(false);
-    }
-  };
-
-  const fetchReflectionStreak = async () => {
-    if (!user) return;
-    setLoadingReflectionStreak(true);
-    try {
-      const streak = await calculateReflectionStreak(user.id);
-      setReflectionStreak(streak);
-    } catch (error) {
-      console.error("Error fetching reflection streak:", error);
-    } finally {
-      setLoadingReflectionStreak(false);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -253,7 +197,7 @@ export function DiscoveryDashboard() {
             {loadingRadar ? (
               <Skeleton className="h-6 w-16" />
             ) : (
-              <span className="text-xl font-bold">{radarStats.recentCount}</span>
+              <span className="text-xl font-bold">{radarStats?.recentCount ?? 0}</span>
             )}
             <p className="text-xs text-muted-foreground">signals this week</p>
           </CardContent>
@@ -269,7 +213,7 @@ export function DiscoveryDashboard() {
             {loadingWorkspace ? (
               <Skeleton className="h-6 w-16" />
             ) : (
-              <span className="text-xl font-bold">{workspaceStats.totalDocs}</span>
+              <span className="text-xl font-bold">{workspaceStats?.totalDocs ?? 0}</span>
             )}
             <p className="text-xs text-muted-foreground">documents</p>
           </CardContent>
