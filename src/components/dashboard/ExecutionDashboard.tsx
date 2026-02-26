@@ -226,43 +226,6 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
 
 /* ─── Sub-components ─── */
 
-function VentureHeader({
-  venture,
-  commitmentProgress,
-}: {
-  venture: Venture;
-  commitmentProgress: ReturnType<typeof useDailyExecution>["commitmentProgress"];
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Target className="h-5 w-5 text-primary" />
-        <h1 className="text-2xl font-bold truncate">{venture.name}</h1>
-      </div>
-      {venture.success_metric && (
-        <p className="text-sm text-muted-foreground ml-7">
-          <span className="font-medium">Goal:</span> {venture.success_metric}
-        </p>
-      )}
-      {commitmentProgress && (
-        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-          <CardContent className="py-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">
-                Day {commitmentProgress.currentDay} of {commitmentProgress.totalDays}
-              </span>
-              <Badge variant={commitmentProgress.daysRemaining <= 3 ? "destructive" : "secondary"}>
-                {commitmentProgress.daysRemaining} days left
-              </Badge>
-            </div>
-            <Progress value={commitmentProgress.progressPercent} className="h-2" />
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
 function TodaysFocus({
   venture,
   hasCheckedInToday,

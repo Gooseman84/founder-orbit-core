@@ -1,6 +1,6 @@
 // src/pages/Ideas.tsx
 import { useState, useMemo, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
@@ -98,7 +98,19 @@ const Ideas = () => {
   const [openingIdeaId, setOpeningIdeaId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("fit_desc");
   const [selectedMode, setSelectedMode] = useState<IdeaMode>(currentMode || "breadth");
-  const [edgyMode, setEdgyMode] = useState<string | null>(null);
+  const { data: edgyMode = null } = useQuery({
+    queryKey: ["founder-edgy-mode", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("founder_profiles")
+        .select("edgy_mode")
+        .eq("user_id", user!.id)
+        .single();
+      return data?.edgy_mode ?? null;
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+  });
   const [filters, setFilters] = useState<IdeaFiltersState>({
     archetypes: [],
     markets: [],
@@ -149,22 +161,6 @@ const Ideas = () => {
     setPaywallReasonCode("MODE_REQUIRES_PRO");
     setShowPaywall(true);
   };
-  useEffect(() => {
-    const fetchEdgyMode = async () => {
-      if (!user?.id) return;
-      try {
-        const { data } = await supabase
-          .from("founder_profiles")
-          .select("edgy_mode")
-          .eq("user_id", user.id)
-          .single();
-        setEdgyMode(data?.edgy_mode ?? null);
-      } catch (e) {
-        console.error("Error fetching edgy_mode:", e);
-      }
-    };
-    fetchEdgyMode();
-  }, [user?.id]);
 
   // Derive available filter options
   const { availableArchetypes, availableMarkets } = useMemo(() => {
