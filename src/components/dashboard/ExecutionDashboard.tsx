@@ -49,6 +49,7 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
     generateDailyTasks,
     submitCheckin,
     markTaskCompleted,
+    refetch: refetchDailyExecution,
   } = useDailyExecution(venture);
 
   const completedTasks = dailyTasks.filter((t) => t.completed).length;
@@ -160,6 +161,7 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
         onGenerate={() => generateDailyTasks()}
         ventureId={venture.id}
         ventureName={venture.name}
+        onTaskAdded={refetchDailyExecution}
       />
 
       {/* 4. QUICK ACCESS cards */}
@@ -427,6 +429,7 @@ function TodaysTasks({
   onGenerate,
   ventureId,
   ventureName,
+  onTaskAdded,
 }: {
   tasks: { id: string; title: string; description: string; category: string; estimatedMinutes: number; completed: boolean }[];
   isLoading: boolean;
@@ -438,6 +441,7 @@ function TodaysTasks({
   onGenerate: () => void;
   ventureId: string;
   ventureName?: string;
+  onTaskAdded?: () => void;
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -445,18 +449,54 @@ function TodaysTasks({
   const [adding, setAdding] = useState(false);
   const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
 
+  const today = new Date().toISOString().split("T")[0];
+
   const handleAddTask = async () => {
     if (!newTask.trim() || !user) return;
     setAdding(true);
     try {
-      await supabase.from("tasks").insert({
-        user_id: user.id,
-        venture_id: ventureId,
+      const manualTask = {
+        id: crypto.randomUUID(),
         title: newTask.trim(),
-        status: "pending",
+        description: "",
         category: "execution",
-      });
+        estimatedMinutes: 15,
+        completed: false,
+      };
+
+      // Fetch existing daily tasks row
+      const { data: existing } = await supabase
+        .from("venture_daily_tasks")
+        .select("tasks")
+        .eq("venture_id", ventureId)
+        .eq("user_id", user.id)
+        .eq("task_date", today)
+        .maybeSingle();
+
+      const currentTasks = (existing?.tasks as unknown as any[]) || [];
+      const updatedTasks = [...currentTasks, manualTask];
+      const tasksJson = JSON.parse(JSON.stringify(updatedTasks));
+
+      if (existing) {
+        await supabase
+          .from("venture_daily_tasks")
+          .update({ tasks: tasksJson })
+          .eq("venture_id", ventureId)
+          .eq("user_id", user.id)
+          .eq("task_date", today);
+      } else {
+        await supabase
+          .from("venture_daily_tasks")
+          .insert({
+            user_id: user.id,
+            venture_id: ventureId,
+            task_date: today,
+            tasks: tasksJson,
+          });
+      }
+
       setNewTask("");
+      onTaskAdded?.();
     } catch (err) {
       console.error("Failed to add task:", err);
     } finally {
