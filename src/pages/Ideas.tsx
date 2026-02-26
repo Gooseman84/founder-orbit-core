@@ -289,11 +289,19 @@ const Ideas = () => {
       return;
     }
     
-    // Free tier check: Only allow 1 generation session
-    if (!hasPro && sessionIdeas.length > 0) {
-      setPaywallReasonCode("IDEA_LIMIT_REACHED");
-      setShowPaywall(true);
-      return;
+    // Free tier check: enforce maxIdeaGenerationsTotal from plan config
+    if (!hasPro) {
+      const { count, error: countErr } = await supabase
+        .from("ideas")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .eq("source_type", "generated");
+      const totalGenerated = countErr ? 0 : (count ?? 0);
+      if (totalGenerated >= planFeatures.maxIdeaGenerationsTotal) {
+        setPaywallReasonCode("IDEA_LIMIT_REACHED");
+        setShowPaywall(true);
+        return;
+      }
     }
     
     try {

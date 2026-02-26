@@ -239,7 +239,10 @@ const Blueprint = () => {
       targetCustomer: displayBlueprint.target_audience || undefined,
       revenueModel: displayBlueprint.monetization_strategy || undefined,
       blueprintData: displayBlueprint as unknown as Record<string, unknown>,
-    }).catch(() => {});
+    }).catch(() => {
+      // Reset so the manual retry button in the FVS section works
+      fvsAutoTriggeredRef.current = false;
+    });
   }, [fvsLoading, hasFvsScore, fvsCalculating, displayBlueprint, venture, calculateFvs]);
 
   // Handle PDF download

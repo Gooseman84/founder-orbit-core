@@ -42,11 +42,15 @@ export function VentureStateGuard({ children }: VentureStateGuardProps) {
       // SOFT GUIDANCE: Only redirect for truly blocked routes (like venture-review when not executing)
       // For ideation routes, show toast but DON'T block - let users access them
       if (isIdeation && ventureState === "executing") {
-        // Show soft guidance toast but still allow navigation
-        toast({
-          title: "Focus Mode Active",
-          description: "You have an active venture. Consider focusing on execution, but feel free to explore.",
-        });
+        // Show soft guidance toast only once per session
+        const toastKey = "tb-focus-mode-toast-shown";
+        if (!sessionStorage.getItem(toastKey)) {
+          sessionStorage.setItem(toastKey, "true");
+          toast({
+            title: "Focus Mode Active",
+            description: "You have an active venture. Consider focusing on execution, but feel free to explore.",
+          });
+        }
         // Don't redirect - let them through
         return;
       }
