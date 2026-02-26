@@ -8,6 +8,7 @@ import { LevelBadge } from "@/components/shared/LevelBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useXP } from "@/hooks/useXP";
 import { useOnboardingGuard } from "@/hooks/useOnboardingGuard";
+import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { cn } from "@/lib/utils";
 
 interface AppShellProps {
@@ -130,6 +131,9 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
+
+      {/* Floating Feedback Button */}
+      <FeedbackButton />
 
     </div>
   );
