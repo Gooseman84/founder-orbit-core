@@ -27,10 +27,10 @@ export function FunnelStepper({ currentStep }: FunnelStepperProps) {
           return (
             <div key={step.key} className="flex items-center flex-1 last:flex-none">
               {/* Step circle + label */}
-              <div className="flex flex-col items-center gap-1">
+              <div className="flex flex-col items-center gap-1 select-none">
                 <div
                   className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors shrink-0",
+                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors shrink-0 pointer-events-none",
                     isCompleted && "bg-primary border-primary text-primary-foreground",
                     isCurrent && "border-primary text-primary animate-pulse",
                     !isCompleted && !isCurrent && "border-muted-foreground/40 text-muted-foreground/40"
