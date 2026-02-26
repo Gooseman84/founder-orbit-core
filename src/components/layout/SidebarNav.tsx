@@ -52,7 +52,7 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const ventureId = northStarVenture?.id ?? activeVenture?.id;
   const blueprintHref = ventureId
     ? `/blueprint?ventureId=${ventureId}`
-    : "/blueprint";
+    : "/dashboard";
   const ventureName = activeVenture?.name ?? "My Venture";
 
   const [researchOpen, setResearchOpen] = useState(() => {
