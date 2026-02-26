@@ -239,13 +239,22 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
                   {kit.error_message || "An error occurred"}
                 </p>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleGenerateClick}
-              >
-                Retry
-              </Button>
+              <div className="flex gap-2 shrink-0">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate(`/blueprint?ventureId=${ventureId}`)}
+                >
+                  View on Blueprint
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleGenerateClick}
+                >
+                  Retry
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
