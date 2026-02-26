@@ -129,8 +129,20 @@ const Blueprint = () => {
         return;
       }
       if (!ventureIdParam) {
-        setVentureError("no_venture_id");
-        setVentureLoading(false);
+        // Auto-lookup most recent active venture
+        const { data: activeV } = await supabase
+          .from("ventures")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("venture_state", "executing")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (activeV?.id) {
+          navigate(`/blueprint?ventureId=${activeV.id}`, { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
         return;
       }
       try {
