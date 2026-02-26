@@ -12,6 +12,7 @@ import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthe
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
+import { PageHelp } from "@/components/shared/PageHelp";
 
 const Billing = () => {
   const { 
@@ -341,6 +342,14 @@ const Billing = () => {
           )}
         </CardContent>
       </Card>
+      <PageHelp
+        title="Billing & Subscription"
+        bullets={[
+          "Pro unlocks unlimited idea generations, all generation modes, comparison tools, and market radar.",
+          "Use 'Manage Subscription' to update payment methods, view invoices, or cancel anytime.",
+          "If your status seems wrong after payment, click 'Refresh subscription status' to sync.",
+        ]}
+      />
     </div>
   );
 };

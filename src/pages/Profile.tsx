@@ -11,6 +11,7 @@ import { XpProgressBar } from "@/components/shared/XpProgressBar";
 import { ProfileEditDrawer, ProfileSection } from "@/components/profile/ProfileEditDrawer";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ContextInspector from "@/pages/ContextInspector";
+import { PageHelp } from "@/components/shared/PageHelp";
 import { 
   User, 
   Heart, 
@@ -553,6 +554,16 @@ const Profile = () => {
         coreData={core}
         extendedData={extended}
         onSaved={refresh}
+      />
+      <PageHelp
+        title="Founder Profile"
+        bullets={[
+          "Talk to Mavrik to refine your profile — each conversation improves idea generation and scoring accuracy.",
+          "Edit any section directly by clicking the pencil icon to correct or update what Mavrik learned.",
+          "Your constraints (time, capital, risk) directly affect which ideas are recommended and how they're scored.",
+          "The Context Inspector at the bottom shows exactly what data Mavrik uses when generating ideas for you.",
+          "Extended profile sections (energy, identity, archetypes) unlock more personalized and nuanced recommendations.",
+        ]}
       />
     </div>
   );

@@ -51,6 +51,7 @@ import { cn } from "@/lib/utils";
 import type { CommitmentWindowDays, Venture, VentureState } from "@/types/venture";
 import type { TechStack } from "@/types/implementationKit";
 import type { FounderBlueprint } from "@/types/blueprint";
+import { PageHelp } from "@/components/shared/PageHelp";
 
 const Blueprint = () => {
   const navigate = useNavigate();
@@ -630,6 +631,17 @@ const Blueprint = () => {
         open={showExportPaywall}
         onClose={() => setShowExportPaywall(false)}
         errorCode="EXPORT_REQUIRES_PRO"
+      />
+      <PageHelp
+        title="Your Blueprint"
+        bullets={[
+          "The Blueprint is your AI-generated execution plan — it maps your idea to a concrete strategy.",
+          "Financial Viability Score breaks down revenue potential across market size, unit economics, and founder fit.",
+          "Use the Validation section to log real-world evidence and shift your confidence from assumptions to data.",
+          "The Mavrik Assessment summarizes your venture's strengths, risks, and recommended next steps.",
+          "Download a PDF export of your full Blueprint (Pro feature) to share or reference offline.",
+          "Generate an Implementation Kit to get architecture specs and a coding-ready project plan.",
+        ]}
       />
     </div>
   );

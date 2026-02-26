@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarNav } from "./SidebarNav";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { LevelBadge } from "@/components/shared/LevelBadge";
+import { HelpPopover } from "@/components/layout/HelpPopover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useXP } from "@/hooks/useXP";
 import { useOnboardingGuard } from "@/hooks/useOnboardingGuard";
@@ -54,7 +55,8 @@ export function AppShell({ children }: AppShellProps) {
           
           <h1 className="text-lg font-bold text-primary">TrueBlazer.AI</h1>
           
-          <div className="w-10 flex justify-end">
+          <div className="w-10 flex items-center justify-end gap-1">
+            <HelpPopover />
             {loading ? (
               <Skeleton className="h-6 w-16" />
             ) : xpSummary ? (
@@ -70,6 +72,7 @@ export function AppShell({ children }: AppShellProps) {
           <h1 className="text-xl font-bold text-primary">TrueBlazer.AI</h1>
           
           <div className="flex items-center gap-3">
+            <HelpPopover />
             {loading ? (
               <Skeleton className="h-7 w-24" />
             ) : xpSummary ? (

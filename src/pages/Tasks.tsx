@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Sparkles, CheckCircle2, AlertTriangle, Inbox, Plus, Calendar } from "lucide-react";
+import { PageHelp } from "@/components/shared/PageHelp";
 
 type CheckinPayload = {
   completionStatus: "yes" | "partial" | "no";
@@ -316,6 +317,16 @@ const Tasks = () => {
           </CardContent>
         </Card>
       )}
+      <PageHelp
+        title="Tasks & Execution"
+        bullets={[
+          "Mavrik generates daily tasks based on your Blueprint and current progress — they refresh each day.",
+          "Click 'Work on This' to open a task in the Workspace with AI-assisted drafting.",
+          "Complete all tasks to unlock your daily check-in, which Mavrik uses to adapt tomorrow's priorities.",
+          "The 30-Day Plan shows your weekly milestones — tasks align with the current week's goals.",
+          "You can generate more tasks after completing all of today's if you want to keep going.",
+        ]}
+      />
     </div>
   );
 };
