@@ -32,6 +32,7 @@ import FeaturePlanner from '@/pages/FeaturePlanner';
 import type { PaywallReasonCode } from '@/config/paywallCopy';
 import type { TaskContext } from '@/types/tasks';
 import type { Json } from '@/integrations/supabase/types';
+import { PageHelp } from '@/components/shared/PageHelp';
 
 interface WorkspaceFolder {
   id: string;
@@ -1066,6 +1067,17 @@ export default function Workspace() {
       )}
       </>
       )}
+      <PageHelp
+        title="Workspace"
+        bullets={[
+          "Create documents to draft strategy, capture brain dumps, or work through AI-suggested tasks.",
+          "Mavrik can generate content suggestions for any document — click 'Ask Mavrik' in the AI panel.",
+          "Refine suggestions with options like 'Make it shorter', 'Add more detail', or 'Change tone'.",
+          "Documents are scoped to your active venture — switch the scope filter to see all or venture-specific docs.",
+          "The Feature Builder tab lets you plan and spec out product features with AI-generated implementation plans.",
+          "Export any document as PDF from the document toolbar (Pro feature).",
+        ]}
+      />
     </div>
   );
 }

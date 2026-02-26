@@ -31,6 +31,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
+import { PageHelp } from "@/components/shared/PageHelp";
 
 type DecisionAction = "continue" | "pivot" | "kill";
 
@@ -418,6 +419,15 @@ const VentureReview = () => {
           </div>
         </DialogContent>
       </Dialog>
+      <PageHelp
+        title="Venture Review"
+        bullets={[
+          "Review your execution stats — tasks completed, check-in rate, and consistency over the commitment window.",
+          "Choose 'Continue' to start a new commitment period and keep building on your progress.",
+          "Pivot archives the current venture and sends you back to refine your approach with a new idea.",
+          "Kill permanently archives the venture — use this when you're ready to move on entirely.",
+        ]}
+      />
     </div>
   );
 };

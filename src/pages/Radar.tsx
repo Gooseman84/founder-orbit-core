@@ -10,6 +10,7 @@ import { Loader2, Radar as RadarIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { recordXpEvent } from "@/lib/xpEngine";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
+import { PageHelp } from "@/components/shared/PageHelp";
 
 interface RadarSignal {
   id: string;
@@ -226,6 +227,15 @@ export default function Radar() {
         open={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         reasonCode={paywallReason}
+      />
+      <PageHelp
+        title="Niche Radar"
+        bullets={[
+          "Generate market signals tailored to your North Star idea and founder profile.",
+          "Each signal includes a priority score — higher scores indicate stronger market opportunities.",
+          "Click any signal card to earn XP and mark it as reviewed.",
+          "Generate fresh signals anytime to discover new trends and emerging opportunities.",
+        ]}
       />
     </div>
   );

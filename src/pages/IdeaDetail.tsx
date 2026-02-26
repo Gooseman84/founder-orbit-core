@@ -38,6 +38,7 @@ import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, Tr
 import { useVentureState } from "@/hooks/useVentureState";
 import { useValidationDisplayProps } from "@/hooks/useValidationDisplayProps";
 import { useRef } from "react";
+import { PageHelp } from "@/components/shared/PageHelp";
 
 const getComplexityVariant = (complexity: string | null) => {
   switch (complexity?.toLowerCase()) {
@@ -1064,6 +1065,16 @@ const IdeaDetail = () => {
           ideaTitle={idea?.title}
         />
       )}
+      <PageHelp
+        title="Idea Detail"
+        bullets={[
+          "Use 'Vet This Idea' to get an AI-powered market analysis with risks, competition, and viability scoring.",
+          "Opportunity Score evaluates market size, timing, and founder fit — generate it after vetting.",
+          "Financial Viability Score breaks down revenue potential across six dimensions.",
+          "Set an idea as your North Star to commit and start building — this creates a venture and Blueprint.",
+          "Generate idea variants to explore twists on the same concept with different angles or business models.",
+        ]}
+      />
     </div>
   );
 };

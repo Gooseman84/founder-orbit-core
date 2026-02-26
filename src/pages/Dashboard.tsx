@@ -2,6 +2,7 @@ import { useVentureState } from "@/hooks/useVentureState";
 import { ExecutionDashboard } from "@/components/dashboard/ExecutionDashboard";
 import { DiscoveryDashboard } from "@/components/dashboard/DiscoveryDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHelp } from "@/components/shared/PageHelp";
 
 const Dashboard = () => {
   const { activeVenture, isLoading } = useVentureState();
@@ -28,7 +29,21 @@ const Dashboard = () => {
   }
 
   // Discovery mode: full dashboard with exploration
-  return <DiscoveryDashboard />;
+  return (
+    <>
+      <DiscoveryDashboard />
+      <PageHelp
+        title="Dashboard"
+        bullets={[
+          "Your XP bar tracks progress across all activities — generating ideas, completing tasks, and checking in daily.",
+          "The North Star card shows your currently committed venture, or prompts you to choose one.",
+          "Quick-action tiles show live stats for Niche Radar signals, workspace docs, and your top opportunity score.",
+          "Compare Ideas lets you evaluate two saved ideas side-by-side (Pro feature).",
+          "During execution mode, this view switches to a focused command center with daily tasks and check-ins.",
+        ]}
+      />
+    </>
+  );
 };
 
 export default Dashboard;
