@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Brain, RefreshCw, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { NPSPrompt } from "@/components/feedback/NPSPrompt";
 
 interface MavrikAssessmentCardProps {
   ventureId: string;
@@ -38,6 +39,8 @@ export function MavrikAssessmentCard({ ventureId }: MavrikAssessmentCardProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [showNPS, setShowNPS] = useState(false);
+  const npsCheckedRef = useRef(false);
 
   const { data: summary, isLoading } = useQuery({
     queryKey: ["mavrik-assessment", ventureId],
@@ -69,6 +72,25 @@ export function MavrikAssessmentCard({ ventureId }: MavrikAssessmentCardProps) {
     },
     enabled: !!user && !!ventureId,
   });
+
+  // NPS trigger: check once after summary loads successfully
+  useEffect(() => {
+    if (!summary || !user || npsCheckedRef.current) return;
+    npsCheckedRef.current = true;
+
+    const checkNPS = async () => {
+      const { count } = await supabase
+        .from("beta_feedback")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("feedback_type", "nps");
+
+      if ((count ?? 0) === 0) {
+        setTimeout(() => setShowNPS(true), 3000);
+      }
+    };
+    checkNPS();
+  }, [summary, user]);
 
   const handleReanalyze = async () => {
     setIsReanalyzing(true);
@@ -120,6 +142,7 @@ export function MavrikAssessmentCard({ ventureId }: MavrikAssessmentCardProps) {
   const recConfig = rec ? RECOMMENDATION_MAP[rec.action] : null;
 
   return (
+    <>
     <Card className="mb-6">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
@@ -211,5 +234,7 @@ export function MavrikAssessmentCard({ ventureId }: MavrikAssessmentCardProps) {
         </div>
       </CardContent>
     </Card>
+    <NPSPrompt open={showNPS} onClose={() => setShowNPS(false)} />
+    </>
   );
 }
