@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useXP } from "@/hooks/useXP";
@@ -9,6 +10,7 @@ import { LevelBadge } from "@/components/shared/LevelBadge";
 import { XpProgressBar } from "@/components/shared/XpProgressBar";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { NorthStarCard } from "./NorthStarCard";
+import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -19,9 +21,9 @@ import {
   BarChart3, 
   Crown, 
   Sparkles,
-  Scale
+  Scale,
+  Lock
 } from "lucide-react";
-import { calculateReflectionStreak } from "@/lib/streakEngine";
 
 const DASHBOARD_STALE_TIME = 3 * 60 * 1000; // 3 minutes
 
@@ -29,9 +31,13 @@ export function DiscoveryDashboard() {
   const { user } = useAuth();
   const { xpSummary, loading, error } = useXP();
   const { plan } = useSubscription();
-  const { hasPro, hasFounder } = useFeatureAccess();
+  const { hasPro, hasFounder, features } = useFeatureAccess();
   const navigate = useNavigate();
   const isFree = plan === "free";
+  const [paywallReason, setPaywallReason] = useState<string | null>(null);
+
+  const canShowRadar = features.canUseRadar !== "none";
+  const canCompare = features.canCompareIdeas;
 
   const { data: radarStats, isLoading: loadingRadar } = useQuery({
     queryKey: ["dashboard-radar-stats", user?.id],
@@ -85,7 +91,28 @@ export function DiscoveryDashboard() {
 
   const { data: reflectionStreak = 0, isLoading: loadingReflectionStreak } = useQuery({
     queryKey: ["dashboard-reflection-streak", user?.id],
-    queryFn: () => calculateReflectionStreak(user!.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("daily_reflections")
+        .select("reflection_date")
+        .eq("user_id", user!.id)
+        .order("reflection_date", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      if (!data || data.length === 0) return 0;
+      let streak = 0;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      for (let i = 0; i < data.length; i++) {
+        const expected = new Date(today);
+        expected.setDate(expected.getDate() - i);
+        const dateStr = expected.toISOString().split("T")[0];
+        if (data[i].reflection_date === dateStr) {
+          streak++;
+        } else break;
+      }
+      return streak;
+    },
     enabled: !!user,
     staleTime: DASHBOARD_STALE_TIME,
   });
@@ -140,7 +167,8 @@ export function DiscoveryDashboard() {
 
       {/* Quick Action Grid */}
       <div className="grid gap-3 grid-cols-2">
-        {/* Niche Radar */}
+        {/* Niche Radar — hidden for free users (matches sidebar) */}
+        {canShowRadar && (
         <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate("/radar")}>
           <CardContent className="py-4">
             <div className="flex items-center gap-2 mb-2">
@@ -155,6 +183,7 @@ export function DiscoveryDashboard() {
             <p className="text-xs text-muted-foreground">signals this week</p>
           </CardContent>
         </Card>
+        )}
 
         {/* Workspace */}
         <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate("/workspace")}>
@@ -215,11 +244,26 @@ export function DiscoveryDashboard() {
           <Sparkles className="h-4 w-4" />
           Explore Ideas
         </Button>
-        <Button variant="outline" className="gap-2" onClick={() => navigate("/ideas/compare")}>
+        <Button variant="outline" className="gap-2" onClick={() => {
+          if (!canCompare) {
+            setPaywallReason("COMPARE_REQUIRES_PRO");
+          } else {
+            navigate("/ideas/compare");
+          }
+        }}>
+          {!canCompare && <Lock className="h-3 w-3" />}
           <Scale className="h-4 w-4" />
           Compare Ideas
         </Button>
       </div>
+
+      {paywallReason && (
+        <ProUpgradeModal
+          open={!!paywallReason}
+          onClose={() => setPaywallReason(null)}
+          reasonCode={paywallReason as any}
+        />
+      )}
     </div>
   );
 }
