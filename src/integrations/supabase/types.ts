@@ -119,6 +119,42 @@ export type Database = {
         }
         Relationships: []
       }
+      beta_feedback: {
+        Row: {
+          created_at: string | null
+          feedback_type: string
+          id: string
+          message: string | null
+          nps_score: number | null
+          page_url: string | null
+          sentiment: string | null
+          user_id: string
+          venture_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          feedback_type: string
+          id?: string
+          message?: string | null
+          nps_score?: number | null
+          page_url?: string | null
+          sentiment?: string | null
+          user_id: string
+          venture_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          feedback_type?: string
+          id?: string
+          message?: string | null
+          nps_score?: number | null
+          page_url?: string | null
+          sentiment?: string | null
+          user_id?: string
+          venture_id?: string | null
+        }
+        Relationships: []
+      }
       check_ins: {
         Row: {
           created_at: string
