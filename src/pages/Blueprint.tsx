@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useVentureBlueprint } from "@/hooks/useVentureBlueprint";
 import { useVenturePlans } from "@/hooks/useVenturePlans";
@@ -624,7 +625,12 @@ const Blueprint = () => {
 // Wrap in MainLayout for return visits, bare for fresh visits
 function renderWrapper(isFresh: boolean, children: React.ReactNode) {
   if (isFresh) {
-    return <div className="min-h-screen bg-background">{children}</div>;
+    return (
+      <div className="min-h-screen bg-background pb-20 md:pb-0">
+        {children}
+        <MobileBottomNav />
+      </div>
+    );
   }
 
   return <MainLayout>{children}</MainLayout>;

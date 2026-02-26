@@ -131,7 +131,7 @@ export function MobileBottomNav() {
                 onClick={handleTap}
                 className={cn(
                   "flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all duration-150 active:scale-95",
-                  isActive ? "text-[#FF6A00]" : "text-muted-foreground"
+                  isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 <div className="relative flex flex-col items-center">
@@ -142,7 +142,7 @@ export function MobileBottomNav() {
                     )}
                   />
                   {isActive && (
-                    <span className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-[#FF6A00]" />
+                    <span className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-primary" />
                   )}
                 </div>
                 <span className="text-[11px] font-medium mt-1 truncate max-w-[70px]">
