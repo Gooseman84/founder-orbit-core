@@ -1883,6 +1883,7 @@ export type Database = {
           append_count: number
           created_at: string
           id: string
+          phase: string | null
           task_date: string
           tasks: Json
           updated_at: string
@@ -1893,6 +1894,7 @@ export type Database = {
           append_count?: number
           created_at?: string
           id?: string
+          phase?: string | null
           task_date?: string
           tasks?: Json
           updated_at?: string
@@ -1903,6 +1905,7 @@ export type Database = {
           append_count?: number
           created_at?: string
           id?: string
+          phase?: string | null
           task_date?: string
           tasks?: Json
           updated_at?: string

@@ -1,0 +1,1 @@
+ALTER TABLE public.venture_daily_tasks ADD COLUMN IF NOT EXISTS phase TEXT;
