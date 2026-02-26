@@ -27,6 +27,7 @@ import { EditBlueprintDrawer } from "@/components/blueprint/EditBlueprintDrawer"
 import { VentureDNASection } from "@/components/blueprint/VentureDNASection";
 import { MavrikAssessmentCard } from "@/components/blueprint/MavrikAssessmentCard";
 import { useValidationDisplayProps } from "@/hooks/useValidationDisplayProps";
+import { useFinancialViabilityScore } from "@/hooks/useFinancialViabilityScore";
 import {
   Target,
   AlertTriangle,
@@ -92,6 +93,16 @@ const Blueprint = () => {
 
   // Validation display props for FVS
   const { confidenceShift, lastValidatedAt, dimensionEvidenceCounts } = useValidationDisplayProps(venture?.id);
+
+  // Real Financial Viability Score from DB
+  const {
+    score: fvsData,
+    isLoading: fvsLoading,
+    isCalculating: fvsCalculating,
+    hasScore: hasFvsScore,
+    calculateScore: calculateFvs,
+    error: fvsError,
+  } = useFinancialViabilityScore(venture?.idea_id ?? undefined);
 
   // PDF export state
   const [pdfExporting, setPdfExporting] = useState(false);
@@ -223,18 +234,17 @@ const Blueprint = () => {
         strategyPrompt = promptData?.prompt_body ?? null;
       }
 
-      // Compute FVS
-      const fvsScore = displayBlueprint.income_target
-        ? Math.min(85, 50 + (displayBlueprint.income_target / 10000) * 10)
-        : 65;
-      const fvsBreakdown = {
-        marketSize: 70,
-        unitEconomics: displayBlueprint.income_target ? Math.min(90, 60 + (displayBlueprint.income_target / 20000) * 30) : 60,
-        timeToRevenue: displayBlueprint.time_available_hours_per_week ? Math.min(85, 40 + displayBlueprint.time_available_hours_per_week * 2) : 55,
-        competition: 65,
-        capitalRequirements: displayBlueprint.capital_available ? Math.min(90, 50 + Math.log10(displayBlueprint.capital_available + 1) * 15) : 50,
-        founderMarketFit: 75,
-      };
+      // Use real FVS data from DB
+      const fvsScore = fvsData?.compositeScore ?? 0;
+      const dims = fvsData?.dimensions;
+      const fvsBreakdown = dims ? {
+        marketSize: dims.marketSize.score,
+        unitEconomics: dims.unitEconomics.score,
+        timeToRevenue: dims.timeToRevenue.score,
+        competition: dims.competitiveDensity.score,
+        capitalRequirements: dims.capitalRequirements.score,
+        founderMarketFit: dims.founderMarketFit.score,
+      } : undefined;
 
       // Map tasks
       const pdfTasks: Record<number, Array<{ title: string; status?: string }>> = {};
@@ -437,22 +447,58 @@ const Blueprint = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <FinancialViabilityScore
-              score={displayBlueprint.income_target ? Math.min(85, 50 + (displayBlueprint.income_target / 10000) * 10) : 65}
-              breakdown={{
-                marketSize: 70,
-                unitEconomics: displayBlueprint.income_target ? Math.min(90, 60 + (displayBlueprint.income_target / 20000) * 30) : 60,
-                timeToRevenue: displayBlueprint.time_available_hours_per_week ? Math.min(85, 40 + displayBlueprint.time_available_hours_per_week * 2) : 55,
-                competition: 65,
-                capitalRequirements: displayBlueprint.capital_available ? Math.min(90, 50 + Math.log10(displayBlueprint.capital_available + 1) * 15) : 50,
-                founderMarketFit: 75,
-              }}
-              showBreakdown
-              size="md"
-              confidenceShift={confidenceShift}
-              lastValidatedAt={lastValidatedAt}
-              dimensionEvidenceCounts={dimensionEvidenceCounts}
-            />
+            {fvsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : hasFvsScore && fvsData ? (
+              <FinancialViabilityScore
+                score={fvsData.compositeScore}
+                breakdown={fvsData.dimensions ? {
+                  marketSize: fvsData.dimensions.marketSize.score,
+                  unitEconomics: fvsData.dimensions.unitEconomics.score,
+                  timeToRevenue: fvsData.dimensions.timeToRevenue.score,
+                  competition: fvsData.dimensions.competitiveDensity.score,
+                  capitalRequirements: fvsData.dimensions.capitalRequirements.score,
+                  founderMarketFit: fvsData.dimensions.founderMarketFit.score,
+                } : undefined}
+                showBreakdown
+                size="md"
+                confidenceShift={confidenceShift}
+                lastValidatedAt={lastValidatedAt}
+                dimensionEvidenceCounts={dimensionEvidenceCounts}
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-6">
+                <BarChart3 className="h-8 w-8 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground text-center">
+                  No financial viability score yet. Generate one to see how your venture stacks up.
+                </p>
+                {fvsError && (
+                  <p className="text-xs text-destructive text-center">{fvsError}</p>
+                )}
+                <Button
+                  onClick={() => calculateFvs({
+                    title: displayBlueprint.north_star_one_liner || venture.name,
+                    description: displayBlueprint.promise_statement || undefined,
+                    targetCustomer: displayBlueprint.target_audience || undefined,
+                    revenueModel: displayBlueprint.monetization_strategy || undefined,
+                    blueprintData: displayBlueprint as unknown as Record<string, unknown>,
+                  })}
+                  disabled={fvsCalculating}
+                  className="gap-2"
+                >
+                  {fvsCalculating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Calculating…
+                    </>
+                  ) : (
+                    "Generate Your Score"
+                  )}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
