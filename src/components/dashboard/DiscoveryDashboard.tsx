@@ -11,7 +11,6 @@ import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { NorthStarCard } from "./NorthStarCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { 
   Radar, 
@@ -20,8 +19,6 @@ import {
   BarChart3, 
   Crown, 
   Sparkles,
-  AlertTriangle,
-  XCircle,
   Scale
 } from "lucide-react";
 import { calculateReflectionStreak } from "@/lib/streakEngine";
@@ -32,7 +29,7 @@ export function DiscoveryDashboard() {
   const { user } = useAuth();
   const { xpSummary, loading, error } = useXP();
   const { plan } = useSubscription();
-  const { isTrialing, isTrialExpired, isLockedOut, daysRemaining, hasPro, hasFounder } = useFeatureAccess();
+  const { hasPro, hasFounder } = useFeatureAccess();
   const navigate = useNavigate();
   const isFree = plan === "free";
 
@@ -93,52 +90,8 @@ export function DiscoveryDashboard() {
     staleTime: DASHBOARD_STALE_TIME,
   });
 
-  // Determine if we should show urgent trial warning
-  const showTrialWarning = !hasPro && !hasFounder && (
-    isTrialExpired || 
-    isLockedOut || 
-    (isTrialing && daysRemaining !== null && daysRemaining <= 2)
-  );
-
   return (
     <div className="space-y-4">
-      {/* Urgent Trial Warning Alert */}
-      {showTrialWarning && (
-        <Alert 
-          variant={isTrialExpired || isLockedOut ? "destructive" : "default"}
-          className={isTrialExpired || isLockedOut 
-            ? "border-destructive/50 bg-destructive/10" 
-            : "border-amber-500/50 bg-amber-500/10"
-          }
-        >
-          {isTrialExpired || isLockedOut ? (
-            <XCircle className="h-4 w-4" />
-          ) : (
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-          )}
-          <AlertTitle className={isTrialExpired || isLockedOut ? "" : "text-amber-700 dark:text-amber-400"}>
-            {isTrialExpired || isLockedOut 
-              ? "Your trial has ended" 
-              : `Your trial ends in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}!`
-            }
-          </AlertTitle>
-          <AlertDescription className={isTrialExpired || isLockedOut ? "" : "text-amber-600 dark:text-amber-300"}>
-            {isTrialExpired || isLockedOut 
-              ? "Subscribe to continue your founder journey with full access to all features."
-              : "Upgrade now to keep full access to unlimited ideas, workspace, and more."
-            }
-            <Button 
-              size="sm" 
-              variant={isTrialExpired || isLockedOut ? "destructive" : "default"}
-              className="ml-3"
-              onClick={() => navigate("/billing")}
-            >
-              {isTrialExpired || isLockedOut ? "Subscribe to Pro" : "Upgrade Now"}
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-sm text-muted-foreground">

@@ -96,7 +96,7 @@ const VentureReview = () => {
       },
       killed: {
         title: "Venture Archived",
-        description: "This venture has been killed and archived. You can start a new venture from the North Star page.",
+        description: "This venture has been killed and archived. You can start a new venture from the Idea Lab.",
       },
     };
 
