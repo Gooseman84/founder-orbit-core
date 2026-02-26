@@ -165,7 +165,7 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
       />
 
       {/* 4. QUICK ACCESS cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Card
           className="cursor-pointer hover:border-primary/40 transition-colors"
           onClick={() => navigate(`/blueprint?ventureId=${venture.id}`)}
