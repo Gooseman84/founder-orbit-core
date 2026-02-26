@@ -1,4 +1,5 @@
 // src/pages/DiscoverResults.tsx
+import type { CommitmentWindowDays } from "@/types/venture";
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { ArrowLeft, Compass, Info, ArrowRight } from "lucide-react";
@@ -6,6 +7,7 @@ import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { useVentureState } from "@/hooks/useVentureState";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { FunnelStepper } from "@/components/shared/FunnelStepper";
@@ -21,6 +23,7 @@ export default function DiscoverResults() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { hasPro, hasFounder } = useFeatureAccess();
+  const { transitionTo } = useVentureState();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -290,32 +293,36 @@ export default function DiscoverResults() {
           .maybeSingle();
 
         if (ventureData && (ventureData.venture_state === "inactive" || !ventureData.venture_state)) {
-          // Auto-commit: transition to executing with 7-day window
+          // Auto-commit: transition to executing with 7-day window using transitionTo()
           const startDate = new Date();
           const endDate = new Date(startDate);
           endDate.setDate(endDate.getDate() + 7);
 
-          const { error: transitionError } = await supabase
-            .from("ventures")
-            .update({
-              venture_state: "executing",
-              commitment_window_days: 7,
-              commitment_start_at: startDate.toISOString(),
-              commitment_end_at: endDate.toISOString(),
-              success_metric: "Complete my Blueprint and review my 30-day plan",
-            })
-            .eq("id", ventureData.id)
-            .eq("user_id", user.id);
+          const commitmentData: { commitment_window_days: CommitmentWindowDays; commitment_start_at: string; commitment_end_at: string; success_metric: string } = {
+            commitment_window_days: 7,
+            commitment_start_at: startDate.toISOString(),
+            commitment_end_at: endDate.toISOString(),
+            success_metric: "Complete my Blueprint and review my 30-day plan",
+          };
 
-          if (transitionError) {
-            console.error("Auto-commit failed, falling back to commit page:", transitionError);
+          // Validate all required fields are present before attempting transition
+          if (!commitmentData.commitment_window_days || !commitmentData.commitment_start_at || !commitmentData.commitment_end_at || !commitmentData.success_metric) {
+            console.error("Missing required commitment fields, falling back to commit page");
             navigate(`/commit/${ideaId}`);
             return;
           }
 
-          // Go straight to blueprint generation
-          navigate(`/blueprint?ventureId=${ventureData.id}&fresh=1`);
-          return;
+          try {
+            const success = await transitionTo(ventureData.id, "executing", commitmentData);
+            if (success) {
+              navigate(`/blueprint?ventureId=${ventureData.id}&fresh=1`);
+              return;
+            }
+          } catch (transitionError) {
+            console.error("Auto-commit failed, falling back to commit page:", transitionError);
+            navigate(`/commit/${ideaId}`);
+            return;
+          }
         }
 
         // Fallback: if venture doesn't exist or is in unexpected state, use commit page
