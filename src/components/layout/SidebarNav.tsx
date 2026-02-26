@@ -2,7 +2,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNorthStarVenture } from "@/hooks/useNorthStarVenture";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
-import { TrialStatusBadge } from "@/components/shared/TrialStatusBadge";
 import { NavLink } from "@/components/NavLink";
 import {
   Home,
@@ -76,10 +75,6 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
 
   return (
     <nav className="flex flex-col gap-0.5 p-3 h-full">
-      {/* Trial Status Badge */}
-      <div className="px-1 mb-2">
-        <TrialStatusBadge />
-      </div>
 
       {isExecutionMode ? (
         /* ── EXECUTION MODE ── */
