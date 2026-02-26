@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useVentureBlueprint } from "@/hooks/useVentureBlueprint";
 import { useVenturePlans } from "@/hooks/useVenturePlans";
@@ -75,6 +75,8 @@ const Blueprint = () => {
   const [generatedBlueprint, setGeneratedBlueprint] = useState<FounderBlueprint | null>(null);
   const [generationFailed, setGenerationFailed] = useState(false);
   const [showReveal, setShowReveal] = useState(false);
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 3;
 
   // The blueprint to display (generated or fetched)
   const displayBlueprint = generatedBlueprint || blueprint;
@@ -171,10 +173,12 @@ const Blueprint = () => {
   useEffect(() => {
     if (ventureLoading || blueprintLoading) return;
     if (!venture || !user) return;
-    if (blueprint || generatedBlueprint || isGenerating || generationFailed) return;
+    if (blueprint || generatedBlueprint || isGenerating) return;
+    if (generationFailed && retryCountRef.current >= MAX_RETRIES) return;
 
     // No blueprint exists — trigger generation
     setIsGenerating(true);
+    retryCountRef.current += 1;
 
     (async () => {
       try {
@@ -186,7 +190,7 @@ const Blueprint = () => {
         const blueprintResult: FounderBlueprint | null = data?.blueprint ?? data ?? null;
         if (blueprintResult) {
           setGeneratedBlueprint(blueprintResult);
-          // Show reveal animation for fresh visits
+          retryCountRef.current = 0;
           if (isFreshVisit) {
             setShowReveal(true);
             setTimeout(() => setShowReveal(false), 800);
@@ -208,6 +212,22 @@ const Blueprint = () => {
 
   const isReadOnly = venture?.venture_state === "executing" || venture?.venture_state === "reviewed";
 
+  // Auto-trigger FVS calculation when blueprint is ready but no score exists
+  const fvsAutoTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (fvsAutoTriggeredRef.current) return;
+    if (fvsLoading || hasFvsScore || fvsCalculating) return;
+    if (!displayBlueprint || !venture) return;
+
+    fvsAutoTriggeredRef.current = true;
+    calculateFvs({
+      title: displayBlueprint.north_star_one_liner || venture.name,
+      description: displayBlueprint.promise_statement || undefined,
+      targetCustomer: displayBlueprint.target_audience || undefined,
+      revenueModel: displayBlueprint.monetization_strategy || undefined,
+      blueprintData: displayBlueprint as unknown as Record<string, unknown>,
+    }).catch(() => {});
+  }, [fvsLoading, hasFvsScore, fvsCalculating, displayBlueprint, venture, calculateFvs]);
 
   // Handle PDF download
   const handleDownloadPdf = async () => {
@@ -304,17 +324,29 @@ const Blueprint = () => {
     ));
   }
 
-  // Generation failed state — show retry button instead of looping
+  // Generation failed state
   if (generationFailed && !isGenerating && !displayBlueprint) {
+    const maxRetriesReached = retryCountRef.current >= MAX_RETRIES;
     return renderWrapper(isFreshVisit, (
       <div className="container mx-auto py-8 px-4 flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <AlertTriangle className="h-10 w-10 text-destructive/70" />
         <p className="text-destructive text-lg font-semibold">Blueprint generation failed</p>
-        <p className="text-muted-foreground text-sm">Something went wrong. Please try again.</p>
+        <p className="text-muted-foreground text-sm text-center max-w-md">
+          {maxRetriesReached
+            ? "Multiple attempts failed. Check your connection or try refreshing the page."
+            : "Something went wrong. Please try again."}
+        </p>
         <Button
-          onClick={() => setGenerationFailed(false)}
+          onClick={() => {
+            if (maxRetriesReached) {
+              // Full reset for manual retry after max attempts
+              retryCountRef.current = 0;
+            }
+            setGenerationFailed(false);
+          }}
           variant="default"
         >
-          Retry Blueprint Generation
+          Try Again
         </Button>
       </div>
     ));
@@ -447,9 +479,12 @@ const Blueprint = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {fvsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            {(fvsLoading || fvsCalculating) ? (
+              <div className="flex flex-col items-center gap-2 py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">
+                  {fvsCalculating ? "Analyzing financial viability…" : "Loading score…"}
+                </p>
               </div>
             ) : hasFvsScore && fvsData ? (
               <FinancialViabilityScore
@@ -470,32 +505,25 @@ const Blueprint = () => {
               />
             ) : (
               <div className="flex flex-col items-center gap-3 py-6">
-                <BarChart3 className="h-8 w-8 text-muted-foreground/50" />
+                <AlertTriangle className="h-6 w-6 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground text-center">
-                  No financial viability score yet. Generate one to see how your venture stacks up.
+                  {fvsError || "Unable to generate score. Try again later."}
                 </p>
-                {fvsError && (
-                  <p className="text-xs text-destructive text-center">{fvsError}</p>
-                )}
                 <Button
-                  onClick={() => calculateFvs({
-                    title: displayBlueprint.north_star_one_liner || venture.name,
-                    description: displayBlueprint.promise_statement || undefined,
-                    targetCustomer: displayBlueprint.target_audience || undefined,
-                    revenueModel: displayBlueprint.monetization_strategy || undefined,
-                    blueprintData: displayBlueprint as unknown as Record<string, unknown>,
-                  })}
-                  disabled={fvsCalculating}
-                  className="gap-2"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    fvsAutoTriggeredRef.current = false;
+                    calculateFvs({
+                      title: displayBlueprint.north_star_one_liner || venture.name,
+                      description: displayBlueprint.promise_statement || undefined,
+                      targetCustomer: displayBlueprint.target_audience || undefined,
+                      revenueModel: displayBlueprint.monetization_strategy || undefined,
+                      blueprintData: displayBlueprint as unknown as Record<string, unknown>,
+                    });
+                  }}
                 >
-                  {fvsCalculating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Calculating…
-                    </>
-                  ) : (
-                    "Generate Your Score"
-                  )}
+                  Retry
                 </Button>
               </div>
             )}
