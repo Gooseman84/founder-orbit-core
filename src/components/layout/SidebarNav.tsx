@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useNorthStarVenture } from "@/hooks/useNorthStarVenture";
 import { useVentureState } from "@/hooks/useVentureState";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { TrialStatusBadge } from "@/components/shared/TrialStatusBadge";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -39,6 +40,10 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const { signOut } = useAuth();
   const { northStarVenture } = useNorthStarVenture();
   const { activeVenture } = useVentureState();
+  const { features } = useFeatureAccess();
+
+  const canShowRadar = features.canUseRadar !== "none";
+  const canShowFusion = features.canUseFusionLab;
 
   const ventureState = activeVenture?.venture_state ?? null;
   const isExecutionMode =
@@ -118,14 +123,18 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
                 <Lightbulb className="w-4 h-4 shrink-0" />
                 <span className="truncate">Idea Lab</span>
               </NavLink>
-              <NavLink to="/radar" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
-                <Search className="w-4 h-4 shrink-0" />
-                <span className="truncate">Niche Radar</span>
-              </NavLink>
-              <NavLink to="/fusion-lab" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
-                <GitMerge className="w-4 h-4 shrink-0" />
-                <span className="truncate">Fusion Lab</span>
-              </NavLink>
+              {canShowRadar && (
+                <NavLink to="/radar" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
+                  <Search className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Niche Radar</span>
+                </NavLink>
+              )}
+              {canShowFusion && (
+                <NavLink to="/fusion-lab" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
+                  <GitMerge className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Fusion Lab</span>
+                </NavLink>
+              )}
             </div>
           )}
         </>
@@ -140,14 +149,18 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
             <Lightbulb className="w-4 h-4 shrink-0" />
             <span className="truncate">Idea Lab</span>
           </NavLink>
-          <NavLink to="/radar" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
-            <Search className="w-4 h-4 shrink-0" />
-            <span className="truncate">Niche Radar</span>
-          </NavLink>
-          <NavLink to="/fusion-lab" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
-            <GitMerge className="w-4 h-4 shrink-0" />
-            <span className="truncate">Fusion Lab</span>
-          </NavLink>
+          {canShowRadar && (
+            <NavLink to="/radar" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
+              <Search className="w-4 h-4 shrink-0" />
+              <span className="truncate">Niche Radar</span>
+            </NavLink>
+          )}
+          {canShowFusion && (
+            <NavLink to="/fusion-lab" onClick={onNavigate} className={linkClass} activeClassName={activeClass}>
+              <GitMerge className="w-4 h-4 shrink-0" />
+              <span className="truncate">Fusion Lab</span>
+            </NavLink>
+          )}
         </>
       )}
 

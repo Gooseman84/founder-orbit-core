@@ -49,6 +49,9 @@ export function MobileBottomNav() {
   const ventureName = activeVenture?.name ?? "Venture";
   const ventureId = activeVenture?.id;
 
+  const canShowRadar = hasPro;
+  const canShowFusion = hasPro;
+
   const getTabs = (): NavTab[] => {
     if (isExecutionMode && ventureId) {
       return [
@@ -62,28 +65,32 @@ export function MobileBottomNav() {
         { label: "Workspace", path: "/workspace", icon: FolderOpen },
       ];
     }
-    return [
+    const tabs: NavTab[] = [
       { label: "Home", path: "/dashboard", icon: Home },
       { label: "Ideas", path: "/ideas", icon: Lightbulb },
-      { label: "Radar", path: "/radar", icon: Search },
     ];
+    if (canShowRadar) {
+      tabs.push({ label: "Radar", path: "/radar", icon: Search });
+    }
+    return tabs;
   };
 
   const getMoreItems = (): MoreItem[] => {
     if (isExecutionMode) {
-      return [
+      const items: MoreItem[] = [
         { label: "Idea Lab", path: "/ideas", icon: Lightbulb },
-        { label: "Niche Radar", path: "/radar", icon: Search },
-        { label: "Fusion Lab", path: "/fusion-lab", icon: GitMerge },
-        { label: "Profile", path: "/profile", icon: User },
-        { label: "Billing", path: "/billing", icon: CreditCard },
       ];
+      if (canShowRadar) items.push({ label: "Niche Radar", path: "/radar", icon: Search });
+      if (canShowFusion) items.push({ label: "Fusion Lab", path: "/fusion-lab", icon: GitMerge });
+      items.push({ label: "Profile", path: "/profile", icon: User });
+      items.push({ label: "Billing", path: "/billing", icon: CreditCard });
+      return items;
     }
-    return [
-      { label: "Fusion Lab", path: "/fusion-lab", icon: GitMerge },
-      { label: "Profile", path: "/profile", icon: User },
-      { label: "Billing", path: "/billing", icon: CreditCard },
-    ];
+    const items: MoreItem[] = [];
+    if (canShowFusion) items.push({ label: "Fusion Lab", path: "/fusion-lab", icon: GitMerge });
+    items.push({ label: "Profile", path: "/profile", icon: User });
+    items.push({ label: "Billing", path: "/billing", icon: CreditCard });
+    return items;
   };
 
   const tabs = getTabs();

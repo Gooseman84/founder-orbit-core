@@ -69,7 +69,7 @@ const Ideas = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { track } = useAnalytics();
-  const { hasPro } = useFeatureAccess();
+  const { hasPro, features: planFeatures } = useFeatureAccess();
 
   // Venture state enforcement
   const { 
@@ -325,8 +325,8 @@ const Ideas = () => {
   };
 
   const handleSaveIdea = async (idea: BusinessIdea | BusinessIdeaV6): Promise<string | null> => {
-    // Free tier check: Max 10 ideas in library
-    if (!hasPro && libraryIdeas.length >= 10) {
+    // Free tier check: Max saved ideas from plan config
+    if (!hasPro && libraryIdeas.length >= planFeatures.maxSavedIdeas) {
       setPaywallReasonCode("LIBRARY_FULL_TRIAL");
       setShowPaywall(true);
       return null;
