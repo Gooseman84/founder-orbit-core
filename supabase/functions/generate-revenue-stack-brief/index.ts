@@ -60,7 +60,27 @@ serve(async (req) => {
 
     const admin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // === Fetch all context in parallel ===
+    // === Pro subscription check ===
+    const { data: subscription } = await admin
+      .from("user_subscriptions")
+      .select("plan, status")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const plan = subscription?.plan || "free";
+    const isPaidUser = plan === "pro" || plan === "founder";
+
+    if (!isPaidUser) {
+      return new Response(
+        JSON.stringify({
+          error: "REQUIRES_PRO",
+          message: "Pro subscription required",
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    log("Pro check passed", { plan });
     const [ventureRes, interviewRes, northStarRes, fvsRes] = await Promise.all([
       admin
         .from("ventures")
