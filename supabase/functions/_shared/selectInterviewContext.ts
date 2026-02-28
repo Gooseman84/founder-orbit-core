@@ -3,7 +3,7 @@
 export type InterviewContextSlice = {
   founderSummary?: string;
   ideaGenerationContext?: string;
-  founderConstraints?: Record<string, any>;
+  constraints?: Record<string, any>;
   energyDrainers?: string[];
   transferablePatterns?: string[];
   ventureIntelligence?: Record<string, any>;
@@ -13,14 +13,14 @@ export type InterviewContextSlice = {
 
 const FUNCTION_FIELD_MAP: Record<string, (keyof InterviewContextSlice)[]> = {
   "generate-ideas": ["ideaGenerationContext", "founderSummary", "transferablePatterns", "energyDrainers"],
-  "generate-blueprint": ["ventureIntelligence", "founderConstraints", "energyDrainers", "founderSummary"],
-  "generate-venture-plan": ["founderConstraints", "ventureIntelligence", "founderSummary", "networkStrength"],
-  "generate-daily-execution-tasks": ["founderConstraints", "energyDrainers", "founderSummary", "transferablePatterns"],
-  "refresh-blueprint": ["founderSummary", "founderConstraints", "ventureIntelligence", "extractedInsights"],
+  "generate-blueprint": ["ventureIntelligence", "constraints", "energyDrainers", "founderSummary"],
+  "generate-venture-plan": ["constraints", "ventureIntelligence", "founderSummary", "networkStrength"],
+  "generate-daily-execution-tasks": ["constraints", "energyDrainers", "founderSummary", "transferablePatterns"],
+  "refresh-blueprint": ["founderSummary", "constraints", "ventureIntelligence", "extractedInsights"],
   "dynamic-founder-interview": ["founderSummary", "extractedInsights", "ventureIntelligence"],
-  "calculate-financial-viability": ["founderConstraints", "networkStrength", "ventureIntelligence", "founderSummary"],
-  "generate-implementation-kit": ["ventureIntelligence", "founderConstraints", "founderSummary"],
-  "venture-debugger": ["founderConstraints", "energyDrainers", "founderSummary", "transferablePatterns", "ventureIntelligence", "extractedInsights"],
+  "calculate-financial-viability": ["constraints", "networkStrength", "ventureIntelligence", "founderSummary"],
+  "generate-implementation-kit": ["ventureIntelligence", "constraints", "founderSummary"],
+  "venture-debugger": ["constraints", "energyDrainers", "founderSummary", "transferablePatterns", "ventureIntelligence", "extractedInsights"],
 };
 
 export function selectInterviewContext(
