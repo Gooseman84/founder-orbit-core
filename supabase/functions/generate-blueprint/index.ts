@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
+import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -728,7 +729,8 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const interviewContext = interviewData?.context_summary as any || null;
+    const rawInterviewContext = interviewData?.context_summary as any || null;
+    const interviewContext = selectInterviewContext("generate-blueprint", rawInterviewContext);
     console.log("[generate-blueprint] hasInterviewContext:", !!interviewContext);
 
     // Build AI input payload

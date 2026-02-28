@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
+import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -212,7 +213,8 @@ serve(async (req) => {
       console.log("generate-ideas: error fetching interview context (non-fatal):", interviewError);
     }
 
-    const interviewContext = latestInterview?.context_summary as any || null;
+    const rawInterviewContext = latestInterview?.context_summary as any || null;
+    const interviewContext = selectInterviewContext("generate-ideas", rawInterviewContext);
     const hasInterviewContext = !!interviewContext;
     console.log("generate-ideas: hasInterviewContext =", hasInterviewContext);
 
