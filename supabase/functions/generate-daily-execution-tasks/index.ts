@@ -115,6 +115,33 @@ serve(async (req) => {
     const currentPhase = detectExecutionPhase(dayInCommitment, totalDays);
     const isStagnating = detectStagnation(recentCheckins || []);
 
+    // ── Compute Founder Moment State ──────────────────────────
+    let founderMomentState = "BUILDING_MOMENTUM";
+    let mavrikIntent = "";
+    try {
+      const momentResponse = await fetch(
+        `${SUPABASE_URL}/functions/v1/compute-founder-moment-state`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ventureId }),
+        }
+      );
+      if (momentResponse.ok) {
+        const momentData = await momentResponse.json();
+        founderMomentState = momentData.state || "BUILDING_MOMENTUM";
+        mavrikIntent = momentData.mavrikIntent || "";
+        console.log(`[generate-daily-execution-tasks] MomentState: ${founderMomentState}`);
+      } else {
+        console.warn(`[generate-daily-execution-tasks] Moment state call failed: ${momentResponse.status}`);
+      }
+    } catch (momentError) {
+      console.warn("[generate-daily-execution-tasks] Moment state error (defaulting):", momentError);
+    }
+
     console.log(`[generate-daily-execution-tasks] Phase: ${currentPhase}, Day: ${dayInCommitment}/${totalDays}, Stagnating: ${isStagnating}`);
 
     // ── Fetch Idea + Source Meta ──────────────────────────────
@@ -277,6 +304,7 @@ Return a JSON array only. No preamble. No markdown fences.
   }
 ]
 
+${mavrikIntent ? `## MAVRIK INTENT\n${mavrikIntent}\n\nFounder Moment State: ${founderMomentState}\n` : ""}
 ## OUTPUT CONTRACT
 
 Each task object must contain:
@@ -322,6 +350,7 @@ Tasks must be calibrated to founderMomentState if provided:
 Venture: ${venture.name}
 Success Metric: ${venture.success_metric}
 Phase: ${currentPhase.toUpperCase()} — Day ${dayInCommitment} of ${totalDays}
+Founder Moment State: ${founderMomentState}
 ${venture.success_metric ? `Goal: ${venture.success_metric}` : ""}
 ${blueprint?.ai_summary ? `Blueprint Summary: ${blueprint.ai_summary}` : ""}
 ${venturePlan?.summary ? `Plan Summary: ${venturePlan.summary}` : ""}
@@ -405,6 +434,7 @@ Generate ${taskCount} focused execution tasks for today.`,
         alreadyGenerated: false,
         tasks: finalTasks,
         phase: currentPhase,
+        founderMomentState,
         appended: append && !!existingTasksRow,
         newTasksCount: newTasks.length,
         isStagnating,
