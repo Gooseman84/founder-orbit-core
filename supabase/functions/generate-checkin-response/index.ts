@@ -79,9 +79,37 @@ serve(async (req) => {
     const totalDays = venture.commitment_window_days || 30;
     const daysRemaining = Math.max(0, totalDays - dayInCommitment);
 
+    // ── Compute Founder Moment State ──────────────────────────
+    let founderMomentState = "BUILDING_MOMENTUM";
+    let mavrikIntent = "";
+    try {
+      const momentResponse = await fetch(
+        `${SUPABASE_URL}/functions/v1/compute-founder-moment-state`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": authHeader!,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ventureId }),
+        }
+      );
+      if (momentResponse.ok) {
+        const momentData = await momentResponse.json();
+        founderMomentState = momentData.state || "BUILDING_MOMENTUM";
+        mavrikIntent = momentData.mavrikIntent || "";
+        console.log(`[generate-checkin-response] MomentState: ${founderMomentState}`);
+      } else {
+        console.warn(`[generate-checkin-response] Moment state call failed: ${momentResponse.status}`);
+      }
+    } catch (momentError) {
+      console.warn("[generate-checkin-response] Moment state error (defaulting):", momentError);
+    }
+
     // ── Build Prompt ──────────────────────────────────────────
     const systemPrompt = `You are Mavrik, an AI co-founder and execution coach. You just received a founder's daily check-in.
 
+${mavrikIntent ? `## MAVRIK INTENT\n${mavrikIntent}\n\nFounder Moment State: ${founderMomentState}\n` : ""}
 Your job is to write a SHORT, PERSONAL, DIRECT response — like a co-founder who genuinely cares about their success.
 
 TONE RULES:
