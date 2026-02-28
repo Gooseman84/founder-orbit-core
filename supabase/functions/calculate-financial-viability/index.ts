@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
+import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -112,7 +113,8 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const interviewContext = latestInterview?.context_summary as any || null;
+    const rawInterviewContext = latestInterview?.context_summary as any || null;
+    const interviewContext = selectInterviewContext("calculate-financial-viability", rawInterviewContext);
 
     // Fetch enriched idea data including source_meta
     const { data: fullIdea } = await adminClient

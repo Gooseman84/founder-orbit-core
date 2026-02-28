@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
+import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -160,7 +161,8 @@ serve(async (req) => {
     console.log(`[generate-daily-execution-tasks] Frameworks loaded — phase: ${phaseFramework.length}c, model: ${modelOverlay.length}c, stagnation: ${stagnationFramework.length}c`);
 
     // ── Build Context Objects ─────────────────────────────────
-    const interviewContext = interviewData?.context_summary as any ?? null;
+    const rawInterviewContext = interviewData?.context_summary as any ?? null;
+    const interviewContext = selectInterviewContext("generate-daily-execution-tasks", rawInterviewContext);
 
     const founderState = {
       latestEnergy: recentReflections?.[0]?.energy_level ?? null,
