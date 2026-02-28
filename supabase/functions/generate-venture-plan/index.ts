@@ -225,7 +225,22 @@ When founderIntelligence is null, generate tasks using only the idea and founder
 {{FRAMEWORKS_INJECTION_POINT}}
 
 ## OUTPUT
-Return ONLY valid JSON matching the schema. No markdown, no explanation, no preamble.`;
+Return ONLY valid JSON matching the schema. No markdown, no explanation, no preamble.
+
+## OUTPUT CONTRACT
+
+The plan must be structured for a founder who will hand it to an AI coding agent (Lovable.dev). Optimize for machine-parseable specificity.
+
+- Every milestone must include: dueDate (ISO), successCriteria (string — one sentence, binary pass/fail), and estimatedHours (number)
+- Phase names must follow the pattern: "Validate" (days 1-7), "Build" (days 8-21), "Launch" (days 22-30). Do not rename phases.
+- Tasks must be atomic: completable in a single 2-4 hour work session. No task should span multiple days.
+- Do NOT include tasks that require skills the founder has listed as gaps unless you pair them with a specific resource or workaround
+
+## ANTI-PATTERNS
+
+- Do NOT generate a plan that front-loads product work before customer validation
+- Do NOT suggest hiring or outsourcing in the first 14 days
+- Do NOT output placeholder milestones like "Continue building" or "Keep iterating"`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

@@ -170,7 +170,30 @@ VENTURE INTELLIGENCE RULES:
   - Content: audienceTraction, monetizationPlan, defensibleAngle
   - SaaS: empty object {}
 
-Stay sharp. Extract signal. Help them win.`;
+Stay sharp. Extract signal. Help them win.
+
+## OUTPUT CONTRACT
+
+Return ONLY valid JSON matching this exact schema. No prose before or after. No markdown fences.
+
+For "question" mode, return:
+
+{ "question": "string — one focused, open-ended question. Never compound. Never yes/no." }
+
+For "summary" mode, return the contextSummary object already defined above, with these additional guarantees:
+
+- founderSummary: 3-5 sentences minimum. References specific things the founder said.
+- founderConstraints: always an object with keys: timePerWeek (number), capitalAvailable (string), riskTolerance (low|medium|high), hardLimits (string[])
+- ventureIntelligence: always includes detectedVertical (string) and detectedBusinessModel (string)
+- energyDrainers: always an array, never null — use [] if none identified
+
+## ANTI-PATTERNS
+
+- Do NOT ask "What are your goals?" — too generic, already answered in intake
+- Do NOT ask multiple questions in one turn
+- Do NOT mention Mavrik by name during the interview
+- Do NOT summarize what the founder said before asking the next question
+- Do NOT generate a summary until at least 3 exchanges have occurred`;
 
 const INTELLIGENCE_LAYERS = `
 ═══════════════════════════════════════════════════════════════════════════════
