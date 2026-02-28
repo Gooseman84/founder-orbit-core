@@ -392,7 +392,19 @@ OUTPUT:
 6. BUILD ON MOMENTUM: If they're completing certain types of tasks, give them more of those
 7. ADDRESS BLOCKERS: If a blocker appears in reflections, one recommendation should tackle it
 8. RESPOND ONLY WITH JSON: No explanations, no markdown, just the JSON object
-</rules>`;
+</rules>
+
+## OUTPUT CONTRACT
+
+- ai_summary: Must be written in second person ("You are..."), must reference at least one specific workspace document by name if recentWorkspaceDocs contains any items. Must identify whether the founder is progressing, plateauing, or regressing — use one of those exact words.
+- ai_recommendations: categories must be distributed — do not output more than 2 recommendations with the same category. At least one must have time_horizon "today".
+- Do NOT repeat recommendations that appeared in the previous blueprint ai_recommendations unless circumstances have materially changed (recentCheckins or recentReflections show new data)
+
+## ANTI-PATTERNS
+
+- Do NOT write ai_summary as a neutral status report — take a position on what's happening
+- Do NOT recommend actions that require more hours per week than the founder's stated availability
+- Do NOT use "continue" as the primary verb in a recommendation title — it's not actionable`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

@@ -275,7 +275,34 @@ Return a JSON array only. No preamble. No markdown fences.
     "estimatedMinutes": 30,
     "completed": false
   }
-]${appendContext}`;
+]
+
+## OUTPUT CONTRACT
+
+Each task object must contain:
+
+{
+  "id": "uuid-style string",
+  "title": "verb-first, specific action — max 10 words",
+  "description": "exactly 2 sentences: (1) what to do, (2) why it matters today",
+  "estimatedMinutes": number between 30 and 240,
+  "category": "validation" | "build" | "distribute" | "admin" | "reflect",
+  "successCriteria": "one binary sentence — either you did it or you didn't",
+  "completed": false
+}
+
+Tasks must be calibrated to founderMomentState if provided:
+- STUCK: 1 task only, ultra-specific, removes exactly one blocker
+- BUILDING_MOMENTUM: 2-3 tasks, push further on what's working
+- SCOPE_CREEPING: 1-2 tasks, all from existing plan scope, nothing new
+- EXECUTION_PARALYSIS: 1 task, smallest possible action, under 60 minutes
+- APPROACHING_LAUNCH: 3 tasks, all launch-critical, no new features
+
+## ANTI-PATTERNS
+
+- Do NOT generate tasks that repeat what the founder completed yesterday (checkin history is provided)
+- Do NOT generate "research" tasks unless the founder is in the Validate phase
+- Do NOT generate tasks that require the founder to be online during a specific time window unless they have shared their schedule${appendContext}`;
 
     // ── Call AI ───────────────────────────────────────────────
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

@@ -487,6 +487,20 @@ RULES
 4. Validate before building — always prioritize proof over polish.
 5. Be kind but honest — if the idea is early stage, say so clearly.
 6. Output ONLY valid JSON — no markdown, no explanation outside the object.
+
+## OUTPUT CONTRACT
+
+- ai_summary: MUST reference at least one specific founder constraint (time, capital, or risk). Generic summaries that could apply to any founder are rejected.
+- ai_recommendations: MUST include at least one recommendation with category "validation" regardless of founder stage. Minimum 3 recommendations, maximum 7.
+- success_metrics: MUST include at least 2 items. Targets must be numbers, not ranges.
+- network_advantage: MUST be populated if the founder profile contains any network data. Never return null if networkStrength exists in interview context.
+- focus_quarters: MUST contain exactly 3 items. Each item must start with "Q1:", "Q2:", "Q3:" respectively.
+
+## ANTI-PATTERNS
+
+- Do NOT generate recommendations with time_horizon "this_quarter" for a founder in week 1
+- Do NOT use the word "leverage" as filler — only use it when describing a specific mechanical advantage
+- Do NOT output recommendations that are purely mindset without a concrete action step
 `.trim();
 
 serve(async (req) => {
