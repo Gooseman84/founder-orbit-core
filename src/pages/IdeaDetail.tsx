@@ -34,6 +34,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload, MoreVertical, RefreshCw, Rocket, Heart, Lock } from "lucide-react";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useValidationDisplayProps } from "@/hooks/useValidationDisplayProps";
@@ -685,6 +686,33 @@ const IdeaDetail = () => {
                   lastValidatedAt={lastValidatedAt}
                   dimensionEvidenceCounts={dimensionEvidenceCounts}
                 />
+
+                {/* Score evaluation confidence chip */}
+                {fvsScore.scoreEvaluation && (
+                  <div className="flex justify-center mt-2">
+                    {fvsScore.scoreEvaluation.consistent && fvsScore.scoreEvaluation.confidence === 'high' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 text-green-600 border border-green-500/30">
+                        Score Verified ✓
+                      </span>
+                    ) : (fvsScore.scoreEvaluation.consistent === false || (fvsScore.scoreEvaluation.contradictions && fvsScore.scoreEvaluation.contradictions.length > 0)) ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-600 border border-amber-500/30 cursor-help">
+                              <AlertCircle className="w-2.5 h-2.5" />
+                              Review Score
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-xs text-xs space-y-1">
+                            {fvsScore.scoreEvaluation.contradictions.map((c, i) => (
+                              <p key={i}>• {c.issue}</p>
+                            ))}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : null}
+                  </div>
+                )}
                 
                 {hasPro ? (
                   <>

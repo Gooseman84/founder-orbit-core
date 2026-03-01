@@ -1,0 +1,1 @@
+ALTER TABLE public.financial_viability_scores ADD COLUMN IF NOT EXISTS score_evaluation JSONB;
