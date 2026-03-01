@@ -167,3 +167,6 @@ verify_jwt = false
 
 [functions.submit-feedback]
 verify_jwt = false
+
+[functions.venture-debugger]
+verify_jwt = false

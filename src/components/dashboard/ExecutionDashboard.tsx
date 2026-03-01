@@ -21,12 +21,14 @@ import {
   Plus,
   Sparkles,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import type { Venture } from "@/types/venture";
 import { useDailyExecution } from "@/hooks/useDailyExecution";
 import { ImplementationKitCard } from "@/components/implementationKit/ImplementationKitCard";
 import { VentureDNACard } from "@/components/dashboard/VentureDNACard";
 import { FounderPatternCard } from "@/components/patterns/FounderPatternCard";
+import { VentureDebugger } from "@/components/venture/VentureDebugger";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -39,6 +41,7 @@ interface ExecutionDashboardProps {
 export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [debuggerOpen, setDebuggerOpen] = useState(false);
   const {
     commitmentProgress,
     dailyTasks,
@@ -162,6 +165,21 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
         ventureId={venture.id}
         ventureName={venture.name}
         onTaskAdded={refetchDailyExecution}
+      />
+
+      {/* Venture Debugger trigger — subtle "break glass" link */}
+      <button
+        onClick={() => setDebuggerOpen(true)}
+        className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 mt-0"
+      >
+        <AlertCircle className="h-3.5 w-3.5" />
+        Something's not working →
+      </button>
+
+      <VentureDebugger
+        ventureId={venture.id}
+        open={debuggerOpen}
+        onClose={() => setDebuggerOpen(false)}
       />
 
       {/* 4. QUICK ACCESS cards */}
