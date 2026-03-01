@@ -480,12 +480,12 @@ async function runSpecValidation(
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(\`Spec validation AI error: \${errorText}\`);
+      throw new Error(`Spec validation AI error: ${errorText}`);
     }
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content || '{}';
-    const clean = text.replace(/\`\`\`json|\`\`\`/g, '').trim();
+    const clean = text.replace(/```json|```/g, '').trim();
     return JSON.parse(clean);
   } catch (error) {
     console.error('Spec validation error:', error);
