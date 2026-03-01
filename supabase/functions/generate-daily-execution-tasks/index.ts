@@ -5,6 +5,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
+import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -235,7 +236,7 @@ serve(async (req) => {
       .filter(Boolean)
       .join("\n\n---\n\n");
 
-    const systemPrompt = `You are Mavrik, an execution-focused co-pilot for founders. Generate ${taskCount} concrete, actionable tasks for TODAY only.
+    const systemPrompt = injectCognitiveMode(`You are Mavrik, an execution-focused co-pilot for founders. Generate ${taskCount} concrete, actionable tasks for TODAY only.
 
 ${frameworksBlock ? `## EXECUTION PLAYBOOKS\nUse these frameworks to determine what kinds of tasks are appropriate right now:\n\n${frameworksBlock}\n\n---` : ""}
 
@@ -332,7 +333,7 @@ Tasks must be calibrated to founderMomentState if provided:
 
 - Do NOT generate tasks that repeat what the founder completed yesterday (checkin history is provided)
 - Do NOT generate "research" tasks unless the founder is in the Validate phase
-- Do NOT generate tasks that require the founder to be online during a specific time window unless they have shared their schedule${appendContext}`;
+- Do NOT generate tasks that require the founder to be online during a specific time window unless they have shared their schedule${appendContext}`, 'converge');
 
     // ── Call AI ───────────────────────────────────────────────
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

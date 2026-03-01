@@ -5,6 +5,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
+import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -323,9 +324,12 @@ serve(async (req) => {
     const interviewContext = selectInterviewContext("venture-debugger", rawContext);
 
     // ── Build System Prompt ──
-    const systemPrompt = VENTURE_DEBUGGER_SYSTEM_PROMPT.replace(
-      "{{FRAMEWORKS_INJECTION_POINT}}",
-      frameworksText || ""
+    const systemPrompt = injectCognitiveMode(
+      VENTURE_DEBUGGER_SYSTEM_PROMPT.replace(
+        "{{FRAMEWORKS_INJECTION_POINT}}",
+        frameworksText || ""
+      ),
+      'critique'
     );
 
     // ── Build User Prompt ──

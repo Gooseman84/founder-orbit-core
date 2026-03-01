@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
+import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -825,9 +826,12 @@ Now ask your first targeted question based on this context. Reference something 
     });
     console.log("dynamic-founder-interview: summary frameworks fetched", { coreLength: coreFrameworks.length });
 
-    const resolvedSummaryPrompt = SYSTEM_PROMPT_BASE.replace(
-      '{{FRAMEWORKS_INJECTION_POINT}}',
-      coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''
+    const resolvedSummaryPrompt = injectCognitiveMode(
+      SYSTEM_PROMPT_BASE.replace(
+        '{{FRAMEWORKS_INJECTION_POINT}}',
+        coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''
+      ),
+      'summarize'
     );
 
     const summaryMessages = [

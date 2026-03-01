@@ -3,6 +3,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
+import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -732,9 +733,12 @@ serve(async (req) => {
     console.log("generate-founder-ideas: frameworks fetched", { coreLength: coreFrameworks.length });
 
     // Resolve Pass A prompt with frameworks
-    const resolvedPassAPrompt = PASS_A_SYSTEM_PROMPT.replace(
-      '{{FRAMEWORKS_INJECTION_POINT}}',
-      coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''
+    const resolvedPassAPrompt = injectCognitiveMode(
+      PASS_A_SYSTEM_PROMPT.replace(
+        '{{FRAMEWORKS_INJECTION_POINT}}',
+        coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''
+      ),
+      'explore'
     );
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

@@ -4,6 +4,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -109,7 +110,7 @@ serve(async (req) => {
     }
 
     // ── Build Prompt ──────────────────────────────────────────
-    const systemPrompt = `You are Mavrik, an AI co-founder and execution coach. You just received a founder's daily check-in.
+    const systemPrompt = injectCognitiveMode(`You are Mavrik, an AI co-founder and execution coach. You just received a founder's daily check-in.
 
 ${mavrikRoleBlock ? `${mavrikRoleBlock}\n\n` : ""}${mavrikIntent ? `## MAVRIK INTENT\n${mavrikIntent}\n\nFounder Moment State: ${founderMomentState}\n` : ""}
 Your job is to write a SHORT, PERSONAL, DIRECT response — like a co-founder who genuinely cares about their success.
@@ -153,7 +154,7 @@ Respond with STRICT JSON only:
   "tomorrowFocus": "One sentence: the single most important thing to focus on tomorrow",
   "tone": "steady|energized|concerned|direct",
   "isStagnationIntervention": ${isStagnating}
-}`;
+}`, 'converge');
 
     // ── Call AI ───────────────────────────────────────────────
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
