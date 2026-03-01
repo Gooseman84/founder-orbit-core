@@ -302,7 +302,7 @@ If FOUNDER INTELLIGENCE is provided above, use it to:
 
     // Build prompts
     const northStarPrompt = buildNorthStarPrompt(blueprintTitle, blueprintContent, techStack, founderIntelStr);
-    const contractPrompt = buildArchitecturePrompt(blueprintTitle, techStack, founderIntelStr);
+    const contractPrompt = buildArchitecturePrompt(blueprintTitle, blueprintContent, techStack, founderIntelStr);
     const slicePrompt = buildSlicePlanPrompt(blueprintTitle, blueprintContent, techStack, founderIntelStr);
     const launchPrompt = buildLaunchPlaybookPrompt(blueprintTitle, blueprintContent, techStack, founderIntelStr);
 
@@ -613,7 +613,7 @@ Then output the full North Star Spec markdown document below it.
 Make it specific, actionable, and based on the actual blueprint details. Use markdown formatting. Keep it to 2 pages maximum when printed.`;
 }
 
-function buildArchitecturePrompt(title: string, techStack: any, founderIntel: string): string {
+function buildArchitecturePrompt(title: string, content: string, techStack: any, founderIntel: string): string {
   const supabasePatterns = `### Supabase Patterns
 
 **Simple Operations:** Direct table access via Supabase client
@@ -689,6 +689,7 @@ Use scoped styles and composition patterns.`;
 
 CONTEXT:
 Business: ${title}
+Blueprint: ${content}
 Frontend: ${techStack.frontend}
 Backend: ${techStack.backend}
 AI Tool: ${techStack.aiTool}
@@ -851,7 +852,7 @@ At the very top of the document, before any markdown content, output this JSON b
 
 Then output the full Architecture Contract markdown document below it.
 
-Make it tech-stack-specific and actionable for \${techStack.frontend} + \${techStack.backend}.`;
+Make it tech-stack-specific and actionable for ${techStack.frontend} + ${techStack.backend}.`;
 }
 
 function buildSlicePlanPrompt(title: string, content: string, techStack: any, founderIntel: string): string {
@@ -1143,7 +1144,7 @@ At the very top of the document, before any markdown content, output this JSON b
 
 Then output the full Thin Vertical Slice Plan markdown document below it.
 
-Make it specific and actionable for \${techStack.frontend} + \${techStack.backend} + \${techStack.deployment}.`;
+Make it specific and actionable for ${techStack.frontend} + ${techStack.backend} + ${techStack.deployment}.`;
 }
 
 function buildLaunchPlaybookPrompt(
