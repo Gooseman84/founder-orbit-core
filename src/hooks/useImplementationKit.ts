@@ -20,7 +20,7 @@ export const implementationKitKeys = {
 
 // Fetch implementation kit by blueprint ID
 export function useImplementationKitByBlueprint(blueprintId: string | undefined) {
-  return useQuery({
+  const query = useQuery({
     queryKey: implementationKitKeys.byBlueprint(blueprintId || ''),
     queryFn: async () => {
       if (!blueprintId) return null;
@@ -37,7 +37,14 @@ export function useImplementationKitByBlueprint(blueprintId: string | undefined)
       return data as unknown as ImplementationKit | null;
     },
     enabled: !!blueprintId,
+    // Poll every 5s while kit is generating
+    refetchInterval: (query) => {
+      const kit = query.state.data;
+      return kit?.status === 'generating' ? 5000 : false;
+    },
   });
+
+  return query;
 }
 
 // Fetch all implementation kits for a venture

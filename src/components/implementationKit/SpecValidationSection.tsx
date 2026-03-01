@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { CheckCircle, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import { CheckCircle, AlertTriangle, ChevronDown, ChevronRight, Info } from "lucide-react";
 import type { SpecValidationResult, SpecValidationFlag } from "@/types/implementationKit";
 
 interface SpecValidationSectionProps {
@@ -50,6 +50,18 @@ export function SpecValidationSection({ validation }: SpecValidationSectionProps
   const approvedForExecution = validation?.approvedForExecution ?? false;
   const flags = validation?.flags ?? [];
 
+  // Approved with no flags — simple green badge, nothing expandable
+  if (approvedForExecution && flags.length === 0) {
+    return (
+      <div className="pt-1 px-1">
+        <Badge variant="outline" className="text-[10px] text-green-500 border-green-500/30 gap-1">
+          <CheckCircle className="h-3 w-3" />
+          Spec Approved
+        </Badge>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2 pt-1">
       <div className="flex items-center gap-2 px-1">
@@ -65,11 +77,19 @@ export function SpecValidationSection({ validation }: SpecValidationSectionProps
           </Badge>
         )}
       </div>
-      {flags.length > 0 && (
+
+      {flags.length > 0 ? (
         <div className="space-y-0.5">
           {flags.map((flag, i) => (
             <FlagRow key={i} flag={flag} />
           ))}
+        </div>
+      ) : (
+        <div className="flex items-start gap-2 px-1 py-2 rounded-md bg-muted/50">
+          <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            Spec validation flagged issues but details are unavailable. Review your documents manually before building.
+          </p>
         </div>
       )}
     </div>
