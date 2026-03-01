@@ -399,6 +399,7 @@ export type Database = {
           dimensions: Json
           id: string
           idea_id: string
+          score_evaluation: Json | null
           summary: string | null
           top_opportunity: string | null
           top_risk: string | null
@@ -410,6 +411,7 @@ export type Database = {
           dimensions?: Json
           id?: string
           idea_id: string
+          score_evaluation?: Json | null
           summary?: string | null
           top_opportunity?: string | null
           top_risk?: string | null
@@ -421,6 +423,7 @@ export type Database = {
           dimensions?: Json
           id?: string
           idea_id?: string
+          score_evaluation?: Json | null
           summary?: string | null
           top_opportunity?: string | null
           top_risk?: string | null

@@ -19,6 +19,23 @@ export interface FinancialViabilityDimensions {
   founderMarketFit: DimensionScore;
 }
 
+export interface ScoreEvaluation {
+  consistent: boolean;
+  confidence: string;
+  contradictions: Array<{
+    dimensions: string[];
+    issue: string;
+    severity: string;
+  }>;
+  adjustmentSuggestions: Array<{
+    dimension: string;
+    currentScore: number;
+    suggestedScore: number;
+    reason: string;
+  }>;
+  evaluatorNote: string;
+}
+
 export interface FinancialViabilityScoreData {
   id: string;
   compositeScore: number;
@@ -28,6 +45,7 @@ export interface FinancialViabilityScoreData {
   topOpportunity?: string;
   isPro: boolean;
   createdAt: string;
+  scoreEvaluation?: ScoreEvaluation;
 }
 
 interface IdeaContext {
@@ -82,6 +100,7 @@ export function useFinancialViabilityScore(ideaId: string | undefined): UseFinan
 
       // Transform database row to interface
       const dimensions = data.dimensions as unknown as FinancialViabilityDimensions | undefined;
+      const scoreEvaluation = (data as any).score_evaluation as ScoreEvaluation | undefined;
       
       return {
         id: data.id,
@@ -92,6 +111,7 @@ export function useFinancialViabilityScore(ideaId: string | undefined): UseFinan
         topOpportunity: hasPro ? data.top_opportunity || undefined : undefined,
         isPro: hasPro,
         createdAt: data.created_at,
+        scoreEvaluation: scoreEvaluation || undefined,
       } as FinancialViabilityScoreData;
     },
     enabled: !!user && !!ideaId,

@@ -44,6 +44,139 @@ interface AIResponse {
   topOpportunity: string;
 }
 
+const FVS_EVALUATOR_SYSTEM_PROMPT = `You are a financial score auditor. 
+You receive a Financial Viability Score with 6 sub-scores and check it 
+for internal consistency and logical contradictions.
+
+## OUTPUT CONTRACT
+
+Return ONLY valid JSON. No prose, no markdown fences.
+
+{
+  "consistent": boolean,
+  "confidence": "high" | "medium" | "low",
+  "contradictions": [
+    {
+      "dimensions": ["dimension1", "dimension2"],
+      "issue": "one sentence describing the logical contradiction",
+      "severity": "critical" | "moderate"
+    }
+  ],
+  "adjustmentSuggestions": [
+    {
+      "dimension": "marketSize" | "unitEconomics" | "timeToRevenue" | 
+                   "competitiveDensity" | "capitalRequirements" | "founderMarketFit",
+      "currentScore": number,
+      "suggestedScore": number,
+      "reason": "one sentence"
+    }
+  ],
+  "evaluatorNote": "2-3 sentence honest assessment of overall score quality"
+}
+
+## Contradiction Patterns to Check
+
+- High marketSize (>70) + high competitiveDensity (>70): If market is large 
+  AND competition is dense, founderMarketFit must be exceptional (>75) to 
+  justify an overall high score. Flag if founderMarketFit is low.
+- High unitEconomics (>70) + low capitalRequirements (<40): These often 
+  contradict — high margin businesses usually require more capital to build. 
+  Flag unless the business model is services-first.
+- Low timeToRevenue (<40) + high capitalRequirements (>70): Can't have slow 
+  time to revenue AND high capital needs without exceptional market size. Flag.
+- compositeScore >75 with ANY dimension below 35: A weak link this severe 
+  should suppress the composite. Flag as critical.
+- founderMarketFit <40 with compositeScore >65: Founder fit is the execution 
+  multiplier — a low fit score should never coexist with a high composite 
+  unless market size is exceptional (>85). Flag.
+
+## Rules
+
+- If contradictions array is empty, consistent must be true
+- adjustmentSuggestions only when a dimension should change by more than 8 points
+- Maximum 3 contradictions, maximum 3 adjustment suggestions
+- If the score is internally consistent, still provide an evaluatorNote 
+  assessing overall quality`;
+
+async function runFVSEvaluation(
+  compositeScore: number,
+  dimensions: Record<string, { score: number; rationale: string }>,
+  summary: string,
+  lovableApiKey: string
+): Promise<{
+  consistent: boolean;
+  confidence: string;
+  contradictions: Array<{
+    dimensions: string[];
+    issue: string;
+    severity: string;
+  }>;
+  adjustmentSuggestions: Array<{
+    dimension: string;
+    currentScore: number;
+    suggestedScore: number;
+    reason: string;
+  }>;
+  evaluatorNote: string;
+}> {
+  try {
+    const scorePayload = {
+      compositeScore,
+      dimensions: Object.entries(dimensions).reduce((acc, [key, val]) => {
+        acc[key] = val.score;
+        return acc;
+      }, {} as Record<string, number>),
+      summary,
+    };
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-lite',
+        max_completion_tokens: 1000,
+        temperature: 0.1,
+        messages: [
+          { role: 'system', content: FVS_EVALUATOR_SYSTEM_PROMPT },
+          { 
+            role: 'user', 
+            content: `Evaluate this Financial Viability Score for internal consistency:\n\n${JSON.stringify(scorePayload, null, 2)}`
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Evaluator API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || '{}';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    // Validate shape
+    if (typeof parsed.consistent !== 'boolean' || !Array.isArray(parsed.contradictions)) {
+      throw new Error('Evaluator returned unexpected shape');
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error('FVS evaluation error:', error);
+    // Never block score return due to evaluation failure
+    return {
+      consistent: true,
+      confidence: 'medium',
+      contradictions: [],
+      adjustmentSuggestions: [],
+      evaluatorNote: 'Evaluation pass unavailable for this score.',
+    };
+  }
+}
+
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[FINANCIAL-VIABILITY] ${step}${detailsStr}`);
@@ -357,6 +490,16 @@ Calculate the weighted composite score using:
 
     logStep("Response parsed", { compositeScore: parsed.compositeScore });
 
+    // Run consistency evaluation
+    logStep("Running evaluation pass...");
+    const fvsEvaluation = await runFVSEvaluation(
+      parsed.compositeScore,
+      parsed.dimensions,
+      parsed.summary,
+      LOVABLE_API_KEY
+    );
+    logStep("Evaluation complete", { consistent: fvsEvaluation.consistent, confidence: fvsEvaluation.confidence });
+
     // Store in database
     const { data: storedScore, error: storeError } = await adminClient
       .from("financial_viability_scores")
@@ -368,6 +511,7 @@ Calculate the weighted composite score using:
         summary: parsed.summary,
         top_risk: parsed.topRisk,
         top_opportunity: parsed.topOpportunity,
+        score_evaluation: fvsEvaluation,
       })
       .select()
       .single();
