@@ -47,7 +47,8 @@ function FlagRow({ flag }: { flag: SpecValidationFlag }) {
 }
 
 export function SpecValidationSection({ validation }: SpecValidationSectionProps) {
-  const { approvedForExecution, flags } = validation;
+  const approvedForExecution = validation?.approvedForExecution ?? false;
+  const flags = validation?.flags ?? [];
 
   return (
     <div className="space-y-2 pt-1">
