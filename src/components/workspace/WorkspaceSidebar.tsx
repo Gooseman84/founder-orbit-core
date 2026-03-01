@@ -107,6 +107,7 @@ function ImplementationKitQuickAccess({ blueprintId }: { blueprintId?: string })
     { id: kit.north_star_spec_id, name: "North Star Spec" },
     { id: kit.architecture_contract_id, name: "Architecture Contract" },
     { id: kit.vertical_slice_plan_id, name: "Vertical Slice Plan" },
+    { id: (kit as any).launch_playbook_id, name: "Launch Playbook" },
   ].filter(doc => doc.id);
 
   if (documents.length === 0) return null;

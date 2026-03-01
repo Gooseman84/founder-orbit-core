@@ -218,28 +218,49 @@ async function generateDocumentsInBackground(
   try {
     console.log('Background generation started for kit:', kitId);
 
-    // Helper function to call Lovable AI Gateway
-    async function callAI(prompt: string): Promise<string> {
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${lovableApiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'openai/gpt-5-mini',
-          max_completion_tokens: 4096,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
+    // Helper function to call Lovable AI Gateway with validation and retry
+    async function callAI(prompt: string, docName: string = 'document'): Promise<string> {
+      const MAX_ATTEMPTS = 2;
+      
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        console.log(`[callAI] Generating ${docName} (attempt ${attempt}/${MAX_ATTEMPTS})...`);
+        
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${lovableApiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'openai/gpt-5-mini',
+            max_completion_tokens: 8192,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`AI API error: ${error}`);
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`AI API error for ${docName}: ${error}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content || '';
+
+        // Validate content is not empty or too short
+        if (content.length >= 100) {
+          console.log(`[callAI] ${docName} generated successfully (${content.length} chars)`);
+          return content;
+        }
+
+        console.warn(`[callAI] ${docName} returned insufficient content (${content.length} chars), attempt ${attempt}/${MAX_ATTEMPTS}`);
+        
+        if (attempt === MAX_ATTEMPTS) {
+          throw new Error(`${docName} generation failed: AI returned empty or insufficient content (${content.length} chars) after ${MAX_ATTEMPTS} attempts`);
+        }
       }
-
-      const data = await response.json();
-      return data.choices[0].message.content;
+      
+      // Should never reach here, but TypeScript needs it
+      throw new Error(`${docName} generation failed unexpectedly`);
     }
 
     // Extract blueprint content
@@ -289,10 +310,10 @@ If FOUNDER INTELLIGENCE is provided above, use it to:
 
     // Generate all 4 documents in parallel
     const [northStarSpec, architectureContract, verticalSlicePlan, launchPlaybook] = await Promise.all([
-      callAI(northStarPrompt),
-      callAI(contractPrompt),
-      callAI(slicePrompt),
-      callAI(launchPrompt),
+      callAI(northStarPrompt, 'North Star Spec'),
+      callAI(contractPrompt, 'Architecture Contract'),
+      callAI(slicePrompt, 'Thin Vertical Slice Plan'),
+      callAI(launchPrompt, 'Launch Playbook'),
     ]);
 
     console.log('All documents generated, saving to database...');
