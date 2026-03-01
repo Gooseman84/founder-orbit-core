@@ -20,6 +20,7 @@ import { useBlueprint } from "@/hooks/useBlueprint";
 import { downloadAsMarkdown } from "@/lib/documentExport";
 import { useToast } from "@/hooks/use-toast";
 import { TechStackDialog } from "./TechStackDialog";
+import { SpecValidationSection } from "./SpecValidationSection";
 import type { TechStack } from "@/types/implementationKit";
 
 interface ImplementationKitCardProps {
@@ -313,6 +314,9 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
               isDownloading={downloadingDoc === (kit as any).launch_playbook_id}
             />
           </div>
+          {kit.spec_validation && (
+            <SpecValidationSection validation={kit.spec_validation} />
+          )}
         </CardContent>
       </Card>
 

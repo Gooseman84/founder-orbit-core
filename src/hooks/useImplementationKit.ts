@@ -34,7 +34,7 @@ export function useImplementationKitByBlueprint(blueprintId: string | undefined)
         .maybeSingle();
       
       if (error) throw error;
-      return data as ImplementationKit | null;
+      return data as unknown as ImplementationKit | null;
     },
     enabled: !!blueprintId,
   });
@@ -54,7 +54,7 @@ export function useImplementationKitsByVenture(ventureId: string | undefined) {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as ImplementationKit[];
+      return data as unknown as ImplementationKit[];
     },
     enabled: !!ventureId,
   });
@@ -74,7 +74,7 @@ export function useImplementationKit(kitId: string | undefined) {
         .single();
       
       if (error) throw error;
-      return data as ImplementationKit;
+      return data as unknown as ImplementationKit;
     },
     enabled: !!kitId,
   });
