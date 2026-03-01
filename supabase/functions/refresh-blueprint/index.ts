@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
+import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -563,9 +564,12 @@ Return ONLY the JSON with ai_summary and ai_recommendations.`;
     });
     console.log("[refresh-blueprint] frameworks fetched", { coreLength: coreFrameworks.length });
 
-    const resolvedPrompt = SYSTEM_PROMPT.replace(
-      '{{FRAMEWORKS_INJECTION_POINT}}',
-      coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''
+    const resolvedPrompt = injectCognitiveMode(
+      SYSTEM_PROMPT.replace(
+        '{{FRAMEWORKS_INJECTION_POINT}}',
+        coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''
+      ),
+      'summarize'
     );
 
     console.log("[refresh-blueprint] Calling AI with enriched context");

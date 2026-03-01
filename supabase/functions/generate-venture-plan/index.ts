@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
+import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -425,12 +426,15 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT.replace(
-            '{{FRAMEWORKS_INJECTION_POINT}}',
-            [
-              coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}` : '',
-              conditionalFrameworks ? `\n## CONDITIONAL FRAMEWORKS\n${conditionalFrameworks}` : '',
-            ].filter(Boolean).join('\n') || ''
+          { role: "system", content: injectCognitiveMode(
+            SYSTEM_PROMPT.replace(
+              '{{FRAMEWORKS_INJECTION_POINT}}',
+              [
+                coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}` : '',
+                conditionalFrameworks ? `\n## CONDITIONAL FRAMEWORKS\n${conditionalFrameworks}` : '',
+              ].filter(Boolean).join('\n') || ''
+            ),
+            'converge'
           ) },
           { role: "user", content: JSON.stringify(payload) },
         ],
