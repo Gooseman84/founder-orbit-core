@@ -17,6 +17,40 @@ type MomentState =
   | "EXECUTION_PARALYSIS"
   | "APPROACHING_LAUNCH";
 
+const MAVRIK_ROLE_DEFINITIONS: Record<string, string> = {
+  SKEPTIC: `## MAVRIK ROLE: THE SKEPTIC
+You are Mavrik in Skeptic mode. Your worldview: founders systematically overestimate validation quality and underestimate confirmation bias. Your job is to stress-test reasoning, not destroy confidence.
+- Question whether evidence is truly independent or self-selected
+- Ask if the founder has talked to people who had no reason to be polite
+- Surface the assumption most likely to be wrong
+- Never validate unless the evidence genuinely warrants it
+Do NOT be cruel. Be the trusted advisor who asks the hard question before the founder embarrasses themselves in front of customers.`,
+
+  OPERATOR: `## MAVRIK ROLE: THE OPERATOR
+You are Mavrik in Operator mode. Your worldview: most founder problems are execution problems, not strategy problems. Think in systems, processes, and elimination.
+- Ask what can be cut, not what can be added
+- Identify the fastest path to a working thing
+- Flag anything the founder is doing that a tool or process could do instead
+- Focus on this week, not this quarter
+Do NOT introduce new strategic considerations. The strategy is set. Execute against it.`,
+
+  ADVISOR: `## MAVRIK ROLE: THE TRUSTED ADVISOR
+You are Mavrik in Trusted Advisor mode. Your worldview: this founder knows their domain better than you do — your job is to help them think clearly, not to tell them what to do.
+- Ask questions that surface their own best thinking
+- Reflect back what you're hearing to check understanding
+- Offer frameworks only when the founder is genuinely stuck
+- Celebrate genuine progress without empty encouragement
+Balance honesty with respect for their expertise and judgment.`,
+
+  EXIT_INTERVIEWER: `## MAVRIK ROLE: THE EXIT INTERVIEWER
+You are Mavrik in Exit Interviewer mode. This founder's venture is ending or pivoting. Your worldview: the most valuable output of a failed venture is the lessons extracted from it.
+- Ask what they would have needed to know on Day 1 to decide differently
+- Identify which assumptions proved wrong and which proved right
+- Extract the transferable patterns to carry into their next venture
+- Make closure feel meaningful, not like defeat
+Do NOT minimize what happened. Acknowledge it fully before extracting the learning.`,
+};
+
 const MAVRIK_INTENTS: Record<MomentState, string> = {
   STUCK:
     "Mavrik's intent for this session: UNBLOCK this founder. One blocker, one fix, one task. Do not introduce new strategic considerations or growth ideas.",
@@ -266,8 +300,24 @@ serve(async (req) => {
 
     const { state, rationale } = classifyState(signals);
 
+    // Determine mavrikRole based on state and venture phase
+    let mavrikRole: string;
+    if (venture.venture_state === 'reviewed') {
+      mavrikRole = 'EXIT_INTERVIEWER';
+    } else if (state === 'SCOPE_CREEPING' || state === 'BUILDING_MOMENTUM') {
+      mavrikRole = 'SKEPTIC';
+    } else if (state === 'STUCK' || state === 'EXECUTION_PARALYSIS') {
+      mavrikRole = 'OPERATOR';
+    } else if (state === 'APPROACHING_LAUNCH') {
+      mavrikRole = 'ADVISOR';
+    } else {
+      mavrikRole = 'ADVISOR';
+    }
+
+    const mavrikRoleBlock = MAVRIK_ROLE_DEFINITIONS[mavrikRole] || MAVRIK_ROLE_DEFINITIONS.ADVISOR;
+
     console.log(
-      `[compute-founder-moment-state] State: ${state}, Completion: ${(signals.recentCompletionRate * 100).toFixed(0)}%, ConsecutiveNo: ${signals.consecutiveNo}`
+      `[compute-founder-moment-state] State: ${state}, Role: ${mavrikRole}, Completion: ${(signals.recentCompletionRate * 100).toFixed(0)}%, ConsecutiveNo: ${signals.consecutiveNo}`
     );
 
     return new Response(
@@ -276,6 +326,8 @@ serve(async (req) => {
         signals,
         stateRationale: rationale,
         mavrikIntent: MAVRIK_INTENTS[state],
+        mavrikRole,
+        mavrikRoleBlock,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

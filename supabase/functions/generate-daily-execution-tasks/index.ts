@@ -118,6 +118,7 @@ serve(async (req) => {
     // ── Compute Founder Moment State ──────────────────────────
     let founderMomentState = "BUILDING_MOMENTUM";
     let mavrikIntent = "";
+    let mavrikRoleBlock = "";
     try {
       const momentResponse = await fetch(
         `${SUPABASE_URL}/functions/v1/compute-founder-moment-state`,
@@ -134,7 +135,8 @@ serve(async (req) => {
         const momentData = await momentResponse.json();
         founderMomentState = momentData.state || "BUILDING_MOMENTUM";
         mavrikIntent = momentData.mavrikIntent || "";
-        console.log(`[generate-daily-execution-tasks] MomentState: ${founderMomentState}`);
+        mavrikRoleBlock = momentData.mavrikRoleBlock || "";
+        console.log(`[generate-daily-execution-tasks] MomentState: ${founderMomentState}, Role: ${momentData.mavrikRole || "unknown"}`);
       } else {
         console.warn(`[generate-daily-execution-tasks] Moment state call failed: ${momentResponse.status}`);
       }
@@ -304,7 +306,7 @@ Return a JSON array only. No preamble. No markdown fences.
   }
 ]
 
-${mavrikIntent ? `## MAVRIK INTENT\n${mavrikIntent}\n\nFounder Moment State: ${founderMomentState}\n` : ""}
+${mavrikRoleBlock ? `${mavrikRoleBlock}\n\n` : ""}${mavrikIntent ? `## MAVRIK INTENT\n${mavrikIntent}\n\nFounder Moment State: ${founderMomentState}\n` : ""}
 ## OUTPUT CONTRACT
 
 Each task object must contain:

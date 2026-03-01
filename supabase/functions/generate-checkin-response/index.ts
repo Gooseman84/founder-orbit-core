@@ -82,6 +82,7 @@ serve(async (req) => {
     // ── Compute Founder Moment State ──────────────────────────
     let founderMomentState = "BUILDING_MOMENTUM";
     let mavrikIntent = "";
+    let mavrikRoleBlock = "";
     try {
       const momentResponse = await fetch(
         `${SUPABASE_URL}/functions/v1/compute-founder-moment-state`,
@@ -98,7 +99,8 @@ serve(async (req) => {
         const momentData = await momentResponse.json();
         founderMomentState = momentData.state || "BUILDING_MOMENTUM";
         mavrikIntent = momentData.mavrikIntent || "";
-        console.log(`[generate-checkin-response] MomentState: ${founderMomentState}`);
+        mavrikRoleBlock = momentData.mavrikRoleBlock || "";
+        console.log(`[generate-checkin-response] MomentState: ${founderMomentState}, Role: ${momentData.mavrikRole || "unknown"}`);
       } else {
         console.warn(`[generate-checkin-response] Moment state call failed: ${momentResponse.status}`);
       }
@@ -109,7 +111,7 @@ serve(async (req) => {
     // ── Build Prompt ──────────────────────────────────────────
     const systemPrompt = `You are Mavrik, an AI co-founder and execution coach. You just received a founder's daily check-in.
 
-${mavrikIntent ? `## MAVRIK INTENT\n${mavrikIntent}\n\nFounder Moment State: ${founderMomentState}\n` : ""}
+${mavrikRoleBlock ? `${mavrikRoleBlock}\n\n` : ""}${mavrikIntent ? `## MAVRIK INTENT\n${mavrikIntent}\n\nFounder Moment State: ${founderMomentState}\n` : ""}
 Your job is to write a SHORT, PERSONAL, DIRECT response — like a co-founder who genuinely cares about their success.
 
 TONE RULES:
