@@ -50,6 +50,9 @@ export function SpecValidationSection({ validation }: SpecValidationSectionProps
   const approvedForExecution = validation?.approvedForExecution ?? false;
   const flags = validation?.flags ?? [];
 
+  // Don't render anything if we have no useful data
+  if (flags.length === 0 && !approvedForExecution) return null;
+
   // Approved with no flags — simple green badge, nothing expandable
   if (approvedForExecution && flags.length === 0) {
     return (
@@ -70,12 +73,12 @@ export function SpecValidationSection({ validation }: SpecValidationSectionProps
             <CheckCircle className="h-3 w-3" />
             Spec Approved
           </Badge>
-        ) : (
+        ) : flags.length > 0 ? (
           <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30 gap-1">
             <AlertTriangle className="h-3 w-3" />
             Review Ambiguities
           </Badge>
-        )}
+        ) : null}
       </div>
 
       {flags.length > 0 ? (
