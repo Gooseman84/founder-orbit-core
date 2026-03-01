@@ -1021,6 +1021,7 @@ export type Database = {
           implementation_folder_id: string | null
           launch_playbook_id: string | null
           north_star_spec_id: string | null
+          spec_validation: Json | null
           status: string | null
           updated_at: string | null
           user_id: string
@@ -1040,6 +1041,7 @@ export type Database = {
           implementation_folder_id?: string | null
           launch_playbook_id?: string | null
           north_star_spec_id?: string | null
+          spec_validation?: Json | null
           status?: string | null
           updated_at?: string | null
           user_id: string
@@ -1059,6 +1061,7 @@ export type Database = {
           implementation_folder_id?: string | null
           launch_playbook_id?: string | null
           north_star_spec_id?: string | null
+          spec_validation?: Json | null
           status?: string | null
           updated_at?: string | null
           user_id?: string

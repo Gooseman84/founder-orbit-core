@@ -1,0 +1,1 @@
+ALTER TABLE implementation_kits ADD COLUMN IF NOT EXISTS spec_validation JSONB;

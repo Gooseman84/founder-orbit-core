@@ -337,9 +337,24 @@ If FOUNDER INTELLIGENCE is provided above, use it to:
       }).select().single(),
     ]);
 
-    console.log('Documents saved, updating kit status...');
+    console.log('Documents saved, running spec validation...');
 
-    // Update kit with document IDs and mark complete
+    // Run spec validation pass
+    let specValidation: any = { overallQuality: 'medium', flags: [], approvedForExecution: true };
+    try {
+      specValidation = await runSpecValidation(
+        northStarSpec,
+        architectureContract,
+        verticalSlicePlan,
+        launchPlaybook,
+        lovableApiKey
+      );
+      console.log('Spec validation complete:', specValidation.overallQuality, 'flags:', specValidation.flags?.length);
+    } catch (validationError) {
+      console.error('Spec validation failed (non-blocking):', validationError);
+    }
+
+    // Update kit with document IDs, validation result, and mark complete
     await supabase
       .from('implementation_kits')
       .update({
@@ -348,6 +363,7 @@ If FOUNDER INTELLIGENCE is provided above, use it to:
         vertical_slice_plan_id: sliceResult.data?.id,
         launch_playbook_id: launchResult.data?.id,
         status: 'complete',
+        spec_validation: specValidation,
       })
       .eq('id', kitId);
 
@@ -364,6 +380,100 @@ If FOUNDER INTELLIGENCE is provided above, use it to:
         error_message: error instanceof Error ? error.message : 'Unknown error' 
       })
       .eq('id', kitId);
+  }
+}
+
+// Spec Validator System Prompt
+const SPEC_VALIDATOR_SYSTEM_PROMPT = `You are a specification quality reviewer. You receive four founder documents and identify ambiguity that would cause an AI coding agent (like Lovable.dev) to make incorrect assumptions or build the wrong thing.
+
+## OUTPUT CONTRACT
+Return ONLY valid JSON. No prose, no markdown fences.
+
+{
+  "overallQuality": "high" | "medium" | "low",
+  "flags": [
+    {
+      "document": "north_star_spec" | "architecture_contract" | "thin_vertical_slice" | "launch_playbook",
+      "severity": "blocking" | "warning" | "suggestion",
+      "ambiguousText": "exact phrase from the document that is ambiguous",
+      "issue": "one sentence explaining why this phrase causes problems for an AI builder",
+      "resolutionQuestion": "the exact question to ask the founder to resolve this"
+    }
+  ],
+  "approvedForExecution": boolean
+}
+
+## Rules
+- Maximum 8 flags total. Prioritize blocking over warning over suggestion.
+- approvedForExecution is true only if there are zero blocking flags.
+- Do NOT flag standard technical terminology with industry-standard meanings.
+- Do NOT flag founder context or narrative — only flag spec language an AI builder would misinterpret.
+
+## Always Flag These Words/Phrases
+"soon", "often", "reasonable", "appropriate", "basic", "simple", "standard", 
+"good enough", "as needed", "when ready", "later", "ideally", "if possible", 
+"fast", "responsive" (without specific breakpoints), "modern", "clean"
+
+## Always Flag These Patterns
+- Feature scope described without acceptance criteria
+- Timeline references without specific dates or day counts
+- "The system should handle X" without defining X's boundaries
+- Architecture decisions described as "optional" or "depending on needs"
+- Any feature in scope without a definition of done`;
+
+async function runSpecValidation(
+  northStarSpec: string,
+  architectureContract: string,
+  verticalSlicePlan: string,
+  launchPlaybook: string,
+  lovableApiKey: string
+): Promise<{
+  overallQuality: string;
+  flags: Array<{
+    document: string;
+    severity: string;
+    ambiguousText: string;
+    issue: string;
+    resolutionQuestion: string;
+  }>;
+  approvedForExecution: boolean;
+}> {
+  try {
+    const userMessage = `Review these four documents for specification quality:\n\nNORTH STAR SPEC:\n${northStarSpec}\n\nARCHITECTURE CONTRACT:\n${architectureContract}\n\nTHIN VERTICAL SLICE PLAN:\n${verticalSlicePlan}\n\nLAUNCH PLAYBOOK:\n${launchPlaybook}`;
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': \`Bearer \${lovableApiKey}\`,
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-5-mini',
+        max_completion_tokens: 2000,
+        messages: [
+          { role: 'system', content: SPEC_VALIDATOR_SYSTEM_PROMPT },
+          { role: 'user', content: userMessage },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(\`Spec validation AI error: \${errorText}\`);
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || '{}';
+    const clean = text.replace(/\`\`\`json|\`\`\`/g, '').trim();
+    return JSON.parse(clean);
+  } catch (error) {
+    console.error('Spec validation error:', error);
+    // Never block kit completion due to validation failure
+    return {
+      overallQuality: 'medium',
+      flags: [],
+      approvedForExecution: true,
+    };
   }
 }
 

@@ -32,6 +32,21 @@ export interface ImplementationKit {
   implementation_folder_id: string | null;
   created_at: string;
   updated_at: string;
+  spec_validation: SpecValidationResult | null;
+}
+
+export interface SpecValidationFlag {
+  document: string;
+  severity: 'blocking' | 'warning' | 'suggestion';
+  ambiguousText: string;
+  issue: string;
+  resolutionQuestion: string;
+}
+
+export interface SpecValidationResult {
+  overallQuality: 'high' | 'medium' | 'low';
+  flags: SpecValidationFlag[];
+  approvedForExecution: boolean;
 }
 
 // Feature PRD types
