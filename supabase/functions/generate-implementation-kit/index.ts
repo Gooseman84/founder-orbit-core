@@ -466,7 +466,7 @@ async function runSpecValidation(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': \`Bearer \${lovableApiKey}\`,
+        'Authorization': `Bearer ${lovableApiKey}`,
       },
       body: JSON.stringify({
         model: 'openai/gpt-5-mini',
