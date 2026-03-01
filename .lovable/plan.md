@@ -1,47 +1,54 @@
 
 
-## Diagnosis: Why Your Imported Idea Disappears from the Library
+## Audit Results and Fix Plan
 
-After investigating the code, the root cause is a **stale cache problem combined with a navigation race condition**:
+### What Went Wrong
 
-1. When you import an idea, `handleImportSuccess` invalidates the ideas cache AND auto-navigates you to the idea detail page 500ms later
-2. The navigation unmounts the Ideas page before the cache refetch completes
-3. When you vet the idea on the IdeaDetail page, the vetting mutation (`analyzeIdea`) does NOT invalidate the `["ideas", userId]` query -- it only invalidates `["idea-analysis", ideaId]`
-4. When you navigate back to Ideas, React Query may serve the old cached list that was fetched before the import completed
+**Issue 1: Architecture Contract and Vertical Slice Plan saved with empty content**
+- The database has all 4 document records, but Architecture Contract and Vertical Slice Plan have `content_length: 0`.
+- The `callAI` function in the edge function uses `max_completion_tokens: 4096` and does not validate that the AI response contains actual content. When the model returns an empty or malformed response, it gets saved as an empty string.
 
-Additionally, there's a secondary issue: the `financial_viability_scores` table is **missing an UPDATE RLS policy**, which could cause silent errors during FVS recalculation and potentially block parts of the detail page flow.
+**Issue 2: Launch Playbook not shown in Workspace sidebar**
+- The `ImplementationKitQuickAccess` component in `WorkspaceSidebar.tsx` hardcodes only 3 documents (North Star Spec, Architecture Contract, Vertical Slice Plan). The Launch Playbook is excluded from the list.
 
-## Plan
+---
 
-### 1. Fix cache invalidation after vetting (useIdeaDetail.tsx)
+### Fix Plan
 
-Add `queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] })` to the `analyzeIdea` mutation's `onSuccess` handler. This ensures the library list refreshes after vetting.
+#### 1. Harden the `callAI` helper (edge function)
 
-### 2. Fix navigation race condition in handleImportSuccess (Ideas.tsx)
+In `supabase/functions/generate-implementation-kit/index.ts`:
 
-Instead of blindly navigating after 500ms, wait for the cache invalidation to settle before navigating. Use `await queryClient.invalidateQueries(...)` and then navigate.
+- Increase `max_completion_tokens` from `4096` to `8192` to accommodate the Architecture Contract and Vertical Slice Plan prompts, which are significantly longer than the North Star Spec.
+- Add content validation after parsing the AI response: if the returned content is empty or under a minimum threshold (e.g., 100 characters), throw an error with a descriptive message so the catch block marks the kit as `error` instead of saving empty documents.
+- Add a retry mechanism (1 retry on empty response) before failing.
 
-### 3. Add missing UPDATE RLS policy on financial_viability_scores
+#### 2. Add Launch Playbook to Workspace sidebar
 
-Create a database migration to add an UPDATE policy so the `update-fvs-from-validation` flow works correctly:
-```sql
-CREATE POLICY "Users can update their own financial viability scores"
-  ON public.financial_viability_scores FOR UPDATE
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+In `src/components/workspace/WorkspaceSidebar.tsx`, update the `ImplementationKitQuickAccess` component's document array (around line 106) to include the Launch Playbook:
+
+```typescript
+const documents = [
+  { id: kit.north_star_spec_id, name: "North Star Spec" },
+  { id: kit.architecture_contract_id, name: "Architecture Contract" },
+  { id: kit.vertical_slice_plan_id, name: "Vertical Slice Plan" },
+  { id: (kit as any).launch_playbook_id, name: "Launch Playbook" },
+].filter(doc => doc.id);
 ```
 
-### 4. Force refetch on Ideas page mount
+The `(kit as any)` cast is needed because the auto-generated types may not include `launch_playbook_id` yet, matching the pattern already used in `ImplementationKitCard.tsx`.
 
-Add a `refetchOnMount: "always"` option to the `useIdeas` query so that every time the user navigates to the Ideas page, it fetches fresh data rather than relying on potentially stale cache.
+#### 3. Fix the ImplementationKit TypeScript type alignment
+
+In `src/types/implementationKit.ts`, confirm the `launch_playbook_id` field is present in the `ImplementationKit` interface (it already is). The `(kit as any)` cast in both the sidebar and card components can remain until the auto-generated Supabase types catch up.
 
 ---
 
 ### Technical Details
 
 **Files to modify:**
-- `src/hooks/useIdeaDetail.tsx` -- Add ideas list cache invalidation to `analyzeIdea.onSuccess`
-- `src/hooks/useIdeas.tsx` -- Add `refetchOnMount: "always"` to the query options
-- `src/pages/Ideas.tsx` -- Fix `handleImportSuccess` to await invalidation before navigating
-- Database migration -- Add UPDATE policy on `financial_viability_scores`
+- `supabase/functions/generate-implementation-kit/index.ts` — harden `callAI` with higher token limit, content validation, and retry
+- `src/components/workspace/WorkspaceSidebar.tsx` — add Launch Playbook to the Implementation Kit quick access list
+
+**No database changes needed.** The `launch_playbook_id` column already exists on the `implementation_kits` table and is populated correctly.
 
