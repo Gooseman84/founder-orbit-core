@@ -458,6 +458,27 @@ These are immutable principles that guide all product decisions:
 
 ---
 
+## MACHINE CONTEXT BLOCK
+At the very top of the document, before any markdown content, output this JSON block:
+
+\`\`\`machine_context
+{
+  "product_name": "string — exact product name",
+  "target_segment": "string — one sentence describing the primary user",
+  "core_problem": "string — one sentence, the problem being solved",
+  "value_proposition": "string — one sentence, the specific value delivered",
+  "v1_features_in_scope": ["string", "string", "string"],
+  "v1_features_out_of_scope": ["string", "string"],
+  "pricing_tiers": [
+    { "name": "string", "price_monthly": number, "key_limits": ["string"] }
+  ],
+  "product_rules": ["string — immutable principle 1", "string — immutable principle 2"],
+  "success_metric_at_30_days": "string — one specific, measurable outcome"
+}
+\`\`\`
+
+Then output the full North Star Spec markdown document below it.
+
 Make it specific, actionable, and based on the actual blueprint details. Use markdown formatting. Keep it to 2 pages maximum when printed.`;
 }
 
@@ -675,7 +696,31 @@ Before every feature:
 
 ---
 
-Make it tech-stack-specific and actionable for ${techStack.frontend} + ${techStack.backend}.`;
+## MACHINE CONTEXT BLOCK
+At the very top of the document, before any markdown content, output this JSON block:
+
+\`\`\`machine_context
+{
+  "tech_stack": {
+    "frontend": "string",
+    "backend": "string",
+    "ai_tool": "string",
+    "deployment": "string"
+  },
+  "data_models": [
+    { "table": "string", "key_columns": ["string"], "rls_required": boolean }
+  ],
+  "edge_functions": [
+    { "name": "string", "method": "POST|GET", "auth_required": boolean, "inputs": {}, "outputs": {} }
+  ],
+  "auth_pattern": "string — describe the auth approach in one sentence",
+  "must_never_do": ["string — hard constraint 1", "string — hard constraint 2"]
+}
+\`\`\`
+
+Then output the full Architecture Contract markdown document below it.
+
+Make it tech-stack-specific and actionable for \${techStack.frontend} + \${techStack.backend}.`;
 }
 
 function buildSlicePlanPrompt(title: string, content: string, techStack: any, founderIntel: string): string {
@@ -944,7 +989,30 @@ Once this is done, you can:
 
 But ship THIS first. Everything else can wait.
 
-Make it specific and actionable for ${techStack.frontend} + ${techStack.backend} + ${techStack.deployment}.`;
+## MACHINE CONTEXT BLOCK
+At the very top of the document, before any markdown content, output this JSON block:
+
+\`\`\`machine_context
+{
+  "total_phases": number,
+  "phases": [
+    {
+      "phase_number": number,
+      "name": "string",
+      "deliverables": ["string"],
+      "estimated_hours": number,
+      "test_criteria": ["string — binary pass/fail"],
+      "lovable_prompt_summary": "string — one sentence describing what the Lovable prompt for this phase accomplishes"
+    }
+  ],
+  "critical_path_order": ["string — phase name in execution order"],
+  "first_working_milestone": "string — the earliest moment something functional exists"
+}
+\`\`\`
+
+Then output the full Thin Vertical Slice Plan markdown document below it.
+
+Make it specific and actionable for \${techStack.frontend} + \${techStack.backend} + \${techStack.deployment}.`;
 }
 
 function buildLaunchPlaybookPrompt(
@@ -1142,6 +1210,24 @@ Before you go live, verify:
 - [ ] Customer support channel exists (even if it's just an email)
 
 ---
+
+## MACHINE CONTEXT BLOCK
+At the very top of the document, before any markdown content, output this JSON block:
+
+\`\`\`machine_context
+{
+  "ideal_first_customer_profile": "string — one sentence describing the exact person to target first",
+  "acquisition_channels": [
+    { "channel": "string", "priority": "high|medium|low", "first_action": "string — the specific first step" }
+  ],
+  "week_one_actions": ["string", "string", "string"],
+  "validation_signal": "string — the one signal that confirms you have product-market fit",
+  "first_10_customers_strategy": "string — one paragraph describing the exact approach",
+  "red_flags_to_watch": ["string — warning sign 1", "string — warning sign 2"]
+}
+\`\`\`
+
+Then output the full Launch Playbook markdown document below it.
 
 Make every section specific to this business, this target customer, and this founder's situation. Use the FOUNDER INTELLIGENCE to personalize the customer acquisition tactics. Reference the specific industry, the specific customer relationships, and the specific expertise. Do NOT give generic advice.
 
