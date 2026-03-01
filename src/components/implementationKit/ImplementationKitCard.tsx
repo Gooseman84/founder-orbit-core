@@ -314,9 +314,12 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
               isDownloading={downloadingDoc === (kit as any).launch_playbook_id}
             />
           </div>
-          {kit.spec_validation && (
-            <SpecValidationSection validation={kit.spec_validation} />
-          )}
+          {(() => {
+            console.log('spec_validation:', kit.spec_validation);
+            return kit.spec_validation ? (
+              <SpecValidationSection validation={kit.spec_validation} />
+            ) : null;
+          })()}
         </CardContent>
       </Card>
 
