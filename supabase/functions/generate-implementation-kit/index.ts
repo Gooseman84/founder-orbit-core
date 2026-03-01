@@ -440,7 +440,9 @@ Return ONLY valid JSON. No prose, no markdown fences.
 - Timeline references without specific dates or day counts
 - "The system should handle X" without defining X's boundaries
 - Architecture decisions described as "optional" or "depending on needs"
-- Any feature in scope without a definition of done`;
+- Any feature in scope without a definition of done
+
+CRITICAL: approvedForExecution MUST be false if and only if flags array contains at least one blocking or warning flag. It is a logical contradiction to return approvedForExecution: false with an empty flags array. If you find no issues, return approvedForExecution: true and flags: [].`;
 
 async function runSpecValidation(
   northStarSpec: string,
@@ -485,8 +487,25 @@ async function runSpecValidation(
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content || '{}';
+    console.log('Spec validator raw response:', text);
     const clean = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(clean);
+    console.log('Spec validator cleaned:', clean);
+    const parsed = JSON.parse(clean);
+
+    // Validate the parsed object has required fields
+    if (
+      typeof parsed.approvedForExecution !== 'boolean' ||
+      !Array.isArray(parsed.flags)
+    ) {
+      console.error('Spec validator returned unexpected shape:', parsed);
+      return {
+        overallQuality: 'medium',
+        flags: [],
+        approvedForExecution: true,
+      };
+    }
+
+    return parsed;
   } catch (error) {
     console.error('Spec validation error:', error);
     // Never block kit completion due to validation failure
