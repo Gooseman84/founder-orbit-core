@@ -1,8 +1,5 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -11,7 +8,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Target,
   CheckCircle2,
-  Circle,
   FileText,
   ClipboardCheck,
   Flame,
@@ -59,7 +55,6 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
   const totalTasks = dailyTasks.length;
   const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Workspace doc count
   const { data: docCount } = useQuery({
     queryKey: ["workspace-doc-count", venture.id, user?.id],
     queryFn: async () => {
@@ -75,7 +70,6 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
     enabled: !!user,
   });
 
-  // Blueprint last updated
   const { data: blueprintDate } = useQuery({
     queryKey: ["blueprint-date", venture.idea_id, user?.id],
     queryFn: async () => {
@@ -94,7 +88,6 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
     enabled: !!user && !!venture.idea_id,
   });
 
-  // Validation status for Blueprint tile
   const { data: validationSummary } = useQuery({
     queryKey: ["validation-status-tile", venture.id, user?.id],
     queryFn: async () => {
@@ -132,19 +125,30 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
 
   const confidenceLabel = useMemo(() => {
     const shift = validationSummary?.confidence_shift;
-    if (!shift || shift === "assumption_based") return { text: "Assumption-Based", cls: "bg-muted text-muted-foreground" };
-    if (shift === "early_signal") return { text: "Early Signal", cls: "bg-amber-500/15 text-amber-500" };
-    if (shift === "partially_validated") return { text: "Partially Validated", cls: "bg-blue-500/15 text-blue-400" };
-    if (shift === "evidence_backed") return { text: "Evidence-Backed", cls: "bg-emerald-500/15 text-emerald-400" };
-    return { text: "Not Started", cls: "bg-muted text-muted-foreground" };
+    if (!shift || shift === "assumption_based") return { text: "Assumption-Based", cls: "text-muted-foreground" };
+    if (shift === "early_signal") return { text: "Early Signal", cls: "text-primary" };
+    if (shift === "partially_validated") return { text: "Partially Validated", cls: "text-accent" };
+    if (shift === "evidence_backed") return { text: "Evidence-Backed", cls: "text-success" };
+    return { text: "Not Started", cls: "text-muted-foreground" };
   }, [validationSummary?.confidence_shift]);
 
   return (
-    <div className="space-y-5">
-      {/* 1. VENTURE DNA — motivational hero card */}
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <div className="eyebrow mb-3">VENTURE COMMAND CENTER</div>
+        <h1 className="font-display text-[2.5rem] font-bold leading-tight text-foreground">
+          <em className="text-primary not-italic" style={{ fontStyle: "italic" }}>{venture.name}</em>
+        </h1>
+        <p className="mt-2 text-[0.95rem] font-light text-muted-foreground">
+          Your execution dashboard. Stay focused, ship daily.
+        </p>
+      </div>
+
+      {/* Venture DNA */}
       <VentureDNACard venture={venture} commitmentProgress={commitmentProgress} />
 
-      {/* 2. TODAY'S FOCUS — inline check-in */}
+      {/* Today's Focus */}
       <TodaysFocus
         venture={venture}
         hasCheckedInToday={hasCheckedInToday}
@@ -152,7 +156,7 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
         submitCheckin={submitCheckin}
       />
 
-      {/* 3. TODAY'S TASKS — inline, checkable */}
+      {/* Today's Tasks */}
       <TodaysTasks
         tasks={dailyTasks}
         isLoading={isLoadingTasks}
@@ -167,11 +171,11 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
         onTaskAdded={refetchDailyExecution}
       />
 
-      {/* Venture Debugger trigger — subtle "break glass" link */}
-      <div className="border-t border-border/30 mt-2 pt-3 pb-1">
+      {/* Debugger trigger */}
+      <div className="border-t border-border mt-2 pt-3 pb-1">
         <button
           onClick={() => setDebuggerOpen(true)}
-          className="text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30 flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors"
+          className="text-sm text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center gap-1.5 px-2 py-1 transition-colors"
         >
           <AlertCircle className="h-3.5 w-3.5" />
           Something's not working →
@@ -187,61 +191,54 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
         onClose={() => setDebuggerOpen(false)}
       />
 
-      {/* 4. QUICK ACCESS cards */}
+      {/* Quick Access */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <Card
-          className="cursor-pointer hover:border-primary/40 transition-colors"
+        <div
+          className="card-gold-accent p-4 cursor-pointer flex flex-col items-center text-center gap-1.5 transition-colors hover:bg-secondary"
           onClick={() => navigate(`/blueprint?ventureId=${venture.id}`)}
         >
-          <CardContent className="py-4 flex flex-col items-center text-center gap-1.5">
-            <Map className="h-5 w-5 text-primary" />
-            <span className="text-xs font-medium">Blueprint</span>
-            {blueprintDate && (
-              <span className="text-[10px] text-muted-foreground">
-                {new Date(blueprintDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-              </span>
-            )}
-            {/* Validation status pill */}
-            {evidenceCount != null && evidenceCount > 0 ? (
-              <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-medium leading-tight", confidenceLabel.cls)}>
-                {confidenceLabel.text}
-              </span>
-            ) : (
-              <span className="text-[9px] text-muted-foreground/60">Validate →</span>
-            )}
-          </CardContent>
-        </Card>
-        <Card
-          className="cursor-pointer hover:border-primary/40 transition-colors"
+          <Map className="h-5 w-5 text-primary" />
+          <span className="label-mono">Blueprint</span>
+          {blueprintDate && (
+            <span className="text-[10px] text-muted-foreground">
+              {new Date(blueprintDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+            </span>
+          )}
+          {evidenceCount != null && evidenceCount > 0 ? (
+            <span className={cn("text-[9px] font-mono", confidenceLabel.cls)}>
+              {confidenceLabel.text}
+            </span>
+          ) : (
+            <span className="text-[9px] text-muted-foreground/60">Validate →</span>
+          )}
+        </div>
+        <div
+          className="card-gold-accent p-4 cursor-pointer flex flex-col items-center text-center gap-1.5 transition-colors hover:bg-secondary"
           onClick={() => navigate("/workspace")}
         >
-          <CardContent className="py-4 flex flex-col items-center text-center gap-1.5">
-            <FileText className="h-5 w-5 text-primary" />
-            <span className="text-xs font-medium">Workspace</span>
-            <span className="text-[10px] text-muted-foreground">
-              {docCount ?? 0} doc{(docCount ?? 0) !== 1 ? "s" : ""}
-            </span>
-          </CardContent>
-        </Card>
-        <Card
-          className="cursor-pointer hover:border-primary/40 transition-colors"
+          <FileText className="h-5 w-5 text-primary" />
+          <span className="label-mono">Workspace</span>
+          <span className="text-[10px] text-muted-foreground">
+            {docCount ?? 0} doc{(docCount ?? 0) !== 1 ? "s" : ""}
+          </span>
+        </div>
+        <div
+          className="card-gold-accent p-4 cursor-pointer flex flex-col items-center text-center gap-1.5 transition-colors hover:bg-secondary"
           onClick={() => navigate("/venture-review")}
         >
-          <CardContent className="py-4 flex flex-col items-center text-center gap-1.5">
-            <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
-            <span className="text-xs font-medium">Review</span>
-            <span className="text-[10px] text-muted-foreground">End / Pivot</span>
-          </CardContent>
-        </Card>
+          <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
+          <span className="label-mono">Review</span>
+          <span className="text-[10px] text-muted-foreground">End / Pivot</span>
+        </div>
       </div>
 
-      {/* 5. FOUNDER PATTERN ALERTS */}
+      {/* Founder Patterns */}
       <FounderPatternCard ventureId={venture.id} />
 
-      {/* 6. IMPLEMENTATION KIT */}
+      {/* Implementation Kit */}
       <ImplementationKitCard ventureId={venture.id} />
 
-      {/* 6. VENTURE CONTROLS */}
+      {/* Venture Controls */}
       <VentureControlPanel venture={venture} />
     </div>
   );
@@ -318,89 +315,86 @@ function TodaysFocus({
         console.warn("Mavrik response unavailable:", e);
       }
     }
-
     setSubmitting(false);
   };
 
   if (hasCheckedInToday && todayCheckin) {
     return (
       <div className="space-y-3">
-        <Card className="border-green-500/20 bg-green-500/5">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Flame className="h-4 w-4 text-orange-500" />
-              <span className="text-sm font-medium">Today's Vibe</span>
-              <CheckCircle2 className="h-3.5 w-3.5 text-green-500 ml-auto" />
-            </div>
-            <p className="text-sm text-muted-foreground line-clamp-2">{todayCheckin.reflection}</p>
-          </CardContent>
-        </Card>
+        <div className="card-gold-left p-4" style={{ borderLeftColor: "hsl(142 50% 42%)" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <Flame className="h-4 w-4 text-primary" />
+            <span className="label-mono">Today's Vibe</span>
+            <CheckCircle2 className="h-3.5 w-3.5 text-success ml-auto" />
+          </div>
+          <p className="text-sm text-muted-foreground line-clamp-2">{todayCheckin.reflection}</p>
+        </div>
 
         {mavrikResponse && (
-          <Card className="border-primary/20">
-            <CardContent className="py-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold text-primary">Mavrik</span>
+          <div className="card-gold-accent p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="label-mono-gold">Mavrik</span>
+            </div>
+            <p className="text-sm text-foreground">{mavrikResponse.message}</p>
+            {mavrikResponse.tomorrowFocus && (
+              <div className="pt-1">
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium">Tomorrow: </span>
+                  {mavrikResponse.tomorrowFocus}
+                </p>
               </div>
-              <p className="text-sm text-foreground">{mavrikResponse.message}</p>
-              {mavrikResponse.tomorrowFocus && (
-                <div className="pt-1">
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-medium">Tomorrow: </span>
-                    {mavrikResponse.tomorrowFocus}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            )}
+          </div>
         )}
       </div>
     );
   }
 
   return (
-    <Card>
-      <CardContent className="py-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Flame className="h-4 w-4 text-orange-500" />
-          <span className="text-sm font-medium">
-            How are you feeling about <span className="text-primary">{venture.name}</span> today?
-          </span>
+    <div className="card-gold-accent p-5 space-y-3">
+      <div className="flex items-center gap-2">
+        <Flame className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium">
+          How are you feeling about <span className="text-primary font-display italic">{venture.name}</span> today?
+        </span>
+      </div>
+      <div className="flex gap-2">
+        {moods.map(({ emoji, label }) => (
+          <button
+            key={label}
+            onClick={() => setSelectedMood(label)}
+            className={cn(
+              "flex-1 py-2.5 border text-sm font-medium transition-all",
+              selectedMood === label
+                ? "border-primary bg-primary/10 scale-[1.02]"
+                : "border-border hover:border-primary/40"
+            )}
+          >
+            <span className="text-lg">{emoji}</span>
+            <span className="block text-[11px] mt-0.5">{label}</span>
+          </button>
+        ))}
+      </div>
+      {selectedMood && (
+        <div className="space-y-2">
+          <Textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Anything on your mind? (optional)"
+            className="resize-none text-sm h-16"
+          />
+          <button
+            className="w-full py-3 px-6 bg-primary text-primary-foreground font-sans font-medium text-[0.85rem] tracking-[0.06em] uppercase flex items-center justify-center gap-2 disabled:opacity-50"
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            Check in
+          </button>
         </div>
-        <div className="flex gap-2">
-          {moods.map(({ emoji, label }) => (
-            <button
-              key={label}
-              onClick={() => setSelectedMood(label)}
-              className={cn(
-                "flex-1 py-2.5 rounded-lg border text-sm font-medium transition-all",
-                selectedMood === label
-                  ? "border-primary bg-primary/10 scale-[1.02]"
-                  : "border-border hover:border-primary/40"
-              )}
-            >
-              <span className="text-lg">{emoji}</span>
-              <span className="block text-[11px] mt-0.5">{label}</span>
-            </button>
-          ))}
-        </div>
-        {selectedMood && (
-          <div className="space-y-2">
-            <Textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Anything on your mind? (optional)"
-              className="resize-none text-sm h-16"
-            />
-            <Button size="sm" className="w-full" onClick={handleSubmit} disabled={submitting}>
-              {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
-              Check in
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }
 
@@ -434,7 +428,6 @@ function TodaysTasks({
   const [newTask, setNewTask] = useState("");
   const [adding, setAdding] = useState(false);
   const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
-
   const today = new Date().toISOString().split("T")[0];
 
   const handleAddTask = async () => {
@@ -449,8 +442,6 @@ function TodaysTasks({
         estimatedMinutes: 15,
         completed: false,
       };
-
-      // Fetch existing daily tasks row
       const { data: existing } = await supabase
         .from("venture_daily_tasks")
         .select("tasks")
@@ -458,11 +449,9 @@ function TodaysTasks({
         .eq("user_id", user.id)
         .eq("task_date", today)
         .maybeSingle();
-
       const currentTasks = (existing?.tasks as unknown as any[]) || [];
       const updatedTasks = [...currentTasks, manualTask];
       const tasksJson = JSON.parse(JSON.stringify(updatedTasks));
-
       if (existing) {
         await supabase
           .from("venture_daily_tasks")
@@ -473,14 +462,8 @@ function TodaysTasks({
       } else {
         await supabase
           .from("venture_daily_tasks")
-          .insert({
-            user_id: user.id,
-            venture_id: ventureId,
-            task_date: today,
-            tasks: tasksJson,
-          });
+          .insert({ user_id: user.id, venture_id: ventureId, task_date: today, tasks: tasksJson });
       }
-
       setNewTask("");
       onTaskAdded?.();
     } catch (err) {
@@ -493,7 +476,6 @@ function TodaysTasks({
   const handleWorkOnThis = async (task: { id: string; title: string; description: string; category: string; estimatedMinutes: number; completed: boolean }) => {
     if (!user || processingTaskId) return;
     setProcessingTaskId(task.id);
-
     try {
       const { data: existingDoc } = await supabase
         .from("workspace_documents")
@@ -502,9 +484,7 @@ function TodaysTasks({
         .eq("source_type", "execution_task")
         .eq("source_id", task.id)
         .maybeSingle();
-
       let targetDocId: string;
-
       if (existingDoc) {
         targetDocId = existingDoc.id;
       } else {
@@ -523,22 +503,12 @@ function TodaysTasks({
           })
           .select()
           .single();
-
         if (error) throw error;
         targetDocId = newDoc.id;
       }
-
       navigate(`/workspace/${targetDocId}`, {
         state: {
-          executionTask: {
-            id: task.id,
-            title: task.title,
-            description: task.description,
-            category: task.category,
-            estimatedMinutes: task.estimatedMinutes,
-            completed: task.completed,
-            ventureId,
-          },
+          executionTask: { id: task.id, title: task.title, description: task.description, category: task.category, estimatedMinutes: task.estimatedMinutes, completed: task.completed, ventureId },
         },
       });
     } catch (error) {
@@ -549,29 +519,27 @@ function TodaysTasks({
   };
 
   const categoryColors: Record<string, string> = {
-    validation: "text-blue-500",
-    build: "text-purple-500",
-    marketing: "text-green-500",
-    ops: "text-orange-500",
+    validation: "text-accent",
+    build: "text-primary",
+    marketing: "text-success",
+    ops: "text-muted-foreground",
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <div className="card-gold-accent">
+      <div className="p-5 pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-primary" />
-            Today's Tasks
-          </CardTitle>
+            <span className="label-mono-gold">Today's Tasks</span>
+          </div>
           {totalTasks > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {completedTasks}/{totalTasks}
-            </span>
+            <span className="label-mono">{completedTasks}/{totalTasks}</span>
           )}
         </div>
-        {totalTasks > 0 && <Progress value={taskProgress} className="h-1.5 mt-2" />}
-      </CardHeader>
-      <CardContent className="space-y-1">
+        {totalTasks > 0 && <Progress value={taskProgress} className="h-1.5 mt-3" />}
+      </div>
+      <div className="px-5 pb-5 space-y-1">
         {isLoading ? (
           <div className="space-y-2">
             <Skeleton className="h-8 w-full" />
@@ -580,14 +548,14 @@ function TodaysTasks({
         ) : totalTasks === 0 ? (
           <div className="text-center py-4">
             <p className="text-sm text-muted-foreground mb-3">No tasks yet for today</p>
-            <Button size="sm" onClick={onGenerate} disabled={isGenerating} className="gap-1.5">
-              {isGenerating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5" />
-              )}
+            <button
+              onClick={onGenerate}
+              disabled={isGenerating}
+              className="py-3 px-6 bg-primary text-primary-foreground font-sans font-medium text-[0.85rem] tracking-[0.06em] uppercase inline-flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               Generate Tasks
-            </Button>
+            </button>
           </div>
         ) : (
           <>
@@ -595,7 +563,7 @@ function TodaysTasks({
               <div
                 key={task.id}
                 className={cn(
-                  "flex items-start gap-2.5 py-2 px-2 rounded-md hover:bg-secondary/50 transition-colors",
+                  "data-row !px-0 !py-2 gap-2.5",
                   task.completed && "opacity-50"
                 )}
               >
@@ -605,34 +573,27 @@ function TodaysTasks({
                   className="mt-0.5"
                 />
                 <div className="flex-1 min-w-0">
-                  <span
-                    className={cn(
-                      "text-sm block",
-                      task.completed && "line-through text-muted-foreground"
-                    )}
-                  >
+                  <span className={cn("text-sm block", task.completed && "line-through text-muted-foreground")}>
                     {task.title}
                   </span>
                   <div className="flex items-center gap-2 mt-1">
                     {task.category && (
-                      <span className={cn("text-[10px] font-medium", categoryColors[task.category] || "text-muted-foreground")}>
+                      <span className={cn("text-[10px] font-mono uppercase tracking-wider font-medium", categoryColors[task.category] || "text-muted-foreground")}>
                         {task.category}
                       </span>
                     )}
                     {task.estimatedMinutes > 0 && (
-                      <span className="text-[10px] text-muted-foreground">{task.estimatedMinutes}m</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">{task.estimatedMinutes}m</span>
                     )}
                     <button
                       onClick={() => handleWorkOnThis(task)}
                       disabled={processingTaskId === task.id}
-                      className="text-[10px] text-primary hover:underline ml-auto flex items-center gap-0.5 disabled:opacity-50"
+                      className="text-[10px] text-primary hover:underline ml-auto flex items-center gap-0.5 disabled:opacity-50 font-mono uppercase tracking-wider"
                     >
                       {processingTaskId === task.id ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
                       ) : (
-                        <>
-                          {task.completed ? "Revisit" : "Work on This"} →
-                        </>
+                        <>{task.completed ? "Revisit" : "Work on This"} →</>
                       )}
                     </button>
                   </div>
@@ -640,7 +601,6 @@ function TodaysTasks({
               </div>
             ))}
 
-            {/* Inline add task */}
             <div className="flex items-center gap-2 pt-2 border-t border-border mt-2">
               <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <Input
@@ -648,62 +608,48 @@ function TodaysTasks({
                 onChange={(e) => setNewTask(e.target.value)}
                 placeholder="Add a task…"
                 className="h-8 text-sm border-none shadow-none focus-visible:ring-0 px-0"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddTask();
-                }}
+                onKeyDown={(e) => { if (e.key === "Enter") handleAddTask(); }}
                 disabled={adding}
               />
             </div>
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
 /* ─── Venture Control Panel ─── */
 
-interface VentureControlPanelProps {
-  venture: Venture;
-}
-
-function VentureControlPanel({ venture }: VentureControlPanelProps) {
+function VentureControlPanel({ venture }: { venture: Venture }) {
   const navigate = useNavigate();
 
   return (
-    <Card className="border-dashed border-muted-foreground/30">
-      <CardHeader className="pb-2">
-        <CardDescription className="text-xs">Change direction anytime</CardDescription>
-      </CardHeader>
-      <CardContent className="grid grid-cols-3 gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex-col h-auto py-3 gap-1 text-xs hover:bg-secondary"
+    <div className="border border-dashed border-muted-foreground/30 p-5">
+      <span className="label-mono block mb-3">Change Direction</span>
+      <div className="grid grid-cols-3 gap-2">
+        <button
+          className="flex flex-col items-center gap-1 py-3 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
           onClick={() => navigate("/venture-review")}
         >
           <ClipboardCheck className="h-4 w-4" />
           Review
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex-col h-auto py-3 gap-1 text-xs hover:bg-amber-500/10 hover:text-amber-600"
+        </button>
+        <button
+          className="flex flex-col items-center gap-1 py-3 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
           onClick={() => navigate("/venture-review?action=pivot")}
         >
           <RefreshCw className="h-4 w-4" />
           Pivot
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex-col h-auto py-3 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive"
+        </button>
+        <button
+          className="flex flex-col items-center gap-1 py-3 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
           onClick={() => navigate("/venture-review?action=kill")}
         >
           <Skull className="h-4 w-4" />
           Kill
-        </Button>
-      </CardContent>
-    </Card>
+        </button>
+      </div>
+    </div>
   );
 }
