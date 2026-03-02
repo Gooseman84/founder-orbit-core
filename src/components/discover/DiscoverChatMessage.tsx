@@ -21,14 +21,14 @@ export function DiscoverChatMessage({ role, content, isLast }: DiscoverChatMessa
       {isAi ? (
         /* Mavrik question — serif italic gold */
         <div className="py-6" role="article" aria-label="Mavrik's question">
-          <p className="font-display italic text-[1.2rem] text-primary leading-relaxed">
+          <p className="font-display italic text-[1.05rem] sm:text-[1.2rem] text-primary leading-relaxed break-words">
             {displayContent}
           </p>
         </div>
       ) : (
         /* Founder answer — indented, light */
-        <div className="py-3 pl-6" role="article" aria-label="Your answer">
-          <p className="text-[0.95rem] font-light text-foreground leading-relaxed">
+        <div className="py-3 pl-4 sm:pl-6" role="article" aria-label="Your answer">
+          <p className="text-[0.95rem] font-light text-foreground leading-relaxed break-words">
             {displayContent}
           </p>
         </div>

@@ -91,7 +91,7 @@ function SectionCard({
         background: "hsl(240 12% 7%)",
         borderColor: "hsl(240 10% 14%)",
         borderLeft: "2px solid hsl(43 52% 54%)",
-        padding: "24px 28px",
+        padding: "24px 16px",
       }}
       onMouseEnter={(e) => {
         (e.currentTarget.style as any).borderLeftColor = "hsl(43 60% 65%)";
@@ -372,7 +372,7 @@ const Profile = () => {
             subtitle="Used for feasibility analysis"
             onEdit={() => openEditor("constraints")}
           >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {[
                 { label: "TIME/WEEK", value: core.time_per_week ? `${core.time_per_week} hrs` : "—" },
                 { label: "CAPITAL", value: core.capital_available ? `$${core.capital_available.toLocaleString()}` : "—" },
@@ -636,7 +636,7 @@ const Profile = () => {
               DELETE ACCOUNT
             </button>
           </DialogTrigger>
-          <DialogContent style={{ borderRadius: 0 }}>
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-lg mx-auto" style={{ borderRadius: 0 }}>
             <DialogHeader>
               <DialogTitle>Delete your account?</DialogTitle>
               <DialogDescription>
@@ -647,13 +647,13 @@ const Profile = () => {
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
               placeholder="Type DELETE to confirm"
-              className="font-mono"
+              className="font-mono w-full"
               style={{ borderRadius: 0 }}
             />
-            <DialogFooter>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
               <button
                 onClick={() => { setDeleteDialogOpen(false); setDeleteConfirmText(""); }}
-                className="border px-4 py-2 font-mono-tb text-[0.65rem] uppercase transition-colors hover:text-foreground"
+                className="border px-4 py-2 min-h-[44px] font-mono-tb text-[0.65rem] uppercase transition-colors hover:text-foreground flex-1 sm:flex-initial"
                 style={{ borderColor: "hsl(240 10% 14%)", color: "hsl(220 12% 58%)" }}
               >
                 CANCEL
@@ -661,7 +661,7 @@ const Profile = () => {
               <button
                 disabled={deleteConfirmText !== "DELETE" || isDeleting}
                 onClick={handleDeleteAccount}
-                className="border px-4 py-2 font-mono-tb text-[0.65rem] uppercase transition-colors hover:opacity-80 disabled:opacity-50"
+                className="border px-4 py-2 min-h-[44px] font-mono-tb text-[0.65rem] uppercase transition-colors hover:opacity-80 disabled:opacity-50 flex-1 sm:flex-initial"
                 style={{ borderColor: "hsl(0 65% 52% / 0.35)", color: "hsl(0 65% 52%)" }}
               >
                 {isDeleting ? <><Loader2 className="w-4 h-4 animate-spin inline mr-2" />DELETING...</> : "PERMANENTLY DELETE"}

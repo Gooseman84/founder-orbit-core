@@ -49,7 +49,7 @@ export function DiscoverChatContainer({
       </div>
 
       {/* Header area */}
-      <div className="px-6 pt-8 pb-4 max-w-[720px] mx-auto w-full">
+      <div className="px-3 sm:px-6 pt-6 sm:pt-8 pb-4 max-w-[720px] mx-auto w-full">
         <div className="eyebrow mb-2">FOUNDER INTELLIGENCE INTERVIEW</div>
         <p className="text-[0.95rem] font-light text-muted-foreground">
           Mavrik will ask you 4–6 questions. Answer honestly — this intelligence powers your entire TrueBlazer experience.
@@ -75,10 +75,10 @@ export function DiscoverChatContainer({
       </div>
 
       {/* Separator */}
-      <div className="mx-6 max-w-[720px] self-center w-full border-b border-border" />
+      <div className="mx-3 sm:mx-6 max-w-[720px] self-center w-full border-b border-border" />
 
       {/* Conversation Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-6">
         <div className="max-w-[720px] mx-auto w-full">
           {transcript.length === 0 && !isThinking && (
             <p className="label-mono text-center py-8">
@@ -102,7 +102,7 @@ export function DiscoverChatContainer({
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-border bg-background px-6 py-4">
+      <div className="border-t border-border bg-background px-3 sm:px-6 py-4 pb-20 sm:pb-4">
         <div className="max-w-[720px] mx-auto w-full">
           {isComplete ? (
             <div className="flex flex-col items-center gap-4 py-3">

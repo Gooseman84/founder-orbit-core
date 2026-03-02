@@ -423,10 +423,10 @@ const Blueprint = () => {
 
       {/* Header */}
       <div className="mb-10">
-        <div className="flex items-end justify-between gap-4 mb-3">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-3">
+          <div className="min-w-0">
             <div className="eyebrow mb-2">VENTURE BLUEPRINT</div>
-            <h1 className="font-display text-2xl md:text-[2.5rem] font-bold leading-tight">
+            <h1 className="font-display text-xl sm:text-2xl md:text-[2.5rem] font-bold leading-tight break-words">
               <em className="text-primary" style={{ fontStyle: "italic" }}>{venture.name}</em>
             </h1>
             {displayBlueprint?.updated_at && (

@@ -137,10 +137,10 @@ export function FinancialViabilityScore({
 
         {/* Animated score */}
         <div className="flex items-baseline gap-1">
-          <span className="font-display font-black text-[8rem] leading-none text-foreground transition-all duration-300">
+          <span className="font-display font-black text-[4.5rem] sm:text-[6rem] md:text-[8rem] leading-none text-foreground transition-all duration-300">
             {displayScore}
           </span>
-          <span className="font-display text-[3rem] text-muted-foreground">
+          <span className="font-display text-[2rem] sm:text-[3rem] text-muted-foreground">
             /10
           </span>
         </div>
@@ -162,14 +162,14 @@ export function FinancialViabilityScore({
       {showBreakdown && (
         <div className="w-full mt-8">
           {canShowBreakdown ? (
-            <div className="card-gold-accent p-10">
+            <div className="card-gold-accent p-4 sm:p-10">
               {/* Dimension bars */}
               <div className="space-y-3">
                 {DIMENSIONS.map((dim, i) => {
                   const value = breakdown[dim.key as keyof typeof breakdown] ?? 0;
                   return (
-                    <div key={dim.key} className="flex items-center gap-4">
-                      <span className="label-mono w-[140px] shrink-0 text-right">
+                    <div key={dim.key} className="flex items-center gap-2 sm:gap-4">
+                      <span className="label-mono w-[90px] sm:w-[140px] shrink-0 text-right text-[0.55rem] sm:text-[0.65rem]">
                         {dim.label}
                       </span>
                       <div
