@@ -68,18 +68,18 @@ export default {
       },
       fontFamily: {
         display: ["Playfair Display", "serif"],
-      },
-      transitionTimingFunction: {
-        smooth: "cubic-bezier(0.4, 0, 0.2, 1)",
+        mono: ["DM Mono", "monospace"],
+        sans: ["DM Sans", "sans-serif"],
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "0px",
+        md: "0px",
+        sm: "0px",
+        DEFAULT: "0px",
       },
       boxShadow: {
-        "tb-card": "0 18px 45px rgba(0,0,0,0.45)",
-        "tb-glow": "0 0 20px hsl(var(--primary) / 0.3)",
+        "tb-card": "0 20px 48px rgba(0,0,0,0.5)",
+        "tb-glow": "0 0 24px hsl(43 52% 54% / 0.25)",
       },
       keyframes: {
         "accordion-down": {

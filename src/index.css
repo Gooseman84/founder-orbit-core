@@ -2,180 +2,197 @@
 @tailwind components;
 @tailwind utilities;
 
-/* TrueBlazer Design System
-   All colors MUST be HSL format.
-   Primary brand: #FF6A00 (TrueBlazer Flame)
-*/
-
 @layer base {
   :root {
-    /* TrueBlazer Theme */
-    --background: 5 8% 7%;
-    --foreground: 210 40% 98%;
+    --background: 240 14% 4%;
+    --foreground: 40 15% 93%;
 
-    --card: 222 33% 8%;
-    --card-foreground: 210 20% 92%;
+    --card: 240 12% 7%;
+    --card-foreground: 40 15% 93%;
 
-    --popover: 222 33% 8%;
-    --popover-foreground: 210 20% 92%;
+    --popover: 240 12% 7%;
+    --popover-foreground: 40 15% 93%;
 
-    --primary: 24 100% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 43 52% 54%;
+    --primary-foreground: 240 14% 4%;
 
-    --secondary: 222 20% 18%;
-    --secondary-foreground: 210 40% 96%;
+    --secondary: 240 10% 10%;
+    --secondary-foreground: 40 15% 93%;
 
-    --muted: 222 20% 15%;
-    --muted-foreground: 215 16% 72%;
+    --muted: 240 10% 10%;
+    --muted-foreground: 220 12% 58%;
 
-    --accent: 27 97% 76%;
-    --accent-foreground: 222 25% 12%;
+    --accent: 43 60% 65%;
+    --accent-foreground: 240 14% 4%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 65% 52%;
+    --destructive-foreground: 40 15% 93%;
 
-    --success: 142 71% 45%;
-    --success-foreground: 142 76% 10%;
+    --success: 142 50% 42%;
+    --success-foreground: 240 14% 4%;
 
-    --warning: 48 96% 47%;
-    --warning-foreground: 35 92% 15%;
+    --warning: 43 52% 54%;
+    --warning-foreground: 240 14% 4%;
 
-    --border: 215 28% 17%;
-    --input: 215 28% 17%;
-    --ring: 24 100% 50%;
+    --border: 240 10% 14%;
+    --input: 240 10% 14%;
+    --ring: 43 52% 54%;
 
-    --radius: 0.75rem;
+    --radius: 0rem;
 
-    /* TrueBlazer Gradient */
-    --tb-gradient-primary: linear-gradient(135deg, #FF6A00, #FF9C3F);
-    --tb-gradient-subtle: linear-gradient(180deg, hsl(24 100% 50% / 0.15) 0%, transparent 100%);
-
-    /* Sidebar */
-    --sidebar-background: 5 8% 7%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 24 100% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 20% 15%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 28% 17%;
-    --sidebar-ring: 24 100% 50%;
-
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --sidebar-background: 240 14% 4%;
+    --sidebar-foreground: 40 15% 93%;
+    --sidebar-primary: 43 52% 54%;
+    --sidebar-primary-foreground: 240 14% 4%;
+    --sidebar-accent: 240 10% 10%;
+    --sidebar-accent-foreground: 40 15% 93%;
+    --sidebar-border: 240 10% 14%;
+    --sidebar-ring: 43 52% 54%;
   }
 
   .dark {
-    /* TrueBlazer Dark Theme (mirrors root - dark-first design) */
-    --background: 5 8% 7%;
-    --foreground: 210 40% 98%;
-
-    --card: 222 33% 8%;
-    --card-foreground: 210 20% 92%;
-
-    --popover: 222 33% 8%;
-    --popover-foreground: 210 20% 92%;
-
-    --primary: 24 100% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 222 20% 18%;
-    --secondary-foreground: 210 40% 96%;
-
-    --muted: 222 20% 15%;
-    --muted-foreground: 215 16% 72%;
-
-    --accent: 27 97% 76%;
-    --accent-foreground: 222 25% 12%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --success: 142 71% 45%;
-    --success-foreground: 142 76% 10%;
-
-    --warning: 48 96% 47%;
-    --warning-foreground: 35 92% 15%;
-
-    --border: 215 28% 17%;
-    --input: 215 28% 17%;
-    --ring: 24 100% 50%;
-
-    --tb-gradient-primary: linear-gradient(135deg, #FF6A00, #FF9C3F);
-    --tb-gradient-subtle: linear-gradient(180deg, hsl(24 100% 50% / 0.15) 0%, transparent 100%);
-
-    --sidebar-background: 5 8% 7%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 24 100% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 20% 15%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 28% 17%;
-    --sidebar-ring: 24 100% 50%;
+    --background: 240 14% 4%;
+    --foreground: 40 15% 93%;
+    --card: 240 12% 7%;
+    --card-foreground: 40 15% 93%;
+    --popover: 240 12% 7%;
+    --popover-foreground: 40 15% 93%;
+    --primary: 43 52% 54%;
+    --primary-foreground: 240 14% 4%;
+    --secondary: 240 10% 10%;
+    --secondary-foreground: 40 15% 93%;
+    --muted: 240 10% 10%;
+    --muted-foreground: 220 12% 58%;
+    --accent: 43 60% 65%;
+    --accent-foreground: 240 14% 4%;
+    --destructive: 0 65% 52%;
+    --destructive-foreground: 40 15% 93%;
+    --success: 142 50% 42%;
+    --success-foreground: 240 14% 4%;
+    --border: 240 10% 14%;
+    --input: 240 10% 14%;
+    --ring: 43 52% 54%;
+    --radius: 0rem;
+    --sidebar-background: 240 14% 4%;
+    --sidebar-foreground: 40 15% 93%;
+    --sidebar-primary: 43 52% 54%;
+    --sidebar-primary-foreground: 240 14% 4%;
+    --sidebar-accent: 240 10% 10%;
+    --sidebar-accent-foreground: 40 15% 93%;
+    --sidebar-border: 240 10% 14%;
+    --sidebar-ring: 43 52% 54%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
   }
 }
 
 @layer utilities {
-  /* Hide scrollbar while maintaining scroll functionality */
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  .font-display { font-family: 'Playfair Display', serif; }
+  .font-mono-tb { font-family: 'DM Mono', monospace; }
+
+  .label-mono {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: hsl(220 12% 58%);
   }
 
-  /* TrueBlazer gradient background utility */
-  .tb-gradient-bg {
-    background: var(--tb-gradient-primary);
+  .label-mono-gold {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: hsl(43 52% 54%);
   }
 
-  .tb-gradient-subtle {
-    background: var(--tb-gradient-subtle);
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: hsl(43 52% 54%);
+  }
+  .eyebrow::before {
+    content: '';
+    width: 20px;
+    height: 1px;
+    background: hsl(43 52% 54%);
+    flex-shrink: 0;
   }
 
-  /* Native-feel tap targets */
-  .tap-target {
-    @apply min-h-[44px] min-w-[44px];
+  .badge-gold {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border: 1px solid hsl(43 52% 54% / 0.35);
+    color: hsl(43 52% 54%);
+    background: hsl(43 52% 54% / 0.1);
+    border-radius: 0;
   }
 
-  /* Confetti animation for celebration */
-  @keyframes confetti-fall {
-    0% {
-      transform: translateY(0) rotate(0deg);
-      opacity: 1;
-    }
-    100% {
-      transform: translateY(100vh) rotate(720deg);
-      opacity: 0;
-    }
+  .card-gold-accent {
+    background: hsl(240 12% 7%);
+    border: 1px solid hsl(240 10% 14%);
+    position: relative;
+    border-radius: 0;
   }
-  
-  .animate-confetti {
-    animation: confetti-fall 3s ease-out forwards;
+  .card-gold-accent::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, hsl(43 52% 54%), transparent);
   }
-}
 
-@layer components {
-  /* TrueBlazer gradient button */
-  .btn-gradient {
-    background: var(--tb-gradient-primary);
-    @apply text-primary-foreground font-medium transition-all duration-150 ease-out;
+  .card-gold-left {
+    background: hsl(240 12% 7%);
+    border: 1px solid hsl(240 10% 14%);
+    border-left: 2px solid hsl(43 52% 54%);
+    border-radius: 0;
+    transition: background 0.2s, border-left-color 0.2s;
   }
-  
-  .btn-gradient:hover {
-    filter: brightness(1.1);
+  .card-gold-left:hover {
+    background: hsl(240 10% 10%);
+    border-left-color: hsl(43 60% 65%);
   }
-  
-  .btn-gradient:active {
-    @apply scale-95;
+
+  .data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid hsl(240 10% 14%);
+    background: hsl(240 14% 4%);
+    transition: background 0.2s;
+  }
+  .data-row:hover { background: hsl(240 12% 7%); }
+  .data-row:last-child { border-bottom: none; }
+
+  .score-display {
+    font-family: 'Playfair Display', serif;
+    font-size: 4rem;
+    font-weight: 900;
+    line-height: 1;
+    color: hsl(40 15% 93%);
   }
 }
