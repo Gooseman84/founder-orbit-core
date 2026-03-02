@@ -2,76 +2,46 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Package, 
-  FileText, 
-  Download, 
-  ExternalLink, 
-  Loader2, 
+import {
+  Package,
+  FileText,
+  Download,
+  ExternalLink,
+  Loader2,
   AlertCircle,
-  ArrowRight 
+  ArrowRight,
+  Copy,
+  Lock,
 } from "lucide-react";
 import { useImplementationKitByBlueprint, useCreateImplementationKit } from "@/hooks/useImplementationKit";
 import { useBlueprint } from "@/hooks/useBlueprint";
+import { useActiveVenture } from "@/hooks/useActiveVenture";
 import { downloadAsMarkdown } from "@/lib/documentExport";
 import { useToast } from "@/hooks/use-toast";
 import { TechStackDialog } from "./TechStackDialog";
 import { SpecValidationSection } from "./SpecValidationSection";
-import type { TechStack } from "@/types/implementationKit";
+import type { TechStack, ImplementationKit } from "@/types/implementationKit";
 
 interface ImplementationKitCardProps {
   ventureId: string;
 }
 
-interface DocumentRowProps {
-  documentId: string | null;
-  name: string;
-  onDownload: (docId: string, filename: string) => void;
-  isDownloading: boolean;
-}
+const DOCUMENTS = [
+  { key: "north_star_spec_id", label: "NORTH STAR SPEC", shortLabel: "SPEC" },
+  { key: "architecture_contract_id", label: "ARCHITECTURE CONTRACT", shortLabel: "ARCH" },
+  { key: "vertical_slice_plan_id", label: "VERTICAL SLICE PLAN", shortLabel: "SLICE" },
+  { key: "launch_playbook_id", label: "LAUNCH PLAYBOOK", shortLabel: "LAUNCH" },
+] as const;
 
-function DocumentRow({ documentId, name, onDownload, isDownloading }: DocumentRowProps) {
-  if (!documentId) return null;
+type DocKey = typeof DOCUMENTS[number]["key"];
 
-  return (
-    <div className="flex items-center gap-2 py-2 px-1 rounded-lg hover:bg-muted/50 transition-colors">
-      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-      <span className="text-sm flex-1 truncate">{name}</span>
-      <div className="flex gap-1 shrink-0">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-7 px-2 text-xs" 
-          asChild
-        >
-          <Link to={`/workspace/${documentId}`}>
-            <ExternalLink className="h-3 w-3 mr-1" />
-            <span className="hidden sm:inline">View</span>
-          </Link>
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-7 px-2 text-xs"
-          onClick={() => onDownload(documentId, name)}
-          disabled={isDownloading}
-        >
-          {isDownloading ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <>
-              <Download className="h-3 w-3 mr-1" />
-              <span className="hidden sm:inline">Download</span>
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
-  );
+function getDocStatus(kit: ImplementationKit | null, key: DocKey): "complete" | "generating" | "locked" {
+  if (!kit) return "locked";
+  if (kit.status === "generating") return "generating";
+  if (kit.status === "complete" && (kit as any)[key]) return "complete";
+  if (kit.status === "complete") return "locked";
+  return "locked";
 }
 
 export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps) {
@@ -81,26 +51,23 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showTechStackDialog, setShowTechStackDialog] = useState(false);
   const { blueprint, loading: blueprintLoading } = useBlueprint();
+  const { venture } = useActiveVenture();
   const blueprintId = blueprint?.id;
-  
+
   const { data: kit, isLoading: kitLoading } = useImplementationKitByBlueprint(blueprintId);
   const createKit = useCreateImplementationKit();
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
 
   const handleGenerateClick = () => {
-    // Pro gating
     if (!hasPro) {
       setShowUpgradeModal(true);
       return;
     }
-
-    // If kit already exists and is complete, navigate to workspace
-    if (kit?.status === 'complete') {
-      navigate('/workspace');
+    if (kit?.status === "complete") {
+      navigate("/workspace");
       return;
     }
-
-    // Open tech stack selection
     setShowTechStackDialog(true);
   };
 
@@ -113,14 +80,9 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
       });
       return;
     }
-
     createKit.mutate(
       { blueprintId, ventureId, techStack },
-      {
-        onSuccess: () => {
-          setShowTechStackDialog(false);
-        },
-      }
+      { onSuccess: () => setShowTechStackDialog(false) }
     );
   };
 
@@ -132,10 +94,7 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
     setDownloadingDoc(docId);
     try {
       await downloadAsMarkdown(docId, filename);
-      toast({
-        title: "Download started",
-        description: `${filename}.md is downloading`,
-      });
+      toast({ title: "Download started", description: `${filename}.md is downloading` });
     } catch (error) {
       toast({
         title: "Download failed",
@@ -147,49 +106,93 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
     }
   };
 
+  const handleCopy = async (docId: string) => {
+    try {
+      // Placeholder: in a real implementation, fetch content and copy
+      await navigator.clipboard.writeText(`Document ID: ${docId}`);
+      toast({ title: "Copied", description: "Document reference copied to clipboard" });
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+
   // Loading state
   if (blueprintLoading || kitLoading) {
     return (
-      <Card className="border-primary/20">
-        <CardHeader className="pb-2">
+      <div className="border border-border" style={{ background: "hsl(240 12% 7%)" }}>
+        <div className="p-6 space-y-3">
           <Skeleton className="h-5 w-40" />
-        </CardHeader>
-        <CardContent className="space-y-2">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
-  // No kit exists - show CTA to generate
+  // No kit exists - show CTA
   if (!kit) {
     return (
       <>
-        <Card className="border-dashed border-primary/20">
-          <CardContent className="py-5">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <Package className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm">Implementation Kit</p>
-                <p className="text-xs text-muted-foreground">
-                  Get tech specs, architecture, and a roadmap for your venture
-                </p>
-              </div>
-              <Button 
-                size="sm"
-                onClick={handleGenerateClick}
-                className="shrink-0"
-              >
-                Generate
-                <ArrowRight className="h-3 w-3 ml-1" />
-              </Button>
+        {/* Header */}
+        <div className="space-y-6">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-5 h-[1px]" style={{ background: "hsl(43 52% 54%)" }} />
+              <span className="font-mono-tb text-[0.68rem] uppercase tracking-wider" style={{ color: "hsl(43 52% 54%)" }}>
+                IMPLEMENTATION KIT
+              </span>
             </div>
-          </CardContent>
-        </Card>
+            <h2 className="font-display font-bold text-2xl" style={{ color: "hsl(40 15% 93%)" }}>
+              Your build is <em className="text-primary" style={{ fontStyle: "italic" }}>ready</em>.
+            </h2>
+            {venture && (
+              <p className="font-mono-tb text-[0.72rem] uppercase mt-2 text-primary">
+                {venture.name || "Untitled Venture"}
+              </p>
+            )}
+          </div>
+
+          {/* Progress Indicators */}
+          <div className="flex gap-6">
+            {DOCUMENTS.map((doc) => (
+              <div key={doc.key} className="flex flex-col items-center gap-2">
+                <div
+                  className="w-2.5 h-2.5 border"
+                  style={{
+                    borderColor: "hsl(220 12% 58%)",
+                    background: "transparent",
+                  }}
+                />
+                <span className="font-mono-tb text-[0.58rem] uppercase" style={{ color: "hsl(220 12% 58%)" }}>
+                  {doc.shortLabel}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Generate CTA */}
+          <div
+            className="border border-dashed p-8 flex flex-col items-center gap-4"
+            style={{ borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+          >
+            <Package className="h-6 w-6 text-primary" />
+            <div className="text-center">
+              <p className="text-sm font-medium" style={{ color: "hsl(40 15% 93%)" }}>
+                Generate your Implementation Kit
+              </p>
+              <p className="text-xs mt-1" style={{ color: "hsl(220 12% 58%)" }}>
+                Tech specs, architecture, and a roadmap for your venture
+              </p>
+            </div>
+            <button
+              onClick={handleGenerateClick}
+              className="bg-primary text-primary-foreground font-medium text-[0.78rem] tracking-[0.06em] uppercase px-5 py-2.5 transition-opacity hover:opacity-90"
+            >
+              GENERATE KIT
+              <ArrowRight className="h-3 w-3 ml-2 inline" />
+            </button>
+          </div>
+        </div>
 
         <TechStackDialog
           open={showTechStackDialog}
@@ -197,7 +200,6 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
           onSubmit={handleTechStackSubmit}
           isGenerating={createKit.isPending}
         />
-
         <ProUpgradeModal
           open={showUpgradeModal}
           onClose={() => setShowUpgradeModal(false)}
@@ -208,57 +210,93 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
   }
 
   // Kit is generating
-  if (kit.status === 'generating') {
+  if (kit.status === "generating") {
     return (
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <div>
-              <p className="font-medium text-sm">Generating Implementation Kit...</p>
-              <p className="text-xs text-muted-foreground">
-                This usually takes 1-2 minutes
-              </p>
-            </div>
+      <div className="space-y-6">
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-5 h-[1px]" style={{ background: "hsl(43 52% 54%)" }} />
+            <span className="font-mono-tb text-[0.68rem] uppercase tracking-wider" style={{ color: "hsl(43 52% 54%)" }}>
+              IMPLEMENTATION KIT
+            </span>
           </div>
-        </CardContent>
-      </Card>
+          <h2 className="font-display font-bold text-2xl" style={{ color: "hsl(40 15% 93%)" }}>
+            Your build is <em className="text-primary" style={{ fontStyle: "italic" }}>ready</em>.
+          </h2>
+        </div>
+
+        {/* Progress Indicators */}
+        <div className="flex gap-6">
+          {DOCUMENTS.map((doc, i) => (
+            <div key={doc.key} className="flex flex-col items-center gap-2">
+              <div
+                className={`w-2.5 h-2.5 border ${i === 0 ? "animate-pulse" : ""}`}
+                style={{
+                  borderColor: "hsl(43 52% 54%)",
+                  background: "transparent",
+                }}
+              />
+              <span className="font-mono-tb text-[0.58rem] uppercase" style={{ color: "hsl(220 12% 58%)" }}>
+                {doc.shortLabel}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div
+          className="border p-6 flex items-center gap-3"
+          style={{ borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+        >
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <div>
+            <p className="font-medium text-sm" style={{ color: "hsl(40 15% 93%)" }}>
+              Generating Implementation Kit...
+            </p>
+            <p className="text-xs" style={{ color: "hsl(220 12% 58%)" }}>
+              This usually takes 1-2 minutes
+            </p>
+          </div>
+        </div>
+      </div>
     );
   }
 
   // Kit has error
-  if (kit.status === 'error') {
+  if (kit.status === "error") {
     return (
       <>
-        <Card className="border-destructive/20 bg-destructive/5">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm text-destructive">Kit Generation Failed</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {kit.error_message || "An error occurred"}
-                </p>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => navigate(`/blueprint?ventureId=${ventureId}`)}
-                >
-                  View on Blueprint
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleGenerateClick}
-                >
-                  Retry
-                </Button>
-              </div>
+        <div className="space-y-6">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-5 h-[1px]" style={{ background: "hsl(43 52% 54%)" }} />
+              <span className="font-mono-tb text-[0.68rem] uppercase tracking-wider" style={{ color: "hsl(43 52% 54%)" }}>
+                IMPLEMENTATION KIT
+              </span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          <div
+            className="border p-6 flex items-center gap-3"
+            style={{ borderColor: "hsl(0 65% 52% / 0.3)", background: "hsl(0 65% 52% / 0.05)" }}
+          >
+            <AlertCircle className="h-5 w-5 shrink-0" style={{ color: "hsl(0 65% 52%)" }} />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm" style={{ color: "hsl(0 65% 52%)" }}>
+                Kit Generation Failed
+              </p>
+              <p className="text-xs truncate" style={{ color: "hsl(220 12% 58%)" }}>
+                {kit.error_message || "An error occurred"}
+              </p>
+            </div>
+            <button
+              onClick={handleGenerateClick}
+              className="border px-4 py-2 font-mono-tb text-[0.65rem] uppercase transition-colors hover:text-foreground"
+              style={{ borderColor: "hsl(240 10% 14%)", color: "hsl(220 12% 58%)" }}
+            >
+              RETRY
+            </button>
+          </div>
+        </div>
 
         <TechStackDialog
           open={showTechStackDialog}
@@ -266,7 +304,6 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
           onSubmit={handleTechStackSubmit}
           isGenerating={createKit.isPending}
         />
-
         <ProUpgradeModal
           open={showUpgradeModal}
           onClose={() => setShowUpgradeModal(false)}
@@ -276,52 +313,187 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
     );
   }
 
-  // Kit is complete - show document list
+  // Kit is complete - full tabbed document viewer
+  const activeDoc = DOCUMENTS[activeTab];
+  const activeDocId = (kit as any)[activeDoc.key] as string | null;
+  const docStatus = getDocStatus(kit, activeDoc.key);
+
   return (
     <>
-      <Card className="border-primary/20">
-        <CardHeader className="pb-2 pt-4 px-4">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Package className="h-4 w-4 text-primary" />
-            Implementation Kit
-            <Badge variant="secondary" className="ml-auto text-xs">Ready</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0 px-3 pb-3">
-          <div className="space-y-1">
-            <DocumentRow 
-              documentId={kit.north_star_spec_id} 
-              name="North Star Spec"
-              onDownload={handleDownload}
-              isDownloading={downloadingDoc === kit.north_star_spec_id}
-            />
-            <DocumentRow 
-              documentId={kit.architecture_contract_id} 
-              name="Architecture Contract"
-              onDownload={handleDownload}
-              isDownloading={downloadingDoc === kit.architecture_contract_id}
-            />
-            <DocumentRow 
-              documentId={kit.vertical_slice_plan_id} 
-              name="Thin Vertical Slice Plan"
-              onDownload={handleDownload}
-              isDownloading={downloadingDoc === kit.vertical_slice_plan_id}
-            />
-            <DocumentRow 
-              documentId={(kit as any).launch_playbook_id} 
-              name="Launch Playbook"
-              onDownload={handleDownload}
-              isDownloading={downloadingDoc === (kit as any).launch_playbook_id}
-            />
+      <div className="space-y-0">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-5 h-[1px]" style={{ background: "hsl(43 52% 54%)" }} />
+            <span className="font-mono-tb text-[0.68rem] uppercase tracking-wider" style={{ color: "hsl(43 52% 54%)" }}>
+              IMPLEMENTATION KIT
+            </span>
           </div>
-          {(() => {
-            console.log('spec_validation:', kit.spec_validation);
-            return kit.spec_validation ? (
-              <SpecValidationSection validation={kit.spec_validation} />
-            ) : null;
-          })()}
-        </CardContent>
-      </Card>
+          <h2 className="font-display font-bold text-2xl" style={{ color: "hsl(40 15% 93%)" }}>
+            Your build is <em className="text-primary" style={{ fontStyle: "italic" }}>ready</em>.
+          </h2>
+          {venture && (
+            <p className="font-mono-tb text-[0.72rem] uppercase mt-2 text-primary">
+              {venture.name || "Untitled Venture"}
+            </p>
+          )}
+        </div>
+
+        {/* Progress Indicators */}
+        <div className="flex gap-6 mb-6">
+          {DOCUMENTS.map((doc) => {
+            const status = getDocStatus(kit, doc.key);
+            return (
+              <div key={doc.key} className="flex flex-col items-center gap-2">
+                <div
+                  className={`w-2.5 h-2.5 ${status === "generating" ? "animate-pulse" : ""}`}
+                  style={{
+                    background: status === "complete" ? "hsl(43 52% 54%)" : "transparent",
+                    border: status === "complete"
+                      ? "none"
+                      : status === "generating"
+                        ? "1px solid hsl(43 52% 54%)"
+                        : "1px solid hsl(220 12% 58%)",
+                  }}
+                />
+                <span className="font-mono-tb text-[0.58rem] uppercase" style={{ color: "hsl(220 12% 58%)" }}>
+                  {doc.shortLabel}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Document Tabs */}
+        <div className="flex" style={{ borderBottom: "1px solid hsl(240 10% 14%)" }}>
+          {DOCUMENTS.map((doc, i) => {
+            const isActive = i === activeTab;
+            return (
+              <button
+                key={doc.key}
+                onClick={() => setActiveTab(i)}
+                className="transition-colors cursor-pointer"
+                style={{
+                  padding: "14px 20px",
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: "0.68rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                  color: isActive ? "hsl(43 52% 54%)" : "hsl(220 12% 58%)",
+                  borderBottom: isActive ? "2px solid hsl(43 52% 54%)" : "2px solid transparent",
+                  marginBottom: isActive ? "-1px" : "0",
+                  background: "transparent",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) e.currentTarget.style.color = "hsl(40 15% 93%)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) e.currentTarget.style.color = "hsl(220 12% 58%)";
+                }}
+              >
+                {doc.shortLabel}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Document Content Area */}
+        <div
+          className="relative border border-t-0"
+          style={{
+            background: "hsl(240 12% 7%)",
+            borderColor: "hsl(240 10% 14%)",
+          }}
+        >
+          {/* Export buttons */}
+          {docStatus === "complete" && activeDocId && (
+            <div className="absolute top-4 right-4 flex gap-2 z-10">
+              <button
+                onClick={() => handleCopy(activeDocId)}
+                className="border px-4 py-2 font-mono-tb text-[0.65rem] uppercase transition-colors hover:text-foreground"
+                style={{
+                  borderColor: "hsl(240 10% 14%)",
+                  color: "hsl(220 12% 58%)",
+                  background: "transparent",
+                }}
+              >
+                <Copy className="h-3 w-3 inline mr-1.5" />
+                COPY
+              </button>
+              <button
+                onClick={() => handleDownload(activeDocId, activeDoc.label)}
+                disabled={downloadingDoc === activeDocId}
+                className="border px-4 py-2 font-mono-tb text-[0.65rem] uppercase transition-colors hover:opacity-80 disabled:opacity-50"
+                style={{
+                  background: "hsl(43 52% 54% / 0.1)",
+                  borderColor: "hsl(43 52% 54% / 0.35)",
+                  color: "hsl(43 52% 54%)",
+                }}
+              >
+                {downloadingDoc === activeDocId ? (
+                  <Loader2 className="h-3 w-3 animate-spin inline" />
+                ) : (
+                  <>
+                    <Download className="h-3 w-3 inline mr-1.5" />
+                    EXPORT PDF
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Content */}
+          <div style={{ padding: "40px 48px", maxWidth: "680px" }}>
+            {docStatus === "complete" && activeDocId ? (
+              <div className="space-y-4">
+                <div
+                  className="font-mono-tb text-[0.68rem] uppercase pb-2 mb-4"
+                  style={{
+                    color: "hsl(43 52% 54%)",
+                    borderBottom: "1px solid hsl(240 10% 14%)",
+                  }}
+                >
+                  {activeDoc.label}
+                </div>
+                <p className="text-[0.88rem] font-light leading-[1.75]" style={{ color: "hsl(40 15% 93%)" }}>
+                  Document generated successfully. View the full document in your workspace.
+                </p>
+                <Link
+                  to={`/workspace/${activeDocId}`}
+                  className="inline-flex items-center gap-2 text-primary font-mono-tb text-[0.68rem] uppercase hover:opacity-80 transition-opacity mt-4"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  OPEN IN WORKSPACE
+                </Link>
+              </div>
+            ) : (
+              /* Locked overlay */
+              <div
+                className="absolute inset-0 flex flex-col items-center justify-center z-20"
+                style={{ background: "hsl(240 14% 4% / 0.92)" }}
+              >
+                <Lock className="h-6 w-6 mb-4" style={{ color: "hsl(43 52% 54%)" }} />
+                <p className="font-display italic text-lg" style={{ color: "hsl(40 15% 93%)" }}>
+                  This document is not yet available.
+                </p>
+                <button
+                  onClick={handleGenerateClick}
+                  className="mt-6 w-64 bg-primary text-primary-foreground font-medium text-[0.78rem] tracking-[0.06em] uppercase py-3 transition-opacity hover:opacity-90"
+                >
+                  GENERATE KIT
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Spec validation */}
+        {kit.spec_validation && (
+          <div className="mt-4">
+            <SpecValidationSection validation={kit.spec_validation} />
+          </div>
+        )}
+      </div>
 
       <ProUpgradeModal
         open={showUpgradeModal}
