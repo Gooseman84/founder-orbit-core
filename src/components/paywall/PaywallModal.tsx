@@ -2,26 +2,17 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Lock, Sparkles, Zap, Target, TrendingUp } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { PLAN_ERROR_CODES, type PlanErrorCode } from "@/config/plans";
 
-// Messages for different limit scenarios
 const LIMIT_MESSAGES: Record<PlanErrorCode, { title: string; description: string }> = {
   [PLAN_ERROR_CODES.IDEA_LIMIT_REACHED]: {
-    title: "Idea limit reached",
+    title: "You're onto something. Keep going.",
     description: "You've used your 3 trial idea generations. Upgrade to Pro for unlimited ideas.",
   },
   [PLAN_ERROR_CODES.MODE_REQUIRES_PRO]: {
-    title: "Pro mode required",
+    title: "This mode is where the magic happens.",
     description: "This generation mode is available to Pro users. Unlock all 10 modes with TrueBlazer Pro.",
   },
   [PLAN_ERROR_CODES.LIBRARY_FULL]: {
@@ -33,7 +24,7 @@ const LIMIT_MESSAGES: Record<PlanErrorCode, { title: string; description: string
     description: "Trial accounts can create 1 blueprint. Upgrade to Pro for unlimited blueprints.",
   },
   [PLAN_ERROR_CODES.FEATURE_REQUIRES_PRO]: {
-    title: "Pro feature",
+    title: "This feature is part of TrueBlazer Pro.",
     description: "This feature is available to TrueBlazer Pro users. Unlock the full toolkit today.",
   },
   [PLAN_ERROR_CODES.EXPORT_REQUIRES_PRO]: {
@@ -82,6 +73,13 @@ const LIMIT_MESSAGES: Record<PlanErrorCode, { title: string; description: string
   },
 };
 
+const PRO_FEATURES = [
+  "Unlimited idea generations across all modes",
+  "CFA-level Financial Viability Scores",
+  "Cross-industry pattern matching",
+  "Implementation Kit for Lovable, Cursor, v0",
+];
+
 interface PaywallModalProps {
   featureName: string;
   open: boolean;
@@ -92,7 +90,6 @@ interface PaywallModalProps {
 
 export const PaywallModal = ({ featureName, open, onClose, errorCode, customMessage }: PaywallModalProps) => {
   const { user } = useAuth();
-  const { isTrialExpired } = useFeatureAccess();
   const [loading, setLoading] = useState(false);
 
   const handleUpgrade = async (plan: "monthly" | "yearly") => {
@@ -100,32 +97,22 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
       toast.error("Please sign in to upgrade your account.");
       return;
     }
-
     setLoading(true);
     try {
       const { data, error } = await invokeAuthedFunction<{ url?: string; error?: string }>(
         "create-checkout-session",
         {
           body: {
-            plan, // "monthly" or "yearly" - edge function reads price ID from secrets
+            plan,
             successUrl: `${window.location.origin}/billing?status=success`,
             cancelUrl: `${window.location.origin}/billing?status=cancelled`,
           },
         }
       );
-
       if (error) throw error;
-
-      if (data?.error) {
-        toast.error(data.error);
-        return;
-      }
-
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        toast.error("No checkout URL returned. Please try again.");
-      }
+      if (data?.error) { toast.error(data.error); return; }
+      if (data?.url) { window.location.href = data.url; }
+      else { toast.error("No checkout URL returned. Please try again."); }
     } catch (err) {
       console.error("Error in handleUpgrade:", err);
       if (err instanceof AuthSessionMissingError) {
@@ -138,100 +125,98 @@ export const PaywallModal = ({ featureName, open, onClose, errorCode, customMess
     }
   };
 
-  // Determine if trial is expired to adjust CTA text
-  const isExpired = false;
-
-  // Get message based on error code or use default
   const message = errorCode ? LIMIT_MESSAGES[errorCode] : null;
   const title = message?.title || "Upgrade to TrueBlazer Pro";
-  const description = customMessage || message?.description || 
+  const description = customMessage || message?.description ||
     "Unlock unlimited workspace, Radar insights, and opportunity scoring to accelerate your founder journey.";
 
-  const proFeatures = [
-    { icon: Zap, text: "Unlimited idea generations" },
-    { icon: Sparkles, text: "All 10 generation modes" },
-    { icon: Target, text: "Opportunity scoring & comparison" },
-    { icon: TrendingUp, text: "Market radar & insights" },
-  ];
-
-  // CTA text based on trial status
-  const monthlyCTA = isExpired ? "Subscribe – $29/month" : "Upgrade to Pro – $29/month";
-  const yearlyCTA = isExpired ? "Subscribe – $199/year (save 43%)" : "Upgrade to Pro – $199/year (save 43%)";
+  if (!open) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-2 rounded-full bg-primary/10">
-              <Lock className="w-5 h-5 text-primary" />
-            </div>
-          </div>
-          <DialogTitle className="text-2xl">{title}</DialogTitle>
-          <DialogDescription className="text-base pt-2">
-            {description}
-          </DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "hsl(240 14% 4% / 0.85)", backdropFilter: "blur(8px)" }}>
+      <div
+        className="relative w-full max-w-[480px] mx-4 border"
+        style={{
+          background: "hsl(240 12% 7%)",
+          borderColor: "hsl(43 52% 54% / 0.35)",
+          padding: "48px 40px",
+        }}
+      >
+        {/* Top gold accent */}
+        <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, hsl(43 52% 54%), transparent)" }} />
 
-        <div className="space-y-4 pt-4">
-          {/* Pro features list */}
-          <div className="space-y-2 py-3 px-4 bg-muted/50 rounded-lg">
-            {proFeatures.map((feature, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <feature.icon className="w-4 h-4 text-primary" />
-                <span>{feature.text}</span>
-              </div>
-            ))}
-          </div>
+        {/* Subtle glow */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle at top center, hsl(43 52% 54% / 0.06) 0%, transparent 60%)" }} />
 
-          {!user ? (
-            <div className="text-center py-4 text-muted-foreground">
-              Please sign in to upgrade your account.
-            </div>
-          ) : (
+        {/* Close */}
+        <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors">
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* Headline */}
+        <h2 className="font-display font-bold text-[1.8rem] leading-[1.1] text-foreground relative z-10">
+          {title.split(" ").length > 3 ? (
             <>
-              <div className="space-y-3">
-                <Button
-                  onClick={() => handleUpgrade("monthly")}
-                  disabled={loading}
-                  className="w-full"
-                  size="lg"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    monthlyCTA
-                  )}
-                </Button>
-
-                <Button
-                  onClick={() => handleUpgrade("yearly")}
-                  disabled={loading}
-                  className="w-full"
-                  size="lg"
-                  variant="secondary"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    yearlyCTA
-                  )}
-                </Button>
-              </div>
-
-              <p className="text-xs text-center text-muted-foreground pt-2">
-                Secure checkout powered by Stripe. Cancel anytime.
-              </p>
+              {title.split(" ").slice(0, -2).join(" ")}{" "}
+              <em className="text-primary" style={{ fontStyle: "italic" }}>
+                {title.split(" ").slice(-2).join(" ")}
+              </em>
             </>
+          ) : (
+            <em className="text-primary" style={{ fontStyle: "italic" }}>{title}</em>
           )}
+        </h2>
+
+        {/* Subhead */}
+        <p className="text-[0.95rem] font-light text-muted-foreground mt-4 relative z-10" style={{ lineHeight: "1.7" }}>
+          {description}
+        </p>
+
+        {/* Feature list */}
+        <div className="mt-6 space-y-2.5 relative z-10">
+          {PRO_FEATURES.map((feature, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <span className="text-primary text-[0.5rem] mt-[5px] shrink-0">◆</span>
+              <span className="text-[0.82rem] font-light text-muted-foreground" style={{ lineHeight: "1.5" }}>
+                {feature}
+              </span>
+            </div>
+          ))}
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* CTA */}
+        {user ? (
+          <div className="relative z-10">
+            <button
+              onClick={() => handleUpgrade("monthly")}
+              disabled={loading}
+              className="w-full mt-8 py-4 bg-primary text-primary-foreground font-medium text-[0.85rem] tracking-[0.06em] uppercase transition-colors hover:bg-accent disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "UPGRADE TO PRO — $29/MONTH"}
+            </button>
+
+            <button
+              onClick={() => handleUpgrade("yearly")}
+              disabled={loading}
+              className="w-full mt-2 py-4 border border-border text-muted-foreground font-medium text-[0.85rem] tracking-[0.06em] uppercase transition-colors hover:text-foreground hover:bg-secondary disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "YEARLY — $199/YEAR (SAVE 43%)"}
+            </button>
+
+            {/* Microcopy */}
+            <p className="font-mono-tb text-[0.62rem] tracking-[0.1em] uppercase text-muted-foreground text-center mt-3">
+              7-DAY FREE TRIAL · CARD REQUIRED · CANCEL ANYTIME
+            </p>
+            <p className="font-mono-tb text-[0.6rem] text-muted-foreground/60 text-center mt-2">
+              ◆ CFA-LEVEL FINANCIAL METHODOLOGY ◆
+            </p>
+          </div>
+        ) : (
+          <p className="text-center text-muted-foreground mt-8 text-sm relative z-10">
+            Please sign in to upgrade your account.
+          </p>
+        )}
+      </div>
+    </div>
   );
 };

@@ -2,37 +2,21 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { getPaywallCopy, type PaywallReasonCode } from "@/config/paywallCopy";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { invokeAuthedFunction, AuthSessionMissingError } from "@/lib/invokeAuthedFunction";
-import { 
-  Loader2,
-  Sparkles,
-  Zap,
-  Target,
-  Infinity,
-  Rocket,
-  CheckCircle,
-  Crown
-} from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 const PRO_FEATURES = [
-  { icon: Infinity, text: "Unlimited ideas — generate until you find the one", highlight: true },
-  { icon: Sparkles, text: "Cross-industry pattern matching & adjacent opportunities" },
-  { icon: Target, text: "CFA-level Financial Viability Scores on every idea" },
-  { icon: Rocket, text: "Implementation Kit — build specs for Lovable, Cursor, v0" },
-  { icon: Zap, text: "30-day plans, daily tasks, and AI workspace" },
+  "Unlimited ideas — generate until you find the one",
+  "Cross-industry pattern matching & adjacent opportunities",
+  "CFA-level Financial Viability Scores on every idea",
+  "Implementation Kit — build specs for Lovable, Cursor, v0",
+  "30-day plans, daily tasks, and AI workspace",
 ];
 
-// Pricing configuration
 const PRICING = {
-  monthly: { amount: 29, label: "Monthly" },
-  yearly: { amount: 199, label: "Yearly", monthlyEquivalent: 16.58, discount: 43 },
+  monthly: { amount: 29, label: "MONTHLY" },
+  yearly: { amount: 199, label: "YEARLY", monthlyEquivalent: 16.58, discount: 43 },
 };
 
 interface ProUpgradeModalProps {
@@ -48,10 +32,7 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">("yearly");
 
-  // Get dynamic copy based on reasonCode
   const copy = getPaywallCopy(reasonCode);
-  
-  // Determine if this is for an expired trial
   const isExpiredTrial = reasonCode === "TRIAL_EXPIRED";
 
   const handleUpgrade = async () => {
@@ -59,185 +40,139 @@ export function ProUpgradeModal({ open, onClose, reasonCode, context }: ProUpgra
       toast.error("Please sign in to upgrade your account.");
       return;
     }
-
     setLoading(true);
     track("upgrade_clicked", { reasonCode, plan: selectedPlan, ...context });
-
     try {
       const { data, error } = await invokeAuthedFunction<{ url?: string; error?: string }>("create-checkout-session", {
         body: {
-          plan: selectedPlan, // "monthly" or "yearly" - edge function reads price ID from secrets
+          plan: selectedPlan,
           successUrl: `${window.location.origin}/billing?status=success`,
           cancelUrl: `${window.location.origin}/billing?status=cancelled`,
         },
       });
-
-      if (error) {
-        console.error("Error creating checkout session:", error);
-        toast.error("Failed to start checkout. Please try again.");
-        return;
-      }
-
-      if (data?.error) {
-        toast.error(data.error);
-        return;
-      }
-
-      if (data?.url) {
-        track("checkout_started", { reasonCode, plan: selectedPlan });
-        window.location.href = data.url;
-      } else {
-        toast.error("No checkout URL returned. Please try again.");
-      }
+      if (error) { toast.error("Failed to start checkout. Please try again."); return; }
+      if (data?.error) { toast.error(data.error); return; }
+      if (data?.url) { track("checkout_started", { reasonCode, plan: selectedPlan }); window.location.href = data.url; }
+      else { toast.error("No checkout URL returned. Please try again."); }
     } catch (err) {
       console.error("Error in handleUpgrade:", err);
-      if (err instanceof AuthSessionMissingError) {
-        toast.error("Session expired. Please sign in again.");
-      } else {
-        toast.error("Something went wrong. Please try again.");
-      }
+      if (err instanceof AuthSessionMissingError) { toast.error("Session expired. Please sign in again."); }
+      else { toast.error("Something went wrong. Please try again."); }
     } finally {
       setLoading(false);
     }
   };
 
-  // Track paywall shown
   useState(() => {
     if (open && reasonCode) {
       track("paywall_shown", { reasonCode, ...context });
     }
   });
-  
-  // Dynamic CTA based on trial status
-  const ctaText = isExpiredTrial ? "Subscribe to Pro" : copy.cta;
+
+  const ctaText = isExpiredTrial ? "SUBSCRIBE TO PRO" : copy.cta.toUpperCase();
+
+  if (!open) return null;
+
+  // Split headline to italicize last 2 words
+  const words = copy.headline.split(" ");
+  const headlineMain = words.length > 3 ? words.slice(0, -2).join(" ") : "";
+  const headlineItalic = words.length > 3 ? words.slice(-2).join(" ") : copy.headline;
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden border-border/50 bg-card">
-        {/* Visually hidden title for accessibility */}
-        <DialogTitle className="sr-only">Upgrade to TrueBlazer Pro</DialogTitle>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "hsl(240 14% 4% / 0.85)", backdropFilter: "blur(8px)" }}>
+      <div
+        className="relative w-full max-w-[480px] mx-4 border"
+        style={{
+          background: "hsl(240 12% 7%)",
+          borderColor: "hsl(43 52% 54% / 0.35)",
+          padding: "48px 40px",
+        }}
+      >
+        {/* Top gold accent */}
+        <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, hsl(43 52% 54%), transparent)" }} />
 
-        {/* Header with gradient */}
-        <div className="relative px-6 pt-8 pb-6 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2.5 rounded-xl bg-primary/20 ring-1 ring-primary/30">
-              <Crown className="w-6 h-6 text-primary" />
-            </div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-              TrueBlazer Pro
-            </span>
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight">{copy.headline}</h2>
-          <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            {copy.subhead}
-          </p>
-        </div>
+        {/* Subtle glow */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle at top center, hsl(43 52% 54% / 0.06) 0%, transparent 60%)" }} />
 
-        {/* Content */}
-        <div className="px-6 pb-6 space-y-5">
-          {/* Features list */}
-          <div className="space-y-2.5">
-            {PRO_FEATURES.map((feature, i) => (
-              <div 
-                key={i} 
-                className={`flex items-center gap-3 text-sm ${
-                  feature.highlight ? "text-foreground font-medium" : "text-muted-foreground"
-                }`}
-              >
-                <div className={`p-1 rounded-md ${feature.highlight ? "bg-primary/20" : "bg-muted"}`}>
-                  <feature.icon className={`w-4 h-4 ${feature.highlight ? "text-primary" : "text-muted-foreground"}`} />
-                </div>
-                <span>{feature.text}</span>
-              </div>
-            ))}
-          </div>
+        {/* Close */}
+        <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors">
+          <X className="h-4 w-4" />
+        </button>
 
-          {/* Pricing toggle */}
-          <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
-            <button
-              onClick={() => setSelectedPlan("monthly")}
-              className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all ${
-                selectedPlan === "monthly"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {PRICING.monthly.label}
-            </button>
-            <button
-              onClick={() => setSelectedPlan("yearly")}
-              className={`flex-1 py-2.5 px-3 rounded-md text-sm font-medium transition-all relative ${
-                selectedPlan === "yearly"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {PRICING.yearly.label}
-              <span className="absolute -top-2 -right-1 text-[10px] font-bold text-primary bg-primary/20 px-1.5 py-0.5 rounded-full">
-                -{PRICING.yearly.discount}%
+        {/* Headline */}
+        <h2 className="font-display font-bold text-[1.8rem] leading-[1.1] text-foreground relative z-10">
+          {headlineMain && <>{headlineMain}{" "}</>}
+          <em className="text-primary" style={{ fontStyle: "italic" }}>{headlineItalic}</em>
+        </h2>
+
+        {/* Subhead */}
+        <p className="text-[0.95rem] font-light text-muted-foreground mt-4 relative z-10" style={{ lineHeight: "1.7" }}>
+          {copy.subhead}
+        </p>
+
+        {/* Feature list */}
+        <div className="mt-6 space-y-2.5 relative z-10">
+          {PRO_FEATURES.map((feature, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <span className="text-primary text-[0.5rem] mt-[5px] shrink-0">◆</span>
+              <span className="text-[0.82rem] font-light text-muted-foreground" style={{ lineHeight: "1.5" }}>
+                {feature}
               </span>
-            </button>
-          </div>
-
-          {/* Price display */}
-          <div className="text-center py-2">
-            {selectedPlan === "yearly" ? (
-              <div>
-                <span className="text-3xl font-bold">${PRICING.yearly.amount}</span>
-                <span className="text-muted-foreground">/year</span>
-                <p className="text-xs text-muted-foreground mt-1">
-                  That's just ${PRICING.yearly.monthlyEquivalent}/month
-                </p>
-              </div>
-            ) : (
-              <div>
-                <span className="text-3xl font-bold">${PRICING.monthly.amount}</span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
-            )}
-          </div>
-
-          {!user ? (
-            <div className="text-center py-4 text-muted-foreground">
-              Please sign in to upgrade your account.
             </div>
-          ) : (
-            <>
-              {/* CTA Button */}
-              <Button
-                onClick={handleUpgrade}
-                disabled={loading}
-                size="lg"
-                className="w-full h-12 text-base font-semibold btn-gradient rounded-xl"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Rocket className="mr-2 h-5 w-5" />
-                    {ctaText}
-                  </>
-                )}
-              </Button>
-
-              {/* Trust indicators */}
-              <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                  <span>{copy.microcopy || "Cancel anytime"}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                  <span>Secure checkout</span>
-                </div>
-              </div>
-            </>
-          )}
+          ))}
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Pricing toggle */}
+        <div className="flex gap-0 mt-6 relative z-10">
+          <button
+            onClick={() => setSelectedPlan("monthly")}
+            className={`flex-1 py-2.5 font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase border transition-colors ${
+              selectedPlan === "monthly"
+                ? "border-primary/35 text-primary bg-primary/10"
+                : "border-border text-muted-foreground bg-transparent hover:text-foreground"
+            }`}
+          >
+            ${PRICING.monthly.amount}/MO
+          </button>
+          <button
+            onClick={() => setSelectedPlan("yearly")}
+            className={`flex-1 py-2.5 font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase border transition-colors relative ${
+              selectedPlan === "yearly"
+                ? "border-primary/35 text-primary bg-primary/10"
+                : "border-border text-muted-foreground bg-transparent hover:text-foreground"
+            }`}
+          >
+            ${PRICING.yearly.amount}/YR
+            <span className="absolute -top-2 right-2 font-mono-tb text-[0.55rem] text-primary bg-primary/20 px-1.5 py-0.5">
+              -{PRICING.yearly.discount}%
+            </span>
+          </button>
+        </div>
+
+        {/* CTA */}
+        {user ? (
+          <div className="relative z-10">
+            <button
+              onClick={handleUpgrade}
+              disabled={loading}
+              className="w-full mt-6 py-4 bg-primary text-primary-foreground font-medium text-[0.85rem] tracking-[0.06em] uppercase transition-colors hover:bg-accent disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : ctaText}
+            </button>
+
+            <p className="font-mono-tb text-[0.62rem] tracking-[0.1em] uppercase text-muted-foreground text-center mt-3">
+              7-DAY FREE TRIAL · CARD REQUIRED · CANCEL ANYTIME
+            </p>
+            <p className="font-mono-tb text-[0.6rem] text-muted-foreground/60 text-center mt-2">
+              ◆ CFA-LEVEL FINANCIAL METHODOLOGY ◆
+            </p>
+          </div>
+        ) : (
+          <p className="text-center text-muted-foreground mt-8 text-sm relative z-10">
+            Please sign in to upgrade your account.
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
