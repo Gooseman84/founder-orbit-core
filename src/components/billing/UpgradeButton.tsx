@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Crown, Sparkles } from "lucide-react";
 import { ProUpgradeModal } from "./ProUpgradeModal";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -10,15 +9,10 @@ interface UpgradeButtonProps {
   className?: string;
 }
 
-/**
- * A reusable upgrade button that opens the Pro upgrade modal.
- * Only shows for free users.
- */
 export function UpgradeButton({ variant = "full", className }: UpgradeButtonProps) {
   const { plan } = useSubscription();
   const [showModal, setShowModal] = useState(false);
 
-  // Don't show for Pro/Founder users
   if (plan === "pro" || plan === "founder") {
     return null;
   }
@@ -30,16 +24,14 @@ export function UpgradeButton({ variant = "full", className }: UpgradeButtonProp
           onClick={() => setShowModal(true)}
           className={cn(
             "flex items-center gap-3 px-4 py-3 w-full",
-            "text-sm font-medium rounded-lg",
-            "bg-gradient-to-r from-primary/20 to-primary/5",
-            "border border-primary/30 hover:border-primary/50",
-            "text-primary hover:text-primary",
-            "transition-all duration-200",
+            "font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase",
+            "border border-primary/35 text-primary bg-primary/10",
+            "hover:bg-primary/20 transition-all duration-200",
             className
           )}
         >
-          <Crown className="w-5 h-5 shrink-0" />
-          <span className="truncate">Upgrade to Pro</span>
+          <Crown className="w-4 h-4 shrink-0" />
+          <span className="truncate">UPGRADE TO PRO</span>
         </button>
         <ProUpgradeModal open={showModal} onClose={() => setShowModal(false)} />
       </>
@@ -49,33 +41,33 @@ export function UpgradeButton({ variant = "full", className }: UpgradeButtonProp
   if (variant === "compact") {
     return (
       <>
-        <Button
+        <button
           onClick={() => setShowModal(true)}
-          size="sm"
-          variant="ghost"
           className={cn(
-            "gap-1.5 text-primary hover:text-primary hover:bg-primary/10",
+            "flex items-center gap-1.5 font-mono-tb text-[0.62rem] tracking-[0.08em] uppercase text-primary hover:text-accent transition-colors px-2 py-1",
             className
           )}
         >
-          <Sparkles className="w-3.5 h-3.5" />
-          Upgrade
-        </Button>
+          <Sparkles className="w-3 h-3" />
+          UPGRADE
+        </button>
         <ProUpgradeModal open={showModal} onClose={() => setShowModal(false)} />
       </>
     );
   }
 
-  // Full variant
   return (
     <>
-      <Button
+      <button
         onClick={() => setShowModal(true)}
-        className={cn("btn-gradient gap-2", className)}
+        className={cn(
+          "flex items-center gap-2 bg-primary text-primary-foreground font-medium text-[0.78rem] tracking-[0.06em] uppercase px-5 py-2.5 transition-opacity hover:opacity-90",
+          className
+        )}
       >
         <Crown className="w-4 h-4" />
-        Upgrade to Pro
-      </Button>
+        UPGRADE TO PRO
+      </button>
       <ProUpgradeModal open={showModal} onClose={() => setShowModal(false)} />
     </>
   );
