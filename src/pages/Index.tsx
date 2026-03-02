@@ -6,7 +6,7 @@ import { Lock } from "lucide-react";
 /* ───────────────────────────────────────────
    Scroll-reveal hook
    ─────────────────────────────────────────── */
-function useReveal(threshold = 0.15) {
+function useReveal(threshold = 0.1) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -41,7 +41,7 @@ const Index = () => {
   const goAuth = useCallback(() => navigate("/auth"), [navigate]);
 
   return (
-    <div style={{ background: "var(--ink)", color: "var(--white)", fontFamily: "'DM Sans', sans-serif", fontWeight: 300 }}>
+    <div className="overflow-x-hidden break-words" style={{ background: "var(--ink)", color: "var(--white)", fontFamily: "'DM Sans', sans-serif", fontWeight: 300 }}>
       {/* Noise overlay */}
       <div
         style={{
@@ -92,17 +92,18 @@ function Nav({ onAuth }: { onAuth: () => void }) {
 
   return (
     <nav
+      className="overflow-hidden"
       style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        padding: scrolled ? "14px 48px" : "20px 48px",
+        padding: scrolled ? "14px 16px" : "20px 16px",
         background: scrolled ? "rgba(10,10,15,0.92)" : "transparent",
         borderBottom: scrolled ? "1px solid var(--border-subtle)" : "none",
         backdropFilter: scrolled ? "blur(20px)" : "none",
         transition: "all 0.3s",
       }}
     >
-      <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "1.3rem" }}>
+      <span className="md:!px-[48px]" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "1.3rem", flexShrink: 0 }}>
         <span style={{ color: "var(--white)" }}>True</span>
         <span style={{ color: "var(--gold)" }}>Blazer</span>
       </span>
@@ -120,7 +121,7 @@ function Nav({ onAuth }: { onAuth: () => void }) {
             background: "var(--gold)", color: "var(--ink)", padding: "9px 22px",
             fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: "0.78rem",
             letterSpacing: "0.05em", textTransform: "uppercase", border: "none", cursor: "pointer",
-            transition: "background 0.2s",
+            transition: "background 0.2s", minHeight: 40,
           }}
           onMouseEnter={e => (e.currentTarget.style.background = "var(--gold-light)")}
           onMouseLeave={e => (e.currentTarget.style.background = "var(--gold)")}
@@ -137,8 +138,8 @@ function Nav({ onAuth }: { onAuth: () => void }) {
    ═══════════════════════════════════════════ */
 function Hero({ onAuth }: { onAuth: () => void }) {
   return (
-    <section style={{ minHeight: "100vh", padding: "120px 48px 80px", position: "relative", background: "var(--ink)" }} className="max-[900px]:!px-6 max-[900px]:!pt-[100px] max-[900px]:!pb-16">
-      {/* Radial glow */}
+    <section className="px-4 pt-[100px] pb-14 md:px-12 md:pt-[120px] md:pb-20 relative overflow-hidden" style={{ minHeight: "100vh", background: "var(--ink)" }}>
+      {/* Radial glow — clamped to not cause overflow */}
       <div style={{ position: "absolute", top: -200, right: -200, width: 800, height: 800, background: "radial-gradient(circle, rgba(200,168,75,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
 
       {/* Eyebrow */}
@@ -154,30 +155,31 @@ function Hero({ onAuth }: { onAuth: () => void }) {
         className="lp-fadeUp"
         style={{
           animationDelay: "0.35s", fontFamily: "'Playfair Display', serif", fontWeight: 900,
-          fontSize: "clamp(3.2rem, 7vw, 6.5rem)", lineHeight: 1.02, letterSpacing: "-0.02em",
+          fontSize: "clamp(2.6rem, 7vw, 6.5rem)", lineHeight: 1.02, letterSpacing: "-0.02em",
           maxWidth: 900, margin: 0,
         }}
       >
         AI can build<br />
-        <em style={{ color: "var(--gold)", fontStyle: "italic" }}>anything.</em><br />
+        <em style={{ color: "var(--gold)", fontStyle: "italic", hyphens: "auto" } as React.CSSProperties}>anything.</em><br />
         We tell you what's<br />
         worth building.
       </h1>
 
       {/* Subheading */}
-      <p className="lp-fadeUp" style={{ animationDelay: "0.5s", marginTop: 32, maxWidth: 560, fontSize: "1.1rem", lineHeight: 1.65, color: "var(--white-dim)" }}>
+      <p className="lp-fadeUp text-base sm:text-lg md:text-xl" style={{ animationDelay: "0.5s", marginTop: 28, maxWidth: 560, lineHeight: 1.65, color: "var(--white-dim)" }}>
         TrueBlazer is the decision layer for founders — the only platform that combines Mavrik AI interview intelligence with CFA-level Financial Viability Scoring to tell you, before you build a single line of code, whether your venture has a real shot.
       </p>
 
       {/* Buttons */}
-      <div className="lp-fadeUp" style={{ animationDelay: "0.65s", marginTop: 48, display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
+      <div className="lp-fadeUp flex flex-col sm:flex-row gap-4 sm:gap-6 mt-10 sm:mt-12" style={{ animationDelay: "0.65s", alignItems: "stretch" }}>
         <button
           onClick={onAuth}
+          className="w-full sm:w-auto"
           style={{
             position: "relative", overflow: "hidden",
-            background: "var(--gold)", color: "var(--ink)", padding: "16px 36px", border: "none",
+            background: "var(--gold)", color: "var(--ink)", padding: "14px 32px", border: "none",
             fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: "0.9rem",
-            letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer",
+            letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer", minHeight: 48,
           }}
         >
           Start Your Free Trial
@@ -185,7 +187,8 @@ function Hero({ onAuth }: { onAuth: () => void }) {
         <a
           href="#how-it-works"
           onClick={e => { e.preventDefault(); document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" }); }}
-          style={{ color: "var(--white-dim)", fontSize: "0.85rem", letterSpacing: "0.04em", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, transition: "color 0.2s" }}
+          className="w-full sm:w-auto text-center sm:text-left py-3 sm:py-0"
+          style={{ color: "var(--white-dim)", fontSize: "0.85rem", letterSpacing: "0.04em", textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "color 0.2s" }}
           onMouseEnter={e => (e.currentTarget.style.color = "var(--white)")}
           onMouseLeave={e => (e.currentTarget.style.color = "var(--white-dim)")}
         >
@@ -194,17 +197,17 @@ function Hero({ onAuth }: { onAuth: () => void }) {
       </div>
 
       {/* Credentials */}
-      <div className="lp-fadeUp" style={{ animationDelay: "0.8s", marginTop: 64, paddingTop: 32, borderTop: "1px solid var(--border-subtle)", display: "flex", gap: 40, alignItems: "center", flexWrap: "wrap" }}>
+      <div className="lp-fadeUp mt-12 sm:mt-16 pt-8 flex flex-wrap gap-4 sm:gap-10" style={{ animationDelay: "0.8s", borderTop: "1px solid var(--border-subtle)", alignItems: "center" }}>
         {[
           { badge: "CFA", text: "Chartered Financial Analyst methodology" },
           { badge: "CFP", text: "Certified Financial Planner rigor" },
           { badge: "FVS™", text: "Proprietary viability scoring" },
         ].map(c => (
           <div key={c.badge} style={{ display: "flex", gap: 10, fontSize: "0.78rem", color: "var(--silver)", letterSpacing: "0.04em", alignItems: "center" }}>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.68rem", background: "var(--gold-dim)", color: "var(--gold)", border: "1px solid var(--lp-border)", padding: "3px 8px" }}>
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.68rem", background: "var(--gold-dim)", color: "var(--gold)", border: "1px solid var(--lp-border)", padding: "3px 8px", flexShrink: 0 }}>
               {c.badge}
             </span>
-            {c.text}
+            <span className="min-w-0">{c.text}</span>
           </div>
         ))}
       </div>
@@ -227,7 +230,7 @@ function Ticker() {
   const doubled = [...items, ...items];
 
   return (
-    <div style={{ background: "var(--ink-2)", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)", padding: "16px 48px", display: "flex", gap: 20, overflow: "hidden", alignItems: "center" }} className="max-[900px]:!px-6 max-[900px]:!py-[14px]">
+    <div className="px-4 py-3 md:px-12 md:py-4" style={{ background: "var(--ink-2)", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)", display: "flex", gap: 20, overflow: "hidden", alignItems: "center" }}>
       <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.65rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--gold)", borderRight: "1px solid var(--lp-border)", paddingRight: 20, whiteSpace: "nowrap", flexShrink: 0 }}>
         Market Signal
       </span>
@@ -258,32 +261,32 @@ function Problem() {
   ];
 
   return (
-    <section style={{ background: "var(--ink-2)", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)", padding: "100px 48px" }} className="max-[900px]:!px-6 max-[900px]:!py-[72px]">
+    <section className="px-4 py-14 md:px-12 md:py-24" style={{ background: "var(--ink-2)", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
       <Eyebrow text="The Problem" />
 
-      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, marginTop: 48 }}>
+      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""} grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 mt-10 md:mt-12`}>
         {/* Left */}
-        <div className="max-[900px]:col-span-full">
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(2rem, 4vw, 3.2rem)", lineHeight: 1.1, margin: 0 }}>
+        <div>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", lineHeight: 1.1, margin: 0 }}>
             Every founder has a<br />
             <em style={{ color: "var(--gold)", fontStyle: "italic" }}>ChatGPT.</em><br />
             None of them have<br />a verdict.
           </h2>
-          <div style={{ marginTop: 32, fontSize: "0.95rem", lineHeight: 1.75, color: "var(--white-dim)" }}>
+          <div className="mt-6 md:mt-8 text-sm sm:text-base" style={{ lineHeight: 1.75, color: "var(--white-dim)" }}>
             <p style={{ marginBottom: 20 }}>You can build anything now. Lovable. Cursor. v0. The execution tools are commoditized. What isn't commoditized is knowing whether what you're building is actually worth your time, money, and next two years of your life.</p>
             <p style={{ marginBottom: 20 }}>AI chatbots give you ideas. VCs give you opinions. Accelerators give you cohorts. None of them give you a <span style={{ color: "var(--white)", fontWeight: 500 }}>disciplined, financially-grounded verdict</span> on your specific venture — before you're too deep to turn back.</p>
             <p>That's the gap TrueBlazer fills.</p>
           </div>
         </div>
         {/* Right — stat table */}
-        <div className="max-[900px]:col-span-full" style={{ border: "1px solid var(--border-subtle)" }}>
+        <div style={{ border: "1px solid var(--border-subtle)" }}>
           {stats.map((s, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "20px 24px", borderBottom: i < stats.length - 1 ? "1px solid var(--border-subtle)" : "none", background: "var(--ink)", transition: "background 0.2s", alignItems: "center" }}
+            <div key={i} className="flex justify-between items-center gap-3 px-4 py-4 sm:px-6 sm:py-5" style={{ borderBottom: i < stats.length - 1 ? "1px solid var(--border-subtle)" : "none", background: "var(--ink)", transition: "background 0.2s" }}
               onMouseEnter={e => (e.currentTarget.style.background = "var(--ink-3)")}
               onMouseLeave={e => (e.currentTarget.style.background = "var(--ink)")}
             >
-              <span style={{ fontSize: "0.82rem", color: "var(--silver)" }}>{s.label}</span>
-              <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.6rem", fontWeight: 700, color: "var(--red)" }}>{s.value}</span>
+              <span className="text-xs sm:text-sm min-w-0" style={{ color: "var(--silver)" }}>{s.label}</span>
+              <span className="text-xl sm:text-2xl flex-shrink-0" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, color: "var(--red)" }}>{s.value}</span>
             </div>
           ))}
         </div>
@@ -315,28 +318,28 @@ function FVSSection() {
   ];
 
   return (
-    <section id="fvs" style={{ background: "var(--ink)", padding: "100px 48px" }} className="max-[900px]:!px-6 max-[900px]:!py-[72px]">
+    <section id="fvs" className="px-4 py-14 md:px-12 md:py-24" style={{ background: "var(--ink)" }}>
       <Eyebrow text="The Financial Viability Score" />
-      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(2rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
         The verdict. Backed by <em style={{ color: "var(--gold)", fontStyle: "italic" }}>CFA-level</em> rigor.
       </h2>
-      <p style={{ maxWidth: 640, marginTop: 28, fontSize: "1.05rem", lineHeight: 1.7, color: "var(--white-dim)" }}>
+      <p className="text-sm sm:text-base" style={{ maxWidth: 640, marginTop: 28, lineHeight: 1.7, color: "var(--white-dim)" }}>
         The FVS™ is TrueBlazer's proprietary scoring system — not a vibe check, not a market research report. Six financial dimensions, quantified and weighted, producing a single score that tells you the truth about your venture.
       </p>
 
-      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 48, marginTop: 48 }}>
+      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""} grid grid-cols-1 md:grid-cols-[1fr_1.4fr] gap-8 md:gap-12 mt-10 md:mt-12`}>
         {/* Score card */}
-        <div className="max-[900px]:col-span-full" style={{ background: "var(--ink-2)", border: "1px solid var(--lp-border)", padding: 40, position: "relative" }}>
+        <div className="p-5 sm:p-8 md:p-10" style={{ background: "var(--ink-2)", border: "1px solid var(--lp-border)", position: "relative" }}>
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, var(--gold), transparent)" }} />
           <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.65rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--gold)", display: "block", marginBottom: 16 }}>Financial Viability Score™</span>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "5rem", fontWeight: 900, lineHeight: 1, color: "var(--white)" }}>
-            8.2<span style={{ color: "var(--gold)", fontSize: "2.5rem" }}>/10</span>
+          <div className="text-5xl sm:text-6xl md:text-7xl" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, lineHeight: 1, color: "var(--white)" }}>
+            8.2<span className="text-2xl sm:text-3xl md:text-4xl" style={{ color: "var(--gold)" }}>/10</span>
           </div>
           <p style={{ marginTop: 16, fontSize: "0.85rem", color: "var(--silver)", fontStyle: "italic" }}>High viability. Proceed to build phase.</p>
           <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 12 }}>
             {bars.map((b, i) => (
               <div key={b.label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.65rem", color: "var(--silver)", width: 140, flexShrink: 0 }}>{b.label}</span>
+                <span className="w-[100px] sm:w-[140px] flex-shrink-0" style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.62rem", color: "var(--silver)" }}>{b.label}</span>
                 <div style={{ flex: 1, height: 3, background: "var(--white-ghost)", overflow: "hidden" }}>
                   <div
                     style={{
@@ -353,14 +356,14 @@ function FVSSection() {
           </div>
         </div>
         {/* Dimension cards */}
-        <div className="max-[900px]:col-span-full" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {dims.map(d => (
-            <div key={d.title} style={{ padding: 24, background: "var(--ink-2)", border: "1px solid var(--border-subtle)", borderLeft: "2px solid var(--gold)", transition: "all 0.2s" }}
+            <div key={d.title} className="p-4 sm:p-6" style={{ background: "var(--ink-2)", border: "1px solid var(--border-subtle)", borderLeft: "2px solid var(--gold)", transition: "all 0.2s" }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--ink-3)"; e.currentTarget.style.borderLeftColor = "var(--gold-light)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "var(--ink-2)"; e.currentTarget.style.borderLeftColor = "var(--gold)"; }}
             >
               <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: "0.85rem", marginBottom: 6, color: "var(--white)" }}>{d.title}</div>
-              <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: "0.78rem", color: "var(--silver)", lineHeight: 1.5 }}>{d.desc}</div>
+              <div className="text-xs sm:text-sm" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, color: "var(--silver)", lineHeight: 1.5 }}>{d.desc}</div>
             </div>
           ))}
         </div>
@@ -381,22 +384,22 @@ function HowItWorks() {
   ];
 
   return (
-    <section id="how-it-works" style={{ background: "var(--ink-2)", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)", padding: "100px 48px" }} className="max-[900px]:!px-6 max-[900px]:!py-[72px]">
+    <section id="how-it-works" className="px-4 py-16 md:px-12 md:py-24" style={{ background: "var(--ink-2)", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
       <Eyebrow text="How It Works" />
-      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(2rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
         From idea paralysis to <em style={{ color: "var(--gold)", fontStyle: "italic" }}>execution clarity.</em>
       </h2>
 
-      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, background: "var(--border-subtle)", marginTop: 64 }}>
+      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""} grid grid-cols-1 md:grid-cols-3 gap-px mt-12 md:mt-16`} style={{ background: "var(--border-subtle)" }}>
         {steps.map(s => (
-          <div key={s.num} className="max-[900px]:col-span-full" style={{ background: "var(--ink)", padding: "48px 36px", position: "relative", overflow: "hidden", transition: "background 0.2s" }}
+          <div key={s.num} className="p-6 sm:p-8 md:p-9" style={{ background: "var(--ink)", position: "relative", overflow: "hidden", transition: "background 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.background = "var(--ink-2)")}
             onMouseLeave={e => (e.currentTarget.style.background = "var(--ink)")}
           >
-            <span style={{ position: "absolute", top: -10, right: 24, fontFamily: "'Playfair Display', serif", fontSize: "6rem", fontWeight: 900, color: "var(--white-ghost)", pointerEvents: "none", lineHeight: 1 }}>{s.num}</span>
+            <span className="text-6xl sm:text-7xl md:text-8xl" style={{ position: "absolute", top: -10, right: 24, fontFamily: "'Playfair Display', serif", fontWeight: 900, color: "var(--white-ghost)", pointerEvents: "none", lineHeight: 1 }}>{s.num}</span>
             <div style={{ width: 40, height: 40, border: "1px solid var(--lp-border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--gold)", marginBottom: 24, fontSize: "1rem" }}>◆</div>
-            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, marginBottom: 12 }}>{s.title}</h3>
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: "0.85rem", lineHeight: 1.65, color: "var(--silver)" }}>{s.desc}</p>
+            <h3 className="text-lg sm:text-xl" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, marginBottom: 12 }}>{s.title}</h3>
+            <p className="text-xs sm:text-sm" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, lineHeight: 1.65, color: "var(--silver)" }}>{s.desc}</p>
           </div>
         ))}
       </div>
@@ -417,31 +420,31 @@ function Mavrik() {
   ];
 
   return (
-    <section id="mavrik" style={{ background: "var(--ink-2)", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)", padding: "100px 48px", position: "relative", overflow: "hidden" }} className="max-[900px]:!px-6 max-[900px]:!py-[72px]">
+    <section id="mavrik" className="px-4 py-16 md:px-12 md:py-24 relative overflow-hidden" style={{ background: "var(--ink-2)", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
       {/* Watermark */}
-      <span style={{ position: "absolute", right: -40, top: "50%", transform: "translateY(-50%)", fontFamily: "'Playfair Display', serif", fontSize: "20rem", fontWeight: 900, color: "rgba(200,168,75,0.03)", letterSpacing: "-0.05em", pointerEvents: "none", lineHeight: 1, whiteSpace: "nowrap" }}>MAVRIK</span>
+      <span className="hidden md:block" style={{ position: "absolute", right: -40, top: "50%", transform: "translateY(-50%)", fontFamily: "'Playfair Display', serif", fontSize: "20rem", fontWeight: 900, color: "rgba(200,168,75,0.03)", letterSpacing: "-0.05em", pointerEvents: "none", lineHeight: 1, whiteSpace: "nowrap" }}>MAVRIK</span>
 
       <Eyebrow text="Meet Mavrik" />
-      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(2rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
         The AI that asks the questions you <em style={{ color: "var(--gold)", fontStyle: "italic" }}>haven't</em> asked yourself.
       </h2>
 
-      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, marginTop: 60 }}>
-        <div className="max-[900px]:col-span-full" style={{ fontSize: "1rem", lineHeight: 1.75, color: "var(--white-dim)" }}>
+      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""} grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 mt-10 md:mt-16`}>
+        <div className="text-sm sm:text-base" style={{ lineHeight: 1.75, color: "var(--white-dim)" }}>
           <p style={{ marginBottom: 20 }}>Most validation tools ask you to fill out a form. Mavrik conducts a founder interview — an adaptive, intelligent conversation that uncovers the real shape of your venture: what you actually know, what you're assuming, and where the gaps are.</p>
           <p style={{ marginBottom: 20 }}>Every insight Mavrik captures becomes part of your venture's intelligence layer. When your FVS is generated, it's reading everything Mavrik learned about you — not a generic rubric applied to a template. <span style={{ fontWeight: 500, color: "var(--white)" }}>Personalized analysis, not processed output.</span></p>
           <p>This is the proprietary data moat that separates TrueBlazer from any AI chatbot. You can't replicate 6 months of Mavrik conversation history by starting over somewhere else. The platform compounds as you do.</p>
         </div>
-        <div className="max-[900px]:col-span-full" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {features.map(f => (
-            <div key={f.title} style={{ background: "var(--ink)", padding: "20px 24px", display: "flex", alignItems: "flex-start", gap: 16, borderLeft: "2px solid transparent", transition: "all 0.2s" }}
+            <div key={f.title} className="p-4 sm:p-5 flex items-start gap-3 sm:gap-4" style={{ background: "var(--ink)", borderLeft: "2px solid transparent", transition: "all 0.2s" }}
               onMouseEnter={e => { e.currentTarget.style.borderLeftColor = "var(--gold)"; e.currentTarget.style.background = "var(--ink-3)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderLeftColor = "transparent"; e.currentTarget.style.background = "var(--ink)"; }}
             >
               <span style={{ color: "var(--gold)", fontSize: "0.85rem", marginTop: 2, flexShrink: 0 }}>◆</span>
-              <div>
-                <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 500, color: "var(--white)", display: "block", marginBottom: 3 }}>{f.title}</span>
-                <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: "0.85rem", color: "var(--silver)", lineHeight: 1.55 }}>{f.desc}</span>
+              <div className="min-w-0">
+                <span className="text-sm sm:text-base" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 500, color: "var(--white)", display: "block", marginBottom: 3 }}>{f.title}</span>
+                <span className="text-xs sm:text-sm" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, color: "var(--silver)", lineHeight: 1.55 }}>{f.desc}</span>
               </div>
             </div>
           ))}
@@ -467,18 +470,18 @@ function Moat() {
   ];
 
   return (
-    <section id="compare" style={{ background: "var(--ink)", padding: "100px 48px" }} className="max-[900px]:!px-6 max-[900px]:!py-[72px]">
+    <section id="compare" className="px-4 py-16 md:px-12 md:py-24" style={{ background: "var(--ink)" }}>
       <Eyebrow text="The Moat" />
-      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(2rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
         Not another <em style={{ color: "var(--gold)", fontStyle: "italic" }}>AI wrapper.</em>
       </h2>
 
-      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""}`} style={{ marginTop: 64, border: "1px solid var(--border-subtle)", width: "100%", overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""}`} style={{ marginTop: 48, border: "1px solid var(--border-subtle)", width: "100%", overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
               {["Capability", "Generic AI Tools", "Accelerators / VCs", "TrueBlazer"].map((h, i) => (
-                <th key={h} className={i === 2 ? "hidden md:table-cell" : ""} style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: i === 3 ? "var(--gold)" : "var(--silver)", padding: "14px 24px", textAlign: "left", borderRight: i < 3 ? "1px solid var(--border-subtle)" : "none", fontWeight: 400 }}>
+                <th key={h} className={i === 2 ? "hidden md:table-cell" : ""} style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.62rem", letterSpacing: "0.12em", textTransform: "uppercase", color: i === 3 ? "var(--gold)" : "var(--silver)", padding: "12px 14px", textAlign: "left", borderRight: i < 3 ? "1px solid var(--border-subtle)" : "none", fontWeight: 400 }}>
                   {h}
                 </th>
               ))}
@@ -492,7 +495,7 @@ function Moat() {
               >
                 {r.map((cell, ci) => (
                   <td key={ci} className={ci === 2 ? "hidden md:table-cell" : ""} style={{
-                    padding: "18px 24px", fontSize: "0.85rem",
+                    padding: "14px", fontSize: "0.8rem",
                     borderRight: ci < 3 ? "1px solid var(--border-subtle)" : "none",
                     color: ci === 0 ? "var(--white)" : cell === "✓" ? "var(--green)" : cell === "✗" || cell.startsWith("✗") ? "var(--red)" : "var(--silver)",
                     fontFamily: ci > 0 ? "'DM Mono', monospace" : "'DM Sans', sans-serif",
@@ -522,22 +525,22 @@ function Outcomes() {
   ];
 
   return (
-    <section style={{ background: "var(--ink)", padding: "100px 48px" }} className="max-[900px]:!px-6 max-[900px]:!py-[72px]">
+    <section className="px-4 py-16 md:px-12 md:py-24" style={{ background: "var(--ink)" }}>
       <Eyebrow text="Founder Outcomes" />
-      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(2rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
         The signal cuts both <em style={{ color: "var(--gold)", fontStyle: "italic" }}>ways.</em>
       </h2>
-      <p style={{ marginTop: 16, maxWidth: 600, fontSize: "0.95rem", color: "var(--white-dim)", lineHeight: 1.7 }}>
+      <p className="text-sm sm:text-base" style={{ marginTop: 16, maxWidth: 600, color: "var(--white-dim)", lineHeight: 1.7 }}>
         TrueBlazer doesn't just validate what works. It saves founders from what doesn't. Both outcomes are wins.
       </p>
 
-      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2, background: "var(--border-subtle)", marginTop: 64 }}>
+      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""} grid grid-cols-1 md:grid-cols-3 gap-px mt-12 md:mt-16`} style={{ background: "var(--border-subtle)" }}>
         {cards.map((c, i) => (
-          <div key={i} className="max-[900px]:col-span-full" style={{ background: "var(--ink)", padding: "36px 32px", transition: "background 0.2s" }}
+          <div key={i} className="p-5 sm:p-8" style={{ background: "var(--ink)", transition: "background 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.background = "var(--ink-2)")}
             onMouseLeave={e => (e.currentTarget.style.background = "var(--ink)")}
           >
-            <div style={{ fontSize: "0.95rem", lineHeight: 1.7, color: "var(--white-dim)", fontStyle: "italic", marginBottom: 24, position: "relative", paddingTop: 20 }}>
+            <div className="text-sm sm:text-base" style={{ lineHeight: 1.7, color: "var(--white-dim)", fontStyle: "italic", marginBottom: 24, position: "relative", paddingTop: 20 }}>
               <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "3rem", color: "var(--gold)", opacity: 0.4, position: "absolute", top: -16, left: -8 }}>"</span>
               {c.quote}
             </div>
@@ -580,29 +583,29 @@ function Pricing({ onAuth }: { onAuth: () => void }) {
     width: "100%", background: "var(--gold)", color: "var(--ink)", border: "none",
     padding: "14px 0", fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
     fontSize: "0.82rem", letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer",
-    marginTop: 32, transition: "background 0.2s",
+    marginTop: 32, transition: "background 0.2s", minHeight: 48,
   };
 
   return (
-    <section id="pricing" style={{ background: "var(--ink-2)", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)", padding: "100px 48px" }} className="max-[900px]:!px-6 max-[900px]:!py-[72px]">
+    <section id="pricing" className="px-4 py-16 md:px-12 md:py-24" style={{ background: "var(--ink-2)", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
       <Eyebrow text="Pricing" />
-      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(2rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
         Your first venture decision is <em style={{ color: "var(--gold)", fontStyle: "italic" }}>free.</em>
       </h2>
-      <p style={{ marginTop: 20, fontSize: "1rem", color: "var(--white-dim)", maxWidth: 520 }}>
+      <p className="text-sm sm:text-base" style={{ marginTop: 20, color: "var(--white-dim)", maxWidth: 520 }}>
         Seven days to run Mavrik, generate your FVS, and decide if TrueBlazer is your edge. Cancel before the trial ends and pay nothing.
       </p>
 
-      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, background: "var(--border-subtle)", marginTop: 56, maxWidth: 800 }}>
+      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""} grid grid-cols-1 md:grid-cols-2 gap-px mt-10 md:mt-14`} style={{ background: "var(--border-subtle)", maxWidth: 800 }}>
         {/* Free */}
-        <div className="max-[900px]:col-span-full" style={{ background: "var(--ink)", padding: "48px 40px" }}>
+        <div className="p-5 sm:p-8 md:p-10" style={{ background: "var(--ink)" }}>
           <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--silver)", display: "block", marginBottom: 20, marginTop: 8 }}>Free Trial</span>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "3rem", fontWeight: 900 }}>$0</div>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.78rem", color: "var(--silver)", marginTop: 8, marginBottom: 32 }}>7 days — no charge until trial ends</p>
+          <div className="text-4xl sm:text-5xl" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900 }}>$0</div>
+          <p className="text-xs sm:text-sm" style={{ fontFamily: "'DM Sans', sans-serif", color: "var(--silver)", marginTop: 8, marginBottom: 32 }}>7 days — no charge until trial ends</p>
           <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
             {freeFeatures.map(f => (
-              <li key={f} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", color: "var(--silver)", display: "flex", alignItems: "flex-start", gap: 8 }}>
-                <span style={{ color: "var(--gold)", fontSize: "0.5rem", marginTop: 6 }}>◆</span>{f}
+              <li key={f} className="text-xs sm:text-sm min-w-0" style={{ fontFamily: "'DM Sans', sans-serif", color: "var(--silver)", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <span style={{ color: "var(--gold)", fontSize: "0.5rem", marginTop: 6, flexShrink: 0 }}>◆</span>{f}
               </li>
             ))}
           </ul>
@@ -613,15 +616,15 @@ function Pricing({ onAuth }: { onAuth: () => void }) {
         </div>
 
         {/* Pro */}
-        <div className="max-[900px]:col-span-full" style={{ background: "var(--ink-2)", border: "1px solid var(--lp-border)", padding: "48px 40px", position: "relative" }}>
+        <div className="p-5 sm:p-8 md:p-10" style={{ background: "var(--ink-2)", border: "1px solid var(--lp-border)", position: "relative" }}>
           <div style={{ position: "absolute", top: -1, left: -1, right: -1, fontFamily: "'DM Mono', monospace", fontSize: "0.6rem", letterSpacing: "0.15em", background: "var(--gold)", color: "var(--ink)", textAlign: "center", padding: 6, textTransform: "uppercase" }}>Most Popular</div>
           <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--silver)", display: "block", marginBottom: 20, marginTop: 8 }}>TrueBlazer Pro</span>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "3rem", fontWeight: 900 }}>$49</div>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.78rem", color: "var(--silver)", marginTop: 8, marginBottom: 32 }}>per month — billed monthly, cancel anytime</p>
+          <div className="text-4xl sm:text-5xl" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900 }}>$49</div>
+          <p className="text-xs sm:text-sm" style={{ fontFamily: "'DM Sans', sans-serif", color: "var(--silver)", marginTop: 8, marginBottom: 32 }}>per month — billed monthly, cancel anytime</p>
           <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
             {proFeatures.map(f => (
-              <li key={f} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", color: "var(--silver)", display: "flex", alignItems: "flex-start", gap: 8 }}>
-                <span style={{ color: "var(--gold)", fontSize: "0.5rem", marginTop: 6 }}>◆</span>{f}
+              <li key={f} className="text-xs sm:text-sm min-w-0" style={{ fontFamily: "'DM Sans', sans-serif", color: "var(--silver)", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <span style={{ color: "var(--gold)", fontSize: "0.5rem", marginTop: 6, flexShrink: 0 }}>◆</span>{f}
               </li>
             ))}
           </ul>
@@ -629,7 +632,7 @@ function Pricing({ onAuth }: { onAuth: () => void }) {
             onMouseEnter={e => (e.currentTarget.style.background = "var(--gold-light)")}
             onMouseLeave={e => (e.currentTarget.style.background = "var(--gold)")}
           >Start Free Trial</button>
-          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.65rem", letterSpacing: "0.08em", color: "var(--silver)", textAlign: "center", marginTop: 12 }}>
+          <p style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.62rem", letterSpacing: "0.08em", color: "var(--silver)", textAlign: "center", marginTop: 12 }}>
             Card required · charged after 7-day trial · cancel anytime
           </p>
         </div>
@@ -643,18 +646,18 @@ function Pricing({ onAuth }: { onAuth: () => void }) {
    ═══════════════════════════════════════════ */
 function FinalCTA({ onAuth }: { onAuth: () => void }) {
   return (
-    <section style={{ background: "var(--ink-2)", borderTop: "1px solid var(--lp-border)", textAlign: "center", padding: "120px 48px", position: "relative", overflow: "hidden" }} className="max-[900px]:!px-6 max-[900px]:!py-20">
+    <section className="px-4 py-16 md:px-12 md:py-24 text-center relative overflow-hidden" style={{ background: "var(--ink-2)", borderTop: "1px solid var(--lp-border)" }}>
       <div style={{ position: "absolute", top: -300, left: "50%", transform: "translateX(-50%)", width: 800, height: 800, background: "radial-gradient(circle, rgba(200,168,75,0.08) 0%, transparent 65%)", pointerEvents: "none" }} />
 
       <div style={{ position: "relative", zIndex: 1 }}>
         <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.68rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)" }}>The Decision Layer</span>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: "clamp(2.4rem, 5vw, 4.5rem)", lineHeight: 1.05, letterSpacing: "-0.02em", margin: "24px 0 20px" }}>
+        <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: "clamp(2rem, 5vw, 4.5rem)", lineHeight: 1.05, letterSpacing: "-0.02em", margin: "24px 0 20px" }}>
           Stop building things<br />that shouldn't<br />be <em style={{ color: "var(--gold)", fontStyle: "italic" }}>built.</em>
         </h2>
-        <p style={{ fontSize: "1rem", color: "var(--white-dim)", maxWidth: 480, margin: "0 auto 48px", lineHeight: 1.65 }}>
+        <p className="text-sm sm:text-base" style={{ color: "var(--white-dim)", maxWidth: 480, margin: "0 auto 40px", lineHeight: 1.65 }}>
           In a world where AI can execute anything, the rarest skill is knowing what to build in the first place. That's what TrueBlazer gives you. Start your free trial — the verdict is waiting.
         </p>
-        <button onClick={onAuth} style={{ background: "var(--gold)", color: "var(--ink)", padding: "16px 36px", border: "none", fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: "0.9rem", letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer", transition: "background 0.2s" }}
+        <button onClick={onAuth} className="w-full sm:w-auto" style={{ background: "var(--gold)", color: "var(--ink)", padding: "14px 36px", border: "none", fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: "0.9rem", letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer", transition: "background 0.2s", minHeight: 48 }}
           onMouseEnter={e => (e.currentTarget.style.background = "var(--gold-light)")}
           onMouseLeave={e => (e.currentTarget.style.background = "var(--gold)")}
         >
@@ -675,12 +678,12 @@ function Footer() {
   const linkStyle: React.CSSProperties = { fontFamily: "'DM Mono', monospace", fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--silver)", textDecoration: "none", transition: "color 0.2s" };
 
   return (
-    <footer style={{ padding: "32px 48px", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }} className="max-[900px]:!flex-col max-[900px]:!text-center max-[900px]:!px-6">
+    <footer className="px-4 py-8 md:px-12 md:py-12 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-5" style={{ borderTop: "1px solid var(--border-subtle)" }}>
       <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem" }}>
         <span style={{ color: "var(--silver)" }}>True</span>
         <span style={{ color: "var(--gold)" }}>Blazer</span>
       </span>
-      <div style={{ display: "flex", gap: 24 }}>
+      <div className="flex gap-4 sm:gap-6">
         <a href="/privacy" style={linkStyle} onMouseEnter={e => (e.currentTarget.style.color = "var(--white)")} onMouseLeave={e => (e.currentTarget.style.color = "var(--silver)")}>Privacy</a>
         <a href="/terms" style={linkStyle} onMouseEnter={e => (e.currentTarget.style.color = "var(--white)")} onMouseLeave={e => (e.currentTarget.style.color = "var(--silver)")}>Terms</a>
         <a href="mailto:support@trueblazer.ai" style={linkStyle} onMouseEnter={e => (e.currentTarget.style.color = "var(--white)")} onMouseLeave={e => (e.currentTarget.style.color = "var(--silver)")}>Contact</a>
