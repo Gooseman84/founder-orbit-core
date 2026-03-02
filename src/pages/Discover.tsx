@@ -1,7 +1,7 @@
 // src/pages/Discover.tsx
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Compass, LogOut } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -55,15 +55,12 @@ export default function Discover() {
         
         if (data.status === "completed") {
           if (updatedAt > sevenDaysAgo) {
-            // Completed within 7 days - offer choice
             setExistingInterview(data);
             setInterviewState("resume_prompt");
           } else {
-            // Older than 7 days - start fresh
             startFreshInterview();
           }
         } else if (data.status === "in_progress") {
-          // In progress - offer to continue
           setExistingInterview(data);
           setInterviewState("resume_prompt");
         } else {
@@ -105,7 +102,6 @@ export default function Discover() {
 
       setIsThinking(true);
 
-      // Optimistically add user message
       let optimisticTranscript = activeTranscript;
       if (userAnswer?.trim()) {
         const userTurn: InterviewTurn = {
@@ -134,18 +130,14 @@ export default function Discover() {
         if (error) throw error;
         if (!data) throw new Error("No response from interview engine");
 
-        // Handle hard stop - interview has hit max questions
         if (data.forceComplete) {
-          // Interview hit max questions — auto-generating summary
           setInterviewId(data.interviewId);
           setTranscript(data.transcript || optimisticTranscript);
           setInterviewState("complete");
-          // Auto-trigger finalization
           await handleFinalize(data.interviewId);
           return;
         }
 
-        // Filter out AI messages that are raw JSON (summary artifacts)
         const newTranscript = (data.transcript as InterviewTurn[]).filter(
           (t) => t.role !== "ai" || !t.content.trim().startsWith("{")
         );
@@ -154,7 +146,6 @@ export default function Discover() {
         setInterviewId(newInterviewId);
         setTranscript(newTranscript);
 
-        // Check for interview completion marker
         const lastAiMessage = newTranscript
           .filter((t) => t.role === "ai")
           .pop();
@@ -186,7 +177,6 @@ export default function Discover() {
     
     setIsThinking(true);
     try {
-      // Generate summary
       const { data: summaryData, error: summaryError } = await invokeAuthedFunction<{
         contextSummary: any;
       }>("dynamic-founder-interview", {
@@ -195,7 +185,6 @@ export default function Discover() {
 
       if (summaryError) throw summaryError;
 
-      // Finalize profile
       await invokeAuthedFunction("finalize-founder-profile", {
         body: { interview_id: finalInterviewId },
       });
@@ -205,7 +194,6 @@ export default function Discover() {
         description: "Mavrik has processed your interview.",
       });
 
-      // Navigate to summary page with insights
       navigate("/discover/summary", { 
         state: { insights: summaryData?.contextSummary } 
       });
@@ -221,10 +209,9 @@ export default function Discover() {
     }
   };
 
-  // Calculate progress
   const aiQuestionCount = transcript.filter((t) => t.role === "ai").length;
   const estimatedTotal = 6;
-  const displayQuestionNumber = aiQuestionCount > 6 ? -1 : aiQuestionCount; // -1 signals "wrapping up"
+  const displayQuestionNumber = aiQuestionCount > 6 ? -1 : aiQuestionCount;
   const progressPercent = Math.min((aiQuestionCount / estimatedTotal) * 100, 100);
   const canFinalize = aiQuestionCount >= 3;
 
@@ -233,24 +220,41 @@ export default function Discover() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* FunnelStepper replaces sidebar during guided funnel */}
+    <div className="flex flex-col h-screen bg-background relative overflow-hidden">
+      {/* MAVRIK watermark */}
+      <div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 select-none"
+        aria-hidden="true"
+      >
+        <span
+          className="font-display font-black"
+          style={{
+            fontSize: "20rem",
+            color: "hsl(40 15% 93% / 0.025)",
+            lineHeight: 1,
+          }}
+        >
+          MAVRIK
+        </span>
+      </div>
+
+      {/* FunnelStepper */}
       <FunnelStepper currentStep="discover" />
 
-      {/* Minimal Header with back link */}
-      <header className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      {/* Minimal Header */}
+      <header className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-border">
         <Link
           to="/dashboard"
-          className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
+          className="p-2 -ml-2 hover:bg-secondary transition-colors"
           aria-label="Back to dashboard"
         >
           <ArrowLeft className="h-5 w-5 text-muted-foreground" />
         </Link>
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <Compass className="h-4 w-4 text-primary" />
-          </div>
-          <span className="font-semibold text-lg">TrueBlazer</span>
+          <span className="font-display text-lg font-bold">
+            <span className="text-foreground">True</span>
+            <span className="text-primary">Blazer</span>
+          </span>
         </div>
         <Button
           variant="ghost"
@@ -274,10 +278,21 @@ export default function Discover() {
 
       {/* Loading State */}
       {interviewState === "loading" && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-            <p className="text-muted-foreground text-sm">Starting your interview...</p>
+        <div className="flex-1 flex items-center justify-center relative z-10">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex gap-2">
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  className="block w-1.5 h-1.5 bg-primary"
+                  style={{
+                    animation: "mavrik-dot 1.2s ease-in-out infinite",
+                    animationDelay: `${i * 200}ms`,
+                  }}
+                />
+              ))}
+            </div>
+            <p className="label-mono">PREPARING INTERVIEW</p>
           </div>
         </div>
       )}
@@ -296,6 +311,14 @@ export default function Discover() {
           onFinalize={handleFinalize}
         />
       )}
+
+      {/* Keyframes for dot animation */}
+      <style>{`
+        @keyframes mavrik-dot {
+          0%, 100% { opacity: 0.2; }
+          50% { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

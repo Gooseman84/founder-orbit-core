@@ -1,9 +1,7 @@
 // src/components/discover/DiscoverChatInput.tsx
 import { useState, useRef, useEffect } from "react";
-import { Send } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 import { VoiceInputButton } from "@/components/ui/VoiceInputButton";
-import { cn } from "@/lib/utils";
 
 interface DiscoverChatInputProps {
   onSend: (message: string) => void;
@@ -14,7 +12,6 @@ export function DiscoverChatInput({ onSend, disabled }: DiscoverChatInputProps) 
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize textarea
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -27,7 +24,6 @@ export function DiscoverChatInput({ onSend, disabled }: DiscoverChatInputProps) 
     if (!message.trim() || disabled) return;
     onSend(message.trim());
     setMessage("");
-    // Reset height after clearing
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -47,13 +43,13 @@ export function DiscoverChatInput({ onSend, disabled }: DiscoverChatInputProps) 
   };
 
   return (
-    <div className="flex items-end gap-2">
-      {/* Voice Input Button */}
+    <div className="flex items-end gap-3">
+      {/* Voice Input */}
       <VoiceInputButton
         onTranscript={handleVoiceTranscript}
         disabled={disabled}
         size="default"
-        className="h-11 w-11 min-w-[44px]"
+        className="h-12 w-12 min-w-[48px] shrink-0 border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
       />
 
       {/* Text Input */}
@@ -66,27 +62,21 @@ export function DiscoverChatInput({ onSend, disabled }: DiscoverChatInputProps) 
           placeholder="Type your answer..."
           disabled={disabled}
           rows={1}
-          className={cn(
-            "w-full resize-none rounded-xl border border-input bg-background px-4 py-3 pr-12",
-            "text-base placeholder:text-muted-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            "disabled:cursor-not-allowed disabled:opacity-50",
-            "min-h-[44px] max-h-[120px]"
-          )}
+          className="w-full resize-none border border-border bg-card px-4 py-3 text-[1rem] font-light text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors disabled:cursor-not-allowed disabled:opacity-50 min-h-[48px] max-h-[120px]"
+          style={{ fontFamily: "'DM Sans', sans-serif" }}
           aria-label="Type your answer"
         />
       </div>
 
       {/* Send Button */}
-      <Button
+      <button
         onClick={handleSubmit}
         disabled={disabled || !message.trim()}
-        size="icon"
-        className="h-11 w-11 min-w-[44px] rounded-xl shrink-0"
+        className="w-12 h-12 min-w-[48px] shrink-0 flex items-center justify-center bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         aria-label="Send message"
       >
-        <Send className="h-5 w-5" />
-      </Button>
+        <ArrowRight className="h-5 w-5" />
+      </button>
     </div>
   );
 }
