@@ -1,18 +1,7 @@
-import { useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
-import { Lock, Info } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  ResponsiveContainer,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  Tooltip as RechartsTooltip,
-} from "recharts";
+import { Lock } from "lucide-react";
 
 interface FinancialViabilityScoreProps {
   score: number; // 0-100
@@ -33,45 +22,57 @@ interface FinancialViabilityScoreProps {
   dimensionEvidenceCounts?: Record<string, number>;
 }
 
-// Get score color based on value
-const getScoreColor = (score: number) => {
-  if (score >= 61) return { text: "text-green-600", bg: "bg-green-600", stroke: "#16a34a" };
-  if (score >= 31) return { text: "text-amber-600", bg: "bg-amber-600", stroke: "#d97706" };
-  return { text: "text-red-600", bg: "bg-red-600", stroke: "#dc2626" };
+// Score verdict text
+const getVerdict = (score: number) => {
+  if (score >= 80) return "This venture shows exceptional financial promise.";
+  if (score >= 60) return "A promising opportunity with strong fundamentals.";
+  if (score >= 40) return "Viable with focused execution and validation.";
+  if (score >= 20) return "Significant financial headwinds identified.";
+  return "Reconsider the financial model before proceeding.";
 };
 
-// Get badge text and style based on score
-const getScoreBadge = (score: number) => {
-  if (score >= 80) return { text: "Strong opportunity", className: "bg-green-500/10 text-green-600 border-green-500/30" };
-  if (score >= 60) return { text: "Promising with caveats", className: "bg-blue-500/10 text-blue-600 border-blue-500/30" };
-  if (score >= 40) return { text: "Needs validation", className: "bg-amber-500/10 text-amber-600 border-amber-500/30" };
-  if (score >= 20) return { text: "Significant risks", className: "bg-orange-500/10 text-orange-600 border-orange-500/30" };
-  return { text: "Reconsider this direction", className: "bg-red-500/10 text-red-600 border-red-500/30" };
+const DIMENSIONS = [
+  { key: "marketSize", label: "MARKET SIZE" },
+  { key: "unitEconomics", label: "UNIT ECONOMICS" },
+  { key: "timeToRevenue", label: "TIME TO REV" },
+  { key: "competition", label: "COMPETITION" },
+  { key: "capitalRequirements", label: "CAPITAL REQ" },
+  { key: "founderMarketFit", label: "FOUNDER FIT" },
+] as const;
+
+const DIMENSION_DESCRIPTIONS: Record<string, { title: string; description: string }> = {
+  marketSize: {
+    title: "Market Size",
+    description: "Total addressable market depth and growth trajectory. Evaluates whether the market can sustain meaningful revenue at scale.",
+  },
+  unitEconomics: {
+    title: "Unit Economics",
+    description: "Gross margin structure, customer acquisition cost relative to lifetime value, and path to profitable unit economics.",
+  },
+  timeToRevenue: {
+    title: "Time to Revenue",
+    description: "Speed from launch to first dollar. Shorter cycles reduce burn and validate demand faster.",
+  },
+  competition: {
+    title: "Competitive Density",
+    description: "Market saturation, barrier strength, and differentiation potential. Lower density signals more opportunity.",
+  },
+  capitalRequirements: {
+    title: "Capital Requirements",
+    description: "Upfront investment needed relative to founder resources. Lower requirements improve risk-adjusted returns.",
+  },
+  founderMarketFit: {
+    title: "Founder-Market Fit",
+    description: "Alignment between your skills, network, and domain expertise with the target market's demands.",
+  },
 };
 
 // Confidence shift display config
-const CONFIDENCE_CONFIG: Record<string, { label: string; color: string }> = {
-  assumption_based: { label: "Assumption-Based", color: "text-muted-foreground bg-muted/50 border-muted-foreground/20" },
-  early_signal: { label: "Early Signal", color: "text-yellow-600 bg-yellow-500/10 border-yellow-500/30" },
-  partially_validated: { label: "Partially Validated", color: "text-blue-600 bg-blue-500/10 border-blue-500/30" },
-  evidence_backed: { label: "Evidence-Backed", color: "text-green-600 bg-green-500/10 border-green-500/30" },
-};
-
-// Size configurations
-const sizeConfig = {
-  sm: { gauge: 100, strokeWidth: 8, fontSize: "text-2xl", labelSize: "text-xs" },
-  md: { gauge: 140, strokeWidth: 10, fontSize: "text-3xl", labelSize: "text-sm" },
-  lg: { gauge: 180, strokeWidth: 12, fontSize: "text-4xl", labelSize: "text-base" },
-};
-
-// Dimension key to label map for evidence tooltip
-const DIMENSION_LABELS: Record<string, string> = {
-  marketSize: "Market Size",
-  unitEconomics: "Unit Economics",
-  timeToRevenue: "Time to Revenue",
-  competitiveDensity: "Competitive Density",
-  capitalRequirements: "Capital Requirements",
-  founderMarketFit: "Founder-Market Fit",
+const CONFIDENCE_CONFIG: Record<string, { label: string }> = {
+  assumption_based: { label: "ASSUMPTION-BASED" },
+  early_signal: { label: "EARLY SIGNAL" },
+  partially_validated: { label: "PARTIALLY VALIDATED" },
+  evidence_backed: { label: "EVIDENCE-BACKED" },
 };
 
 export function FinancialViabilityScore({
@@ -86,201 +87,162 @@ export function FinancialViabilityScore({
   dimensionEvidenceCounts,
 }: FinancialViabilityScoreProps) {
   const { hasPro } = useFeatureAccess();
-  const config = sizeConfig[size];
-  const scoreColors = getScoreColor(score);
-  const badge = getScoreBadge(score);
+  const [animatedScore, setAnimatedScore] = useState(0);
+  const [barsVisible, setBarsVisible] = useState(false);
+  const hasAnimated = useRef(false);
 
-  // Calculate gauge parameters
-  const radius = (config.gauge - config.strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
+  // Animate score counting up
+  useEffect(() => {
+    if (hasAnimated.current || score <= 0) return;
+    hasAnimated.current = true;
 
-  // Prepare radar chart data
-  const radarData = useMemo(() => {
-    if (!breakdown) return [];
-    return [
-      { axis: "Market Size", value: breakdown.marketSize, key: "marketSize" },
-      { axis: "Unit Economics", value: breakdown.unitEconomics, key: "unitEconomics" },
-      { axis: "Time to Revenue", value: breakdown.timeToRevenue, key: "timeToRevenue" },
-      { axis: "Competition", value: breakdown.competition, key: "competitiveDensity" },
-      { axis: "Capital Req.", value: breakdown.capitalRequirements, key: "capitalRequirements" },
-      { axis: "Founder Fit", value: breakdown.founderMarketFit, key: "founderMarketFit" },
-    ];
-  }, [breakdown]);
+    const duration = 1500;
+    const startTime = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setAnimatedScore(Math.round(eased * score));
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        setBarsVisible(true);
+      }
+    };
+
+    requestAnimationFrame(tick);
+  }, [score]);
 
   const canShowBreakdown = hasPro && showBreakdown && breakdown;
   const confidenceCfg = confidenceShift ? CONFIDENCE_CONFIG[confidenceShift] : null;
 
+  // Convert score to /10 for display
+  const displayScore = (animatedScore / 10).toFixed(1);
+
   return (
     <div className={cn("flex flex-col items-center", className)}>
-      {/* Circular Gauge */}
-      <div 
-        className="relative flex items-center justify-center"
-        style={{ width: config.gauge, height: config.gauge }}
+      {/* Radial glow background */}
+      <div
+        className="relative w-full flex flex-col items-center py-12"
+        style={{
+          background: "radial-gradient(circle at center, hsl(43 52% 54% / 0.08) 0%, transparent 60%)",
+        }}
       >
-        <svg
-          className="absolute inset-0 transform -rotate-90"
-          width={config.gauge}
-          height={config.gauge}
-        >
-          {/* Background circle */}
-          <circle
-            cx={config.gauge / 2}
-            cy={config.gauge / 2}
-            r={radius}
-            stroke="currentColor"
-            strokeWidth={config.strokeWidth}
-            fill="none"
-            className="text-muted opacity-20"
-          />
-          {/* Progress circle with smooth transition */}
-          <circle
-            cx={config.gauge / 2}
-            cy={config.gauge / 2}
-            r={radius}
-            stroke={scoreColors.stroke}
-            strokeWidth={config.strokeWidth}
-            fill="none"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            className="transition-all duration-[600ms] ease-out"
-          />
-        </svg>
+        {/* Eyebrow */}
+        <span className="label-mono-gold mb-6 tracking-[0.2em]">
+          FINANCIAL VIABILITY SCORE™
+        </span>
 
-        {/* Center content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={cn(config.fontSize, "font-bold transition-all duration-[600ms]", scoreColors.text)}>
-            {Math.round(score)}
+        {/* Animated score */}
+        <div className="flex items-baseline gap-1">
+          <span className="font-display font-black text-[8rem] leading-none text-foreground transition-all duration-300">
+            {displayScore}
           </span>
-          <span className={cn(config.labelSize, "text-muted-foreground")}>
-            / 100
+          <span className="font-display text-[3rem] text-muted-foreground">
+            /10
           </span>
         </div>
+
+        {/* Verdict */}
+        <p className="mt-4 text-[1.1rem] font-light italic text-muted-foreground text-center max-w-md">
+          {getVerdict(score)}
+        </p>
+
+        {/* Confidence badge */}
+        {confidenceCfg && (
+          <span className="badge-gold mt-4">
+            {confidenceCfg.label}
+          </span>
+        )}
       </div>
 
-      {/* Label */}
-      <p className="mt-2 text-sm font-medium text-center text-muted-foreground">
-        Financial Viability Score
-      </p>
-
-      {/* Confidence Badge */}
-      {confidenceCfg && (
-        <span className={cn(
-          "mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border",
-          confidenceCfg.color
-        )}>
-          {confidenceCfg.label}
-        </span>
-      )}
-
-      {/* Badge */}
-      <span className={cn(
-        "mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium border",
-        badge.className
-      )}>
-        {badge.text}
-      </span>
-
-      {/* Radar Chart Breakdown (Pro only) */}
-      {showBreakdown && breakdown && (
-        <div className="mt-4 w-full">
+      {/* Score card with dimension bars */}
+      {showBreakdown && (
+        <div className="w-full mt-8">
           {canShowBreakdown ? (
-            <>
-              <div className="w-full h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
-                    <PolarGrid stroke="hsl(var(--border))" />
-                    <PolarAngleAxis 
-                      dataKey="axis" 
-                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                    />
-                    <PolarRadiusAxis 
-                      domain={[0, 100]} 
-                      tick={{ fontSize: 8 }}
-                      axisLine={false}
-                    />
-                    <Radar
-                      name="Score"
-                      dataKey="value"
-                      stroke={scoreColors.stroke}
-                      fill={scoreColors.stroke}
-                      fillOpacity={0.3}
-                      strokeWidth={2}
-                    />
-                    <RechartsTooltip 
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                        fontSize: "12px"
-                      }}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
+            <div className="card-gold-accent p-10">
+              {/* Dimension bars */}
+              <div className="space-y-3">
+                {DIMENSIONS.map((dim, i) => {
+                  const value = breakdown[dim.key as keyof typeof breakdown] ?? 0;
+                  return (
+                    <div key={dim.key} className="flex items-center gap-4">
+                      <span className="label-mono w-[140px] shrink-0 text-right">
+                        {dim.label}
+                      </span>
+                      <div
+                        className="flex-1 h-[3px] overflow-hidden"
+                        style={{ background: "hsl(40 15% 93% / 0.06)" }}
+                      >
+                        <div
+                          className="h-full bg-primary"
+                          style={{
+                            transformOrigin: "left",
+                            transform: barsVisible ? `scaleX(${value / 100})` : "scaleX(0)",
+                            transition: `transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${i * 0.1}s`,
+                          }}
+                        />
+                      </div>
+                      <span className="font-mono-tb text-[0.65rem] text-primary w-7 text-right">
+                        {value}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Dimension bars with evidence indicators */}
-              {dimensionEvidenceCounts && (
-                <TooltipProvider>
-                  <div className="mt-3 space-y-2">
-                    {radarData.map((dim) => {
-                      const evidenceCount = dimensionEvidenceCounts[dim.key] || 0;
-                      return (
-                        <div key={dim.key} className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground w-24 text-right shrink-0 truncate">
-                            {dim.axis}
-                          </span>
-                          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-[600ms] ease-out"
-                              style={{
-                                width: `${dim.value}%`,
-                                backgroundColor: scoreColors.stroke,
-                              }}
-                            />
-                          </div>
-                          <span className="text-[10px] font-medium w-6 text-right">{dim.value}</span>
-                          {evidenceCount > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center cursor-help shrink-0">
-                                  <Info className="w-2.5 h-2.5 text-primary" />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="right" className="text-xs">
-                                Informed by {evidenceCount} evidence {evidenceCount === 1 ? "entry" : "entries"}
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </TooltipProvider>
-              )}
-            </>
-          ) : (
-            // Locked state for trial users
-            <div className="relative mt-2">
-              <div className="w-full h-36 flex items-center justify-center bg-muted/30 rounded-lg border border-dashed border-muted-foreground/30 backdrop-blur-sm">
-                <div className="text-center space-y-2">
-                  <Lock className="w-5 h-5 mx-auto text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">
-                    Upgrade to see full breakdown
-                  </p>
-                  {onUpgradeClick && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={onUpgradeClick}
-                      className="text-xs h-7"
+              {/* Dimension explanation cards */}
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-3">
+                {DIMENSIONS.map((dim) => {
+                  const desc = DIMENSION_DESCRIPTIONS[dim.key];
+                  const evidenceCount = dimensionEvidenceCounts?.[dim.key] || 0;
+                  return (
+                    <div
+                      key={dim.key}
+                      className="card-gold-left p-5"
                     >
-                      Upgrade to Pro
-                    </Button>
-                  )}
-                </div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[0.85rem] font-medium text-foreground">
+                          {desc.title}
+                        </span>
+                        {evidenceCount > 0 && (
+                          <span className="label-mono">
+                            {evidenceCount} {evidenceCount === 1 ? "signal" : "signals"}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[0.78rem] font-light text-muted-foreground leading-relaxed">
+                        {desc.description}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
+            </div>
+          ) : (
+            /* Locked state for trial users */
+            <div
+              className="w-full flex flex-col items-center justify-center border border-dashed py-12 px-6"
+              style={{
+                borderColor: "hsl(240 10% 14%)",
+                background: "hsl(240 12% 7%)",
+              }}
+            >
+              <Lock className="w-5 h-5 text-muted-foreground mb-3" />
+              <p className="label-mono mb-4">DIMENSION BREAKDOWN LOCKED</p>
+              {onUpgradeClick && (
+                <button
+                  onClick={onUpgradeClick}
+                  className="w-full max-w-sm py-4 bg-primary text-primary-foreground font-medium text-[0.85rem] tracking-[0.06em] uppercase transition-colors hover:opacity-90"
+                >
+                  Unlock Full Analysis
+                </button>
+              )}
+              <p className="label-mono mt-4 text-center">
+                BUILT WITH CFA-LEVEL METHODOLOGY · 7-DAY FREE TRIAL
+              </p>
             </div>
           )}
         </div>
@@ -288,13 +250,13 @@ export function FinancialViabilityScore({
 
       {/* Last validated timestamp */}
       {lastValidatedAt && (
-        <p className="mt-2 text-[10px] text-muted-foreground/70 text-center">
+        <p className="mt-4 label-mono text-center">
           Last updated from validation: {new Date(lastValidatedAt).toLocaleDateString()}
         </p>
       )}
 
-      {/* Trust Element */}
-      <p className="mt-1 text-[10px] text-muted-foreground/70 text-center">
+      {/* Trust element */}
+      <p className="mt-2 label-mono text-center">
         Scored using CFA-grade financial analysis
       </p>
     </div>
@@ -309,23 +271,18 @@ export function FinancialViabilityScoreInline({
   score: number;
   className?: string;
 }) {
-  const scoreColors = getScoreColor(score);
-  const badge = getScoreBadge(score);
+  const displayScore = (score / 10).toFixed(1);
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <div className={cn(
-        "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2",
-        scoreColors.text,
-        score >= 61 ? "border-green-500/30" : score >= 31 ? "border-amber-500/30" : "border-red-500/30"
-      )}>
-        {Math.round(score)}
+    <div className={cn("flex items-center gap-3", className)}>
+      <div className="flex items-baseline gap-0.5">
+        <span className="font-display text-2xl font-bold text-primary">
+          {displayScore}
+        </span>
+        <span className="font-display text-sm text-muted-foreground">/10</span>
       </div>
       <div className="flex flex-col">
-        <span className="text-xs font-medium">Financial Viability</span>
-        <span className={cn("text-[10px]", badge.className.includes("green") ? "text-green-600" : badge.className.includes("blue") ? "text-blue-600" : badge.className.includes("amber") ? "text-amber-600" : "text-red-600")}>
-          {badge.text}
-        </span>
+        <span className="label-mono-gold">FVS</span>
       </div>
     </div>
   );
