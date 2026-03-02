@@ -1,8 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Target, Sparkles, RefreshCw, Pencil } from "lucide-react";
+import { Sparkles, RefreshCw } from "lucide-react";
 import { FounderBlueprint } from "@/types/blueprint";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,26 +17,24 @@ interface NorthStarSnapshotProps {
   onGenerateMoves: () => void;
 }
 
-export const NorthStarSnapshot = ({ 
-  blueprint, 
-  onEditSection, 
-  onGenerateMoves 
+export const NorthStarSnapshot = ({
+  blueprint,
+  onEditSection,
+  onGenerateMoves,
 }: NorthStarSnapshotProps) => {
   const { user } = useAuth();
   const [generatingMoves, setGeneratingMoves] = useState(false);
-  // Get first quarter from focus_quarters if it exists
+
   const currentQuarterFocus = blueprint.focus_quarters?.[0] as Record<string, unknown> | undefined;
 
   const handleGenerateMoves = async () => {
     if (!user) return;
-    
     const recommendations = blueprint.ai_recommendations as unknown as Recommendation[] | null;
-    
     if (!recommendations || recommendations.length === 0) {
-      toast({ 
-        title: "No recommendations", 
+      toast({
+        title: "No recommendations",
         description: "Refresh your blueprint with AI first to generate recommendations.",
-        variant: "destructive" 
+        variant: "destructive",
       });
       onGenerateMoves();
       return;
@@ -55,128 +50,82 @@ export const NorthStarSnapshot = ({
         xp_reward: 10,
         status: "pending",
       }));
-
       const { error } = await supabase.from("tasks").insert(tasks);
-
       if (error) throw error;
-
-      toast({ 
-        title: "5 new moves added to your Tasks", 
-        description: "Check your Tasks page to get started." 
-      });
+      toast({ title: "5 new moves added to your Tasks", description: "Check your Tasks page to get started." });
     } catch (err) {
       console.error("Failed to create tasks:", err);
-      toast({ 
-        title: "Error", 
-        description: "Failed to create tasks from recommendations", 
-        variant: "destructive" 
-      });
+      toast({ title: "Error", description: "Failed to create tasks from recommendations", variant: "destructive" });
     } finally {
       setGeneratingMoves(false);
     }
   };
 
   return (
-    <Card className="border-primary/30 bg-gradient-to-b from-primary/5 to-transparent h-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">North Star</CardTitle>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => onEditSection("north_star")}
-          >
-            <Pencil className="h-3 w-3 mr-1" />
-            Edit
-          </Button>
-        </div>
-      </CardHeader>
+    <div className="border border-border bg-card">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+        <span className="label-mono-gold">NORTH STAR</span>
+        <button
+          onClick={() => onEditSection("north_star")}
+          className="label-mono hover:text-foreground transition-colors"
+        >
+          EDIT
+        </button>
+      </div>
 
-      <CardContent className="space-y-6">
-        {/* One-Liner - Big and prominent */}
-        <div className="text-center py-4">
-          {blueprint.north_star_one_liner ? (
-            <p className="text-xl font-semibold text-primary leading-relaxed">
-              "{blueprint.north_star_one_liner}"
+      <div className="p-6 space-y-6">
+        {/* One-Liner */}
+        {blueprint.north_star_one_liner ? (
+          <div className="relative border-l-4 border-primary pl-6 py-2">
+            <span className="absolute -top-3 -left-2 font-display text-[3rem] text-primary/30 leading-none pointer-events-none select-none">"</span>
+            <p className="font-display italic text-[1.3rem] text-foreground leading-[1.5]">
+              {blueprint.north_star_one_liner}
             </p>
-          ) : (
-            <p className="text-lg text-muted-foreground/50 italic">
-              Your north star one-liner goes here
-            </p>
-          )}
-        </div>
+          </div>
+        ) : (
+          <p className="text-sm font-light text-muted-foreground/50 italic">
+            Your north star one-liner goes here
+          </p>
+        )}
 
         {/* Validation Stage */}
-        <div className="flex items-center justify-center">
-          {blueprint.validation_stage ? (
-            <Badge variant="secondary" className="text-sm px-3 py-1">
-              Stage: {blueprint.validation_stage}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-sm px-3 py-1 text-muted-foreground">
-              Stage not set
-            </Badge>
-          )}
-        </div>
+        {blueprint.validation_stage && (
+          <div className="flex items-center">
+            <span className="badge-gold">STAGE: {blueprint.validation_stage.toUpperCase()}</span>
+          </div>
+        )}
 
         {/* Current Quarter Focus */}
         {currentQuarterFocus && (
-          <Card className="bg-muted/50">
-            <CardHeader className="pb-2 pt-3">
-              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Current Quarter Focus
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {currentQuarterFocus.title && (
-                <p className="font-medium text-sm">{String(currentQuarterFocus.title)}</p>
-              )}
-              {currentQuarterFocus.description && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {String(currentQuarterFocus.description)}
-                </p>
-              )}
-              {currentQuarterFocus.goals && Array.isArray(currentQuarterFocus.goals) && (
-                <ul className="mt-2 space-y-1">
-                  {currentQuarterFocus.goals.map((goal, i) => (
-                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-1">
-                      <span className="text-primary">•</span>
-                      {String(goal)}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {!currentQuarterFocus.title && !currentQuarterFocus.description && (
-                <pre className="text-xs overflow-auto">
-                  {JSON.stringify(currentQuarterFocus, null, 2)}
-                </pre>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {!currentQuarterFocus && (
-          <div className="text-center py-3">
-            <p className="text-sm text-muted-foreground/50 italic">
-              No quarterly focus set
-            </p>
+          <div className="border border-border bg-secondary/50 p-5">
+            <span className="label-mono block mb-2">CURRENT QUARTER FOCUS</span>
+            {currentQuarterFocus.title && (
+              <p className="text-sm font-medium text-foreground">{String(currentQuarterFocus.title)}</p>
+            )}
+            {currentQuarterFocus.description && (
+              <p className="text-sm font-light text-muted-foreground mt-1">{String(currentQuarterFocus.description)}</p>
+            )}
+            {currentQuarterFocus.goals && Array.isArray(currentQuarterFocus.goals) && (
+              <ul className="mt-2 space-y-1">
+                {currentQuarterFocus.goals.map((goal, i) => (
+                  <li key={i} className="text-[0.82rem] font-light text-muted-foreground flex items-start gap-2">
+                    <span className="text-primary shrink-0">—</span>
+                    {String(goal)}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 
         {/* AI Summary */}
         {blueprint.ai_summary && (
-          <div className="border-t pt-4">
-            <div className="flex items-center gap-1 mb-2">
-              <Sparkles className="h-3 w-3 text-primary" />
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                AI Summary
-              </p>
-            </div>
-            <p className="text-sm italic text-muted-foreground leading-relaxed">
+          <div className="border-t border-border pt-4">
+            <span className="label-mono-gold flex items-center gap-1 mb-2">
+              <Sparkles className="h-3 w-3" /> AI SUMMARY
+            </span>
+            <p className="text-sm font-light italic text-muted-foreground leading-relaxed">
               {blueprint.ai_summary}
             </p>
           </div>
@@ -184,25 +133,24 @@ export const NorthStarSnapshot = ({
 
         {/* Action Buttons */}
         <div className="pt-4 space-y-2">
-          <Button 
-            className="w-full" 
+          <button
+            className="w-full bg-primary text-primary-foreground font-medium text-[0.78rem] tracking-[0.06em] uppercase py-3 transition-opacity hover:opacity-90"
             onClick={() => onEditSection("full_blueprint")}
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Update Blueprint
-          </Button>
-          <Button 
-            variant="outline" 
-            className="w-full"
+            <RefreshCw className="h-3.5 w-3.5 inline mr-2" />
+            UPDATE BLUEPRINT
+          </button>
+          <button
+            className="w-full border border-border text-muted-foreground font-medium text-[0.78rem] tracking-[0.06em] uppercase py-3 transition-colors hover:text-foreground hover:bg-secondary disabled:opacity-40"
             onClick={handleGenerateMoves}
             disabled={generatingMoves}
           >
-            <Sparkles className={`h-4 w-4 mr-2 ${generatingMoves ? "animate-pulse" : ""}`} />
-            {generatingMoves ? "Adding moves..." : "Generate Next 5 Moves"}
-          </Button>
+            <Sparkles className={`h-3.5 w-3.5 inline mr-2 ${generatingMoves ? "animate-pulse" : ""}`} />
+            {generatingMoves ? "ADDING MOVES…" : "GENERATE NEXT 5 MOVES"}
+          </button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

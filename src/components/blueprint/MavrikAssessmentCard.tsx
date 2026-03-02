@@ -3,12 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Brain, RefreshCw, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { RefreshCw, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { NPSPrompt } from "@/components/feedback/NPSPrompt";
 
@@ -19,10 +15,10 @@ interface MavrikAssessmentCardProps {
 type RecommendationAction = "persist" | "double_down" | "pivot" | "pause";
 
 const RECOMMENDATION_MAP: Record<RecommendationAction, { label: string; className: string }> = {
-  persist: { label: "Stay the Course", className: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
-  double_down: { label: "Double Down", className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
-  pivot: { label: "Consider a Pivot", className: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
-  pause: { label: "Gather More Signal", className: "bg-muted text-muted-foreground border-border" },
+  persist: { label: "STAY THE COURSE", className: "border-primary/35 text-primary bg-primary/10" },
+  double_down: { label: "DOUBLE DOWN", className: "border-success/35 text-success bg-success/10" },
+  pivot: { label: "CONSIDER A PIVOT", className: "border-destructive/35 text-destructive bg-destructive/10" },
+  pause: { label: "GATHER MORE SIGNAL", className: "border-border text-muted-foreground bg-transparent" },
 };
 
 function parseRecommendation(raw: string | null) {
@@ -73,18 +69,15 @@ export function MavrikAssessmentCard({ ventureId }: MavrikAssessmentCardProps) {
     enabled: !!user && !!ventureId,
   });
 
-  // NPS trigger: check once after summary loads successfully
   useEffect(() => {
     if (!summary || !user || npsCheckedRef.current) return;
     npsCheckedRef.current = true;
-
     const checkNPS = async () => {
       const { count } = await supabase
         .from("beta_feedback")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
         .eq("feedback_type", "nps");
-
       if ((count ?? 0) === 0) {
         setTimeout(() => setShowNPS(true), 3000);
       }
@@ -104,13 +97,10 @@ export function MavrikAssessmentCard({ ventureId }: MavrikAssessmentCardProps) {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-
       if (!session?.id) return;
-
       await invokeAuthedFunction("analyze-validation-session", {
         body: { session_id: session.id, venture_id: ventureId },
       });
-
       queryClient.invalidateQueries({ queryKey: ["mavrik-assessment", ventureId] });
       queryClient.invalidateQueries({ queryKey: ["mavrik-evidence-count", ventureId] });
     } catch (err) {
@@ -122,17 +112,15 @@ export function MavrikAssessmentCard({ ventureId }: MavrikAssessmentCardProps) {
 
   if (isLoading) {
     return (
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <Skeleton className="h-5 w-48" />
-          <Skeleton className="h-3 w-32 mt-1" />
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="border border-border bg-card mb-6">
+        <div className="px-6 py-4 border-b border-border">
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <div className="p-6 space-y-4">
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-8 w-40" />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
@@ -143,98 +131,87 @@ export function MavrikAssessmentCard({ ventureId }: MavrikAssessmentCardProps) {
 
   return (
     <>
-    <Card className="mb-6">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-            <Brain className="h-4 w-4 text-primary" />
-          </div>
+      <div className="border border-border bg-card mb-6">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg">Mavrik's Assessment</CardTitle>
+            <span className="label-mono-gold">MAVRIK'S ASSESSMENT</span>
             {evidenceCount != null && (
-              <p className="text-xs text-muted-foreground">
-                Based on {evidenceCount} evidence {evidenceCount === 1 ? "entry" : "entries"}
+              <p className="label-mono mt-0.5">
+                BASED ON {evidenceCount} EVIDENCE {evidenceCount === 1 ? "ENTRY" : "ENTRIES"}
               </p>
             )}
           </div>
         </div>
-      </CardHeader>
 
-      <CardContent className="space-y-5">
-        {/* Pattern Summary */}
-        {summary.pattern_summary && (
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">
-              What the evidence shows
-            </p>
-            <p className="text-sm text-card-foreground/80 leading-relaxed">
-              {summary.pattern_summary}
-            </p>
-          </div>
-        )}
+        <div className="p-6 space-y-5">
+          {/* Pattern Summary */}
+          {summary.pattern_summary && (
+            <div>
+              <span className="label-mono block mb-1">WHAT THE EVIDENCE SHOWS</span>
+              <p className="text-sm font-light text-foreground/80 leading-relaxed">
+                {summary.pattern_summary}
+              </p>
+            </div>
+          )}
 
-        {/* Advisor Note — most prominent */}
-        {summary.advisor_note && (
-          <div className="rounded-lg border-l-4 border-primary bg-primary/5 p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">
-              Mavrik's take
-            </p>
-            <p className="text-sm text-card-foreground leading-relaxed">
-              {summary.advisor_note}
-            </p>
-          </div>
-        )}
+          {/* Advisor Note */}
+          {summary.advisor_note && (
+            <div className="border-l-4 border-primary bg-primary/5 p-5">
+              <span className="label-mono block mb-1">MAVRIK'S TAKE</span>
+              <p className="text-sm font-light text-foreground leading-relaxed">
+                {summary.advisor_note}
+              </p>
+            </div>
+          )}
 
-        {/* Recommendation Badge */}
-        {rec && recConfig && (
-          <div>
-            <Badge className={cn("text-sm px-3 py-1 border", recConfig.className)}>
-              {recConfig.label}
-            </Badge>
-            {rec.rationale && (
-              <p className="text-xs text-muted-foreground mt-1.5">{rec.rationale}</p>
-            )}
-          </div>
-        )}
+          {/* Recommendation Badge */}
+          {rec && recConfig && (
+            <div>
+              <span className={`font-mono-tb text-[0.62rem] uppercase tracking-wider border px-2.5 py-1 ${recConfig.className}`}>
+                {recConfig.label}
+              </span>
+              {rec.rationale && (
+                <p className="text-[0.82rem] font-light text-muted-foreground mt-1.5">{rec.rationale}</p>
+              )}
+            </div>
+          )}
 
-        {/* Evidence Breakdown */}
-        {(summary.positive_count != null || summary.negative_count != null || summary.neutral_count != null) && (
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-emerald-400 font-medium">
-              {summary.positive_count ?? 0} Confirming
+          {/* Evidence Breakdown */}
+          {(summary.positive_count != null || summary.negative_count != null || summary.neutral_count != null) && (
+            <div className="flex items-center gap-4">
+              <span className="font-mono-tb text-[0.65rem] uppercase text-success">
+                {summary.positive_count ?? 0} CONFIRMING
+              </span>
+              <span className="font-mono-tb text-[0.65rem] uppercase text-destructive">
+                {summary.negative_count ?? 0} CHALLENGING
+              </span>
+              <span className="font-mono-tb text-[0.65rem] uppercase text-muted-foreground">
+                {summary.neutral_count ?? 0} NEUTRAL
+              </span>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-4 border-t border-border">
+            <span className="label-mono">
+              {summary.generated_at ? format(new Date(summary.generated_at), "MMM d, yyyy").toUpperCase() : "—"}
             </span>
-            <span className="text-destructive font-medium">
-              {summary.negative_count ?? 0} Challenging
-            </span>
-            <span className="text-muted-foreground font-medium">
-              {summary.neutral_count ?? 0} Neutral
-            </span>
+            <button
+              onClick={handleReanalyze}
+              disabled={isReanalyzing}
+              className="flex items-center gap-1.5 label-mono hover:text-foreground transition-colors disabled:opacity-40"
+            >
+              {isReanalyzing ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              RE-ANALYZE
+            </button>
           </div>
-        )}
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          <p className="text-xs text-muted-foreground">
-            Assessment generated {summary.generated_at ? format(new Date(summary.generated_at), "MMM d, yyyy") : "—"}
-          </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs gap-1.5"
-            onClick={handleReanalyze}
-            disabled={isReanalyzing}
-          >
-            {isReanalyzing ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3 w-3" />
-            )}
-            Re-analyze
-          </Button>
         </div>
-      </CardContent>
-    </Card>
-    <NPSPrompt open={showNPS} onClose={() => setShowNPS(false)} />
+      </div>
+      <NPSPrompt open={showNPS} onClose={() => setShowNPS(false)} />
     </>
   );
 }
