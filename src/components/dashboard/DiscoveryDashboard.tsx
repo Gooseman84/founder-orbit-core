@@ -11,9 +11,7 @@ import { XpProgressBar } from "@/components/shared/XpProgressBar";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { NorthStarCard } from "./NorthStarCard";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { 
   Radar, 
   FileText, 
@@ -25,7 +23,7 @@ import {
   Lock
 } from "lucide-react";
 
-const DASHBOARD_STALE_TIME = 3 * 60 * 1000; // 3 minutes
+const DASHBOARD_STALE_TIME = 3 * 60 * 1000;
 
 export function DiscoveryDashboard() {
   const { user } = useAuth();
@@ -118,143 +116,146 @@ export function DiscoveryDashboard() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
+      {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
+        <div className="eyebrow mb-3">VENTURE COMMAND CENTER</div>
+        <h1 className="font-display text-[2.5rem] font-bold leading-tight text-foreground">
+          Discover Your <em className="text-primary not-italic" style={{ fontStyle: "italic" }}>North Star</em>
+        </h1>
+        <p className="mt-2 text-[0.95rem] font-light text-muted-foreground">
           Explore ideas and find your next venture.
         </p>
       </div>
 
-      {/* XP Progress Card - Compact */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium">Founder Progress</span>
-            {!loading && xpSummary && <LevelBadge level={xpSummary.level} />}
-          </div>
-          {loading ? (
-            <Skeleton className="h-2 w-full" />
-          ) : error ? (
-            <p className="text-xs text-destructive">{error}</p>
-          ) : xpSummary ? (
-            <XpProgressBar
-              totalXp={xpSummary.totalXp}
-              level={xpSummary.level}
-              nextLevelXp={xpSummary.nextLevelXp}
-              currentLevelMinXp={xpSummary.currentLevelMinXp}
-              progressPercent={xpSummary.progressPercent}
-            />
-          ) : null}
-        </CardContent>
-      </Card>
+      {/* XP Progress */}
+      <div className="card-gold-accent p-5">
+        <div className="flex items-center justify-between mb-3">
+          <span className="label-mono">Founder Progress</span>
+          {!loading && xpSummary && <LevelBadge level={xpSummary.level} />}
+        </div>
+        {loading ? (
+          <Skeleton className="h-2 w-full" />
+        ) : error ? (
+          <p className="text-xs text-destructive">{error}</p>
+        ) : xpSummary ? (
+          <XpProgressBar
+            totalXp={xpSummary.totalXp}
+            level={xpSummary.level}
+            nextLevelXp={xpSummary.nextLevelXp}
+            currentLevelMinXp={xpSummary.currentLevelMinXp}
+            progressPercent={xpSummary.progressPercent}
+          />
+        ) : null}
+      </div>
 
       {/* Pro Upgrade CTA */}
       {isFree && (
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
-          <CardContent className="flex items-center justify-between gap-3 py-4">
-            <div className="flex items-center gap-2">
-              <Crown className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">Unlock TrueBlazer Pro</span>
-            </div>
-            <UpgradeButton variant="full" />
-          </CardContent>
-        </Card>
+        <div className="card-gold-accent p-5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Crown className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">Unlock TrueBlazer Pro</span>
+          </div>
+          <UpgradeButton variant="full" />
+        </div>
       )}
 
       {/* North Star Card */}
       <NorthStarCard />
 
-      {/* Quick Action Grid */}
-      <div className="grid gap-3 grid-cols-2">
-        {/* Niche Radar — hidden for free users (matches sidebar) */}
+      {/* Stat Grid */}
+      <div className="grid gap-4 grid-cols-2">
         {canShowRadar && (
-        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate("/radar")}>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-2 mb-2">
+          <div
+            className="card-gold-accent p-5 cursor-pointer transition-colors hover:bg-secondary"
+            onClick={() => navigate("/radar")}
+          >
+            <div className="flex items-center gap-2 mb-3">
               <Radar className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Niche Radar</span>
+              <span className="label-mono">Niche Radar</span>
             </div>
             {loadingRadar ? (
-              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-8 w-16" />
             ) : (
-              <span className="text-xl font-bold">{radarStats?.recentCount ?? 0}</span>
+              <span className="font-display text-[2rem] font-bold text-foreground">{radarStats?.recentCount ?? 0}</span>
             )}
-            <p className="text-xs text-muted-foreground">signals this week</p>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground mt-1">signals this week</p>
+          </div>
         )}
 
-        {/* Workspace */}
-        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate("/workspace")}>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Workspace</span>
-            </div>
-            {loadingWorkspace ? (
-              <Skeleton className="h-6 w-16" />
-            ) : (
-              <span className="text-xl font-bold">{workspaceStats?.totalDocs ?? 0}</span>
-            )}
-            <p className="text-xs text-muted-foreground">documents</p>
-          </CardContent>
-        </Card>
+        <div
+          className="card-gold-accent p-5 cursor-pointer transition-colors hover:bg-secondary"
+          onClick={() => navigate("/workspace")}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="h-4 w-4 text-primary" />
+            <span className="label-mono">Workspace</span>
+          </div>
+          {loadingWorkspace ? (
+            <Skeleton className="h-8 w-16" />
+          ) : (
+            <span className="font-display text-[2rem] font-bold text-foreground">{workspaceStats?.totalDocs ?? 0}</span>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">documents</p>
+        </div>
 
-        {/* Opportunity Score */}
-        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate("/ideas")}>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Top Score</span>
-            </div>
-            {loadingScore ? (
-              <Skeleton className="h-6 w-16" />
-            ) : highestScore ? (
-              <span className="text-xl font-bold">{highestScore.total_score}</span>
-            ) : (
-              <span className="text-xl font-bold text-muted-foreground">—</span>
-            )}
-            <p className="text-xs text-muted-foreground truncate">
-              {highestScore?.ideas?.title || "No scores yet"}
-            </p>
-          </CardContent>
-        </Card>
+        <div
+          className="card-gold-accent p-5 cursor-pointer transition-colors hover:bg-secondary"
+          onClick={() => navigate("/ideas")}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <span className="label-mono">Top Score</span>
+          </div>
+          {loadingScore ? (
+            <Skeleton className="h-8 w-16" />
+          ) : highestScore ? (
+            <span className="font-display text-[2.5rem] font-bold text-primary">{highestScore.total_score}</span>
+          ) : (
+            <span className="font-display text-[2rem] font-bold text-muted-foreground">—</span>
+          )}
+          <p className="text-xs text-muted-foreground mt-1 truncate">
+            {highestScore?.ideas?.title || "No scores yet"}
+          </p>
+        </div>
 
-        {/* Reflection Streak */}
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Flame className={`h-4 w-4 ${reflectionStreak > 0 ? "text-orange-500" : "text-muted-foreground"}`} />
-              <span className="text-sm font-medium">Streak</span>
-            </div>
-            {loadingReflectionStreak ? (
-              <Skeleton className="h-6 w-16" />
-            ) : (
-              <span className="text-xl font-bold">{reflectionStreak}</span>
-            )}
-            <p className="text-xs text-muted-foreground">day{reflectionStreak !== 1 ? "s" : ""}</p>
-          </CardContent>
-        </Card>
+        <div className="card-gold-accent p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Flame className={`h-4 w-4 ${reflectionStreak > 0 ? "text-primary" : "text-muted-foreground"}`} />
+            <span className="label-mono">Streak</span>
+          </div>
+          {loadingReflectionStreak ? (
+            <Skeleton className="h-8 w-16" />
+          ) : (
+            <span className="font-display text-[2rem] font-bold text-foreground">{reflectionStreak}</span>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">day{reflectionStreak !== 1 ? "s" : ""}</p>
+        </div>
       </div>
 
       {/* Primary Actions */}
-      <div className="grid gap-2 grid-cols-2">
-        <Button className="gap-2" onClick={() => navigate("/ideas")}>
+      <div className="grid gap-3 grid-cols-2">
+        <button
+          className="py-3 px-6 bg-primary text-primary-foreground font-sans font-medium text-[0.85rem] tracking-[0.06em] uppercase transition-colors hover:brightness-110 flex items-center justify-center gap-2"
+          onClick={() => navigate("/ideas")}
+        >
           <Sparkles className="h-4 w-4" />
           Explore Ideas
-        </Button>
-        <Button variant="outline" className="gap-2" onClick={() => {
-          if (!canCompare) {
-            setPaywallReason("COMPARE_REQUIRES_PRO");
-          } else {
-            navigate("/ideas/compare");
-          }
-        }}>
+        </button>
+        <button
+          className="py-3 px-6 border border-border text-foreground font-sans font-medium text-[0.85rem] tracking-[0.06em] uppercase transition-colors hover:bg-secondary flex items-center justify-center gap-2"
+          onClick={() => {
+            if (!canCompare) {
+              setPaywallReason("COMPARE_REQUIRES_PRO");
+            } else {
+              navigate("/ideas/compare");
+            }
+          }}
+        >
           {!canCompare && <Lock className="h-3 w-3" />}
           <Scale className="h-4 w-4" />
           Compare Ideas
-        </Button>
+        </button>
       </div>
 
       {paywallReason && (
