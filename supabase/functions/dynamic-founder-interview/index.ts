@@ -46,6 +46,15 @@ Before each question, silently assess which gaps remain:
      customer pain, or regulatory complexity that this founder's
      expertise could transfer to?
 
+4b. WORKFLOW DEPTH (Required when a specific problem is described)
+   - What is the exact sequence of steps the target customer follows
+     today to solve this problem?
+   - What tool or system do they open first?
+   - Where specifically does it break down or take too long?
+   - What does the output of this workflow look like when it's done?
+   - This is the most important signal for determining whether the
+     founder is a native or a tourist in this problem space.
+
 5. VISION
    - What does success look like in 3 years?
    - Income target? Lifestyle goals?
@@ -214,8 +223,28 @@ logistics, agriculture, etc.), activate vertical probing:
    for the ONE painful workflow they will own first. Ask: "What's the
    one task in that business that still runs on spreadsheets or paper?"
 
-2. WORKFLOW DEPTH: How well do they understand the end-to-end workflow?
-   From "lead appears" to "job done and paid" to "books closed."
+2. WORKFLOW DEPTH: How well do they understand the step-by-step
+   process their target customer follows today?
+
+   Push for: "Walk me through exactly what [customer] does today
+   to handle [problem] — the specific steps, tools they use, where
+   it breaks down, and what done looks like."
+
+   HIGH signal: founder describes 4+ specific steps with tool names
+   and failure points. They know which step takes longest and why.
+
+   MEDIUM signal: founder describes the problem outcome but not
+   the process. They know it's painful but not exactly where.
+
+   LOW signal: founder describes the problem category but can't
+   walk through the current workflow. This is a tourist signal —
+   flag in workflowDepth as "low" and note in confidenceLevel.
+
+   This probe applies universally — not just vertical SaaS. A
+   founder building for wealth advisors, healthcare workers, or
+   any specific professional role should be able to describe the
+   current workflow in detail. If they can't, that's the most
+   important signal in the entire interview.
 
 3. INDUSTRY ACCESS: Do they have direct access to operators? Worked in
    it, served it, or have warm relationships?
@@ -303,9 +332,12 @@ reasons to ask more. If you have medium-or-better signal on at least
 Ask **5-7 questions** that fill gaps (HARD LIMIT: 7 questions max):
 1. Specific unfair advantages (unique access, insider knowledge, rare skills)
 2. Real constraints (actual time, family responsibilities, financial runway)
-3. Hard "no" filters (things they'll NEVER do)
-4. Market segments they understand from the inside
-5. Network & distribution (REQUIRED — who are their first 10 customers?)
+3. Workflow depth — walk me through exactly how your target customer
+     solves this problem today, step by step (REQUIRED if not already
+     covered in onboarding answers)
+4. Hard "no" filters (things they'll NEVER do)
+5. Market segments they understand from the inside
+6. Network & distribution (REQUIRED — who are their first 10 customers?)
 
 DO NOT ask about:
 - Why they're here (you already know)
@@ -377,7 +409,10 @@ Ask **6-8 questions** that cover these areas in order of priority (HARD LIMIT: 8
 1. Professional expertise and insider knowledge (what they know that
    others don't)
 2. Customer groups they understand from the inside
-3. Specific frustrations or broken workflows they've observed
+3. Workflow depth — the step-by-step process the target customer
+     follows today to solve this problem, where it breaks down, and
+     what tools they currently use (REQUIRED once a specific problem
+     is identified)
 4. Real constraints (time, capital, responsibilities)
 5. Financial target and lifestyle vision
 6. Network & distribution — who are their first 10 customers? (REQUIRED)
@@ -420,6 +455,11 @@ dealt with — something that made you think 'there has to be a better way'?"
 After problem → "Who specifically suffers most from this? Paint me a
 picture of that person — their role, their frustration, what they're
 doing today to cope."
+After customer identified → If workflow depth is not yet clear,
+ask: "Walk me through exactly what [that person] does today to
+handle this — start from the moment the problem appears. What do
+they open, what do they do, where does it get painful, and what
+does the end result look like?"
 After customer → "If you could build something for them, what would the
 first version look like? Don't worry about feasibility — just describe
 what changes for them."
