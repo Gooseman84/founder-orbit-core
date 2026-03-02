@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CheckCircle, AlertTriangle, ChevronDown, ChevronRight, Info } from "lucide-react";
 import type { SpecValidationResult, SpecValidationFlag } from "@/types/implementationKit";
@@ -15,32 +14,51 @@ const DOCUMENT_LABELS: Record<string, string> = {
   launch_playbook: "Launch Playbook",
 };
 
-const SEVERITY_VARIANT: Record<string, "destructive" | "secondary" | "outline"> = {
-  blocking: "destructive",
-  warning: "secondary",
-  suggestion: "outline",
+const SEVERITY_STYLES: Record<string, { borderColor: string; color: string }> = {
+  blocking: { borderColor: "hsl(0 65% 52% / 0.35)", color: "hsl(0 65% 52%)" },
+  warning: { borderColor: "hsl(43 52% 54% / 0.35)", color: "hsl(43 52% 54%)" },
+  suggestion: { borderColor: "hsl(220 12% 58% / 0.35)", color: "hsl(220 12% 58%)" },
 };
 
 function FlagRow({ flag }: { flag: SpecValidationFlag }) {
   const [open, setOpen] = useState(false);
+  const severity = SEVERITY_STYLES[flag.severity] || SEVERITY_STYLES.suggestion;
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="flex items-center gap-2 w-full py-1.5 px-1 rounded hover:bg-muted/50 transition-colors text-left">
-        {open ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />}
-        <span className="text-xs text-primary font-medium shrink-0">
+      <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 px-2 hover:bg-secondary/30 transition-colors text-left">
+        {open ? (
+          <ChevronDown className="h-3 w-3 shrink-0" style={{ color: "hsl(220 12% 58%)" }} />
+        ) : (
+          <ChevronRight className="h-3 w-3 shrink-0" style={{ color: "hsl(220 12% 58%)" }} />
+        )}
+        <span className="font-mono-tb text-[0.62rem] uppercase shrink-0 text-primary">
           {DOCUMENT_LABELS[flag.document] || flag.document}
         </span>
-        <Badge variant={SEVERITY_VARIANT[flag.severity] || "outline"} className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+        <span
+          className="font-mono-tb text-[0.58rem] uppercase px-1.5 py-0.5 border shrink-0"
+          style={{ borderColor: severity.borderColor, color: severity.color }}
+        >
           {flag.severity}
-        </Badge>
-        <span className="text-xs text-muted-foreground truncate flex-1">{flag.issue}</span>
+        </span>
+        <span className="text-xs truncate flex-1" style={{ color: "hsl(220 12% 58%)" }}>
+          {flag.issue}
+        </span>
       </CollapsibleTrigger>
       <CollapsibleContent className="pl-6 pb-2 space-y-1">
-        <code className="text-[11px] bg-muted px-1.5 py-0.5 rounded font-mono block">
+        <div
+          className="text-[0.75rem] font-mono-tb px-3 py-2"
+          style={{
+            background: "hsl(240 10% 10%)",
+            borderLeft: "2px solid hsl(43 52% 54%)",
+            color: "hsl(40 15% 93%)",
+          }}
+        >
           "{flag.ambiguousText}"
-        </code>
-        <p className="text-xs text-muted-foreground italic">{flag.resolutionQuestion}</p>
+        </div>
+        <p className="text-xs italic" style={{ color: "hsl(220 12% 58%)" }}>
+          {flag.resolutionQuestion}
+        </p>
       </CollapsibleContent>
     </Collapsible>
   );
@@ -50,34 +68,47 @@ export function SpecValidationSection({ validation }: SpecValidationSectionProps
   const approvedForExecution = validation?.approvedForExecution ?? false;
   const flags = validation?.flags ?? [];
 
-  // Don't render anything if we have no useful data
   if (flags.length === 0 && !approvedForExecution) return null;
 
-  // Approved with no flags — simple green badge, nothing expandable
   if (approvedForExecution && flags.length === 0) {
     return (
-      <div className="pt-1 px-1">
-        <Badge variant="outline" className="text-[10px] text-green-500 border-green-500/30 gap-1">
+      <div className="px-2 pt-2">
+        <span
+          className="inline-flex items-center gap-1.5 font-mono-tb text-[0.62rem] uppercase border px-2 py-1"
+          style={{
+            borderColor: "hsl(142 50% 42% / 0.35)",
+            color: "hsl(142 50% 42%)",
+          }}
+        >
           <CheckCircle className="h-3 w-3" />
-          Spec Approved
-        </Badge>
+          SPEC APPROVED
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2 pt-1">
-      <div className="flex items-center gap-2 px-1">
+    <div
+      className="space-y-2 border p-4"
+      style={{ borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+    >
+      <div className="flex items-center gap-2">
         {approvedForExecution ? (
-          <Badge variant="outline" className="text-[10px] text-green-500 border-green-500/30 gap-1">
+          <span
+            className="inline-flex items-center gap-1.5 font-mono-tb text-[0.62rem] uppercase border px-2 py-1"
+            style={{ borderColor: "hsl(142 50% 42% / 0.35)", color: "hsl(142 50% 42%)" }}
+          >
             <CheckCircle className="h-3 w-3" />
-            Spec Approved
-          </Badge>
+            SPEC APPROVED
+          </span>
         ) : flags.length > 0 ? (
-          <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30 gap-1">
+          <span
+            className="inline-flex items-center gap-1.5 font-mono-tb text-[0.62rem] uppercase border px-2 py-1"
+            style={{ borderColor: "hsl(43 52% 54% / 0.35)", color: "hsl(43 52% 54%)" }}
+          >
             <AlertTriangle className="h-3 w-3" />
-            Review Ambiguities
-          </Badge>
+            REVIEW AMBIGUITIES
+          </span>
         ) : null}
       </div>
 
@@ -88,9 +119,9 @@ export function SpecValidationSection({ validation }: SpecValidationSectionProps
           ))}
         </div>
       ) : (
-        <div className="flex items-start gap-2 px-1 py-2 rounded-md bg-muted/50">
-          <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
-          <p className="text-xs text-muted-foreground">
+        <div className="flex items-start gap-2 px-2 py-2">
+          <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: "hsl(220 12% 58%)" }} />
+          <p className="text-xs" style={{ color: "hsl(220 12% 58%)" }}>
             Spec validation flagged issues but details are unavailable. Review your documents manually before building.
           </p>
         </div>
