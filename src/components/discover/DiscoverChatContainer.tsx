@@ -1,11 +1,9 @@
 // src/components/discover/DiscoverChatContainer.tsx
 import { useRef, useEffect } from "react";
-import { Progress } from "@/components/ui/progress";
 import { DiscoverChatMessage } from "./DiscoverChatMessage";
 import { DiscoverChatInput } from "./DiscoverChatInput";
 import { DiscoverTypingIndicator } from "./DiscoverTypingIndicator";
 import { Button } from "@/components/ui/button";
-import { Sparkles } from "lucide-react";
 import type { InterviewTurn } from "@/types/founderInterview";
 
 interface DiscoverChatContainerProps {
@@ -33,44 +31,59 @@ export function DiscoverChatContainer({
 }: DiscoverChatContainerProps) {
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript, isThinking]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Progress Bar */}
-      <div className="px-4 py-2 border-b bg-muted/30">
-        <div className="max-w-[680px] mx-auto w-full">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-muted-foreground">
-              {questionNumber < 0 ? "Wrapping up..." : `Question ${Math.max(questionNumber, 1)} of ~${estimatedTotal}`}
-            </span>
-            {canFinalize && !isComplete && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onFinalize()}
-                disabled={isThinking}
-                className="text-xs h-7 text-primary hover:text-primary"
-              >
-                <Sparkles className="h-3 w-3 mr-1" />
-                Done — Generate ideas
-              </Button>
-            )}
-          </div>
-          <Progress value={progressPercent} className="h-1" />
+    <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+      {/* Progress Bar — 3px full width */}
+      <div
+        className="w-full h-[3px] shrink-0"
+        style={{ background: "hsl(40 15% 93% / 0.06)" }}
+      >
+        <div
+          className="h-full bg-primary transition-all duration-500 ease-out"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+
+      {/* Header area */}
+      <div className="px-6 pt-8 pb-4 max-w-[720px] mx-auto w-full">
+        <div className="eyebrow mb-2">FOUNDER INTELLIGENCE INTERVIEW</div>
+        <p className="text-[0.95rem] font-light text-muted-foreground">
+          Mavrik will ask you 4–6 questions. Answer honestly — this intelligence powers your entire TrueBlazer experience.
+        </p>
+
+        {/* Finalize CTA row */}
+        <div className="flex items-center justify-between mt-4">
+          <span className="label-mono">
+            {questionNumber < 0
+              ? "WRAPPING UP"
+              : `QUESTION ${Math.max(questionNumber, 1)} OF ~${estimatedTotal}`}
+          </span>
+          {canFinalize && !isComplete && (
+            <button
+              onClick={() => onFinalize()}
+              disabled={isThinking}
+              className="label-mono-gold hover:opacity-80 transition-opacity disabled:opacity-40"
+            >
+              DONE — GENERATE IDEAS →
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-[680px] mx-auto w-full space-y-4">
+      {/* Separator */}
+      <div className="mx-6 max-w-[720px] self-center w-full border-b border-border" />
+
+      {/* Conversation Area */}
+      <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="max-w-[720px] mx-auto w-full">
           {transcript.length === 0 && !isThinking && (
-            <div className="text-center text-muted-foreground text-sm py-8">
-              Mavrik is preparing your personalized interview...
-            </div>
+            <p className="label-mono text-center py-8">
+              MAVRIK IS PREPARING YOUR INTERVIEW
+            </p>
           )}
 
           {transcript.map((turn, index) => (
@@ -78,27 +91,30 @@ export function DiscoverChatContainer({
               key={index}
               role={turn.role}
               content={turn.content}
+              isLast={index === transcript.length - 1}
             />
           ))}
 
           {isThinking && <DiscoverTypingIndicator />}
 
-          {/* Scroll anchor */}
           <div ref={scrollAnchorRef} />
         </div>
       </div>
 
-      {/* Input Area - Fixed at bottom */}
-      <div className="border-t bg-background px-4 py-3">
-        <div className="max-w-[680px] mx-auto w-full">
+      {/* Input Area */}
+      <div className="border-t border-border bg-background px-6 py-4">
+        <div className="max-w-[720px] mx-auto w-full">
           {isComplete ? (
-            <div className="flex flex-col items-center gap-3 py-2">
-              <p className="text-sm text-muted-foreground text-center">
-                Interview complete! Ready to discover your ideal ventures.
+            <div className="flex flex-col items-center gap-4 py-3">
+              <p className="label-mono text-center">
+                INTERVIEW COMPLETE
               </p>
-              <Button onClick={() => onFinalize()} disabled={isThinking} className="w-full sm:w-auto">
-                <Sparkles className="h-4 w-4 mr-2" />
-                {isThinking ? "Generating profile..." : "Generate my ideas"}
+              <Button
+                onClick={() => onFinalize()}
+                disabled={isThinking}
+                className="w-full bg-primary text-primary-foreground font-medium text-[0.85rem] tracking-[0.06em] uppercase py-4 h-auto hover:opacity-90"
+              >
+                {isThinking ? "GENERATING PROFILE..." : "GENERATE MY IDEAS"}
               </Button>
             </div>
           ) : (
