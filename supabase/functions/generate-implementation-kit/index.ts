@@ -1141,23 +1141,81 @@ Once this is done, you can:
 But ship THIS first. Everything else can wait.
 
 ## MACHINE CONTEXT BLOCK
-At the very top of the document, before any markdown content, output this JSON block:
+
+At the very top of the document, before any markdown content, output this JSON block. Every field is required. This is a machine-readable execution manifest for autonomous AI coding agents.
 
 \`\`\`machine_context
 {
+  "schema_version": "2.0",
+  "manifest_type": "dag_execution_plan",
+  "product_name": "string — exact product name from North Star Spec",
   "total_phases": number,
+  "execution_model": "sequential" | "parallel_where_noted",
+  "environment": {
+    "frontend": "string — e.g. React + TypeScript + Tailwind",
+    "backend": "string — e.g. Supabase (PostgreSQL + Edge Functions)",
+    "ai_tool": "string — e.g. Cursor, Lovable, Windsurf",
+    "deployment": "string — e.g. Vercel",
+    "package_manager": "npm" | "yarn" | "pnpm",
+    "required_env_vars": ["string — e.g. SUPABASE_URL, STRIPE_SECRET_KEY"]
+  },
   "phases": [
     {
+      "phase_id": "string — stable machine identifier e.g. 'phase_1_auth'",
       "phase_number": number,
-      "name": "string",
-      "deliverables": ["string"],
+      "name": "string — human readable phase name",
+      "objective": "string — one sentence: what capability exists after this phase that did not before",
+
+      "depends_on": ["string — phase_id values that must be complete before this phase starts. Empty array for phase 1."],
+
       "estimated_hours": number,
-      "test_criteria": ["string — binary pass/fail"],
-      "lovable_prompt_summary": "string — one sentence describing what the Lovable prompt for this phase accomplishes"
+
+      "tasks": [
+        {
+          "task_id": "string — e.g. 'p1_t1_supabase_auth'",
+          "title": "string — verb-first, max 8 words",
+          "depends_on_tasks": ["string — task_id values within this phase that must complete first"],
+          "agent_instruction": "string — exact instruction an agent should receive. Specific enough that a coding agent can execute without clarification. Include file paths, function names, or table names where known.",
+          "estimated_minutes": number,
+          "output_artifact": "string — what file, table, or endpoint exists when this task is done"
+        }
+      ],
+      "acceptance_criteria": [
+        {
+          "criterion_id": "string — e.g. 'p1_ac1'",
+          "test": "string — binary pass/fail statement written as a testable assertion. Must start with a verb. Examples: 'User can sign up with email and password without error', 'Stripe webhook receives payment_succeeded event and updates user subscription in database', 'Dashboard renders without console errors when user has zero ventures'",
+          "test_method": "manual_qa" | "automated_test" | "log_inspection" | "database_check",
+          "blocking": true | false
+        }
+      ],
+
+      "phase_complete_when": "string — single sentence combining all blocking acceptance criteria. This is the gate an agent checks before proceeding to dependent phases.",
+
+      "agent_prompt_template": "string — complete prompt an agent can use to implement this entire phase. Written in imperative second person. Must reference the tech stack specifically. Must end with: 'Do not proceed until all acceptance criteria in phase_complete_when are verified.' Minimum 3 sentences.",
+      "failure_behavior": {
+        "if_blocked": "string — what the agent should do if it cannot complete a task (e.g. 'Log blocker to console and halt. Do not proceed to dependent phases.')",
+        "rollback_safe": true | false,
+        "rollback_instruction": "string — if rollback_safe is false, what the agent must do to avoid corrupting state"
+      }
     }
   ],
-  "critical_path_order": ["string — phase name in execution order"],
-  "first_working_milestone": "string — the earliest moment something functional exists"
+  "dag_edges": [
+    {
+      "from": "string — phase_id",
+      "to": "string — phase_id",
+      "dependency_type": "hard_sequential" | "soft_parallel",
+      "rationale": "string — one sentence explaining why this dependency exists"
+    }
+  ],
+  "critical_path": ["string — ordered array of phase_ids representing the longest dependent chain"],
+
+  "first_working_milestone": {
+    "phase_id": "string — which phase produces the first working end-to-end slice",
+    "description": "string — what a user can actually do at this milestone",
+    "estimated_hours_to_reach": number
+  },
+  "agent_handoff_instructions": "string — 2-3 sentences an agent reads before starting execution. Should state: what this manifest represents, the execution order, and how to handle blockers. Example: 'This manifest defines the Thin Vertical Slice for [product]. Execute phases in critical_path order. Each phase has an agent_prompt_template — use it verbatim. Do not skip acceptance criteria checks. If a phase cannot be completed, halt and report the blocking criterion.'",
+  "out_of_scope": ["string — explicit list of features NOT in this slice. Agents must not build these even if they seem related."]
 }
 \`\`\`
 
