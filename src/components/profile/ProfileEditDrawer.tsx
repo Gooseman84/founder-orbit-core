@@ -8,7 +8,6 @@ import {
   DrawerFooter,
   DrawerClose,
 } from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -19,10 +18,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
-export type ProfileSection = 
-  | "passions" 
-  | "skills" 
-  | "constraints" 
+export type ProfileSection =
+  | "passions"
+  | "skills"
+  | "constraints"
   | "vision"
   | "deep_desires"
   | "energy"
@@ -140,10 +139,8 @@ export function ProfileEditDrawer({
   const [workPreferences, setWorkPreferences] = useState<string[]>([]);
   const [personalityFlags, setPersonalityFlags] = useState<Record<string, boolean>>({});
 
-  // Initialize state when drawer opens
   useEffect(() => {
     if (open && section) {
-      // Core data
       setPassionsText(coreData?.passions_text || "");
       setPassionsTags(coreData?.passions_tags || []);
       setSkillsText(coreData?.skills_text || "");
@@ -154,8 +151,6 @@ export function ProfileEditDrawer({
       setTechLevel(coreData?.tech_level || "");
       setLifestyleGoals(coreData?.lifestyle_goals || "");
       setSuccessVision(coreData?.success_vision || "");
-
-      // Extended data
       setDeepDesires(extendedData?.deep_desires || "");
       setFears(extendedData?.fears || "");
       setEnergyGivers(extendedData?.energy_givers || "");
@@ -177,7 +172,6 @@ export function ProfileEditDrawer({
 
       if (isCoreSection) {
         const updateData: Record<string, unknown> = {};
-        
         if (section === "passions") {
           updateData.passions_text = passionsText;
           updateData.passions_tags = passionsTags;
@@ -193,17 +187,13 @@ export function ProfileEditDrawer({
           updateData.lifestyle_goals = lifestyleGoals;
           updateData.success_vision = successVision;
         }
-
         const { error } = await supabase
           .from("founder_profiles")
           .update(updateData)
           .eq("user_id", user.id);
-
         if (error) throw error;
       } else {
-        // Extended profile sections
         const updateData: Record<string, unknown> = {};
-
         if (section === "deep_desires") {
           updateData.deep_desires = deepDesires;
           updateData.fears = fears;
@@ -219,14 +209,11 @@ export function ProfileEditDrawer({
         } else if (section === "personality") {
           updateData.personality_flags = personalityFlags;
         }
-
-        // Check if extended profile exists
         const { data: existing } = await supabase
           .from("user_intake_extended")
           .select("id")
           .eq("user_id", user.id)
           .single();
-
         if (existing) {
           const { error } = await supabase
             .from("user_intake_extended")
@@ -240,7 +227,6 @@ export function ProfileEditDrawer({
           if (error) throw error;
         }
       }
-
       toast({ title: "Profile updated", description: "Your changes have been saved." });
       onSaved();
       onOpenChange(false);
@@ -260,90 +246,83 @@ export function ProfileEditDrawer({
     }
   };
 
+  const fieldLabelClass = "font-mono-tb text-[0.65rem] uppercase tracking-wider block mb-1.5";
+  const fieldLabelStyle = { color: "hsl(43 52% 54%)" };
+
   const renderContent = () => {
     switch (section) {
       case "passions":
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="passions-text">What are you passionate about?</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>What are you passionate about?</label>
               <Textarea
-                id="passions-text"
                 value={passionsText}
                 onChange={(e) => setPassionsText(e.target.value)}
                 placeholder="Describe what excites and drives you..."
-                className="mt-1.5"
                 rows={4}
+                style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+                className="font-light focus:border-primary"
               />
             </div>
             <div>
-              <Label>Passion Tags</Label>
-              <TagInput
-                tags={passionsTags}
-                onTagsChange={setPassionsTags}
-                placeholder="Add tags..."
-              />
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Passion Tags</label>
+              <TagInput tags={passionsTags} onTagsChange={setPassionsTags} placeholder="Add tags..." />
             </div>
           </div>
         );
-
       case "skills":
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="skills-text">What are your key skills?</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>What are your key skills?</label>
               <Textarea
-                id="skills-text"
                 value={skillsText}
                 onChange={(e) => setSkillsText(e.target.value)}
                 placeholder="Describe your expertise and capabilities..."
-                className="mt-1.5"
                 rows={4}
+                style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+                className="font-light focus:border-primary"
               />
             </div>
             <div>
-              <Label>Skill Tags</Label>
-              <TagInput
-                tags={skillsTags}
-                onTagsChange={setSkillsTags}
-                placeholder="Add tags..."
-              />
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Skill Tags</label>
+              <TagInput tags={skillsTags} onTagsChange={setSkillsTags} placeholder="Add tags..." />
             </div>
           </div>
         );
-
       case "constraints":
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="time">Hours available per week</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Hours available per week</label>
               <Input
-                id="time"
                 type="number"
                 value={timePerWeek}
                 onChange={(e) => setTimePerWeek(e.target.value ? Number(e.target.value) : "")}
                 placeholder="e.g., 20"
-                className="mt-1.5"
+                style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+                className="focus:border-primary"
               />
             </div>
             <div>
-              <Label htmlFor="capital">Capital available ($)</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Capital available ($)</label>
               <Input
-                id="capital"
                 type="number"
                 value={capitalAvailable}
                 onChange={(e) => setCapitalAvailable(e.target.value ? Number(e.target.value) : "")}
                 placeholder="e.g., 5000"
-                className="mt-1.5"
+                style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+                className="focus:border-primary"
               />
             </div>
             <div>
-              <Label>Risk Tolerance</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Risk Tolerance</label>
               <Select value={riskTolerance} onValueChange={setRiskTolerance}>
-                <SelectTrigger className="mt-1.5">
+                <SelectTrigger style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}>
                   <SelectValue placeholder="Select risk tolerance" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent style={{ borderRadius: 0 }}>
                   <SelectItem value="low">Low</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="high">High</SelectItem>
@@ -351,12 +330,12 @@ export function ProfileEditDrawer({
               </Select>
             </div>
             <div>
-              <Label>Tech Level</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Tech Level</label>
               <Select value={techLevel} onValueChange={setTechLevel}>
-                <SelectTrigger className="mt-1.5">
+                <SelectTrigger style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}>
                   <SelectValue placeholder="Select tech level" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent style={{ borderRadius: 0 }}>
                   <SelectItem value="non-technical">Non-technical</SelectItem>
                   <SelectItem value="basic">Basic</SelectItem>
                   <SelectItem value="intermediate">Intermediate</SelectItem>
@@ -366,156 +345,157 @@ export function ProfileEditDrawer({
             </div>
           </div>
         );
-
       case "vision":
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="lifestyle">Lifestyle Goals</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Lifestyle Goals</label>
               <Textarea
-                id="lifestyle"
                 value={lifestyleGoals}
                 onChange={(e) => setLifestyleGoals(e.target.value)}
                 placeholder="What does your ideal lifestyle look like?"
-                className="mt-1.5"
                 rows={4}
+                style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+                className="font-light focus:border-primary"
               />
             </div>
             <div>
-              <Label htmlFor="vision">Success Vision</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Success Vision</label>
               <Textarea
-                id="vision"
                 value={successVision}
                 onChange={(e) => setSuccessVision(e.target.value)}
                 placeholder="How do you define success?"
-                className="mt-1.5"
                 rows={4}
+                style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+                className="font-light focus:border-primary"
               />
             </div>
           </div>
         );
-
       case "deep_desires":
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="desires">Deep Desires</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Deep Desires</label>
               <Textarea
-                id="desires"
                 value={deepDesires}
                 onChange={(e) => setDeepDesires(e.target.value)}
                 placeholder="What do you truly want to achieve?"
-                className="mt-1.5"
                 rows={4}
+                style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+                className="font-light focus:border-primary"
               />
             </div>
             <div>
-              <Label htmlFor="fears">Fears</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Fears</label>
               <Textarea
-                id="fears"
                 value={fears}
                 onChange={(e) => setFears(e.target.value)}
                 placeholder="What are you afraid of?"
-                className="mt-1.5"
                 rows={4}
+                style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+                className="font-light focus:border-primary"
               />
             </div>
           </div>
         );
-
       case "energy":
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="givers">Energy Givers</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Energy Givers</label>
               <Textarea
-                id="givers"
                 value={energyGivers}
                 onChange={(e) => setEnergyGivers(e.target.value)}
                 placeholder="What activities give you energy?"
-                className="mt-1.5"
                 rows={4}
+                style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+                className="font-light focus:border-primary"
               />
             </div>
             <div>
-              <Label htmlFor="drainers">Energy Drainers</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Energy Drainers</label>
               <Textarea
-                id="drainers"
                 value={energyDrainers}
                 onChange={(e) => setEnergyDrainers(e.target.value)}
                 placeholder="What activities drain your energy?"
-                className="mt-1.5"
                 rows={4}
+                style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+                className="font-light focus:border-primary"
               />
             </div>
           </div>
         );
-
       case "identity":
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="identity">Identity Statements</Label>
+              <label className={fieldLabelClass} style={fieldLabelStyle}>Identity Statements</label>
               <Textarea
-                id="identity"
                 value={identityStatements}
                 onChange={(e) => setIdentityStatements(e.target.value)}
                 placeholder="How do you see yourself? (e.g., 'I am a builder who...')"
-                className="mt-1.5"
                 rows={6}
+                style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
+                className="font-light focus:border-primary"
               />
             </div>
           </div>
         );
-
       case "archetypes":
         return (
           <div className="space-y-3">
-            <Label>Select business models that appeal to you</Label>
+            <label className={fieldLabelClass} style={fieldLabelStyle}>Select business models that appeal to you</label>
             <div className="grid grid-cols-2 gap-2">
               {ARCHETYPE_OPTIONS.map((opt) => (
                 <div
                   key={opt.value}
-                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                    businessArchetypes.includes(opt.value)
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50"
-                  }`}
+                  className="p-3 border cursor-pointer transition-all duration-200"
+                  style={{
+                    borderColor: businessArchetypes.includes(opt.value)
+                      ? "hsl(43 52% 54%)"
+                      : "hsl(240 10% 14%)",
+                    background: businessArchetypes.includes(opt.value)
+                      ? "hsl(43 52% 54% / 0.1)"
+                      : "transparent",
+                  }}
                   onClick={() => toggleArrayItem(businessArchetypes, opt.value, setBusinessArchetypes)}
                 >
-                  <span className="text-sm">{opt.label}</span>
+                  <span className="text-sm" style={{ color: "hsl(40 15% 93%)" }}>{opt.label}</span>
                 </div>
               ))}
             </div>
           </div>
         );
-
       case "work_preferences":
         return (
           <div className="space-y-3">
-            <Label>Select work types you enjoy</Label>
+            <label className={fieldLabelClass} style={fieldLabelStyle}>Select work types you enjoy</label>
             <div className="grid grid-cols-2 gap-2">
               {WORK_PREF_OPTIONS.map((opt) => (
                 <div
                   key={opt.value}
-                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                    workPreferences.includes(opt.value)
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50"
-                  }`}
+                  className="p-3 border cursor-pointer transition-all duration-200"
+                  style={{
+                    borderColor: workPreferences.includes(opt.value)
+                      ? "hsl(43 52% 54%)"
+                      : "hsl(240 10% 14%)",
+                    background: workPreferences.includes(opt.value)
+                      ? "hsl(43 52% 54% / 0.1)"
+                      : "transparent",
+                  }}
                   onClick={() => toggleArrayItem(workPreferences, opt.value, setWorkPreferences)}
                 >
-                  <span className="text-sm">{opt.label}</span>
+                  <span className="text-sm" style={{ color: "hsl(40 15% 93%)" }}>{opt.label}</span>
                 </div>
               ))}
             </div>
           </div>
         );
-
       case "personality":
         return (
           <div className="space-y-3">
-            <Label>Select traits that describe you</Label>
+            <label className={fieldLabelClass} style={fieldLabelStyle}>Select traits that describe you</label>
             <div className="space-y-2">
               {PERSONALITY_FLAGS.map((flag) => (
                 <div key={flag.key} className="flex items-center space-x-3">
@@ -526,7 +506,7 @@ export function ProfileEditDrawer({
                       setPersonalityFlags((prev) => ({ ...prev, [flag.key]: !!checked }))
                     }
                   />
-                  <Label htmlFor={flag.key} className="cursor-pointer">
+                  <Label htmlFor={flag.key} className="cursor-pointer text-sm" style={{ color: "hsl(40 15% 93%)" }}>
                     {flag.label}
                   </Label>
                 </div>
@@ -534,7 +514,6 @@ export function ProfileEditDrawer({
             </div>
           </div>
         );
-
       default:
         return null;
     }
@@ -544,19 +523,30 @@ export function ProfileEditDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[85vh]">
+      <DrawerContent className="max-h-[85vh]" style={{ borderRadius: 0 }}>
         <DrawerHeader>
-          <DrawerTitle>{SECTION_TITLES[section]}</DrawerTitle>
-          <DrawerDescription>Make changes to your profile section below.</DrawerDescription>
+          <DrawerTitle className="font-display font-bold">{SECTION_TITLES[section]}</DrawerTitle>
+          <DrawerDescription className="font-mono-tb text-[0.62rem] uppercase" style={{ color: "hsl(220 12% 58%)" }}>
+            Make changes to your profile section below.
+          </DrawerDescription>
         </DrawerHeader>
         <div className="px-4 pb-4 overflow-y-auto">{renderContent()}</div>
-        <DrawerFooter>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Save Changes
-          </Button>
+        <DrawerFooter className="gap-2">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full bg-primary text-primary-foreground font-medium text-[0.78rem] tracking-[0.06em] uppercase py-3 transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin inline" />}
+            SAVE CHANGES
+          </button>
           <DrawerClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <button
+              className="w-full border py-3 font-mono-tb text-[0.68rem] uppercase transition-colors hover:text-foreground"
+              style={{ borderColor: "hsl(240 10% 14%)", color: "hsl(220 12% 58%)" }}
+            >
+              CANCEL
+            </button>
           </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
