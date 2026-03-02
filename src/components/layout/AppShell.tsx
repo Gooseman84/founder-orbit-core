@@ -22,12 +22,10 @@ export function AppShell({ children }: AppShellProps) {
   const location = useLocation();
   useOnboardingGuard();
 
-  // Close mobile nav on route change
   useEffect(() => {
     setMobileNavOpen(false);
   }, [location.pathname]);
 
-  // Prevent body scroll when mobile nav is open
   useEffect(() => {
     if (mobileNavOpen) {
       document.body.style.overflow = "hidden";
@@ -41,7 +39,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Top Bar - visible on < md */}
+      {/* Mobile Top Bar */}
       <header className="fixed top-0 left-0 right-0 h-14 bg-card border-b border-border z-50 md:hidden">
         <div className="flex items-center justify-between h-full px-3">
           <Button
@@ -52,9 +50,12 @@ export function AppShell({ children }: AppShellProps) {
           >
             <Menu className="w-6 h-6" />
           </Button>
-          
-          <h1 className="text-lg font-bold text-primary">TrueBlazer.AI</h1>
-          
+
+          <h1 className="font-display text-lg font-bold">
+            <span className="text-foreground">True</span>
+            <span className="text-primary">Blazer</span>
+          </h1>
+
           <div className="w-10 flex items-center justify-end gap-1">
             <HelpPopover />
             {loading ? (
@@ -66,21 +67,34 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </header>
 
-      {/* Desktop Top Bar - visible on md+ */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 hidden md:block">
-        <div className="flex items-center justify-between h-full px-6">
-          <h1 className="text-xl font-bold text-primary">TrueBlazer.AI</h1>
-          
-          <div className="flex items-center gap-3">
-            <HelpPopover />
-            {loading ? (
-              <Skeleton className="h-7 w-24" />
-            ) : xpSummary ? (
-              <LevelBadge level={xpSummary.level} />
-            ) : null}
-          </div>
+      {/* Desktop Sidebar */}
+      <aside
+        className="fixed left-0 top-0 bottom-0 w-[220px] border-r border-border overflow-y-auto hidden md:flex md:flex-col z-40"
+        style={{ background: "hsl(240 14% 4%)" }}
+      >
+        {/* Logo */}
+        <div className="flex items-center h-[60px] px-6 border-b border-border shrink-0">
+          <h1 className="font-display text-[1.25rem] font-bold">
+            <span className="text-foreground">True</span>
+            <span className="text-primary">Blazer</span>
+          </h1>
         </div>
-      </header>
+
+        {/* Nav */}
+        <div className="flex-1 overflow-y-auto">
+          <SidebarNav />
+        </div>
+
+        {/* Support */}
+        <div className="px-5 py-3 border-t border-border">
+          <a
+            href="mailto:support@trueblazer.ai"
+            className="label-mono hover:text-foreground transition-colors"
+          >
+            support@trueblazer.ai
+          </a>
+        </div>
+      </aside>
 
       {/* Mobile Navigation Drawer */}
       <div
@@ -89,22 +103,19 @@ export function AppShell({ children }: AppShellProps) {
           mobileNavOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
       >
-        {/* Dark overlay */}
         <div
           className="absolute inset-0 bg-black/60"
           onClick={() => setMobileNavOpen(false)}
         />
-        
-        {/* Slide-in drawer */}
         <aside
           className={cn(
-            "absolute left-0 top-0 bottom-0 w-64 max-w-[80vw] bg-card border-r border-border",
+            "absolute left-0 top-0 bottom-0 w-[220px] max-w-[80vw] bg-card border-r border-border",
             "transform transition-transform duration-300 ease-out",
             mobileNavOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
           <div className="flex items-center justify-between h-14 px-4 border-b border-border">
-            <span className="text-lg font-bold text-primary">Menu</span>
+            <span className="font-display text-lg font-bold text-primary">Menu</span>
             <Button
               variant="ghost"
               size="icon"
@@ -120,30 +131,15 @@ export function AppShell({ children }: AppShellProps) {
         </aside>
       </div>
 
-      {/* Desktop Sidebar - visible on md+ */}
-      <aside className="fixed left-0 top-16 bottom-0 w-56 bg-card border-r border-border overflow-y-auto hidden md:block z-40">
-        <SidebarNav />
-      </aside>
-
       {/* Main Content */}
-      <main className="pt-14 pb-16 md:pt-16 md:pb-0 md:pl-56 min-w-0 overflow-x-hidden">
-        <div className="container mx-auto py-4 px-3 md:py-6 md:px-6 max-w-7xl overflow-hidden">
+      <main className="pt-14 pb-16 md:pt-0 md:pb-0 md:pl-[220px] min-w-0 overflow-x-hidden">
+        <div className="py-10 px-3 md:px-12 max-w-7xl overflow-hidden">
           {children}
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
-
-      {/* Floating Feedback Button */}
       <FeedbackButton />
-
-      {/* Support footer - desktop only */}
-      <div className="hidden md:block fixed bottom-2 left-0 w-56 text-center z-40">
-        <a href="mailto:support@trueblazer.ai" className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
-          Need help? support@trueblazer.ai
-        </a>
-      </div>
     </div>
   );
 }
