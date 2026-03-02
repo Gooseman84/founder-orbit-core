@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Copy,
   Lock,
+  Terminal,
 } from "lucide-react";
 import { useImplementationKitByBlueprint, useCreateImplementationKit } from "@/hooks/useImplementationKit";
 import { useBlueprint } from "@/hooks/useBlueprint";
@@ -22,6 +23,46 @@ import { useToast } from "@/hooks/use-toast";
 import { TechStackDialog } from "./TechStackDialog";
 import { SpecValidationSection } from "./SpecValidationSection";
 import type { TechStack, ImplementationKit } from "@/types/implementationKit";
+
+function generateClaudeMd(productName: string): string {
+  return `# TrueBlazer Implementation Manifest
+
+This project was planned using TrueBlazer. Read the execution manifest before starting any work.
+
+## Instructions for Claude Code
+
+1. Read TRUEBLAZER_MANIFEST.md at project root before every task
+2. Execute phases in the order defined by critical_path in the manifest
+3. Use the agent_prompt_template for each phase verbatim as your prompt
+4. Do not begin a phase until all criteria in phase_complete_when are verified
+5. Do not build anything listed in out_of_scope
+6. If blocked on a task, log the blocking criterion and halt — do not skip ahead
+
+## Available Documents
+
+The following Implementation Kit documents are in this project:
+
+- TRUEBLAZER_MANIFEST.md (Thin Vertical Slice Plan — primary execution manifest)
+- NORTH_STAR_SPEC.md (Product definition and scope)
+- ARCHITECTURE_CONTRACT.md (Tech stack decisions and constraints)
+- LAUNCH_PLAYBOOK.md (Go-to-market plan for first 10 customers)
+
+## Execution Model
+
+Always execute sequentially unless a phase explicitly marks tasks as parallel. Use subagents for distinct phases to prevent context overflow between phases.
+`;
+}
+
+function downloadClaudeMd(productName: string) {
+  const content = generateClaudeMd(productName);
+  const blob = new Blob([content], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'CLAUDE.md';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 interface ImplementationKitCardProps {
   ventureId: string;
@@ -486,6 +527,48 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
             )}
           </div>
         </div>
+
+        {/* Generate CLAUDE.md */}
+        {kit.status === "complete" && (
+          <div
+            className="mt-4 border"
+            style={{
+              borderColor: "hsl(240 10% 14%)",
+              background: "hsl(240 12% 7%)",
+            }}
+          >
+            <button
+              onClick={() => downloadClaudeMd(venture?.name || "Venture")}
+              className="w-full flex items-center gap-4 transition-colors"
+              style={{ padding: "16px 24px" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "hsl(240 10% 10%)";
+                e.currentTarget.style.borderLeftColor = "hsl(43 60% 65%)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.borderLeftColor = "hsl(43 52% 54%)";
+              }}
+            >
+              <Terminal className="h-4 w-4 shrink-0" style={{ color: "hsl(43 52% 54%)" }} />
+              <div className="text-left">
+                <span
+                  className="font-mono-tb text-[0.72rem] uppercase tracking-wider block"
+                  style={{ color: "hsl(40 15% 93%)" }}
+                >
+                  Generate CLAUDE.md
+                </span>
+                <span
+                  className="font-mono-tb text-[0.6rem] block mt-0.5"
+                  style={{ color: "hsl(220 12% 58%)" }}
+                >
+                  For use with Claude Code
+                </span>
+              </div>
+              <Download className="h-3 w-3 ml-auto" style={{ color: "hsl(220 12% 58%)" }} />
+            </button>
+          </div>
+        )}
 
         {/* Spec validation */}
         {kit.spec_validation && (
