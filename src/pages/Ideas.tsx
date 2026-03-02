@@ -533,9 +533,9 @@ const Ideas = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading your ideas...</p>
+        <div className="flex flex-col items-center gap-3">
+          <span className="text-primary text-[1.5rem]">◆</span>
+          <p className="label-mono">LOADING VENTURES</p>
         </div>
       </div>
     );
@@ -547,35 +547,38 @@ const Ideas = () => {
     <div className="space-y-4 md:space-y-6">
       {/* Info banner when user has an active venture */}
       {activeVenture && !dismissedBannerSession && (
-        <Alert variant="default" className="border-blue-500/50 bg-blue-500/10 relative">
-          <AlertDescription className="text-blue-700 dark:text-blue-300 pr-8">
-            You're currently building <strong>{activeVenture.name}</strong>. Browsing ideas won't affect your active venture. To switch ventures, visit your Command Center and choose Pivot or Kill.
-          </AlertDescription>
+        <div className="card-gold-left p-4 relative">
+          <p className="text-[0.85rem] font-light text-foreground pr-8">
+            You're currently building <strong className="text-primary">{activeVenture.name}</strong>. Browsing ideas won't affect your active venture.
+          </p>
           <button
             onClick={handleDismissBanner}
-            className="absolute top-3 right-3 text-blue-500 hover:text-blue-700 dark:hover:text-blue-300"
+            className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
             aria-label="Dismiss banner"
           >
             <X className="w-4 h-4" />
           </button>
-        </Alert>
+        </div>
       )}
 
-      {/* Venture state warning - ideation locked during executing */}
+      {/* Venture state warning */}
       {!canAccessIdeationTools && activeVenture && (
-        <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
-          <Lock className="h-4 w-4 text-amber-500" />
-          <AlertDescription className="text-amber-700 dark:text-amber-300">
+        <div className="card-gold-left p-4 flex items-center gap-3">
+          <Lock className="h-4 w-4 text-primary shrink-0" />
+          <p className="text-[0.85rem] font-light text-muted-foreground">
             Ideation tools are locked while your venture is in "executing" state. Focus on your current commitment.
-          </AlertDescription>
-        </Alert>
+          </p>
+        </div>
       )}
 
-      {/* Header - stacks on mobile */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      {/* Header */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-4xl font-bold mb-1 md:mb-2">Your Business Ideas</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
+          <div className="eyebrow mb-2">VENTURE INTELLIGENCE</div>
+          <h1 className="font-display text-2xl md:text-[2.5rem] font-bold leading-tight">
+            Your <em className="text-primary" style={{ fontStyle: "italic" }}>Ideas</em>
+          </h1>
+          <p className="text-sm font-light text-muted-foreground mt-1">
             {libraryIdeas.length} saved · {sessionIdeas.length} generated
           </p>
         </div>
@@ -665,22 +668,30 @@ const Ideas = () => {
 
       {/* Tabbed View: Generated vs Library */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="generated" className="gap-2 text-xs sm:text-sm">
-            <Sparkles className="w-4 h-4" />
-            <span className="hidden xs:inline">Generated</span> ({filteredFounderIdeas.length})
-          </TabsTrigger>
-          <TabsTrigger value="library" className="gap-2 text-xs sm:text-sm">
-            <Library className="w-4 h-4" />
-            <span className="hidden xs:inline">Library</span> ({filteredLibraryIdeas.length})
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex gap-1">
+          <button
+            onClick={() => setActiveTab("generated")}
+            className={`font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase px-4 py-2.5 border transition-colors ${
+              activeTab === "generated" ? "border-primary/35 text-primary bg-primary/10" : "border-border text-muted-foreground bg-card hover:text-foreground hover:bg-secondary"
+            }`}
+          >
+            GENERATED ({filteredFounderIdeas.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("library")}
+            className={`font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase px-4 py-2.5 border transition-colors ${
+              activeTab === "library" ? "border-primary/35 text-primary bg-primary/10" : "border-border text-muted-foreground bg-card hover:text-foreground hover:bg-secondary"
+            }`}
+          >
+            LIBRARY ({filteredLibraryIdeas.length})
+          </button>
+        </div>
 
         {/* Generated (v6) Tab */}
         <TabsContent value="generated" className="space-y-4">
           {/* Mode Selector with Focus Area */}
-          <div className="bg-card border border-border rounded-lg p-4">
-            <ModeSelector 
+          <div className="border border-border bg-card p-4">
+            <ModeSelector
               selectedMode={selectedMode} 
               onModeChange={setSelectedMode}
               focusArea={focusArea}
@@ -693,12 +704,12 @@ const Ideas = () => {
             {/* Active Focus Pill */}
             {focusArea && (
               <div className="mt-3 flex items-center gap-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 border border-primary/35 text-primary text-sm">
                   <Target className="w-3.5 h-3.5" />
                   <span>Focused on: "{focusArea.length > 30 ? focusArea.slice(0, 30) + "..." : focusArea}"</span>
-                  <button 
+                  <button
                     onClick={() => setFocusArea("")}
-                    className="ml-1 hover:bg-primary/20 rounded-full p-0.5"
+                    className="ml-1 hover:bg-primary/20 p-0.5"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -781,15 +792,15 @@ const Ideas = () => {
             <section className="space-y-3">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <h2 className="text-2xl font-semibold">v6 Generated Ideas</h2>
-                  <p className="text-sm text-muted-foreground">
-                    AI-powered ideas from your profile. Save the ones you like to Library.
+                  <span className="label-mono-gold">GENERATED IDEAS</span>
+                  <p className="text-sm font-light text-muted-foreground mt-1">
+                    AI-powered ideas from your profile. Save the ones you like.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+                  <span className="label-mono">SORT:</span>
                   <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
-                    <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-[180px] border-border bg-card text-[0.75rem]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {SORT_OPTIONS.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -839,26 +850,26 @@ const Ideas = () => {
         <TabsContent value="library" className="space-y-4">
           {filteredLibraryIdeas.length === 0 ? (
             <div className="text-center py-12">
-              <Library className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Your Library is Empty</h3>
-              <p className="text-muted-foreground mb-4">
+              <span className="text-primary text-[1.5rem] block mb-5">◆</span>
+              <h3 className="font-display italic text-lg text-muted-foreground mb-2">Your library is empty</h3>
+              <p className="text-sm font-light text-muted-foreground mb-4">
                 Save generated ideas, variants, or fused concepts to build your library.
               </p>
-              <Button onClick={() => setActiveTab("generated")} variant="outline">
-                Go to Generated Ideas
-              </Button>
+              <button onClick={() => setActiveTab("generated")} className="border border-border text-muted-foreground font-medium text-[0.78rem] tracking-[0.06em] uppercase px-5 py-2.5 hover:text-foreground hover:bg-secondary transition-colors">
+                GO TO GENERATED IDEAS
+              </button>
             </div>
           ) : (
             <>
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <h2 className="text-2xl font-semibold">Ideas Library</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Your saved ideas, variants, and fused concepts. Click to explore.
+                  <span className="label-mono-gold">IDEAS LIBRARY</span>
+                  <p className="text-sm font-light text-muted-foreground mt-1">
+                    Your saved ideas, variants, and fused concepts.
                   </p>
                   {!hasPro && libraryIdeas.length >= 8 && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      {libraryIdeas.length}/10 ideas saved. Upgrade to Pro for unlimited storage.
+                    <p className="label-mono mt-1">
+                      {libraryIdeas.length}/10 IDEAS SAVED — UPGRADE FOR UNLIMITED
                     </p>
                   )}
                 </div>
