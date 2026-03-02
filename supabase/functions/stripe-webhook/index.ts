@@ -189,11 +189,11 @@ serve(async (req) => {
 
         console.log("[stripe-webhook] Subscription deleted/canceled:", sub.id);
 
-        // Downgrade to "trial" instead of "free"
+        // Downgrade to "free" to match plans.ts PlanId type
         const { error } = await supabase
           .from("user_subscriptions")
           .update({
-            plan: "trial",
+            plan: "free",
             status: "canceled",
             stripe_subscription_id: null,
             cancel_at: null,

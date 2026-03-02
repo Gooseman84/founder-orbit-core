@@ -2011,6 +2011,33 @@ export type Database = {
           },
         ]
       }
+      venture_signals: {
+        Row: {
+          created_at: string | null
+          id: string
+          signal_data: Json | null
+          signal_type: string | null
+          user_id: string | null
+          venture_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          signal_data?: Json | null
+          signal_type?: string | null
+          user_id?: string | null
+          venture_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          signal_data?: Json | null
+          signal_type?: string | null
+          user_id?: string | null
+          venture_id?: string | null
+        }
+        Relationships: []
+      }
       ventures: {
         Row: {
           commitment_end_at: string | null

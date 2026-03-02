@@ -138,6 +138,12 @@ export function AppShell({ children }: AppShellProps) {
       {/* Floating Feedback Button */}
       <FeedbackButton />
 
+      {/* Support footer - desktop only */}
+      <div className="hidden md:block fixed bottom-2 left-0 w-56 text-center z-40">
+        <a href="mailto:support@trueblazer.ai" className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+          Need help? support@trueblazer.ai
+        </a>
+      </div>
     </div>
   );
 }

@@ -33,7 +33,7 @@ function normalizePlan(rawPlan: string | null | undefined): PlanId {
   if (rawPlan === "pro" || rawPlan === "founder") {
     return rawPlan;
   }
-  // "trial", "free", or null/undefined maps to "free"
+  // "trial", "free", or null/undefined all map to "free"
   return "free";
 }
 
