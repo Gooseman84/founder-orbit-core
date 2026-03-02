@@ -368,13 +368,13 @@ const IdeaDetail = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <Button variant="ghost" onClick={() => navigate("/ideas")} className="-ml-2">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+        <Button variant="ghost" onClick={() => navigate("/ideas")} className="-ml-2 min-h-[44px]">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Ideas
         </Button>
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
            {/* Commit to This — primary CTA when no active venture */}
            {!currentActiveVenture ? (
               <Button
@@ -472,10 +472,10 @@ const IdeaDetail = () => {
 
       <Card>
         <CardHeader>
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-2 flex-1">
-              <div className="flex items-center gap-3">
-                <CardTitle className="text-3xl">{idea.title}</CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+            <div className="space-y-2 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <CardTitle className="text-xl sm:text-3xl break-words">{idea.title}</CardTitle>
                 {idea.status === "north_star" && (
                   <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1.5 px-2.5 py-1">
                     <Star className="w-3.5 h-3.5 fill-current" />
@@ -600,7 +600,7 @@ const IdeaDetail = () => {
                   <Progress value={scoreValue(idea.overall_fit_score)} className="h-2" />
                 </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-muted-foreground">Passion Fit</span>

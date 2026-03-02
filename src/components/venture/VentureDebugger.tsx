@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface VentureDebuggerProps {
   ventureId: string;
@@ -81,6 +82,7 @@ const LOADING_STEPS = [
 export function VentureDebugger({ ventureId, open, onClose }: VentureDebuggerProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [uiState, setUiState] = useState<UIState>("input");
   const [symptom, setSymptom] = useState("");
   const [loadingStep, setLoadingStep] = useState(0);
@@ -211,10 +213,18 @@ export function VentureDebugger({ ventureId, open, onClose }: VentureDebuggerPro
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        className={cn(
+          "overflow-y-auto",
+          isMobile
+            ? "h-[85vh] rounded-t-2xl px-4"
+            : "w-full sm:max-w-[480px]"
+        )}
+      >
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2 text-base">
-            <Crosshair className="h-4 w-4 text-primary" />
+            <Crosshair className="h-4 w-4 text-primary shrink-0" />
             Mavrik Diagnostic Mode
           </SheetTitle>
           {uiState === "input" && (
@@ -233,10 +243,10 @@ export function VentureDebugger({ ventureId, open, onClose }: VentureDebuggerPro
               onChange={(e) => setSymptom(e.target.value)}
               placeholder="Example: I've sent 20 outreach messages and nobody is responding..."
               rows={4}
-              className="resize-none text-sm"
+              className="resize-none text-sm w-full min-h-[100px]"
             />
             <Button
-              className="w-full"
+              className="w-full min-h-[44px]"
               onClick={runDiagnostic}
               disabled={!symptom.trim()}
             >
@@ -263,7 +273,10 @@ export function VentureDebugger({ ventureId, open, onClose }: VentureDebuggerPro
                 ) : (
                   <div className="h-4 w-4 rounded-full border border-muted-foreground/30 shrink-0" />
                 )}
-                <span className={cn(i <= loadingStep ? "text-foreground" : "text-muted-foreground")}>
+                <span className={cn(
+                  "break-words",
+                  i <= loadingStep ? "text-foreground" : "text-muted-foreground"
+                )}>
                   {step}
                 </span>
               </div>
@@ -276,11 +289,11 @@ export function VentureDebugger({ ventureId, open, onClose }: VentureDebuggerPro
           <div className="space-y-4 pt-2">
             {/* Section A — Mavrik's Read */}
             <Card className="border-muted-foreground/20">
-              <CardContent className="py-4 space-y-2">
+              <CardContent className="py-4 px-3 sm:px-6 space-y-2">
                 <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                   Mavrik Diagnostic
                 </p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-sm text-muted-foreground leading-relaxed break-words">
                   {result.diagnosis.mavrikNote}
                 </p>
                 {result.diagnosis.symptomParsing.actualProblemType !== "root_problem" ? (
@@ -288,7 +301,7 @@ export function VentureDebugger({ ventureId, open, onClose }: VentureDebuggerPro
                     <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">
                       Reframed
                     </Badge>
-                    <p className="text-xs text-foreground">
+                    <p className="text-xs text-foreground break-words">
                       {result.diagnosis.symptomParsing.reframe}
                     </p>
                   </div>
@@ -322,16 +335,16 @@ export function VentureDebugger({ ventureId, open, onClose }: VentureDebuggerPro
                       isPrimary ? "border-primary/40 bg-primary/5" : ""
                     )}
                   >
-                    <CardContent className="py-3 space-y-1.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium leading-snug">
+                    <CardContent className="py-3 px-3 sm:px-6 space-y-1.5">
+                      <div className="flex items-start gap-2">
+                        <p className="text-sm font-medium leading-snug flex-1 min-w-0 break-words">
                           {h.hypothesis}
                         </p>
                         <Badge variant="outline" className={cn("text-[10px] shrink-0", confColor)}>
                           {h.confidence}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">{h.dataSignal}</p>
+                      <p className="text-xs text-muted-foreground break-words">{h.dataSignal}</p>
                     </CardContent>
                   </Card>
                 );
@@ -344,14 +357,14 @@ export function VentureDebugger({ ventureId, open, onClose }: VentureDebuggerPro
                 Intervention
               </p>
               <div className="rounded-lg border bg-secondary/30 p-3 space-y-2">
-                <p className="text-sm font-medium leading-snug">
+                <p className="text-sm font-medium leading-snug break-words">
                   {result.diagnosis.intervention.action}
                 </p>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground break-words">
                     {result.diagnosis.intervention.rationale}
                   </p>
-                  <div className="flex gap-3 text-[10px] text-muted-foreground">
+                  <div className="flex flex-wrap gap-2 sm:gap-3 text-[10px] text-muted-foreground">
                     <span>⏱ {result.diagnosis.intervention.timeToResult}</span>
                     <span>✓ {result.diagnosis.intervention.successCriteria}</span>
                   </div>
@@ -365,25 +378,25 @@ export function VentureDebugger({ ventureId, open, onClose }: VentureDebuggerPro
                 Executable Output
               </p>
               <Card>
-                <CardContent className="py-3 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium">
+                <CardContent className="py-3 px-3 sm:px-6 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <p className="text-sm font-medium flex-1 min-w-0 break-words">
                       {result.diagnosis.executableOutput.title}
                     </p>
                     <Badge variant="outline" className="text-[10px] shrink-0">
                       {result.diagnosis.executableOutput.category}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground break-words">
                     {result.diagnosis.executableOutput.description}
                   </p>
                   <p className="text-[10px] text-muted-foreground">
                     ~{result.diagnosis.executableOutput.estimatedMinutes} min
                   </p>
-                  <div className="flex gap-2 pt-1">
+                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
                     <Button
                       size="sm"
-                      className="flex-1 gap-1.5"
+                      className="flex-1 gap-1.5 min-h-[44px]"
                       onClick={handleAddTask}
                       disabled={addingTask}
                     >
@@ -397,6 +410,7 @@ export function VentureDebugger({ ventureId, open, onClose }: VentureDebuggerPro
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="min-h-[44px]"
                       onClick={onClose}
                     >
                       Dismiss

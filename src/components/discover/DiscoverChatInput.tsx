@@ -49,7 +49,7 @@ export function DiscoverChatInput({ onSend, disabled }: DiscoverChatInputProps) 
         onTranscript={handleVoiceTranscript}
         disabled={disabled}
         size="default"
-        className="h-12 w-12 min-w-[48px] shrink-0 border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+        className="h-12 w-12 min-w-[48px] min-h-[48px] shrink-0 border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
       />
 
       {/* Text Input */}
@@ -72,7 +72,7 @@ export function DiscoverChatInput({ onSend, disabled }: DiscoverChatInputProps) 
       <button
         onClick={handleSubmit}
         disabled={disabled || !message.trim()}
-        className="w-12 h-12 min-w-[48px] shrink-0 flex items-center justify-center bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-12 h-12 min-w-[48px] min-h-[48px] shrink-0 flex items-center justify-center bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         aria-label="Send message"
       >
         <ArrowRight className="h-5 w-5" />

@@ -137,7 +137,7 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
       {/* Page Header */}
       <div>
         <div className="eyebrow mb-3">VENTURE COMMAND CENTER</div>
-        <h1 className="font-display text-[2.5rem] font-bold leading-tight text-foreground">
+        <h1 className="font-display text-[1.75rem] sm:text-[2.5rem] font-bold leading-tight text-foreground break-words">
           <em className="text-primary not-italic" style={{ fontStyle: "italic" }}>{venture.name}</em>
         </h1>
         <p className="mt-2 text-[0.95rem] font-light text-muted-foreground">
@@ -175,9 +175,9 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
       <div className="border-t border-border mt-2 pt-3 pb-1">
         <button
           onClick={() => setDebuggerOpen(true)}
-          className="text-sm text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center gap-1.5 px-2 py-1 transition-colors"
+          className="text-sm text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center gap-1.5 px-2 py-2 min-h-[44px] transition-colors"
         >
-          <AlertCircle className="h-3.5 w-3.5" />
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
           Something's not working →
         </button>
         <p className="text-xs text-muted-foreground/60 pl-2 mt-1">
@@ -359,13 +359,13 @@ function TodaysFocus({
           How are you feeling about <span className="text-primary font-display italic">{venture.name}</span> today?
         </span>
       </div>
-      <div className="flex gap-2">
+        <div className="flex gap-2">
         {moods.map(({ emoji, label }) => (
           <button
             key={label}
             onClick={() => setSelectedMood(label)}
             className={cn(
-              "flex-1 py-2.5 border text-sm font-medium transition-all",
+              "flex-1 py-3 min-h-[44px] border text-sm font-medium transition-all",
               selectedMood === label
                 ? "border-primary bg-primary/10 scale-[1.02]"
                 : "border-border hover:border-primary/40"
@@ -629,21 +629,21 @@ function VentureControlPanel({ venture }: { venture: Venture }) {
       <span className="label-mono block mb-3">Change Direction</span>
       <div className="grid grid-cols-3 gap-2">
         <button
-          className="flex flex-col items-center gap-1 py-3 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          className="flex flex-col items-center gap-1 py-3 min-h-[44px] text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
           onClick={() => navigate("/venture-review")}
         >
           <ClipboardCheck className="h-4 w-4" />
           Review
         </button>
         <button
-          className="flex flex-col items-center gap-1 py-3 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+          className="flex flex-col items-center gap-1 py-3 min-h-[44px] text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
           onClick={() => navigate("/venture-review?action=pivot")}
         >
           <RefreshCw className="h-4 w-4" />
           Pivot
         </button>
         <button
-          className="flex flex-col items-center gap-1 py-3 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          className="flex flex-col items-center gap-1 py-3 min-h-[44px] text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
           onClick={() => navigate("/venture-review?action=kill")}
         >
           <Skull className="h-4 w-4" />

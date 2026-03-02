@@ -381,7 +381,7 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
         </div>
 
         {/* Progress Indicators */}
-        <div className="flex gap-6 mb-6">
+        <div className="flex gap-4 sm:gap-6 mb-6">
           {DOCUMENTS.map((doc) => {
             const status = getDocStatus(kit, doc.key);
             return (
@@ -406,16 +406,16 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
         </div>
 
         {/* Document Tabs */}
-        <div className="flex" style={{ borderBottom: "1px solid hsl(240 10% 14%)" }}>
+        <div className="flex overflow-x-auto scrollbar-hide" style={{ borderBottom: "1px solid hsl(240 10% 14%)" }}>
           {DOCUMENTS.map((doc, i) => {
             const isActive = i === activeTab;
             return (
               <button
                 key={doc.key}
                 onClick={() => setActiveTab(i)}
-                className="transition-colors cursor-pointer"
+                className="transition-colors cursor-pointer whitespace-nowrap min-h-[44px]"
                 style={{
-                  padding: "14px 20px",
+                  padding: "14px 16px",
                   fontFamily: "'DM Mono', monospace",
                   fontSize: "0.68rem",
                   textTransform: "uppercase",
@@ -448,10 +448,10 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
         >
           {/* Export buttons */}
           {docStatus === "complete" && activeDocId && (
-            <div className="absolute top-4 right-4 flex gap-2 z-10">
+            <div className="absolute top-4 right-3 sm:right-4 flex gap-1.5 sm:gap-2 z-10">
               <button
                 onClick={() => handleCopy(activeDocId)}
-                className="border px-4 py-2 font-mono-tb text-[0.65rem] uppercase transition-colors hover:text-foreground"
+                className="border px-3 sm:px-4 py-2 min-h-[44px] font-mono-tb text-[0.65rem] uppercase transition-colors hover:text-foreground"
                 style={{
                   borderColor: "hsl(240 10% 14%)",
                   color: "hsl(220 12% 58%)",
@@ -464,7 +464,7 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
               <button
                 onClick={() => handleDownload(activeDocId, activeDoc.label)}
                 disabled={downloadingDoc === activeDocId}
-                className="border px-4 py-2 font-mono-tb text-[0.65rem] uppercase transition-colors hover:opacity-80 disabled:opacity-50"
+                className="border px-3 sm:px-4 py-2 min-h-[44px] font-mono-tb text-[0.65rem] uppercase transition-colors hover:opacity-80 disabled:opacity-50"
                 style={{
                   background: "hsl(43 52% 54% / 0.1)",
                   borderColor: "hsl(43 52% 54% / 0.35)",
@@ -484,7 +484,7 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
           )}
 
           {/* Content */}
-          <div style={{ padding: "40px 48px", maxWidth: "680px" }}>
+          <div className="px-4 py-8 sm:px-12 sm:py-10 max-w-[680px]">
             {docStatus === "complete" && activeDocId ? (
               <div className="space-y-4">
                 <div
@@ -539,8 +539,8 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
           >
             <button
               onClick={() => downloadClaudeMd(venture?.name || "Venture")}
-              className="w-full flex items-center gap-4 transition-colors"
-              style={{ padding: "16px 24px" }}
+              className="w-full flex items-center gap-3 sm:gap-4 min-h-[44px] transition-colors"
+              style={{ padding: "16px 16px" }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = "hsl(240 10% 10%)";
                 e.currentTarget.style.borderLeftColor = "hsl(43 60% 65%)";

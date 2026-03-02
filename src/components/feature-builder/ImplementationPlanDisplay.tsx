@@ -323,16 +323,16 @@ export function ImplementationPlanDisplay({
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={downloadMarkdown}>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="sm" className="min-h-[44px] w-full sm:w-auto" onClick={downloadMarkdown}>
                 <Download className="w-4 h-4 mr-1" />
                 Download MD
               </Button>
-              <Button variant="outline" size="sm" onClick={copyAllPrompts}>
+              <Button variant="outline" size="sm" className="min-h-[44px] w-full sm:w-auto" onClick={copyAllPrompts}>
                 <Copy className="w-4 h-4 mr-1" />
                 Copy All Prompts
               </Button>
-              <Button size="sm" onClick={onStartNew}>
+              <Button size="sm" className="min-h-[44px] w-full sm:w-auto" onClick={onStartNew}>
                 <Plus className="w-4 h-4 mr-1" />
                 New Feature
               </Button>
@@ -575,27 +575,27 @@ export function ImplementationPlanDisplay({
                 className="border rounded-lg px-4 data-[state=open]:border-primary/30"
               >
                 <AccordionTrigger className="hover:no-underline py-4">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         cyclePhaseStatus(phase.phase_number);
                       }}
-                      className="shrink-0"
+                      className="shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center -m-2"
                     >
                       {getStatusIcon(phaseStatuses[phase.phase_number])}
                     </button>
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Badge variant="outline" className="shrink-0">
-                        Phase {phase.phase_number}
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                      <Badge variant="outline" className="shrink-0 text-[10px] sm:text-xs">
+                        P{phase.phase_number}
                       </Badge>
-                      <span className="font-medium truncate">{phase.name}</span>
+                      <span className="font-medium text-sm truncate max-w-[120px] sm:max-w-none">{phase.name}</span>
+                      <Badge className="shrink-0 gap-1 text-[10px] sm:text-xs">
+                        <Clock className="w-3 h-3" />
+                        {phase.estimated_hours}h
+                      </Badge>
                     </div>
-                    <Badge className="shrink-0 gap-1 ml-2">
-                      <Clock className="w-3 h-3" />
-                      {phase.estimated_hours}h
-                    </Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-2 pb-4">
@@ -680,7 +680,7 @@ export function ImplementationPlanDisplay({
                                   )}
                                 </Button>
                               </div>
-                              <pre className="p-3 rounded-md bg-background border text-xs overflow-x-auto whitespace-pre-wrap break-words font-mono">
+                              <pre className="p-3 rounded-md bg-background border text-xs overflow-x-auto whitespace-pre-wrap break-words font-mono" style={{ overflowWrap: "anywhere" }}>
                                 {prompt}
                               </pre>
                             </div>
