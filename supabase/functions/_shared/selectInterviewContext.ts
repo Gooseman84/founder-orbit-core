@@ -22,6 +22,7 @@ const FUNCTION_FIELD_MAP: Record<string, (keyof InterviewContextSlice)[]> = {
   "calculate-financial-viability": ["constraints", "networkStrength", "ventureIntelligence", "founderSummary"],
   "generate-implementation-kit": ["ventureIntelligence", "constraints", "founderSummary"],
   "venture-debugger": ["constraints", "energyDrainers", "founderSummary", "transferablePatterns", "ventureIntelligence", "extractedInsights"],
+  "feature-builder": ["ventureIntelligence", "constraints", "founderSummary", "extractedInsights"],
 };
 
 export function selectInterviewContext(
