@@ -1,5 +1,3 @@
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -8,7 +6,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ChevronDown, X } from "lucide-react";
 
 export interface IdeaFiltersState {
@@ -27,17 +24,17 @@ interface IdeaFiltersProps {
 }
 
 const TIME_OPTIONS = [
-  { value: "lte5", label: "≤ 5 hrs" },
-  { value: "5to10", label: "5–10 hrs" },
-  { value: "10to20", label: "10–20 hrs" },
-  { value: "20plus", label: "20+ hrs" },
+  { value: "lte5", label: "≤ 5 HRS" },
+  { value: "5to10", label: "5–10 HRS" },
+  { value: "10to20", label: "10–20 HRS" },
+  { value: "20plus", label: "20+ HRS" },
 ];
 
 const CAPITAL_OPTIONS = [
-  { value: "lte1k", label: "≤ $1k" },
-  { value: "1kto5k", label: "$1k–$5k" },
-  { value: "5kto20k", label: "$5k–$20k" },
-  { value: "20kplus", label: "$20k+" },
+  { value: "lte1k", label: "≤ $1K" },
+  { value: "1kto5k", label: "$1K–$5K" },
+  { value: "5kto20k", label: "$5K–$20K" },
+  { value: "20kplus", label: "$20K+" },
 ];
 
 const RISK_LEVELS = ["low", "medium", "high"];
@@ -86,25 +83,36 @@ export function IdeaFilters({
     onFiltersChange({ ...filters, riskLevels: newRisks });
   };
 
+  const FilterButton = ({ children, onClick, active }: { children: React.ReactNode; onClick?: () => void; active?: boolean }) => (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase px-3 py-2 border transition-colors ${
+        active
+          ? "border-primary/35 text-primary bg-primary/10"
+          : "border-border text-muted-foreground bg-card hover:text-foreground hover:bg-secondary"
+      }`}
+    >
+      {children}
+    </button>
+  );
+
   return (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="border border-border bg-card p-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
         {/* Archetype Filter */}
         {availableArchetypes.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1">
-                Archetype
+              <button className="flex items-center gap-1.5 font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase px-3 py-2 border border-border text-muted-foreground bg-card hover:text-foreground hover:bg-secondary transition-colors">
+                ARCHETYPE
                 {filters.archetypes.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
-                    {filters.archetypes.length}
-                  </Badge>
+                  <span className="badge-gold ml-1 py-0 px-1">{filters.archetypes.length}</span>
                 )}
                 <ChevronDown className="h-3 w-3" />
-              </Button>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 bg-popover z-50">
-              <DropdownMenuLabel>Business Archetype</DropdownMenuLabel>
+              <DropdownMenuLabel className="label-mono">BUSINESS ARCHETYPE</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {availableArchetypes.map((archetype) => (
                 <DropdownMenuCheckboxItem
@@ -123,18 +131,16 @@ export function IdeaFilters({
         {availableMarkets.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1">
-                Market
+              <button className="flex items-center gap-1.5 font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase px-3 py-2 border border-border text-muted-foreground bg-card hover:text-foreground hover:bg-secondary transition-colors">
+                MARKET
                 {filters.markets.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
-                    {filters.markets.length}
-                  </Badge>
+                  <span className="badge-gold ml-1 py-0 px-1">{filters.markets.length}</span>
                 )}
                 <ChevronDown className="h-3 w-3" />
-              </Button>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 max-h-64 overflow-y-auto bg-popover z-50">
-              <DropdownMenuLabel>Market / Vertical</DropdownMenuLabel>
+              <DropdownMenuLabel className="label-mono">MARKET / VERTICAL</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {availableMarkets.map((market) => (
                 <DropdownMenuCheckboxItem
@@ -152,18 +158,16 @@ export function IdeaFilters({
         {/* Risk Level Filter */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1">
-              Risk
+            <button className="flex items-center gap-1.5 font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase px-3 py-2 border border-border text-muted-foreground bg-card hover:text-foreground hover:bg-secondary transition-colors">
+              RISK
               {filters.riskLevels.length > 0 && (
-                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
-                  {filters.riskLevels.length}
-                </Badge>
+                <span className="badge-gold ml-1 py-0 px-1">{filters.riskLevels.length}</span>
               )}
               <ChevronDown className="h-3 w-3" />
-            </Button>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-40 bg-popover z-50">
-            <DropdownMenuLabel>Risk Level</DropdownMenuLabel>
+            <DropdownMenuLabel className="label-mono">RISK LEVEL</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {RISK_LEVELS.map((risk) => (
               <DropdownMenuCheckboxItem
@@ -178,57 +182,52 @@ export function IdeaFilters({
         </DropdownMenu>
 
         {/* Time Commitment */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Time:</span>
-          <ToggleGroup
-            type="single"
-            value={filters.timeCommitment ?? ""}
-            onValueChange={(value) =>
-              onFiltersChange({ ...filters, timeCommitment: value || null })
-            }
-          >
-            {TIME_OPTIONS.map((opt) => (
-              <ToggleGroupItem
-                key={opt.value}
-                value={opt.value}
-                size="sm"
-                className="text-xs px-2"
-              >
-                {opt.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+        <div className="flex items-center gap-1.5">
+          <span className="label-mono">TIME:</span>
+          {TIME_OPTIONS.map((opt) => (
+            <FilterButton
+              key={opt.value}
+              active={filters.timeCommitment === opt.value}
+              onClick={() =>
+                onFiltersChange({
+                  ...filters,
+                  timeCommitment: filters.timeCommitment === opt.value ? null : opt.value,
+                })
+              }
+            >
+              {opt.label}
+            </FilterButton>
+          ))}
         </div>
 
         {/* Capital Required */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Capital:</span>
-          <ToggleGroup
-            type="single"
-            value={filters.capitalRequired ?? ""}
-            onValueChange={(value) =>
-              onFiltersChange({ ...filters, capitalRequired: value || null })
-            }
-          >
-            {CAPITAL_OPTIONS.map((opt) => (
-              <ToggleGroupItem
-                key={opt.value}
-                value={opt.value}
-                size="sm"
-                className="text-xs px-2"
-              >
-                {opt.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+        <div className="flex items-center gap-1.5">
+          <span className="label-mono">CAPITAL:</span>
+          {CAPITAL_OPTIONS.map((opt) => (
+            <FilterButton
+              key={opt.value}
+              active={filters.capitalRequired === opt.value}
+              onClick={() =>
+                onFiltersChange({
+                  ...filters,
+                  capitalRequired: filters.capitalRequired === opt.value ? null : opt.value,
+                })
+              }
+            >
+              {opt.label}
+            </FilterButton>
+          ))}
         </div>
 
         {/* Clear Filters */}
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+          <button
+            onClick={clearFilters}
+            className="flex items-center gap-1 font-mono-tb text-[0.65rem] uppercase text-muted-foreground hover:text-foreground transition-colors px-2 py-2"
+          >
             <X className="h-3 w-3" />
-            Clear filters
-          </Button>
+            CLEAR
+          </button>
         )}
       </div>
     </div>
