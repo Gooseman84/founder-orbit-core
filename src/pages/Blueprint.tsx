@@ -413,64 +413,67 @@ const Blueprint = () => {
 
       {/* Read-only Mode Banner */}
       {isReadOnly && (
-        <Alert className="mb-6 border-primary/30 bg-primary/5">
-          <ClipboardList className="h-4 w-4" />
-          <AlertDescription className="flex items-center gap-2">
-            <span className="font-medium">Execution Mode:</span>
-            Your commitment is locked. Complete or end your current commitment to make changes.
-          </AlertDescription>
-        </Alert>
+        <div className="card-gold-left p-4 mb-6 flex items-center gap-3">
+          <ClipboardList className="h-4 w-4 text-primary shrink-0" />
+          <p className="text-[0.85rem] font-light text-muted-foreground">
+            <span className="text-foreground font-medium">Execution Mode:</span> Your commitment is locked. Complete or end your current commitment to make changes.
+          </p>
+        </div>
       )}
 
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold">Your Blueprint</h1>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
+      <div className="mb-10">
+        <div className="flex items-end justify-between gap-4 mb-3">
+          <div>
+            <div className="eyebrow mb-2">VENTURE BLUEPRINT</div>
+            <h1 className="font-display text-2xl md:text-[2.5rem] font-bold leading-tight">
+              <em className="text-primary" style={{ fontStyle: "italic" }}>{venture.name}</em>
+            </h1>
+            {displayBlueprint?.updated_at && (
+              <p className="label-mono mt-2">
+                LAST UPDATED {new Date(displayBlueprint.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()}
+              </p>
+            )}
+          </div>
+          <button
             onClick={handleDownloadPdf}
             disabled={pdfExporting || !displayBlueprint}
+            className="badge-gold flex items-center gap-1.5 px-3.5 py-1.5 transition-opacity hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
           >
             {pdfExporting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="hidden sm:inline">Generating PDF…</span>
-              </>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : pdfSuccess ? (
-              <>
-                <Check className="h-4 w-4" />
-                <span className="hidden sm:inline">Downloaded ✓</span>
-              </>
+              <Check className="h-3.5 w-3.5" />
             ) : (
               <>
                 {!hasPro && <Lock className="h-3 w-3" />}
-                <FileDown className="h-4 w-4" />
-                <span className="hidden sm:inline">Download PDF</span>
+                <FileDown className="h-3.5 w-3.5" />
               </>
             )}
-          </Button>
+            {pdfExporting ? "GENERATING…" : pdfSuccess ? "DOWNLOADED ✓" : "EXPORT PDF"}
+          </button>
         </div>
-        <p className="text-muted-foreground text-center">
-          {isReadOnly
-            ? "Reference your plan while building."
-            : "This is where thinking ends and building begins."}
-        </p>
       </div>
 
+      {/* North Star Statement */}
+      {displayBlueprint?.north_star_one_liner && (
+        <div className="relative mb-8 border-l-4 border-primary pl-6 py-2">
+          <span className="absolute -top-3 -left-2 font-display text-[3rem] text-primary/30 leading-none pointer-events-none select-none">"</span>
+          <p className="font-display italic text-[1.3rem] text-foreground leading-[1.5]">
+            {displayBlueprint.north_star_one_liner}
+          </p>
+        </div>
+      )}
+
       {/* AI Narrative Summary */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">What you're building — and why it makes sense</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground leading-relaxed">{narrativeSummary}</p>
-        </CardContent>
-      </Card>
+      <div className="border border-border bg-card mb-6">
+        <div className="px-6 py-4 border-b border-border">
+          <span className="label-mono-gold">VENTURE SUMMARY</span>
+        </div>
+        <div className="p-6">
+          <p className="text-sm font-light text-muted-foreground leading-relaxed">{narrativeSummary}</p>
+        </div>
+      </div>
 
       {/* Business Blueprint sections */}
       {displayBlueprint && (
@@ -488,20 +491,15 @@ const Blueprint = () => {
 
       {/* Financial Viability Score Card */}
       {displayBlueprint && (
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Financial Viability</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
+        <div className="card-gold-accent mb-6">
+          <div className="px-6 py-4 border-b border-border">
+            <span className="label-mono-gold">FINANCIAL VIABILITY SCORE™</span>
+          </div>
+          <div className="p-6">
             {(fvsLoading || fvsCalculating) ? (
-              <div className="flex flex-col items-center gap-2 py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">
-                  {fvsCalculating ? "Analyzing financial viability…" : "Loading score…"}
-                </p>
+              <div className="flex flex-col items-center gap-3 py-8">
+                <span className="text-primary text-[1.5rem]">◆</span>
+                <p className="label-mono">{fvsCalculating ? "ANALYZING FINANCIAL VIABILITY" : "LOADING SCORE"}</p>
               </div>
             ) : hasFvsScore && fvsData ? (
               <FinancialViabilityScore
@@ -522,13 +520,11 @@ const Blueprint = () => {
               />
             ) : (
               <div className="flex flex-col items-center gap-3 py-6">
-                <AlertTriangle className="h-6 w-6 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground text-center">
+                <span className="text-primary text-[1.5rem]">◆</span>
+                <p className="text-sm font-light text-muted-foreground text-center">
                   {fvsError || "Unable to generate score. Try again later."}
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={() => {
                     fvsAutoTriggeredRef.current = false;
                     calculateFvs({
@@ -539,13 +535,14 @@ const Blueprint = () => {
                       blueprintData: displayBlueprint as unknown as Record<string, unknown>,
                     });
                   }}
+                  className="badge-gold px-4 py-1.5 hover:opacity-80 transition-opacity"
                 >
-                  Retry
-                </Button>
+                  RETRY
+                </button>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Venture DNA — Master Prompt Section */}
@@ -554,25 +551,26 @@ const Blueprint = () => {
       )}
 
       {/* Link to Execution Plan */}
-      <Card className="mb-6 mt-10 border-primary/20 hover:border-primary/40 transition-colors cursor-pointer" onClick={() => navigate("/tasks")}>
-        <CardContent className="py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Calendar className="h-5 w-5 text-primary" />
-              <div>
-                <p className="font-semibold">30-Day Execution Plan</p>
-                <p className="text-sm text-muted-foreground">
-                  {latestPlan
-                    ? `${Object.values(tasksByWeek).flat().filter((t: any) => t.status === 'completed').length} of ${Object.values(tasksByWeek).flat().length} tasks completed`
-                    : "Generate your personalized 30-day roadmap"
-                  }
-                </p>
-              </div>
+      <div
+        className="card-gold-left mb-6 mt-10 cursor-pointer"
+        onClick={() => navigate("/tasks")}
+      >
+        <div className="p-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Calendar className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-[0.95rem] font-medium text-foreground">30-Day Execution Plan</p>
+              <p className="text-[0.82rem] font-light text-muted-foreground">
+                {latestPlan
+                  ? `${Object.values(tasksByWeek).flat().filter((t: any) => t.status === 'completed').length} of ${Object.values(tasksByWeek).flat().length} tasks completed`
+                  : "Generate your personalized 30-day roadmap"
+                }
+              </p>
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </div>
-        </CardContent>
-      </Card>
+          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        </div>
+      </div>
 
       {/* Validate Your Assumptions */}
       {venture && (
@@ -593,13 +591,12 @@ const Blueprint = () => {
 
       {/* ─── Start Building CTA ─── */}
       <div className="mt-10 mb-4">
-        <Button
-          size="lg"
-          className="w-full text-base"
+        <button
+          className="w-full bg-primary text-primary-foreground font-medium text-[0.85rem] tracking-[0.06em] uppercase py-4 transition-opacity hover:opacity-90"
           onClick={() => navigate("/dashboard")}
         >
-          Start Building →
-        </Button>
+          START BUILDING →
+        </button>
       </div>
 
       {/* Tech Stack Dialog */}
