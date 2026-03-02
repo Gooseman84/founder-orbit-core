@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFounderProfile } from "@/hooks/useFounderProfile";
 import { useXP } from "@/hooks/useXP";
@@ -6,12 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LevelBadge } from "@/components/shared/LevelBadge";
 import { XpProgressBar } from "@/components/shared/XpProgressBar";
 import { ProfileEditDrawer, ProfileSection } from "@/components/profile/ProfileEditDrawer";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ContextInspector from "@/pages/ContextInspector";
 import { PageHelp } from "@/components/shared/PageHelp";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   User, 
   Heart, 
@@ -26,7 +31,9 @@ import {
   ChevronRight,
   AlertCircle,
   Eye,
-  Info
+  Info,
+  Trash2,
+  Loader2
 } from "lucide-react";
 
 const ARCHETYPE_LABELS: Record<string, string> = {
@@ -71,10 +78,35 @@ const Profile = () => {
   const [editSection, setEditSection] = useState<ProfileSection | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
 
   const openEditor = (section: ProfileSection) => {
     setEditSection(section);
     setDrawerOpen(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "DELETE") return;
+    setIsDeleting(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("delete-account");
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+      
+      await supabase.auth.signOut();
+      toast({ title: "Account deleted", description: "Your account and all data have been permanently removed." });
+      navigate("/");
+    } catch (err: any) {
+      toast({ title: "Deletion failed", description: err.message || "Please try again or contact support.", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDeleteConfirmText("");
+    }
   };
 
   if (loading) {
@@ -555,6 +587,50 @@ const Profile = () => {
         extendedData={extended}
         onSaved={refresh}
       />
+      {/* Danger Zone */}
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="h-5 w-5" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>Irreversible actions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Dialog open={deleteDialogOpen} onOpenChange={(open) => { setDeleteDialogOpen(open); if (!open) setDeleteConfirmText(""); }}>
+            <DialogTrigger asChild>
+              <Button variant="destructive" size="sm">Delete Account</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete your account?</DialogTitle>
+                <DialogDescription>
+                  This permanently deletes all your data and cannot be undone. Type <span className="font-mono font-bold">DELETE</span> to confirm.
+                </DialogDescription>
+              </DialogHeader>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Type DELETE to confirm"
+                className="font-mono"
+              />
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => { setDeleteDialogOpen(false); setDeleteConfirmText(""); }}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={deleteConfirmText !== "DELETE" || isDeleting}
+                  onClick={handleDeleteAccount}
+                >
+                  {isDeleting ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Deleting...</> : "Permanently Delete"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </CardContent>
+      </Card>
+
       <PageHelp
         title="Founder Profile"
         bullets={[

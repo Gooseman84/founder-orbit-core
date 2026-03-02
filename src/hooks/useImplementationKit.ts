@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +21,11 @@ export const implementationKitKeys = {
 
 // Fetch implementation kit by blueprint ID
 export function useImplementationKitByBlueprint(blueprintId: string | undefined) {
+  const [generationStartTime, setGenerationStartTime] = useState<number | null>(null);
+  const [isTimedOut, setIsTimedOut] = useState(false);
+
+  const GENERATION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
   const query = useQuery({
     queryKey: implementationKitKeys.byBlueprint(blueprintId || ''),
     queryFn: async () => {
@@ -37,14 +43,32 @@ export function useImplementationKitByBlueprint(blueprintId: string | undefined)
       return data as unknown as ImplementationKit | null;
     },
     enabled: !!blueprintId,
-    // Poll every 5s while kit is generating
+    // Poll every 5s while kit is generating (unless timed out)
     refetchInterval: (query) => {
       const kit = query.state.data;
-      return kit?.status === 'generating' ? 5000 : false;
+      if (kit?.status !== 'generating' || isTimedOut) return false;
+
+      // Track generation start time
+      if (!generationStartTime) {
+        setGenerationStartTime(Date.now());
+      } else if (Date.now() - generationStartTime > GENERATION_TIMEOUT_MS) {
+        setIsTimedOut(true);
+        return false;
+      }
+
+      return 5000;
     },
   });
 
-  return query;
+  // Reset timeout tracking when kit status changes away from generating
+  useEffect(() => {
+    if (query.data?.status !== 'generating') {
+      setGenerationStartTime(null);
+      setIsTimedOut(false);
+    }
+  }, [query.data?.status]);
+
+  return { ...query, isTimedOut };
 }
 
 // Fetch all implementation kits for a venture

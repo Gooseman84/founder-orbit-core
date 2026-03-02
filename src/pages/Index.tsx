@@ -46,6 +46,7 @@ const Index = () => {
           <div className="flex gap-6 text-sm text-muted-foreground">
             <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
             <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
+            <a href="mailto:support@trueblazer.ai" className="hover:text-foreground transition-colors">Support</a>
           </div>
         </div>
       </footer>
@@ -444,6 +445,7 @@ const PricingSection = ({ onNavigate }: { onNavigate: () => void }) => {
                   <span className="text-muted-foreground">/month</span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">or $199/year (save 43%)</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">7-day free trial · Card required · Cancel anytime</p>
               </div>
             </div>
             
