@@ -146,7 +146,7 @@ function Hero({ onAuth }: { onAuth: () => void }) {
       <div className="lp-fadeUp" style={{ animationDelay: "0.2s", display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
         <span style={{ width: 32, height: 1, background: "var(--gold)", flexShrink: 0 }} />
         <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.72rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)" }}>
-          Venture Intelligence Platform
+          The System of Record for Your Venture
         </span>
       </div>
 
@@ -161,13 +161,13 @@ function Hero({ onAuth }: { onAuth: () => void }) {
       >
         AI can build<br />
         <em style={{ color: "var(--gold)", fontStyle: "italic", hyphens: "auto" } as React.CSSProperties}>anything.</em><br />
-        We tell you what's<br />
-        worth building.
+        TrueBlazer holds the context<br />
+        that makes it build the right thing.
       </h1>
 
       {/* Subheading */}
       <p className="lp-fadeUp text-base sm:text-lg md:text-xl" style={{ animationDelay: "0.5s", marginTop: 28, maxWidth: 560, lineHeight: 1.65, color: "var(--white-dim)" }}>
-        TrueBlazer is the decision layer for founders — the only platform that combines Mavrik AI interview intelligence with CFA-level Financial Viability Scoring to tell you, before you build a single line of code, whether your venture has a real shot.
+        TrueBlazer is where your venture lives — interview data, financial scores, architecture decisions, and build specs, all in one place. Every AI tool you use to build draws from context that exists nowhere else.
       </p>
 
       {/* Buttons */}
@@ -268,9 +268,9 @@ function Problem() {
         {/* Left */}
         <div>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", lineHeight: 1.1, margin: 0 }}>
-            Every founder has a<br />
-            <em style={{ color: "var(--gold)", fontStyle: "italic" }}>ChatGPT.</em><br />
-            None of them have<br />a verdict.
+            Agents can build<br />
+            <em style={{ color: "var(--gold)", fontStyle: "italic" }}>anything.</em><br />
+            They can't tell you what's<br />worth building.
           </h2>
           <div className="mt-6 md:mt-8 text-sm sm:text-base" style={{ lineHeight: 1.75, color: "var(--white-dim)" }}>
             <p style={{ marginBottom: 20 }}>You can build anything now. Lovable. Cursor. v0. The execution tools are commoditized. What isn't commoditized is knowing whether what you're building is actually worth your time, money, and next two years of your life.</p>
