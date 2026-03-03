@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Lock } from "lucide-react";
+import { Lock, Check } from "lucide-react";
 
 /* ───────────────────────────────────────────
    Scroll-reveal hook
@@ -52,6 +52,7 @@ const Index = () => {
 
       <Nav onAuth={goAuth} />
       <Hero onAuth={goAuth} />
+      <SocialProof />
       <Ticker />
       <Problem />
       <FVSSection />
@@ -60,6 +61,7 @@ const Index = () => {
       <Moat />
       <Outcomes />
       <Pricing onAuth={goAuth} />
+      <WeekOne />
       <FinalCTA onAuth={goAuth} />
       <Footer />
     </div>
@@ -672,25 +674,89 @@ function FinalCTA({ onAuth }: { onAuth: () => void }) {
 }
 
 /* ═══════════════════════════════════════════
+   SOCIAL PROOF BAR
+   ═══════════════════════════════════════════ */
+function SocialProof() {
+  return (
+    <div className="px-4 py-6 md:px-12 md:py-8" style={{ background: "var(--ink)", borderBottom: "1px solid var(--border-subtle)" }}>
+      <div style={{ maxWidth: 800, margin: "0 auto" }}>
+        <p className="text-sm sm:text-base" style={{ textAlign: "center", lineHeight: 1.7, color: "var(--silver)", fontFamily: "'DM Sans', sans-serif", fontWeight: 300 }}>
+          Built by a{" "}
+          <span style={{ color: "var(--gold)", fontWeight: 500 }}>CFA Charterholder &amp; CFP</span>{" "}
+          who evaluates business models for a living. The only founder intelligence platform designed to be consumed by the AI agents building your product.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   WEEK ONE SECTION
+   ═══════════════════════════════════════════ */
+function WeekOne() {
+  const { ref, visible } = useReveal();
+
+  const deliverables = [
+    "Clarity on exactly what to build — based on your expertise, not generic templates",
+    "5 personalized venture ideas scored across 6 financial dimensions",
+    "Cross-industry opportunities you'd never discover on your own",
+    "A 30-day execution plan with tasks tailored to your schedule and network",
+    "Build-ready specs you can paste directly into Lovable, Cursor, or v0",
+  ];
+
+  return (
+    <section className="px-4 py-16 md:px-12 md:py-24" style={{ background: "var(--ink)", borderTop: "1px solid var(--border-subtle)" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        <Eyebrow text="Week One" />
+        <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
+          What gets built into your system of record{" "}
+          <span style={{ color: "var(--silver)" }}>in 7 days</span>
+        </h2>
+
+        <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""}`} style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 16 }}>
+          {deliverables.map((item, index) => (
+            <div key={index} style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+              <div style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--gold-dim)", border: "1px solid var(--lp-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                <Check size={12} style={{ color: "var(--gold)" }} />
+              </div>
+              <span className="text-sm sm:text-base" style={{ color: "var(--white-dim)", lineHeight: 1.6 }}>
+                {item}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════
    SECTION 12 — FOOTER
    ═══════════════════════════════════════════ */
 function Footer() {
   const linkStyle: React.CSSProperties = { fontFamily: "'DM Mono', monospace", fontSize: "0.65rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--silver)", textDecoration: "none", transition: "color 0.2s" };
 
   return (
-    <footer className="px-4 py-8 md:px-12 md:py-12 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-5" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem" }}>
-        <span style={{ color: "var(--silver)" }}>True</span>
-        <span style={{ color: "var(--gold)" }}>Blazer</span>
-      </span>
-      <div className="flex gap-4 sm:gap-6">
-        <a href="/privacy" style={linkStyle} onMouseEnter={e => (e.currentTarget.style.color = "var(--white)")} onMouseLeave={e => (e.currentTarget.style.color = "var(--silver)")}>Privacy</a>
-        <a href="/terms" style={linkStyle} onMouseEnter={e => (e.currentTarget.style.color = "var(--white)")} onMouseLeave={e => (e.currentTarget.style.color = "var(--silver)")}>Terms</a>
-        <a href="mailto:support@trueblazer.ai" style={linkStyle} onMouseEnter={e => (e.currentTarget.style.color = "var(--white)")} onMouseLeave={e => (e.currentTarget.style.color = "var(--silver)")}>Contact</a>
+    <footer className="px-4 py-8 md:px-12 md:py-12" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}>
+        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem" }}>
+          <span style={{ color: "var(--silver)" }}>True</span>
+          <span style={{ color: "var(--gold)" }}>Blazer</span>
+        </span>
+        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", color: "var(--silver)", letterSpacing: "0.02em" }}>
+          TrueBlazer.AI — The system of record for your venture.
+        </span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, marginTop: 8 }}>
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.62rem", color: "var(--silver)", letterSpacing: "0.04em", opacity: 0.5 }}>
+            © {new Date().getFullYear()} TrueBlazer.AI
+          </span>
+          <div className="flex gap-4 sm:gap-6">
+            <a href="/terms" style={linkStyle} onMouseEnter={e => (e.currentTarget.style.color = "var(--white)")} onMouseLeave={e => (e.currentTarget.style.color = "var(--silver)")}>Terms</a>
+            <a href="/privacy" style={linkStyle} onMouseEnter={e => (e.currentTarget.style.color = "var(--white)")} onMouseLeave={e => (e.currentTarget.style.color = "var(--silver)")}>Privacy</a>
+            <a href="mailto:support@trueblazer.ai" style={linkStyle} onMouseEnter={e => (e.currentTarget.style.color = "var(--white)")} onMouseLeave={e => (e.currentTarget.style.color = "var(--silver)")}>Support</a>
+          </div>
+        </div>
       </div>
-      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.62rem", color: "var(--silver)", letterSpacing: "0.04em", opacity: 0.5 }}>
-        © 2026 TrueBlazer. All rights reserved.
-      </span>
     </footer>
   );
 }
