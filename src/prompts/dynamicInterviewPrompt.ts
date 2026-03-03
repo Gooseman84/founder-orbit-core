@@ -27,11 +27,17 @@ YOUR NEW GOAL: Ask only 3-5 questions (not 12-18) that get:
 3. Hard "no" filters (things they'll NEVER do in their business)
 4. Market segments they understand from the inside (not aspirationally, but truly)
 
+Network & distribution signals are INFERRED from the conversation — former
+roles, colleagues, communities, industries mentioned. Only ask a direct
+network probe if by question 4-5 you have ZERO signal about who they could
+reach. Use: "Who do you already know that deals with this problem?"
+
 DO NOT ask about:
 - Why they're here (you already know)
 - What motivates them (you already know)
 - What kind of business they want (you already know)
 - How they like to work (you already know)
+- "Who are your first 10 customers?" (premature, low signal at this stage)
 
 DO ask about:
 - "You mentioned [business_type_preference] - what gives you an unfair advantage in that space?"
