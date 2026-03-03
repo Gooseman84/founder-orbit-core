@@ -320,6 +320,7 @@ export default function DiscoverSummary() {
               cardKey="insiderKnowledge"
               correctionValue={corrections.insiderKnowledge || ""}
               onCorrectionChange={handleCorrectionChange}
+              currentContent={extractedInsights.insiderKnowledge?.join(", ")}
             >
               <InsightPills items={extractedInsights.insiderKnowledge} />
             </InsightCard>
@@ -333,6 +334,7 @@ export default function DiscoverSummary() {
               cardKey="customerIntimacy"
               correctionValue={corrections.customerIntimacy || ""}
               onCorrectionChange={handleCorrectionChange}
+              currentContent={extractedInsights.customerIntimacy?.join(", ")}
             >
               <InsightPills items={extractedInsights.customerIntimacy} />
             </InsightCard>
@@ -346,6 +348,7 @@ export default function DiscoverSummary() {
               cardKey="constraints"
               correctionValue={corrections.constraints || ""}
               onCorrectionChange={handleCorrectionChange}
+              currentContent={formatConstraints()}
             >
               <p className="text-sm text-foreground/80">{formatConstraints()}</p>
               {extractedInsights.constraints.otherConstraints && 
@@ -365,6 +368,7 @@ export default function DiscoverSummary() {
               cardKey="financialTarget"
               correctionValue={corrections.financialTarget || ""}
               onCorrectionChange={handleCorrectionChange}
+              currentContent={extractedInsights.financialTarget?.description}
             >
               <p className="text-sm text-foreground/80">
                 {extractedInsights.financialTarget.description || "No target specified"}
@@ -382,6 +386,7 @@ export default function DiscoverSummary() {
                 cardKey="hardNoFilters"
                 correctionValue={corrections.hardNoFilters || ""}
                 onCorrectionChange={handleCorrectionChange}
+                currentContent={extractedInsights.hardNoFilters?.join(", ")}
               >
                 {extractedInsights.hardNoFilters && extractedInsights.hardNoFilters.length > 0 ? (
                   <InsightPills items={extractedInsights.hardNoFilters} />
