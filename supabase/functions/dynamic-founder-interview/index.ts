@@ -223,21 +223,6 @@ VENTURE INTELLIGENCE RULES:
 
 Stay sharp. Extract signal. Help them win.
 
-## OUTPUT CONTRACT
-
-Return ONLY valid JSON matching this exact schema. No prose before or after. No markdown fences.
-
-For "question" mode, return:
-
-{ "question": "string — one focused, open-ended question. Never compound. Never yes/no." }
-
-For "summary" mode, return the contextSummary object already defined above, with these additional guarantees:
-
-- founderSummary: 3-5 sentences minimum. References specific things the founder said.
-- founderConstraints: always an object with keys: timePerWeek (number), capitalAvailable (string), riskTolerance (low|medium|high), hardLimits (string[])
-- ventureIntelligence: always includes detectedVertical (string) and detectedBusinessModel (string)
-- energyDrainers: always an array, never null — use [] if none identified
-
 ## ANTI-PATTERNS
 
 - Do NOT ask "What are your goals?" — too generic, already answered in intake
@@ -874,9 +859,17 @@ Now ask your first targeted question based on this context. Reference something 
       }
 
       const data = await response.json();
-      const question: string =
+      let question: string =
         data.choices?.[0]?.message?.content?.trim?.() ||
         "What specific skill have people paid you for that you think gives you an edge?";
+
+      // Safety net: unwrap if model returned JSON-wrapped question
+      if (question.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(question);
+          if (parsed.question) question = parsed.question;
+        } catch { /* not valid JSON, use as-is */ }
+      }
 
       transcript = [
         ...transcript,
