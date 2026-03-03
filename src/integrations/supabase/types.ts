@@ -683,16 +683,19 @@ export type Database = {
           energy_source: string | null
           entry_trigger: string | null
           future_vision: string | null
+          hell_no_filters: string[] | null
           hours_per_week: number | null
           id: string
           interview_completed_at: string | null
           learning_style: string | null
           lifestyle_goals: string | null
+          lightning_round_completed_at: string | null
           open_to_memetic_ideas: boolean | null
           open_to_personas: boolean | null
           passions_tags: string[] | null
           passions_text: string | null
           profile: Json
+          revenue_target: string | null
           risk_tolerance: string | null
           skills_tags: string[] | null
           skills_text: string | null
@@ -702,6 +705,7 @@ export type Database = {
           time_per_week: number | null
           updated_at: string
           user_id: string
+          visibility_preference: string | null
           wants_money_systems: boolean | null
           work_personality: string[] | null
         }
@@ -718,16 +722,19 @@ export type Database = {
           energy_source?: string | null
           entry_trigger?: string | null
           future_vision?: string | null
+          hell_no_filters?: string[] | null
           hours_per_week?: number | null
           id?: string
           interview_completed_at?: string | null
           learning_style?: string | null
           lifestyle_goals?: string | null
+          lightning_round_completed_at?: string | null
           open_to_memetic_ideas?: boolean | null
           open_to_personas?: boolean | null
           passions_tags?: string[] | null
           passions_text?: string | null
           profile?: Json
+          revenue_target?: string | null
           risk_tolerance?: string | null
           skills_tags?: string[] | null
           skills_text?: string | null
@@ -737,6 +744,7 @@ export type Database = {
           time_per_week?: number | null
           updated_at?: string
           user_id: string
+          visibility_preference?: string | null
           wants_money_systems?: boolean | null
           work_personality?: string[] | null
         }
@@ -753,16 +761,19 @@ export type Database = {
           energy_source?: string | null
           entry_trigger?: string | null
           future_vision?: string | null
+          hell_no_filters?: string[] | null
           hours_per_week?: number | null
           id?: string
           interview_completed_at?: string | null
           learning_style?: string | null
           lifestyle_goals?: string | null
+          lightning_round_completed_at?: string | null
           open_to_memetic_ideas?: boolean | null
           open_to_personas?: boolean | null
           passions_tags?: string[] | null
           passions_text?: string | null
           profile?: Json
+          revenue_target?: string | null
           risk_tolerance?: string | null
           skills_tags?: string[] | null
           skills_text?: string | null
@@ -772,6 +783,7 @@ export type Database = {
           time_per_week?: number | null
           updated_at?: string
           user_id?: string
+          visibility_preference?: string | null
           wants_money_systems?: boolean | null
           work_personality?: string[] | null
         }
