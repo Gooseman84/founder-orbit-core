@@ -170,3 +170,6 @@ verify_jwt = false
 
 [functions.venture-debugger]
 verify_jwt = false
+
+[functions.save-lightning-round]
+verify_jwt = false
