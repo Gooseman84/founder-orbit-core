@@ -191,16 +191,6 @@ SUMMARY RULES:
 - minimumMonthlyRevenue must be a number or the string "unspecified".
 - type must be one of: "side_income", "salary_replacement", "wealth_building".
 - founderSummary should be personal and specific, not generic.
-
-CONSTRAINTS FALLBACK RULES:
-- IMPORTANT: Never return "unclear" for hoursPerWeek if the founder mentioned ANY time commitment during the interview — infer a number. If truly unknown, use 10 as a safe default for a part-time founder. Never leave availableCapital as "unclear" — if not mentioned, write "bootstrapped / not specified". Always populate timeline with something — if not discussed, write "flexible".
-
-FINANCIAL TARGET FALLBACK RULES:
-- IMPORTANT: Always infer a financialTarget type from context. If the founder has a day job and is building on the side, use "side_income". If they want to quit their job, use "salary_replacement". If they mentioned wealth or long-term goals, use "wealth_building". Default to "side_income" if unclear. For minimumMonthlyRevenue, infer from lifestyle goals if mentioned, otherwise use a reasonable default (e.g., 3000 for side_income). Never return "unspecified" for description — write what you can infer.
-
-CONFIDENCE LEVEL RULES:
-- Only assign "low" confidence to insiderKnowledge or customerIntimacy if those fields are genuinely empty. For constraints and financialTarget, assign "medium" confidence for inferred values rather than "low" — "low" signals to the user that they need to correct something, which should be rare.
-
 - networkDistribution: INFER from the full conversation — former roles,
   colleagues mentioned, communities, industry connections, audiences.
   Do NOT require an explicit network question to fill these fields.

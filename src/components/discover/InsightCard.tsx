@@ -18,7 +18,6 @@ interface InsightCardProps {
   cardKey?: string;
   correctionValue?: string;
   onCorrectionChange?: (key: string, value: string | null) => void;
-  currentContent?: string;
 }
 
 export function InsightCard({
@@ -31,15 +30,14 @@ export function InsightCard({
   cardKey,
   correctionValue = "",
   onCorrectionChange,
-  currentContent = "",
 }: InsightCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [localValue, setLocalValue] = useState(correctionValue || currentContent || "");
+  const [localValue, setLocalValue] = useState(correctionValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    setLocalValue(correctionValue || currentContent || "");
-  }, [correctionValue, currentContent]);
+    setLocalValue(correctionValue);
+  }, [correctionValue]);
 
   useEffect(() => {
     if (isExpanded && textareaRef.current) {
@@ -141,7 +139,7 @@ export function InsightCard({
                 ref={textareaRef}
                 value={localValue}
                 onChange={(e) => setLocalValue(e.target.value.slice(0, 500))}
-                placeholder="Edit or replace the content above..."
+                placeholder="What would you change or add?"
                 className="min-h-[80px] resize-none text-sm"
                 maxLength={500}
               />
