@@ -174,6 +174,27 @@ Deno.serve(async (req) => {
       );
     }
 
+    // generate-founder-ideas reads from founder_interviews.context_summary directly,
+    // so corrections flow through automatically. Also sync to founder_profiles for
+    // other downstream consumers.
+    const { error: profileSyncError } = await supabaseAuth
+      .from("founder_profiles")
+      .update({
+        context_summary: updatedInsights,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId);
+
+    if (profileSyncError) {
+      // Log but don't fail — interview update already succeeded
+      console.error(
+        "mavrik-apply-corrections: failed to sync to founder_profiles",
+        profileSyncError
+      );
+    }
+
+    console.log("mavrik-apply-corrections: corrections saved to founder_interviews and synced to founder_profiles");
+
     return new Response(
       JSON.stringify({
         success: true,
