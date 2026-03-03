@@ -7,29 +7,7 @@ const corsHeaders = {
 };
 
 interface FinalizeRequestBody {
-  user_id?: string;
   interview_id?: string;
-}
-
-function mergeUnique(existing: any, inferred: any): string[] {
-  const base = Array.isArray(existing) ? existing : [];
-  const extra = Array.isArray(inferred) ? inferred : [];
-  return Array.from(new Set([...base, ...extra].filter((x) => typeof x === "string"))) as string[];
-}
-
-// Merge text fields intelligently - append new insights if they add value
-function mergeText(existing: string | null | undefined, inferred: string | null | undefined): string | null {
-  if (!existing && !inferred) return null;
-  if (!existing) return inferred || null;
-  if (!inferred) return existing;
-  
-  // If inferred content is already contained in existing, skip
-  if (existing.toLowerCase().includes(inferred.toLowerCase())) {
-    return existing;
-  }
-  
-  // Append with separator
-  return `${existing}\n\n[From interview]: ${inferred}`;
 }
 
 serve(async (req) => {
@@ -78,7 +56,7 @@ serve(async (req) => {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
 
-    // ===== REQUEST BODY (no user_id required) =====
+    // ===== REQUEST BODY =====
     const body = (await req.json().catch(() => ({}))) as FinalizeRequestBody;
 
     if (!body.interview_id) {
@@ -88,174 +66,113 @@ serve(async (req) => {
       );
     }
 
-    // Load existing founder profile with ALL fields (including structured onboarding)
-    const { data: existingProfile, error: profileError } = await supabase
-      .from("founder_profiles")
-      .select("*")
-      .eq("user_id", resolvedUserId)
-      .maybeSingle();
+    // ===== Load existing profile + interview in parallel =====
+    const [profileResult, interviewResult] = await Promise.all([
+      supabase
+        .from("founder_profiles")
+        .select("*")
+        .eq("user_id", resolvedUserId)
+        .maybeSingle(),
+      supabase
+        .from("founder_interviews")
+        .select("context_summary")
+        .eq("id", body.interview_id)
+        .eq("user_id", resolvedUserId)
+        .maybeSingle(),
+    ]);
 
-    if (profileError) {
-      console.error("finalize-founder-profile: error fetching profile", profileError);
+    if (profileResult.error) {
+      console.error("finalize-founder-profile: error fetching profile", profileResult.error);
       return new Response(
         JSON.stringify({ error: "Failed to load founder profile" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    let resolvedProfile = existingProfile;
-
-    if (!resolvedProfile) {
-      console.log(`finalize-founder-profile: No existing profile for user ${resolvedUserId}. Upserting minimal row.`);
-      const nowForInsert = new Date().toISOString();
-      try {
-        const { data: upsertedProfile, error: upsertError } = await supabase
-          .from("founder_profiles")
-          .upsert(
-            {
-              user_id: resolvedUserId,
-              profile: {},
-              interview_completed_at: nowForInsert,
-            },
-            { onConflict: "user_id", ignoreDuplicates: false }
-          )
-          .select("*")
-          .single();
-
-        if (upsertError) {
-          console.error("finalize-founder-profile: upsert error details:", JSON.stringify(upsertError));
-          return new Response(
-            JSON.stringify({ error: "Failed to create founder profile", details: upsertError.message }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        if (!upsertedProfile) {
-          console.error("finalize-founder-profile: upsert returned no data");
-          return new Response(
-            JSON.stringify({ error: "Failed to create founder profile - no data returned" }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        resolvedProfile = upsertedProfile;
-        console.log(`finalize-founder-profile: Successfully created profile for user ${resolvedUserId}, id=${resolvedProfile.id}`);
-      } catch (err) {
-        console.error("finalize-founder-profile: unexpected error during upsert:", err);
-        return new Response(
-          JSON.stringify({ error: "Unexpected error during profile creation" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    let profile = (resolvedProfile.profile as any) || {};
-
-    // Load interview + context summary
-    const { data: interviewRow, error: interviewError } = await supabase
-      .from("founder_interviews")
-      .select("context_summary")
-      .eq("id", body.interview_id)
-      .eq("user_id", resolvedUserId)
-      .maybeSingle();
-
-    if (interviewError) {
-      console.error("finalize-founder-profile: error fetching interview", interviewError);
+    if (interviewResult.error) {
+      console.error("finalize-founder-profile: error fetching interview", interviewResult.error);
       return new Response(
         JSON.stringify({ error: "Failed to load interview" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!interviewRow || !interviewRow.context_summary) {
+    if (!interviewResult.data || !interviewResult.data.context_summary) {
       return new Response(
         JSON.stringify({ error: "Interview context summary not found. Run summary first." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const ctx = interviewRow.context_summary as any;
-
-    // Merge AI-inferred signals into the profile without overwriting explicit user inputs
-    profile.primaryDesires = mergeUnique(profile.primaryDesires, ctx.inferredPrimaryDesires);
-    profile.founderRoles = mergeUnique(profile.founderRoles, ctx.inferredFounderRoles);
-    profile.workStylePreferences = mergeUnique(profile.workStylePreferences, ctx.inferredWorkStyle);
-    profile.marketSegmentsUnderstood = mergeUnique(
-      profile.marketSegmentsUnderstood,
-      ctx.inferredMarketSegments,
-    );
-    profile.hellNoFilters = mergeUnique(profile.hellNoFilters, ctx.inferredHellNoFilters);
-    profile.businessArchetypes = mergeUnique(profile.businessArchetypes, ctx.inferredArchetypes);
-
+    const ctx = interviewResult.data.context_summary as any;
     const nowIso = new Date().toISOString();
-    profile.updatedAt = nowIso;
-    if (!profile.createdAt) {
-      profile.createdAt = nowIso;
-    }
 
-    // Build payload that PRESERVES structured onboarding data and ADDS interview insights
-    const payload: Record<string, any> = {
-      user_id: resolvedUserId,
-      profile,
-      
-      // Store the full interview context summary
-      context_summary: ctx,
-      interview_completed_at: nowIso,
-      
-      // Keep existing structured onboarding fields (don't overwrite with nulls)
-      // Only update if profile has values
-      hours_per_week: profile.hoursPerWeek ?? resolvedProfile.hours_per_week,
-      risk_tolerance: profile.riskTolerance ?? resolvedProfile.risk_tolerance,
-      commitment_level: profile.commitmentLevel ?? resolvedProfile.commitment_level,
-      time_per_week: profile.hoursPerWeek ?? resolvedProfile.time_per_week,
-      capital_available: profile.availableCapital ?? resolvedProfile.capital_available,
-      
-      // Merge text fields - append interview insights to structured data
-      passions_text: mergeText(resolvedProfile.passions_text, ctx.inferredPrimaryDesires?.join(', ')),
-      skills_text: mergeText(resolvedProfile.skills_text, ctx.inferredFounderRoles?.join(', ')),
-      lifestyle_goals: mergeText(resolvedProfile.lifestyle_goals, ctx.inferredWorkStyle?.join(', ')),
-      success_vision: mergeText(resolvedProfile.success_vision, profile.visionOfSuccessText),
-      
-      // Merge array fields
-      passions_tags: mergeUnique(resolvedProfile.passions_tags, profile.passionDomains),
-      skills_tags: mergeUnique(resolvedProfile.skills_tags, profile.skillTags),
+    // ===== Build profile JSONB blob =====
+    // Merge interview-extracted intelligence into the profile blob
+    // for backward compatibility. Lightning Round columns are NOT touched.
+    const existingProfile = (profileResult.data?.profile as any) || {};
+
+    const profile = {
+      ...existingProfile,
+
+      // Interview-extracted fields (complement Lightning Round data)
+      domainExpertise: ctx.domainExpertise ?? existingProfile.domainExpertise,
+      customerPain: ctx.customerPain ?? existingProfile.customerPain,
+      ventureIntelligence: ctx.ventureIntelligence ?? existingProfile.ventureIntelligence,
+      transferablePatterns: ctx.transferablePatterns ?? existingProfile.transferablePatterns,
+      interviewSignalQuality: ctx.interviewSignalQuality ?? existingProfile.interviewSignalQuality,
+      keyQuotes: ctx.keyQuotes ?? existingProfile.keyQuotes,
+      redFlags: ctx.redFlags ?? existingProfile.redFlags,
+      founderSummary: ctx.founderSummary ?? existingProfile.founderSummary,
+      ideaGenerationContext: ctx.ideaGenerationContext ?? existingProfile.ideaGenerationContext,
+
+      updatedAt: nowIso,
+      createdAt: existingProfile.createdAt || nowIso,
     };
 
-    console.log("finalize-founder-profile: merging structured + interview data", {
-      hasStructuredData: !!resolvedProfile.structured_onboarding_completed_at,
-      hasInterviewData: !!ctx,
-      entryTrigger: resolvedProfile.entry_trigger,
-      futureVision: resolvedProfile.future_vision,
+    // ===== Build DB update payload =====
+    // Only set interview-related fields. Do NOT overwrite Lightning Round columns.
+    const payload: Record<string, any> = {
+      profile,
+      context_summary: ctx,
+      interview_completed_at: nowIso,
+    };
+
+    console.log("finalize-founder-profile: storing context_summary + profile blob", {
+      hasExistingProfile: !!profileResult.data,
+      interviewSignalQuality: ctx.interviewSignalQuality,
     });
 
-    const { data: updated, error: updateError } = await supabase
-      .from("founder_profiles")
-      .update(payload)
-      .eq("user_id", resolvedUserId)
-      .select("id");
+    // ===== Upsert profile =====
+    if (profileResult.data) {
+      const { error: updateError } = await supabase
+        .from("founder_profiles")
+        .update(payload)
+        .eq("user_id", resolvedUserId);
 
-    if (updateError) {
-      console.error("finalize-founder-profile: error updating profile", updateError);
-      return new Response(
-        JSON.stringify({ error: "Failed to update founder profile" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!updated || updated.length === 0) {
+      if (updateError) {
+        console.error("finalize-founder-profile: error updating profile", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to update founder profile" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      // No profile exists yet — create minimal row
       const { error: insertError } = await supabase
         .from("founder_profiles")
-        .insert(payload as any);
+        .insert({ user_id: resolvedUserId, ...payload });
 
       if (insertError) {
         console.error("finalize-founder-profile: error inserting profile", insertError);
         return new Response(
-          JSON.stringify({ error: "Failed to insert founder profile" }),
+          JSON.stringify({ error: "Failed to create founder profile" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
+    // ===== Mark interview as completed =====
     const { error: statusError } = await supabase
       .from("founder_interviews")
       .update({ status: "completed" })
