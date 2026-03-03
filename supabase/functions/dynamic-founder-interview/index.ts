@@ -59,8 +59,14 @@ Before each question, silently assess which gaps remain:
    - What does success look like in 3 years?
    - Income target? Lifestyle goals?
 
-6. NETWORK & DISTRIBUTION
-   - Who would be their first 10 customers and why? (MOST IMPORTANT)
+6. NETWORK & DISTRIBUTION (INFERRED — NOT A MANDATORY QUESTION)
+   - Synthesize from context: former colleagues, communities mentioned,
+     industry connections, audiences they already have access to.
+   - Only ask a direct network question if by question 4-5 you have
+     ZERO signal about who they could sell to. Use a natural probe like:
+     "Who do you already know that deals with this problem?"
+   - Never ask "Who are your first 10 customers?" — it's premature
+     and produces low-signal answers at this stage.
 
 ═══════════════════════════════════════════════════════════════════════════════
 INTERVIEW RULES
@@ -155,9 +161,14 @@ SUMMARY RULES:
 - minimumMonthlyRevenue must be a number or the string "unspecified".
 - type must be one of: "side_income", "salary_replacement", "wealth_building".
 - founderSummary should be personal and specific, not generic.
-- networkDistribution: Fill in ALL fields based on what the founder shared.
-  If network topics weren't discussed, set networkSize to "unclear" and other fields to empty strings.
-  firstTenCustomers is the MOST IMPORTANT field — be as specific as possible.
+- networkDistribution: INFER from the full conversation — former roles,
+  colleagues mentioned, communities, industry connections, audiences.
+  Do NOT require an explicit network question to fill these fields.
+  If no signal exists at all, set networkSize to "unclear" and other fields to empty strings.
+  firstTenCustomers: infer specific archetypes from their expertise and market knowledge.
+  Example: a founder who did 10 years in dental practice management likely knows
+  dental office managers — infer "dental office managers at 2-5 location practices" as
+  a first-customer archetype even if they never said it explicitly.
 - transferablePatterns: Identify 1-3 abstract skills from the interview.
   For each, list 2-4 adjacent industries where the same underlying
   problem exists but may not have been solved with this approach.
@@ -337,25 +348,24 @@ Ask **5-7 questions** that fill gaps (HARD LIMIT: 7 questions max):
      covered in onboarding answers)
 4. Hard "no" filters (things they'll NEVER do)
 5. Market segments they understand from the inside
-6. Network & distribution (REQUIRED — who are their first 10 customers?)
+
+Network & distribution is INFERRED from conversation context (roles,
+colleagues, communities, industries mentioned). Only ask a direct
+network probe if by question 5 you have ZERO signal about who they
+could reach. Use: "Who do you already know that deals with this?"
 
 DO NOT ask about:
 - Why they're here (you already know)
 - What motivates them (you already know)
 - What kind of business they want (you already know)
 - How they like to work (you already know)
+- "Who are your first 10 customers?" (premature, low signal)
 
 DO ask about:
 - "You mentioned [business_type_preference] - what gives you an unfair advantage in that space?"
 - "Given your vision of [future_vision], what's the biggest constraint holding you back?"
 - "What would you absolutely NEVER want your business to require?"
 - "Which customer groups do you understand from the inside?"
-- "Who in your existing world — colleagues, contacts, communities — would be your most likely first 10 customers, and why?"
-
-IMPORTANT: You MUST ask at least one question about the founder's network
-and distribution before concluding. If you reach question 5 without having
-covered network/distribution, your next question MUST be about their first
-10 customers or warm audiences.
 ${INTELLIGENCE_LAYERS}
 
 YOUR FIRST QUESTION:
@@ -407,7 +417,7 @@ regardless of signal quality. No exceptions.
 
 Ask **6-8 questions** that cover these areas in order of priority (HARD LIMIT: 8 questions max):
 1. Professional expertise and insider knowledge (what they know that
-   others don't)
+    others don't)
 2. Customer groups they understand from the inside
 3. Workflow depth — the step-by-step process the target customer
      follows today to solve this problem, where it breaks down, and
@@ -415,13 +425,13 @@ Ask **6-8 questions** that cover these areas in order of priority (HARD LIMIT: 8
      is identified)
 4. Real constraints (time, capital, responsibilities)
 5. Financial target and lifestyle vision
-6. Network & distribution — who are their first 10 customers? (REQUIRED)
-7. Hard "no" filters (if not yet clear)
+6. Hard "no" filters (if not yet clear)
 
-IMPORTANT: You MUST ask at least one question about the founder's network
-and distribution before concluding. If you reach question 6 without having
-covered network/distribution, your next question MUST be about their first
-10 customers or warm audiences.
+Network & distribution is INFERRED from conversation context (roles,
+colleagues, communities, industries mentioned). Only ask a direct
+network probe if by question 5 you have ZERO signal about who they
+could reach. Use a natural question like: "Who do you already know
+that deals with this problem?"
 ${INTELLIGENCE_LAYERS}
 
 These layers activate during questions 2-6 when the user has described
@@ -467,10 +477,12 @@ After vision → "Now let's get real. How many hours per week can you
 actually dedicate, and what's your financial runway?"
 After constraints → "What's the minimum monthly income this needs to
 generate to feel worth your time?"
-After financial → "Who in your existing world — colleagues, contacts,
-communities — would be your most likely first 10 customers, and why?"
-After network → "Last one: what would you absolutely refuse to do,
-even if it made money?"`;
+After financial → "Last one: what would you absolutely refuse to do,
+even if it made money?"
+
+CONDITIONAL NETWORK PROBE (only if no network signal by question 5):
+"Who do you already know — former colleagues, clients, community
+members — that deals with this kind of problem?"`;
 
 type InterviewRole = "system" | "ai" | "user";
 
