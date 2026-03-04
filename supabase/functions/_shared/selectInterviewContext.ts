@@ -31,17 +31,20 @@ export function selectInterviewContext(
 ): InterviewContextSlice | null {
   if (!interviewContext) return null;
 
+  // Normalize new schema to include old field names for backward compat
+  const normalized = normalizeForBackend(interviewContext);
+
   const fields = FUNCTION_FIELD_MAP[functionName];
-  if (!fields) return interviewContext; // unknown function: pass full context
+  if (!fields) return normalized; // unknown function: pass full context
 
   const slice: InterviewContextSlice = {};
 
   for (const field of fields) {
     // Handle nested paths in context_summary
     const value =
-      interviewContext[field] ??
-      interviewContext.extractedInsights?.[field] ??
-      interviewContext.ventureIntelligence?.[field] ??
+      normalized[field] ??
+      normalized.extractedInsights?.[field] ??
+      normalized.ventureIntelligence?.[field] ??
       null;
 
     if (value !== null && value !== undefined) {
@@ -50,4 +53,33 @@ export function selectInterviewContext(
   }
 
   return Object.keys(slice).length > 0 ? slice : null;
+}
+
+/**
+ * Maps new interview schema (domainExpertise, customerPain, etc.) to
+ * old-style extractedInsights so downstream functions work unchanged.
+ */
+function normalizeForBackend(ctx: any): any {
+  // If it already has extractedInsights (old schema), return as-is
+  if (ctx.extractedInsights) return ctx;
+
+  const domain = ctx.domainExpertise || {};
+  const pain = ctx.customerPain || {};
+
+  return {
+    ...ctx,
+    extractedInsights: {
+      insiderKnowledge: domain.specificKnowledge || [],
+      customerIntimacy: [pain.targetRole, pain.specificProblem].filter(Boolean),
+      constraints: {},
+      hardNoFilters: [],
+      domainExpertise: [domain.primaryIndustry, domain.abstractExpertise].filter(Boolean),
+      transferablePatterns: ctx.transferablePatterns || [],
+      networkDistribution: {},
+    },
+    domainExpertise: domain,
+    customerPain: pain,
+    ventureIntelligence: ctx.ventureIntelligence || {},
+    interviewSignalQuality: ctx.interviewSignalQuality || {},
+  };
 }
