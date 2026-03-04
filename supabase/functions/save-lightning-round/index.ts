@@ -127,6 +127,9 @@ serve(async (req) => {
       lightning_round_completed_at: new Date().toISOString(),
     };
 
+    // Columns that are integer in the DB and may arrive as string
+    const INTEGER_COLUMNS = new Set(["capital_available", "hours_per_week", "commitment_level", "time_per_week"]);
+
     for (const response of parsed.responses) {
       const columns = FIELD_MAPPING[response.question_id];
       if (!columns) {
@@ -134,7 +137,13 @@ serve(async (req) => {
         continue;
       }
       for (const col of columns) {
-        profileUpdate[col] = response.value;
+        let val = response.value;
+        // Coerce string-encoded numbers to integers for integer columns
+        if (INTEGER_COLUMNS.has(col) && typeof val === "string") {
+          const parsed = parseInt(val, 10);
+          val = isNaN(parsed) ? null : parsed;
+        }
+        profileUpdate[col] = val;
       }
     }
 
