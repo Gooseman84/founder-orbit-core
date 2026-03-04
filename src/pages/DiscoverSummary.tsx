@@ -6,12 +6,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
+import { normalizeInterviewInsights, NormalizedInterviewData } from "@/lib/normalizeInterviewInsights";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FunnelStepper } from "@/components/shared/FunnelStepper";
 import { FounderPortrait } from "@/components/discover/FounderPortrait";
 import { InsightCard, InsightPills } from "@/components/discover/InsightCard";
-import type { InterviewInsights } from "@/types/interviewInsights";
 import type { CorrectionFields, CorrectionsPayload } from "@/types/corrections";
 
 export default function DiscoverSummary() {
@@ -20,7 +20,7 @@ export default function DiscoverSummary() {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const [insights, setInsights] = useState<InterviewInsights | null>(null);
+  const [insights, setInsights] = useState<NormalizedInterviewData | null>(null);
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -47,11 +47,11 @@ export default function DiscoverSummary() {
 
     const loadInsights = async () => {
       // Check if insights were passed via navigation state
-      const stateInsights = location.state?.insights as InterviewInsights | undefined;
+      const stateInsights = location.state?.insights as any | undefined;
       const stateInterviewId = location.state?.interviewId as string | undefined;
       
       if (stateInsights) {
-        setInsights(stateInsights);
+        setInsights(normalizeInterviewInsights(stateInsights));
 
         if (stateInterviewId) {
           setInterviewId(stateInterviewId);
@@ -86,7 +86,7 @@ export default function DiscoverSummary() {
         if (error) throw error;
 
         if (data?.context_summary) {
-          setInsights(data.context_summary as unknown as InterviewInsights);
+          setInsights(normalizeInterviewInsights(data.context_summary));
           setInterviewId(data.id);
         } else {
           toast({
@@ -236,6 +236,10 @@ export default function DiscoverSummary() {
 
   const { extractedInsights, founderSummary, confidenceLevel } = insights;
 
+  // Map "none" to undefined for InsightCard compatibility
+  const conf = (level: string | undefined): "high" | "medium" | "low" | undefined =>
+    level === "none" ? undefined : (level as "high" | "medium" | "low" | undefined);
+
   // Format constraints for display
   const formatConstraints = () => {
     const parts: string[] = [];
@@ -315,7 +319,7 @@ export default function DiscoverSummary() {
             <InsightCard
               title="Your Edge"
               icon={Lightbulb}
-              confidence={confidenceLevel.insiderKnowledge}
+              confidence={conf(confidenceLevel.insiderKnowledge)}
               isEditMode={isEditMode}
               cardKey="insiderKnowledge"
               correctionValue={corrections.insiderKnowledge || ""}
@@ -328,7 +332,7 @@ export default function DiscoverSummary() {
             <InsightCard
               title="Your People"
               icon={Users}
-              confidence={confidenceLevel.customerIntimacy}
+              confidence={conf(confidenceLevel.customerIntimacy)}
               isEditMode={isEditMode}
               cardKey="customerIntimacy"
               correctionValue={corrections.customerIntimacy || ""}
@@ -341,7 +345,7 @@ export default function DiscoverSummary() {
             <InsightCard
               title="Your Reality"
               icon={Clock}
-              confidence={confidenceLevel.constraints}
+              confidence={conf(confidenceLevel.constraints)}
               isEditMode={isEditMode}
               cardKey="constraints"
               correctionValue={corrections.constraints || ""}
@@ -360,7 +364,7 @@ export default function DiscoverSummary() {
             <InsightCard
               title="Your Target"
               icon={Target}
-              confidence={confidenceLevel.financialTarget}
+              confidence={conf(confidenceLevel.financialTarget)}
               isEditMode={isEditMode}
               cardKey="financialTarget"
               correctionValue={corrections.financialTarget || ""}
