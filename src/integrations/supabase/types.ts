@@ -672,7 +672,7 @@ export type Database = {
       founder_profiles: {
         Row: {
           business_type_preference: string | null
-          capital_available: number | null
+          capital_available: string | null
           commitment_level: number | null
           commitment_level_text: string | null
           context_summary: Json | null
@@ -711,7 +711,7 @@ export type Database = {
         }
         Insert: {
           business_type_preference?: string | null
-          capital_available?: number | null
+          capital_available?: string | null
           commitment_level?: number | null
           commitment_level_text?: string | null
           context_summary?: Json | null
@@ -750,7 +750,7 @@ export type Database = {
         }
         Update: {
           business_type_preference?: string | null
-          capital_available?: number | null
+          capital_available?: string | null
           commitment_level?: number | null
           commitment_level_text?: string | null
           context_summary?: Json | null

@@ -5,7 +5,7 @@ export interface OnboardingData {
   skills_tags: string[];
   tech_level: string;
   time_per_week: number;
-  capital_available: number;
+  capital_available: string;
   risk_tolerance: string;
   lifestyle_goals: string;
   success_vision: string;
@@ -18,7 +18,7 @@ export const INITIAL_ONBOARDING_DATA: OnboardingData = {
   skills_tags: [],
   tech_level: "",
   time_per_week: 0,
-  capital_available: 0,
+  capital_available: "",
   risk_tolerance: "",
   lifestyle_goals: "",
   success_vision: "",
