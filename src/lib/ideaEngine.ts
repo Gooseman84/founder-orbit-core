@@ -13,7 +13,7 @@ export interface FounderProfileLite {
   passions_text?: string | null;
   skills_text?: string | null;
   time_per_week?: number | null;
-  capital_available?: number | null;
+  capital_available?: string | null;
   risk_tolerance?: string | null; // e.g. "low" | "medium" | "high"
   lifestyle_goals?: string | null;
   success_vision?: string | null;
@@ -62,7 +62,8 @@ export function computeFitScore(
 
   // Time/Capital heuristic (very light, just reduces fit if constraints very low)
   const time = founder.time_per_week ?? 0;
-  const capital = founder.capital_available ?? 0;
+  const capitalRaw = founder.capital_available ?? "0";
+  const capital = typeof capitalRaw === "string" ? parseInt(capitalRaw, 10) || 0 : capitalRaw;
 
   let constraintScore = 70;
   if (time < 3) constraintScore -= 20;

@@ -18,7 +18,7 @@ export type FounderProfileData = {
   skills_tags: string[] | null;
   tech_level: string | null;
   time_per_week: number | null;
-  capital_available: number | null;
+  capital_available: string | null;
   risk_tolerance: string | null;
   lifestyle_goals: string | null;
   success_vision: string | null;

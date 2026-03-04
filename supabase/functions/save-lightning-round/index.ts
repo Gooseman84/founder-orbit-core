@@ -128,7 +128,7 @@ serve(async (req) => {
     };
 
     // Columns that are integer in the DB and may arrive as string
-    const INTEGER_COLUMNS = new Set(["capital_available", "hours_per_week", "commitment_level", "time_per_week"]);
+    const INTEGER_COLUMNS = new Set(["hours_per_week", "commitment_level", "time_per_week"]);
 
     for (const response of parsed.responses) {
       const columns = FIELD_MAPPING[response.question_id];

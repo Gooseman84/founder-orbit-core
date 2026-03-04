@@ -1,0 +1,1 @@
+ALTER TABLE public.founder_profiles ALTER COLUMN capital_available TYPE TEXT USING capital_available::TEXT;

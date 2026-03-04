@@ -40,7 +40,7 @@ interface ProfileEditDrawerProps {
     skills_text?: string | null;
     skills_tags?: string[] | null;
     time_per_week?: number | null;
-    capital_available?: number | null;
+    capital_available?: string | null;
     risk_tolerance?: string | null;
     tech_level?: string | null;
     lifestyle_goals?: string | null;
@@ -123,7 +123,7 @@ export function ProfileEditDrawer({
   const [skillsText, setSkillsText] = useState("");
   const [skillsTags, setSkillsTags] = useState<string[]>([]);
   const [timePerWeek, setTimePerWeek] = useState<number | "">("");
-  const [capitalAvailable, setCapitalAvailable] = useState<number | "">("");
+  const [capitalAvailable, setCapitalAvailable] = useState<string>("");
   const [riskTolerance, setRiskTolerance] = useState("");
   const [techLevel, setTechLevel] = useState("");
   const [lifestyleGoals, setLifestyleGoals] = useState("");
@@ -310,7 +310,7 @@ export function ProfileEditDrawer({
               <Input
                 type="number"
                 value={capitalAvailable}
-                onChange={(e) => setCapitalAvailable(e.target.value ? Number(e.target.value) : "")}
+                onChange={(e) => setCapitalAvailable(e.target.value)}
                 placeholder="e.g., 5000"
                 style={{ borderRadius: 0, borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
                 className="focus:border-primary"
