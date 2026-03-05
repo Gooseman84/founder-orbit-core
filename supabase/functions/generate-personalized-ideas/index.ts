@@ -7,6 +7,44 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * Maps new interview schema to old-style fields so the prompt builder works unchanged.
+ * Handles both old-schema interviews (extractedInsights) and new-schema (domainExpertise/customerPain).
+ */
+function normalizeContextSummary(ctx: any): any {
+  if (!ctx) return {};
+
+  // Old schema already has extractedInsights — return as-is
+  if (ctx.extractedInsights) return ctx;
+
+  // New schema — map to old field structure
+  const domain = ctx.domainExpertise || {};
+  const pain = ctx.customerPain || {};
+  const signal = ctx.interviewSignalQuality || {};
+
+  return {
+    ...ctx,
+    extractedInsights: {
+      insiderKnowledge: domain.specificKnowledge || [],
+      customerIntimacy: [pain.targetRole, pain.specificProblem].filter(Boolean),
+      constraints: {},
+      financialTarget: { type: "see_profile", minimumMonthlyRevenue: 0, description: "" },
+      hardNoFilters: [],
+      emotionalDrivers: [],
+      domainExpertise: [domain.primaryIndustry, domain.abstractExpertise].filter(Boolean),
+      transferablePatterns: ctx.transferablePatterns || [],
+      networkDistribution: {},
+    },
+    confidenceLevel: {
+      insiderKnowledge: signal.insiderKnowledge || "low",
+      customerIntimacy: signal.customerPain || "low",
+      constraints: "high",
+      financialTarget: "high",
+    },
+    ventureIntelligence: ctx.ventureIntelligence || {},
+  };
+}
+
 interface RequestBody {
   interviewId: string;
 }
@@ -128,9 +166,10 @@ Deno.serve(async (req) => {
     }
 
     const contextSummary = interview.context_summary as any;
+    const normalizedSummary = normalizeContextSummary(contextSummary);
     
     // Build the system prompt
-    const systemPrompt = buildIdeaGenerationPrompt(contextSummary, profile);
+    const systemPrompt = buildIdeaGenerationPrompt(normalizedSummary, profile);
 
     // Call Anthropic API
     const anthropic = new Anthropic({ apiKey: anthropicApiKey });
