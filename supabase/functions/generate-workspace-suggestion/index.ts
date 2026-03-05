@@ -153,11 +153,26 @@ serve(async (req) => {
           interviewContext.ventureIntelligence.verticalIdentified !== "none")
         parts.push(`Industry: ${interviewContext.ventureIntelligence.verticalIdentified}`);
       
-      if (interviewContext?.extractedInsights?.insiderKnowledge?.length)
-        parts.push(`Expertise: ${interviewContext.extractedInsights.insiderKnowledge.join(", ")}`);
+      // Handle both old schema (extractedInsights) and new schema (domainExpertise/customerPain)
+      const insiderKnowledge = 
+        interviewContext?.extractedInsights?.insiderKnowledge ||
+        interviewContext?.domainExpertise?.specificKnowledge ||
+        [];
       
-      if (interviewContext?.extractedInsights?.customerIntimacy?.length)
-        parts.push(`Customers: ${interviewContext.extractedInsights.customerIntimacy.join(", ")}`);
+      const customerIntimacy = 
+        interviewContext?.extractedInsights?.customerIntimacy ||
+        [interviewContext?.customerPain?.targetRole, interviewContext?.customerPain?.specificProblem].filter(Boolean) ||
+        [];
+      
+      const hardNoFilters = 
+        interviewContext?.extractedInsights?.hardNoFilters ||
+        [];
+      
+      if (insiderKnowledge?.length)
+        parts.push(`Expertise: ${insiderKnowledge.join(", ")}`);
+      
+      if (customerIntimacy?.length)
+        parts.push(`Customers: ${customerIntimacy.join(", ")}`);
       
       if (ideaContext?.title)
         parts.push(`Venture: ${ideaContext.title}`);
@@ -168,8 +183,18 @@ serve(async (req) => {
       if (ideaContext?.source_meta?.keyRisk)
         parts.push(`Key Risk: ${ideaContext.source_meta.keyRisk}`);
       
-      if (interviewContext?.extractedInsights?.hardNoFilters?.length)
-        parts.push(`Hard Nos: ${interviewContext.extractedInsights.hardNoFilters.join(", ")}`);
+      if (hardNoFilters?.length)
+        parts.push(`Hard Nos: ${hardNoFilters.join(", ")}`);
+      
+      // New schema fields — provide richer context when available
+      if (interviewContext?.customerPain?.currentWorkflow?.length)
+        parts.push(`Current Workflow: ${interviewContext.customerPain.currentWorkflow.join(" → ")}`);
+      
+      if (interviewContext?.customerPain?.toolsCurrentlyUsed?.length)
+        parts.push(`Tools Used: ${interviewContext.customerPain.toolsCurrentlyUsed.join(", ")}`);
+      
+      if (interviewContext?.domainExpertise?.abstractExpertise)
+        parts.push(`Core Capability: ${interviewContext.domainExpertise.abstractExpertise}`);
       
       founderContextBlock = `
 FOUNDER CONTEXT (use this to personalize your suggestions):
