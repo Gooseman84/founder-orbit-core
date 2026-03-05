@@ -7,6 +7,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * Detects whether context_summary uses old or new schema.
+ */
+function isNewSchema(ctx: any): boolean {
+  return !!(ctx?.domainExpertise || ctx?.interviewSignalQuality || ctx?.customerPain);
+}
+
 interface CorrectionFields {
   insiderKnowledge: string | null;
   customerIntimacy: string | null;
@@ -200,6 +207,82 @@ function buildCorrectionPrompt(
   existingContext: any,
   corrections: CorrectionsPayload
 ): string {
+  const useNewSchema = isNewSchema(existingContext);
+
+  const correctionsList = [];
+  if (corrections.corrections.insiderKnowledge) {
+    correctionsList.push(
+      useNewSchema
+        ? `- Domain Expertise / Specific Knowledge: "${corrections.corrections.insiderKnowledge}"`
+        : `- Insider Knowledge: "${corrections.corrections.insiderKnowledge}"`
+    );
+  } else {
+    correctionsList.push(
+      useNewSchema
+        ? "- Domain Expertise / Specific Knowledge: (no changes)"
+        : "- Insider Knowledge: (no changes)"
+    );
+  }
+
+  if (corrections.corrections.customerIntimacy) {
+    correctionsList.push(
+      useNewSchema
+        ? `- Customer Pain / Target Role: "${corrections.corrections.customerIntimacy}"`
+        : `- Customer Intimacy: "${corrections.corrections.customerIntimacy}"`
+    );
+  } else {
+    correctionsList.push(
+      useNewSchema
+        ? "- Customer Pain / Target Role: (no changes)"
+        : "- Customer Intimacy: (no changes)"
+    );
+  }
+
+  if (corrections.corrections.constraints) {
+    correctionsList.push(`- Constraints: "${corrections.corrections.constraints}"`);
+  } else {
+    correctionsList.push("- Constraints: (no changes)");
+  }
+
+  if (corrections.corrections.financialTarget) {
+    correctionsList.push(`- Financial/Revenue Target: "${corrections.corrections.financialTarget}"`);
+  } else {
+    correctionsList.push("- Financial/Revenue Target: (no changes)");
+  }
+
+  if (corrections.corrections.hardNoFilters) {
+    correctionsList.push(`- Hard No Filters: "${corrections.corrections.hardNoFilters}"`);
+  } else {
+    correctionsList.push("- Hard No Filters: (no changes)");
+  }
+
+  const structureInstructions = useNewSchema
+    ? `Return ONLY the updated JSON object. Keep the EXACT SAME STRUCTURE as the original, which uses these top-level keys:
+{
+  "interviewSignalQuality": { ... },
+  "domainExpertise": { ... },
+  "customerPain": { ... },
+  "ventureIntelligence": { ... },
+  "transferablePatterns": [ ... ],
+  "keyQuotes": [ ... ],
+  "redFlags": [ ... ],
+  "founderSummary": "...",
+  "ideaGenerationContext": "..."
+}
+When applying corrections:
+- "Domain Expertise" corrections should update domainExpertise.specificKnowledge and domainExpertise.abstractExpertise
+- "Customer Pain" corrections should update customerPain.targetRole, customerPain.specificProblem, and customerPain.painPoints
+- "Constraints" corrections should be noted in the founderSummary and ideaGenerationContext (constraints now live in profile columns, not the interview summary)
+- "Hard No Filters" corrections should be noted in the founderSummary (hell_no_filters now live in profile columns)
+- Update interviewSignalQuality confidence levels if corrections provide clarity`
+    : `Return ONLY the updated JSON object with the exact same structure as the original:
+{
+  "extractedInsights": { ... },
+  "founderSummary": "...",
+  "confidenceLevel": { ... },
+  "ideaGenerationContext": "..."
+}`;
+
   return `You previously analyzed a founder interview and produced this summary:
 
 ${JSON.stringify(existingContext, null, 2)}
@@ -207,29 +290,17 @@ ${JSON.stringify(existingContext, null, 2)}
 The founder has reviewed this summary and provided the following corrections:
 
 SPECIFIC CORRECTIONS:
-${corrections.corrections.insiderKnowledge ? `- Insider Knowledge: "${corrections.corrections.insiderKnowledge}"` : "- Insider Knowledge: (no changes)"}
-${corrections.corrections.customerIntimacy ? `- Customer Intimacy: "${corrections.corrections.customerIntimacy}"` : "- Customer Intimacy: (no changes)"}
-${corrections.corrections.constraints ? `- Constraints: "${corrections.corrections.constraints}"` : "- Constraints: (no changes)"}
-${corrections.corrections.financialTarget ? `- Financial Target: "${corrections.corrections.financialTarget}"` : "- Financial Target: (no changes)"}
-${corrections.corrections.hardNoFilters ? `- Hard No Filters: "${corrections.corrections.hardNoFilters}"` : "- Hard No Filters: (no changes)"}
+${correctionsList.join("\n")}
 
 ${corrections.additionalContext ? `ADDITIONAL CONTEXT FROM FOUNDER:\n"${corrections.additionalContext}"` : ""}
 
 INSTRUCTIONS:
 1. Regenerate the founder summary incorporating these corrections
-2. Update the extractedInsights to reflect the corrections
+2. Update all relevant fields to reflect the corrections
 3. Update the ideaGenerationContext to include this new information
-4. Keep the same JSON structure as the original
-5. For fields the founder didn't correct, keep the original values
-6. Where the founder provided corrections, integrate their input naturally
-7. Update confidence levels if the corrections provide clarity
+4. For fields the founder didn't correct, keep the original values
+5. Where the founder provided corrections, integrate their input naturally
+6. Update confidence/signal quality levels if the corrections provide clarity
 
-Return ONLY the updated JSON object with no additional text or explanation. The JSON should have the exact same structure as the original:
-
-{
-  "extractedInsights": { ... },
-  "founderSummary": "...",
-  "confidenceLevel": { ... },
-  "ideaGenerationContext": "..."
-}`;
+${structureInstructions}`;
 }
