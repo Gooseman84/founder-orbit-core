@@ -34,6 +34,11 @@ import VentureReview from "./pages/VentureReview";
 import Commit from "./pages/Commit";
 import NotFound from "./pages/NotFound";
 
+/** Logs a deprecation warning and redirects */
+function DeprecatedRedirect({ to, label }: { to: string; label: string }) {
+  console.log(`Deprecated: ${label} redirected to ${to}`);
+  return <Navigate to={to} replace />;
+}
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -126,8 +131,8 @@ const App = () => (
               }
             />
             {/* Safety Redirects for Legacy Routes */}
-            <Route path="/onboarding" element={<Navigate to="/discover" replace />} />
-            <Route path="/onboarding/*" element={<Navigate to="/discover" replace />} />
+            <Route path="/onboarding" element={<DeprecatedRedirect to="/discover" label="structured onboarding" />} />
+            <Route path="/onboarding/*" element={<DeprecatedRedirect to="/discover" label="structured onboarding" />} />
             <Route path="/pulse" element={<Navigate to="/dashboard" replace />} />
             <Route path="/pulse/history" element={<Navigate to="/dashboard" replace />} />
             <Route path="/daily-reflection" element={<Navigate to="/dashboard" replace />} />
