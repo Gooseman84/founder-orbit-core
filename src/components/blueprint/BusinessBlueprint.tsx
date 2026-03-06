@@ -27,7 +27,7 @@ export const BusinessBlueprint = ({ blueprint, onEditSection }: BusinessBlueprin
           <div className="px-6 py-4 border-b border-border flex items-center justify-between">
             <span className="label-mono-gold">{section.label}</span>
             <button
-              onClick={() => onEditSection(section.key)}
+              onClick={() => onEditSection("business")}
               className="flex items-center gap-1 label-mono opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground"
             >
               <Pencil className="h-3 w-3" />
