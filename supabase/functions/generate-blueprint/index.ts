@@ -712,6 +712,43 @@ serve(async (req) => {
       console.log("[generate-blueprint] Synthesized idea_analysis from source_meta");
     }
 
+    // Second fallback: if idea_analysis is STILL empty or very sparse,
+    // enrich it from Mavrik interview data. The interview often has richer
+    // customer/problem/market data than the idea's source_meta.
+    if (interviewContext) {
+      const domain = (interviewContext as any).domainExpertise || {};
+      const pain = (interviewContext as any).customerPain || {};
+      const extractedInsights = (interviewContext as any).extractedInsights || {};
+
+      if (!ideaAnalysis) {
+        ideaAnalysis = {};
+      }
+
+      if (!ideaAnalysis.ideal_customer_profile && pain.targetRole) {
+        ideaAnalysis.ideal_customer_profile = `${pain.targetRole}${pain.specificProblem ? ` dealing with ${pain.specificProblem}` : ''}`;
+      }
+      if (!ideaAnalysis.problem_intensity && pain.specificProblem) {
+        const workflowDetail = pain.currentWorkflow?.length
+          ? ` Current workflow: ${pain.currentWorkflow.join(' → ')}. Pain points: ${(pain.painPoints || []).join(', ')}`
+          : '';
+        ideaAnalysis.problem_intensity = `${pain.specificProblem}${workflowDetail}`;
+      }
+      if (!ideaAnalysis.market_insight && domain.primaryIndustry) {
+        ideaAnalysis.market_insight = `Founder has ${domain.insiderAccessLevel || 'direct'} access to ${domain.primaryIndustry}. Specific knowledge: ${(domain.specificKnowledge || []).join(', ')}`;
+      }
+      if (!ideaAnalysis.founder_fit) {
+        ideaAnalysis.founder_fit = interviewContext.founderSummary || extractedInsights.insiderKnowledge?.join(', ') || null;
+      }
+      if (pain.toolsCurrentlyUsed?.length) {
+        ideaAnalysis.competitive_landscape = `Target users currently use: ${pain.toolsCurrentlyUsed.join(', ')}`;
+      }
+      if (pain.currentWorkflow?.length) {
+        ideaAnalysis.workflow_context = `Current workflow (${pain.currentWorkflow.length} steps): ${pain.currentWorkflow.join(' → ')}`;
+      }
+
+      console.log("[generate-blueprint] Enriched idea_analysis from Mavrik interview data");
+    }
+
     // Fetch dynamic frameworks from the frameworks table
     const detectedBusinessModel = chosenIdea?.business_model_type || 'all';
     console.log("[generate-blueprint] Detected business model:", detectedBusinessModel);
