@@ -99,8 +99,8 @@ export const EditBlueprintDrawer = ({
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <SheetContent className="w-full sm:max-w-lg bg-background border-l border-border">
         <SheetHeader className="border-b border-border pb-4">
-          <span className="label-mono-gold">{sectionTitles[section].toUpperCase()}</span>
-          <SheetTitle className="font-display text-lg">{sectionTitles[section]}</SheetTitle>
+          <span className="label-mono-gold">{(sectionTitles[section] || section || "").toUpperCase()}</span>
+          <SheetTitle className="font-display text-lg">{sectionTitles[section] || section || "Edit"}</SheetTitle>
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-200px)] pr-4 mt-6">
