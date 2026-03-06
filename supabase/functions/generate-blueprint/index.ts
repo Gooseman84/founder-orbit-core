@@ -841,6 +841,20 @@ serve(async (req) => {
       } : null,
     };
 
+    const interviewInstructions = interviewContext ? `
+
+INTERVIEW INTELLIGENCE (use this to fill business sections):
+The founder has completed a Mavrik interview. Use this intelligence to populate ALL blueprint sections, especially when idea_analysis data is sparse:
+
+- For PROMISE: Combine the customer's specific pain point with the founder's unique ability to solve it. Reference the workflow depth if available.
+- For OFFER MODEL: Derive from the current workflow (what steps would the product replace?), the tools currently used (what would it replace or integrate with?), and the founder's technical capability.
+- For MONETIZATION: Consider the founder's revenue target, the cost of the current pain (time spent, tools used), and what the target customer currently pays.
+- For DISTRIBUTION: Use the founder's industry access level, existing network, and the communities/roles identified in the interview.
+- For UNFAIR ADVANTAGE: This IS the interview intelligence — the founder's insider knowledge, domain expertise, customer relationships, and workflow understanding that competitors can't easily replicate.
+
+CRITICAL: Never leave business sections as null or empty. If you don't have explicit data for a section, INFER it from the interview intelligence. A founder who deeply understands their target customer's workflow always has enough context to populate every blueprint section.
+` : '';
+
     console.log("[generate-blueprint] Calling Lovable AI gateway with payload");
 
     // Call Lovable AI Gateway (OpenAI-compatible)
@@ -859,7 +873,7 @@ serve(async (req) => {
               coreFrameworks ? `\n\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}` : '',
               conditionalFrameworks ? `\n\n## CONDITIONAL FRAMEWORKS\n${conditionalFrameworks}` : '',
             ].filter(Boolean).join('') || ''
-          ) },
+          ) + interviewInstructions },
           { role: "user", content: JSON.stringify(payload) },
         ],
         response_format: { type: "json_object" },
