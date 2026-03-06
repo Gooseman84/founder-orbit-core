@@ -15,7 +15,7 @@ serve(async (req) => {
   // Validate cron secret for scheduled function security
   const cronSecret = req.headers.get('x-cron-secret');
   const expectedSecret = Deno.env.get('CRON_SECRET');
-  if (expectedSecret && cronSecret !== expectedSecret) {
+  if (!expectedSecret || cronSecret !== expectedSecret) {
     console.error('[refresh-niche-radar] Unauthorized: Invalid cron secret');
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
       status: 401, 
