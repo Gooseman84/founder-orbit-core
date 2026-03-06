@@ -788,11 +788,19 @@ serve(async (req) => {
         : null,
       venture_intelligence: interviewContext?.ventureIntelligence || null,
       founder_insights: interviewContext ? {
-        extractedInsights: interviewContext.extractedInsights || {},
+        // Old schema fields (populated by normalizeForBackend in selectInterviewContext)
+        insiderKnowledge: interviewContext.extractedInsights?.insiderKnowledge || [],
+        customerIntimacy: interviewContext.extractedInsights?.customerIntimacy || [],
+        hardNoFilters: interviewContext.extractedInsights?.hardNoFilters || [],
+        constraints: interviewContext.extractedInsights?.constraints || {},
         founderSummary: interviewContext.founderSummary || "",
-        transferablePatterns: interviewContext.extractedInsights?.transferablePatterns || [],
-        networkDistribution: interviewContext.extractedInsights?.networkDistribution || null,
+        // New schema fields (richer data when available)
+        domainExpertise: interviewContext.domainExpertise || null,
+        customerPain: interviewContext.customerPain || null,
+        transferablePatterns: interviewContext.transferablePatterns || interviewContext.extractedInsights?.transferablePatterns || [],
         ideaGenerationContext: interviewContext.ideaGenerationContext || "",
+        signalQuality: interviewContext.interviewSignalQuality || null,
+        networkDistribution: interviewContext.extractedInsights?.networkDistribution || null,
       } : null,
     };
 
