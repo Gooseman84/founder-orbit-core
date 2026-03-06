@@ -616,8 +616,20 @@ const Blueprint = () => {
           section={editSection as "life" | "business" | "northstar" | "traction"}
           onSave={async (data) => {
             if (!displayBlueprint?.id) return;
-            await supabase.from("founder_blueprints").update(data as any).eq("id", displayBlueprint.id);
+            const { error } = await supabase
+              .from("founder_blueprints" as any)
+              .update(data as any)
+              .eq("id", displayBlueprint.id);
+            if (error) {
+              console.error("Blueprint save error:", error);
+              toast({ title: "Failed to save", description: error.message, variant: "destructive" });
+              return;
+            }
+            // Update local state so UI reflects changes immediately
+            const updated = { ...displayBlueprint, ...data } as FounderBlueprint;
+            setGeneratedBlueprint(updated);
             setEditSection(null);
+            toast({ title: "Blueprint updated", description: "Your changes have been saved." });
           }}
         />
       )}
