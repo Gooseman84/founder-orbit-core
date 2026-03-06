@@ -92,7 +92,7 @@ export const NorthStarSnapshot = ({
         {/* Validation Stage */}
         {blueprint.validation_stage && (
           <div className="flex items-center">
-            <span className="badge-gold">STAGE: {blueprint.validation_stage.toUpperCase()}</span>
+            <span className="badge-gold">STAGE: {(blueprint.validation_stage || "").toUpperCase()}</span>
           </div>
         )}
 
