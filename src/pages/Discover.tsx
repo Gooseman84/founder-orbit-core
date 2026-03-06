@@ -305,13 +305,19 @@ export default function Discover() {
         </span>
       </div>
 
-      {/* FunnelStepper — hidden during Lightning Round (it has its own chrome) */}
-      {interviewState !== "lightning_round" && (
-        <FunnelStepper currentStep="discover" />
-      )}
+      {/* FunnelStepper */}
+      <FunnelStepper
+        currentStep={
+          interviewState === "lightning_round"
+            ? "lightning_round"
+            : interviewState === "confirming"
+              ? "summary"
+              : "discover"
+        }
+      />
 
-      {/* Minimal Header — hidden during Lightning Round */}
-      {interviewState !== "lightning_round" && (
+      {/* Minimal Header */}
+      {interviewState !== "lightning_round" && interviewState !== "confirming" && (
         <header className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-border">
           <Link
             to="/dashboard"

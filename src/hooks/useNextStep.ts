@@ -38,6 +38,22 @@ export function useNextStep() {
         };
       }
 
+      // 1b. Lightning Round completed?
+      const { data: profile } = await supabase
+        .from("founder_profiles")
+        .select("lightning_round_completed_at, interview_completed_at")
+        .eq("user_id", uid)
+        .maybeSingle();
+
+      if (profile && !profile.lightning_round_completed_at) {
+        return {
+          id: "complete_lightning_round",
+          message: "Almost there — complete the Lightning Round to unlock your personalized ideas.",
+          cta: "Continue",
+          href: "/discover",
+        };
+      }
+
       // 2. Has saved ideas?
       const { count: ideaCount } = await supabase
         .from("ideas")
