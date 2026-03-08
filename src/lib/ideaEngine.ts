@@ -51,12 +51,12 @@ export function computeFitScore(
   const skills = (founder.skills_text ?? "").toLowerCase();
 
   let passionMatch = 0;
-  if (passions && (title.includesAny(passions) || summary.includesAny(passions))) {
+  if (passions && (includesAny(title, passions) || includesAny(summary, passions))) {
     passionMatch = 80;
   }
 
   let skillMatch = 0;
-  if (skills && (title.includesAny(skills) || summary.includesAny(skills))) {
+  if (skills && (includesAny(title, skills) || includesAny(summary, skills))) {
     skillMatch = 70;
   }
 
@@ -95,23 +95,14 @@ export function computeFitScore(
 }
 
 /**
- * Helper: naive "includes any keyword" detection.
- * This extends String in a non-destructive way by using a helper pattern.
+ * Returns true if `haystack` contains any comma/semicolon/newline-separated
+ * token from `needles` (case-insensitive).
  */
-declare global {
-  interface String {
-    includesAny(other: string): boolean;
-  }
-}
-
-if (!String.prototype.includesAny) {
-  // eslint-disable-next-line no-extend-native
-  String.prototype.includesAny = function (this: string, other: string) {
-    const tokens = other.split(/[,;\n]/).map((t) => t.trim()).filter(Boolean);
-    if (!tokens.length) return false;
-    const lower = this.toLowerCase();
-    return tokens.some((token) => lower.includes(token.toLowerCase()));
-  };
+function includesAny(haystack: string, needles: string): boolean {
+  const tokens = needles.split(/[,;\n]/).map((t) => t.trim()).filter(Boolean);
+  if (!tokens.length) return false;
+  const lower = haystack.toLowerCase();
+  return tokens.some((token) => lower.includes(token.toLowerCase()));
 }
 
 /**

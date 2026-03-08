@@ -1,7 +1,12 @@
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+// deno-lint-ignore-file no-explicit-any
+// SupabaseClient type is intentionally `any` here — this shared utility is
+// called from functions that each import different patch versions of supabase-js.
+// Using a concrete SupabaseClient type from one version causes type errors in
+// callers that use a different version URL.
 
 export async function fetchFrameworks(
-  supabase: SupabaseClient,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
   options: {
     functions?: string[];
     businessModel?: string;
