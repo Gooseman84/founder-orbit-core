@@ -7,9 +7,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
+import { MavrikLabel } from "@/components/shared/MavrikLabel";
 import type { CommitmentWindowDays, CommitmentFull } from "@/types/venture";
 import { addDays, format } from "date-fns";
-import { ArrowLeft, Check, Lock, Rocket, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Lock, Rocket, Sparkles, Target, Map, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +58,7 @@ export default function Commit() {
   const [windowDays, setWindowDays] = useState<CommitmentWindowDays>(7);
   const [successMetric, setSuccessMetric] = useState("");
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [launchedVentureId, setLaunchedVentureId] = useState<string | null>(null);
 
   // Check if there's already an active executing venture (for a different idea)
   const hasConflictingVenture = activeVenture && activeVenture.venture_state === "executing" && activeVenture.idea_id !== ideaId;
@@ -137,8 +139,7 @@ export default function Commit() {
       const success = await transitionTo(venture.id, "executing", commitmentData);
 
       if (success) {
-        toast.success("You're committed! Let's build. 🔥");
-        navigate(`/blueprint?ventureId=${venture.id}&fresh=1`);
+        setLaunchedVentureId(venture.id);
       } else {
         toast.error("This venture is already in progress or cannot be started. Check your active ventures.");
       }
@@ -186,6 +187,68 @@ export default function Commit() {
               <Link to="/ideas">Idea Lab</Link>
             </Button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Transition screen — shown after successful commitment
+  if (launchedVentureId) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12 animate-in fade-in duration-700">
+        <div className="w-full max-w-md space-y-8 text-center">
+
+          {/* Icon */}
+          <div className="flex justify-center">
+            <div className="w-20 h-20 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
+              <Rocket className="w-9 h-9 text-primary" />
+            </div>
+          </div>
+
+          {/* Headline */}
+          <div className="space-y-2">
+            <div className="eyebrow">Execution Mode Unlocked</div>
+            <h1 className="font-display text-3xl sm:text-4xl font-bold leading-tight">
+              You're committed to{" "}
+              <em className="text-primary not-italic">{idea?.title}</em>.
+            </h1>
+          </div>
+
+          {/* Mavrik briefing */}
+          <div className="card-gold-accent p-5 text-left space-y-2">
+            <MavrikLabel suffix="Your briefing" />
+            <p className="text-sm text-foreground leading-relaxed mt-2">
+              Your {windowDays}-day execution window starts now. Here's what happens next:
+            </p>
+            <ul className="space-y-2 mt-3">
+              {[
+                { icon: Map, text: "Generate your Blueprint — your business & life plan" },
+                { icon: CheckCircle2, text: "Get daily tasks tailored to your venture" },
+                { icon: Target, text: "Check in each day to keep your streak and momentum" },
+              ].map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <Icon className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Success metric reminder */}
+          <div className="text-left space-y-1 px-1">
+            <span className="label-mono">Your success metric</span>
+            <p className="text-sm text-foreground">{successMetric}</p>
+            <p className="text-xs text-muted-foreground">in {windowDays} days</p>
+          </div>
+
+          {/* CTA */}
+          <button
+            onClick={() => navigate(`/blueprint?ventureId=${launchedVentureId}&fresh=1`)}
+            className="w-full py-4 px-6 bg-primary text-primary-foreground font-sans font-medium text-[0.85rem] tracking-[0.06em] uppercase flex items-center justify-center gap-2 hover:brightness-110 transition-all"
+          >
+            Generate My Blueprint
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
     );
