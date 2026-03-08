@@ -133,18 +133,38 @@ INPUT SCHEMA
   "chosen_idea": {
     "id": string,
     "title": string,
-    "summary": string
+    "summary": string,
+    "target_customer": string | null,        // use for target_audience
+    "business_model_type": string | null,    // use to derive offer_model
+    "revenue_model": string | null,          // use for monetization_strategy
+    "key_risk": string | null,
+    "first_step": string | null,
+    "why_this_founder": string | null,       // use for unfair_advantage — this is the founder's edge for THIS idea
+    "fit_score": number | null
   } | null,
   "idea_analysis": {
     "customer": string | null,
     "problem": string | null,
     "solution": string | null,
     "revenue_model": string | null,
-    "channels": string | null
+    "channels": string | null,
+    "unfair_advantages": string[] | null,    // CRITICAL: use for unfair_advantage field
+    "distribution_hints": string | null,     // use for distribution_channels
+    "founder_fit": string | null,            // additional context for unfair_advantage
+    "competitive_landscape": string | null,  // use for context on market position
+    "workflow_context": string | null        // step-by-step workflow the product would replace
+  } | null,
+  "venture_intelligence": object | null,     // rich venture context if available
+  "founder_insights": {
+    "insiderKnowledge": string[],            // what the founder uniquely knows — use for unfair_advantage
+    "customerIntimacy": string[],            // who they know — use for distribution_channels
+    "domainExpertise": object | null,        // their industry access level
+    "customerPain": object | null,           // deep customer pain data — use for problem_statement
+    "networkDistribution": object | null     // their network — use for distribution_channels + first_ten_customers
   } | null
 }
 
-Some fields may be null. Do the best you can with available data.
+Some fields may be null. Do the best you can with available data. When multiple fields inform the same blueprint section, synthesize them — for example, unfair_advantage should combine idea_analysis.unfair_advantages, chosen_idea.why_this_founder, founder_insights.insiderKnowledge, and founder_profile.skills_text into one specific, credible statement.
 
 ---
 OUTPUT SCHEMA (STRICT JSON ONLY)
@@ -701,10 +721,12 @@ serve(async (req) => {
       const meta = chosenIdea.source_meta as any;
       ideaAnalysis = {
         ideal_customer_profile: meta.targetCustomer || meta.target_customer || null,
-        problem_intensity: meta.whyThisFounder || meta.keyRisk || null,
+        problem_intensity: meta.keyRisk || meta.problemStatement || null,
         elevator_pitch: chosenIdea.description || meta.oneLiner || null,
         pricing_power: meta.revenueModel || meta.revenue_model || null,
-        market_insight: meta.capitalRequired || meta.firstStep || null,
+        market_insight: meta.firstStep || meta.marketInsight || null,
+        unfair_advantages: meta.whyThisFounder ? [meta.whyThisFounder] : null,
+        distribution_hints: meta.channels || meta.distributionChannels || null,
         founder_fit: meta.fitBreakdown?.founderMarketFit || null,
         feasibility: meta.fitBreakdown?.feasibility || null,
         revenue_alignment: meta.fitBreakdown?.revenueAlignment || null,
@@ -823,6 +845,12 @@ serve(async (req) => {
             solution: ideaAnalysis.elevator_pitch ?? null,
             revenue_model: ideaAnalysis.pricing_power ?? null,
             channels: ideaAnalysis.market_insight ?? null,
+            // Extended fields — used by AI to populate offer_model, distribution, unfair_advantage
+            unfair_advantages: ideaAnalysis.unfair_advantages ?? null,
+            distribution_hints: ideaAnalysis.distribution_hints ?? null,
+            founder_fit: ideaAnalysis.founder_fit ?? null,
+            competitive_landscape: ideaAnalysis.competitive_landscape ?? null,
+            workflow_context: ideaAnalysis.workflow_context ?? null,
           }
         : null,
       venture_intelligence: interviewContext?.ventureIntelligence || null,
@@ -855,7 +883,16 @@ The founder has completed a Mavrik interview. Use this intelligence to populate 
 - For UNFAIR ADVANTAGE: This IS the interview intelligence — the founder's insider knowledge, domain expertise, customer relationships, and workflow understanding that competitors can't easily replicate.
 
 CRITICAL: Never leave business sections as null or empty. If you don't have explicit data for a section, INFER it from the interview intelligence. A founder who deeply understands their target customer's workflow always has enough context to populate every blueprint section.
-` : '';
+` : `
+
+NO INTERVIEW DATA — use all available context to fill business sections:
+- For OFFER MODEL: Use chosen_idea.business_model_type + idea_analysis.solution + the founder's skill set to determine the product form (SaaS, course, agency, marketplace, etc.)
+- For MONETIZATION: Use idea_analysis.revenue_model + chosen_idea.revenue_model. Be specific: "X/month subscription" not just "subscription"
+- For DISTRIBUTION: Use idea_analysis.channels + idea_analysis.distribution_hints + founder_insights.customerIntimacy. Start with warm channels the founder can access immediately.
+- For UNFAIR ADVANTAGE: Synthesize chosen_idea.why_this_founder + idea_analysis.unfair_advantages + founder_profile.skills_text + founder_profile.passions_text. Be specific about what this founder uniquely brings — their background, relationships, or expertise that makes them the right person for this idea.
+
+CRITICAL: Never return null for these 4 fields. Even with minimal data, you can always derive a concrete answer from the business model type, the founder's skills, and the idea description.
+`;
 
     console.log("[generate-blueprint] Calling Lovable AI gateway with payload");
 
