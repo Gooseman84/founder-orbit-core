@@ -148,28 +148,42 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
       {/* Venture DNA */}
       <VentureDNACard venture={venture} commitmentProgress={commitmentProgress} />
 
-      {/* Today's Focus */}
-      <TodaysFocus
-        venture={venture}
-        hasCheckedInToday={hasCheckedInToday}
-        todayCheckin={todayCheckin}
-        submitCheckin={submitCheckin}
-      />
+      {/* ── TODAY'S FOCUS ZONE ── */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <span className="eyebrow">Today's Focus</span>
+          <div className="flex-1 h-px bg-primary/20" />
+        </div>
 
-      {/* Today's Tasks */}
-      <TodaysTasks
-        tasks={dailyTasks}
-        isLoading={isLoadingTasks}
-        isGenerating={isGeneratingTasks}
-        completedTasks={completedTasks}
-        totalTasks={totalTasks}
-        taskProgress={taskProgress}
-        onToggle={markTaskCompleted}
-        onGenerate={() => generateDailyTasks()}
-        ventureId={venture.id}
-        ventureName={venture.name}
-        onTaskAdded={refetchDailyExecution}
-      />
+        {/* Today's Check-in */}
+        <TodaysFocus
+          venture={venture}
+          hasCheckedInToday={hasCheckedInToday}
+          todayCheckin={todayCheckin}
+          submitCheckin={submitCheckin}
+        />
+
+        {/* Today's Tasks */}
+        <TodaysTasks
+          tasks={dailyTasks}
+          isLoading={isLoadingTasks}
+          isGenerating={isGeneratingTasks}
+          completedTasks={completedTasks}
+          totalTasks={totalTasks}
+          taskProgress={taskProgress}
+          onToggle={markTaskCompleted}
+          onGenerate={() => generateDailyTasks()}
+          ventureId={venture.id}
+          ventureName={venture.name}
+          onTaskAdded={refetchDailyExecution}
+        />
+      </div>
+
+      {/* ── VENTURE TOOLS ── */}
+      <div className="flex items-center gap-3 pt-2">
+        <span className="eyebrow text-muted-foreground">Venture Tools</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
 
       {/* Debugger trigger */}
       <div className="border-t border-border mt-2 pt-3 pb-1">
