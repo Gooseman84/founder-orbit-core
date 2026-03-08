@@ -95,8 +95,12 @@ export interface IdeaGenerationV7Response {
 // ============================================
 // LEGACY / BACKWARDS COMPATIBILITY TYPES
 // ============================================
+// These types support pre-v6 ideas still in the DB.
+// Do NOT use for new features — use BusinessIdeaV7 instead.
+// Full migration blocked on: updating scoring logic in ideaScoring.ts,
+// migrating legacy DB rows, and removing adapters in CompareIdeas + Ideas pages.
 
-// Legacy BusinessIdea interface (for backwards compatibility)
+/** @deprecated Use BusinessIdeaV7 for new code. Kept for legacy scoring compatibility. */
 export interface BusinessIdea {
   id: string;
   title: string;
@@ -154,7 +158,7 @@ export interface BusinessIdea {
   engineVersion?: string;        // e.g., "v6"
 }
 
-// EPIC v6 BusinessIdea interface (new format from v6 engine)
+/** @deprecated Use BusinessIdeaV7 for new code. V6 type kept while v6 ideas remain in DB. */
 export interface BusinessIdeaV6 {
   id: string;
   title: string;
