@@ -16,7 +16,21 @@ import { cn } from "@/lib/utils";
 import { TrialStatusBadge } from "@/components/shared/TrialStatusBadge";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useVentureState } from "@/hooks/useVentureState";
+import { useNextStep } from "@/hooks/useNextStep";
 import { useState } from "react";
+
+const STEP_ORDER = [
+  "complete_interview",
+  "complete_lightning_round",
+  "generate_ideas",
+  "calculate_fvs",
+  "start_venture",
+  "generate_blueprint",
+  "generate_kit",
+  "generate_tasks",
+  "checkin_today",
+];
+const TOTAL_STEPS = STEP_ORDER.length;
 import {
   Sheet,
   SheetContent,
@@ -42,6 +56,7 @@ export function MobileBottomNav() {
     useFeatureAccess();
   const { activeVenture } = useVentureState();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { data: nextStep } = useNextStep();
 
   const ventureState = activeVenture?.venture_state ?? null;
   const isExecutionMode =
@@ -172,6 +187,33 @@ export function MobileBottomNav() {
           <SheetHeader className="pb-2">
             <SheetTitle className="text-left text-base">More</SheetTitle>
           </SheetHeader>
+
+          {/* Journey Progress */}
+          {(() => {
+            const stepNumber = nextStep ? STEP_ORDER.indexOf(nextStep.id) + 1 : null;
+            const progressPercent = stepNumber ? Math.round((stepNumber / TOTAL_STEPS) * 100) : 100;
+            const phase = isExecutionMode ? "Execution" : "Discovery";
+            return (
+              <div className="mb-4 p-3 rounded-lg bg-muted/40 border border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[0.65rem] tracking-[0.1em] uppercase text-primary font-medium font-mono">
+                    {phase} Phase
+                  </span>
+                  {stepNumber && (
+                    <span className="text-[0.65rem] text-muted-foreground font-mono">
+                      Step {stepNumber} of {TOTAL_STEPS}
+                    </span>
+                  )}
+                </div>
+                <div className="h-1.5 bg-border rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-500"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
           <div className="space-y-1">
             {moreItems.map(({ label, path, icon: Icon }) => {
               const isActive = location.pathname === path;

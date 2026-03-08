@@ -2,12 +2,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNorthStarVenture } from "@/hooks/useNorthStarVenture";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { useNextStep } from "@/hooks/useNextStep";
 import { NavLink } from "@/components/NavLink";
 import {
   Home,
   Lightbulb,
   Map,
-  FileText,
   Target,
   User,
   CreditCard,
@@ -22,6 +22,19 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { cn } from "@/lib/utils";
+
+const STEP_ORDER = [
+  "complete_interview",
+  "complete_lightning_round",
+  "generate_ideas",
+  "calculate_fvs",
+  "start_venture",
+  "generate_blueprint",
+  "generate_kit",
+  "generate_tasks",
+  "checkin_today",
+];
+const TOTAL_STEPS = STEP_ORDER.length;
 
 interface SidebarNavProps {
   onNavigate?: () => void;
@@ -39,6 +52,7 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const { northStarVenture } = useNorthStarVenture();
   const { activeVenture } = useVentureState();
   const { features } = useFeatureAccess();
+  const { data: nextStep } = useNextStep();
 
   const canShowRadar = features.canUseRadar !== "none";
   const canShowFusion = features.canUseFusionLab;
@@ -72,8 +86,32 @@ export function SidebarNav({ onNavigate }: SidebarNavProps) {
     onNavigate?.();
   };
 
+  const stepNumber = nextStep ? STEP_ORDER.indexOf(nextStep.id) + 1 : null;
+  const progressPercent = stepNumber ? Math.round((stepNumber / TOTAL_STEPS) * 100) : 100;
+  const phase = isExecutionMode ? "Execution" : "Discovery";
+
   return (
     <nav className="flex flex-col gap-[2px] h-full font-mono text-[0.72rem]">
+      {/* Journey Progress */}
+      <div className="px-5 pt-4 pb-3 border-b border-border">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[0.6rem] tracking-[0.12em] uppercase text-primary font-medium">
+            {phase} Phase
+          </span>
+          {stepNumber && (
+            <span className="text-[0.6rem] tracking-[0.08em] text-muted-foreground">
+              {stepNumber}/{TOTAL_STEPS}
+            </span>
+          )}
+        </div>
+        <div className="h-1 bg-border rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary rounded-full transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      </div>
+
       <div className="py-2">
         {isExecutionMode ? (
           <>
