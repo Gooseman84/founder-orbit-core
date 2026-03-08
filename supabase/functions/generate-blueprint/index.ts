@@ -712,6 +712,20 @@ serve(async (req) => {
       console.log("[generate-blueprint] Synthesized idea_analysis from source_meta");
     }
 
+    // Fetch Mavrik interview for venture intelligence (moved ABOVE enrichment block)
+    const { data: interviewData } = await supabase
+      .from("founder_interviews")
+      .select("context_summary")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const rawInterviewContext = interviewData?.context_summary as any || null;
+    const interviewContext = selectInterviewContext("generate-blueprint", rawInterviewContext);
+    console.log("[generate-blueprint] hasInterviewContext:", !!interviewContext);
+
     // Second fallback: if idea_analysis is STILL empty or very sparse,
     // enrich it from Mavrik interview data. The interview often has richer
     // customer/problem/market data than the idea's source_meta.
