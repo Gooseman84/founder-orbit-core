@@ -5,10 +5,13 @@ export type InterviewContextSlice = {
   ideaGenerationContext?: string;
   constraints?: Record<string, any>;
   energyDrainers?: string[];
-  transferablePatterns?: string[];
+  transferablePatterns?: string[] | Array<Record<string, any>>;
   ventureIntelligence?: Record<string, any>;
   extractedInsights?: Record<string, any>;
   networkStrength?: string;
+  domainExpertise?: Record<string, any>;
+  customerPain?: Record<string, any>;
+  interviewSignalQuality?: Record<string, any>;
 };
 
 const FUNCTION_FIELD_MAP: Record<string, (keyof InterviewContextSlice)[]> = {
