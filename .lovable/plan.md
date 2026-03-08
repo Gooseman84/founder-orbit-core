@@ -1,45 +1,49 @@
 
 
-## Problem Analysis
+# Fix: Mavrik Interview Stopping After Question 2
 
-There are **two critical bugs** in `supabase/functions/generate-blueprint/index.ts` causing the empty business sections:
+## Problem
 
-### Bug 1: Variable used before declaration (build error)
-The interview enrichment fallback block (lines 718-750) uses `interviewContext` **before** it's declared at line 784. This means:
-- The enrichment of `ideaAnalysis` from interview data **never executes**
-- The AI receives a sparse `idea_analysis` payload with no offer/monetization/distribution data
-- TypeScript correctly flags this as `TS2448: Block-scoped variable used before declaration`
+The interview stops showing new questions after question 2 due to two conflicting behaviors:
 
-### Bug 2: `InterviewContextSlice` type missing fields
-The `selectInterviewContext` shared utility strips the context down to only fields in its type (`InterviewContextSlice`). But lines 835-839 reference `domainExpertise`, `customerPain`, and `interviewSignalQuality` — fields that don't exist on `InterviewContextSlice`. The slice for `generate-blueprint` only includes: `ventureIntelligence`, `constraints`, `energyDrainers`, `founderSummary`.
+1. The system prompt contains contradictory instructions: an early section says "Return ONLY the question text, no JSON" but a later OUTPUT CONTRACT section says to return `{ "question": "..." }` JSON. The AI model follows the later instruction and wraps questions in JSON starting around question 2-3.
 
-So even if the interview has rich data, it gets stripped before the payload is built.
+2. The frontend in `Discover.tsx` filters out any AI message that starts with `{` (a filter meant to hide raw JSON summaries). This silently removes the JSON-wrapped questions from the visible transcript, making it look like the interview stopped.
 
----
+3. The edge function stores the raw AI response into the transcript without unwrapping JSON, so the problem persists across page reloads.
 
-## Fix Plan
+## Solution
 
-### 1. Move the interview context fetch ABOVE the enrichment block
-Move the interview fetch (lines 774-785) to **before** line 718, so `interviewContext` is declared and available when the enrichment fallback runs.
+Two changes, both in the edge function (`supabase/functions/dynamic-founder-interview/index.ts`):
 
-### 2. Add missing fields to `InterviewContextSlice` type
-Update `selectInterviewContext.ts` to include `domainExpertise`, `customerPain`, and `interviewSignalQuality` in the type definition.
+### Change 1: Remove the contradictory OUTPUT CONTRACT for question mode
 
-### 3. Update the field map for `generate-blueprint`
-Add `extractedInsights`, `domainExpertise`, `customerPain`, and `interviewSignalQuality` (or a broader alias) to the `generate-blueprint` entry in `FUNCTION_FIELD_MAP` so the slice actually passes these fields through.
+Delete the OUTPUT CONTRACT block (lines 226-246) that instructs the AI to return `{ "question": "..." }` JSON. The existing RESPONSE FORMAT section (lines 112-120) already correctly says to return plain text. This eliminates the conflict at the source.
 
-### 4. Cast `interviewContext` properly in the enrichment block
-Since we're accessing raw interview fields (`domainExpertise`, `customerPain`) for enrichment, use the full `rawInterviewContext` (pre-slicing) for the enrichment block, or access via the now-typed slice.
+### Change 2: Add server-side JSON unwrapping as a safety net
 
-### Technical Summary of Changes
+After the AI response is received (around line 877), add a guard that detects if the response is JSON-wrapped (e.g., `{ "question": "What..." }`) and extracts just the question text before storing it in the transcript. This prevents any future model drift from breaking the interview.
 
-**File: `supabase/functions/generate-blueprint/index.ts`**
-- Reorder: Move the interview data fetch block (lines 774-785) to just after line 713 (after source_meta fallback)
-- The enrichment block (lines 718-750) then works correctly with the declared variable
+```typescript
+// After getting the raw question from the AI response:
+let question = data.choices?.[0]?.message?.content?.trim?.() || "...fallback...";
 
-**File: `supabase/functions/_shared/selectInterviewContext.ts`**
-- Add `domainExpertise`, `customerPain`, `interviewSignalQuality` to the `InterviewContextSlice` type
-- Add these fields to the `generate-blueprint` entry in `FUNCTION_FIELD_MAP`
+// Safety net: unwrap if model returned JSON
+if (question.startsWith("{")) {
+  try {
+    const parsed = JSON.parse(question);
+    if (parsed.question) question = parsed.question;
+  } catch { /* not valid JSON, use as-is */ }
+}
+```
 
-These changes fix both the build errors and the root cause of empty business sections.
+### No frontend changes needed
+
+The existing filter in `Discover.tsx` that removes `{`-prefixed AI messages is a reasonable safety measure for summary mode responses. With the server-side fix, question-mode responses will always be plain text by the time they reach the frontend.
+
+## Technical Details
+
+- **Files modified**: `supabase/functions/dynamic-founder-interview/index.ts`
+- **Deployment**: Edge function will be redeployed after changes
+- **Risk**: Low -- only removes a contradictory instruction and adds a defensive unwrap
 

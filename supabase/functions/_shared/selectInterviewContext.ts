@@ -5,16 +5,19 @@ export type InterviewContextSlice = {
   ideaGenerationContext?: string;
   constraints?: Record<string, any>;
   energyDrainers?: string[];
-  transferablePatterns?: string[];
+  transferablePatterns?: string[] | Array<Record<string, any>>;
   ventureIntelligence?: Record<string, any>;
   extractedInsights?: Record<string, any>;
   networkStrength?: string;
+  domainExpertise?: Record<string, any>;
+  customerPain?: Record<string, any>;
+  interviewSignalQuality?: Record<string, any>;
 };
 
 const FUNCTION_FIELD_MAP: Record<string, (keyof InterviewContextSlice)[]> = {
   "generate-ideas": ["ideaGenerationContext", "founderSummary", "transferablePatterns", "energyDrainers"],
   "generate-founder-ideas": ["founderSummary", "ventureIntelligence", "extractedInsights", "ideaGenerationContext"],
-  "generate-blueprint": ["ventureIntelligence", "constraints", "energyDrainers", "founderSummary"],
+  "generate-blueprint": ["ventureIntelligence", "constraints", "energyDrainers", "founderSummary", "extractedInsights", "domainExpertise", "customerPain", "interviewSignalQuality", "transferablePatterns", "ideaGenerationContext"],
   "generate-venture-plan": ["constraints", "ventureIntelligence", "founderSummary", "networkStrength"],
   "generate-daily-execution-tasks": ["constraints", "energyDrainers", "founderSummary", "transferablePatterns"],
   "refresh-blueprint": ["founderSummary", "constraints", "ventureIntelligence", "extractedInsights"],
