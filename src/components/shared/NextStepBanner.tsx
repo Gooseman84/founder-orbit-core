@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, Sparkles, X } from "lucide-react";
+import { ArrowRight, X } from "lucide-react";
 import { useNextStep } from "@/hooks/useNextStep";
+import { MavrikLabel } from "@/components/shared/MavrikLabel";
 
 const BANNER_ROUTES = ["/dashboard", "/ideas", "/blueprint", "/workspace", "/tasks", "/discover"];
 
@@ -36,13 +37,7 @@ export function NextStepBanner() {
   return (
     <div className="mb-6 card-gold-accent p-5">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary shrink-0" />
-          <span className="label-mono-gold">Your Next Move</span>
-          {stepLabel && (
-            <span className="label-mono text-muted-foreground">&mdash; {stepLabel}</span>
-          )}
-        </div>
+        <MavrikLabel suffix={stepLabel ? `Your Next Move · ${stepLabel}` : "Your Next Move"} />
         <button
           onClick={() => setDismissed(true)}
           className="shrink-0 p-1 hover:bg-muted rounded transition-colors"

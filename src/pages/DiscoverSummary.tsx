@@ -236,6 +236,12 @@ export default function DiscoverSummary() {
 
   const { extractedInsights, founderSummary, confidenceLevel } = insights;
 
+  // Guard: if data is malformed, redirect back to interview
+  if (!extractedInsights || !confidenceLevel) {
+    navigate("/discover");
+    return null;
+  }
+
   // Map "none" to undefined for InsightCard compatibility
   const conf = (level: string | undefined): "high" | "medium" | "low" | undefined =>
     level === "none" ? undefined : (level as "high" | "medium" | "low" | undefined);

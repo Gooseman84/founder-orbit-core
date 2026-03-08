@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { HelpCircle, X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Drawer, DrawerContent, DrawerClose } from "@/components/ui/drawer";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { usePageHelp } from "@/contexts/PageHelpContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MavrikLabel } from "@/components/shared/MavrikLabel";
 
 export function HelpPopover() {
   const { help } = usePageHelp();
@@ -16,7 +17,7 @@ export function HelpPopover() {
   const content = (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm">{help.title}</h3>
+        <MavrikLabel suffix={help.title} />
         <Button
           variant="ghost"
           size="icon"
@@ -55,7 +56,7 @@ export function HelpPopover() {
           onClick={() => setOpen(true)}
           aria-label="Page help"
         >
-          <HelpCircle className="h-4 w-4 text-muted-foreground" />
+          <Sparkles className="h-4 w-4 text-primary/70" />
         </Button>
         <Drawer open={open} onOpenChange={setOpen}>
           <DrawerContent className="px-4 pb-6 pt-4">
@@ -75,7 +76,7 @@ export function HelpPopover() {
           className="h-8 w-8 rounded-full"
           aria-label="Page help"
         >
-          <HelpCircle className="h-4 w-4 text-muted-foreground" />
+          <Sparkles className="h-4 w-4 text-primary/70" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80">
