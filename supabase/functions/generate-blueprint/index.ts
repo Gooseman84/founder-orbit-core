@@ -784,19 +784,7 @@ serve(async (req) => {
 
     console.log("[generate-blueprint] coreFrameworks length:", coreFrameworks.length, "conditionalFrameworks length:", conditionalFrameworks.length);
 
-    // Fetch Mavrik interview for venture intelligence
-    const { data: interviewData } = await supabase
-      .from("founder_interviews")
-      .select("context_summary")
-      .eq("user_id", userId)
-      .eq("status", "completed")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const rawInterviewContext = interviewData?.context_summary as any || null;
-    const interviewContext = selectInterviewContext("generate-blueprint", rawInterviewContext);
-    console.log("[generate-blueprint] hasInterviewContext:", !!interviewContext);
+    // (interview context already fetched above enrichment block)
 
     // Build AI input payload
     const payload = {
