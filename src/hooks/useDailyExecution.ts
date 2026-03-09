@@ -10,6 +10,7 @@ export interface DailyTask {
   id: string;
   title: string;
   description: string;
+  why_now?: string;
   category: string;
   estimatedMinutes: number;
   completed: boolean;
@@ -23,6 +24,7 @@ export interface DailyCheckin {
   completion_status: "yes" | "partial" | "no";
   explanation: string | null;
   reflection: string | null;
+  mavrik_response: { message: string; tomorrowFocus: string; tone: string; isStagnationIntervention: boolean } | null;
   created_at: string;
 }
 

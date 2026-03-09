@@ -286,7 +286,10 @@ function TodaysFocus({
     tomorrowFocus: string;
     tone: string;
     isStagnationIntervention: boolean;
-  } | null>(null);
+  } | null>(
+    // Hydrate from DB-persisted response on mount if already checked in
+    todayCheckin?.mavrik_response ?? null
+  );
   const { user } = useAuth();
 
   // Calculate consecutive check-in streak
@@ -469,7 +472,7 @@ function TodaysTasks({
   ventureName,
   onTaskAdded,
 }: {
-  tasks: { id: string; title: string; description: string; category: string; estimatedMinutes: number; completed: boolean }[];
+  tasks: { id: string; title: string; description: string; why_now?: string; category: string; estimatedMinutes: number; completed: boolean }[];
   isLoading: boolean;
   isGenerating: boolean;
   completedTasks: number;
@@ -486,6 +489,7 @@ function TodaysTasks({
   const [newTask, setNewTask] = useState("");
   const [adding, setAdding] = useState(false);
   const [processingTaskId, setProcessingTaskId] = useState<string | null>(null);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const today = new Date().toISOString().split("T")[0];
 
   const handleAddTask = async () => {
@@ -617,47 +621,72 @@ function TodaysTasks({
           </div>
         ) : (
           <>
-            {tasks.map((task) => (
+            {tasks.map((task) => {
+              const isExpanded = expandedTaskId === task.id;
+              const hasContext = !!(task.description || task.why_now);
+              return (
               <div
                 key={task.id}
                 className={cn(
-                  "data-row !px-0 !py-2 gap-2.5",
+                  "!px-0 !py-2 border-b border-border/40 last:border-0",
                   task.completed && "opacity-50"
                 )}
               >
-                <Checkbox
-                  checked={task.completed}
-                  onCheckedChange={(checked) => onToggle(task.id, !!checked)}
-                  className="mt-0.5"
-                />
-                <div className="flex-1 min-w-0">
-                  <span className={cn("text-sm block", task.completed && "line-through text-muted-foreground")}>
-                    {task.title}
-                  </span>
-                  <div className="flex items-center gap-2 mt-1">
-                    {task.category && (
-                      <span className={cn("text-[10px] font-mono uppercase tracking-wider font-medium", categoryColors[task.category] || "text-muted-foreground")}>
-                        {task.category}
-                      </span>
-                    )}
-                    {task.estimatedMinutes > 0 && (
-                      <span className="text-[10px] text-muted-foreground font-mono">{task.estimatedMinutes}m</span>
-                    )}
+                <div className="flex gap-2.5 items-start">
+                  <Checkbox
+                    checked={task.completed}
+                    onCheckedChange={(checked) => onToggle(task.id, !!checked)}
+                    className="mt-0.5"
+                  />
+                  <div className="flex-1 min-w-0">
                     <button
-                      onClick={() => handleWorkOnThis(task)}
-                      disabled={processingTaskId === task.id}
-                      className="text-[10px] text-primary hover:underline ml-auto flex items-center gap-0.5 disabled:opacity-50 font-mono uppercase tracking-wider"
+                      className={cn("text-sm text-left w-full", task.completed && "line-through text-muted-foreground")}
+                      onClick={() => hasContext && setExpandedTaskId(isExpanded ? null : task.id)}
                     >
-                      {processingTaskId === task.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <>{task.completed ? "Revisit" : "Work on This"} →</>
-                      )}
+                      {task.title}
                     </button>
+                    <div className="flex items-center gap-2 mt-1">
+                      {task.category && (
+                        <span className={cn("text-[10px] font-mono uppercase tracking-wider font-medium", categoryColors[task.category] || "text-muted-foreground")}>
+                          {task.category}
+                        </span>
+                      )}
+                      {task.estimatedMinutes > 0 && (
+                        <span className="text-[10px] text-muted-foreground font-mono">{task.estimatedMinutes}m</span>
+                      )}
+                      {hasContext && (
+                        <button
+                          onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
+                          className="text-[10px] text-muted-foreground hover:text-foreground font-mono"
+                        >
+                          {isExpanded ? "less ↑" : "why? ↓"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleWorkOnThis(task)}
+                        disabled={processingTaskId === task.id}
+                        className="text-[10px] text-primary hover:underline ml-auto flex items-center gap-0.5 disabled:opacity-50 font-mono uppercase tracking-wider"
+                      >
+                        {processingTaskId === task.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <>{task.completed ? "Revisit" : "Work on This"} →</>
+                        )}
+                      </button>
+                    </div>
+                    {isExpanded && (
+                      <div className="mt-2 space-y-1.5 text-xs text-muted-foreground border-l-2 border-primary/30 pl-3">
+                        {task.description && <p>{task.description}</p>}
+                        {task.why_now && (
+                          <p className="text-primary/80 italic">Why now: {task.why_now}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             <div className="flex items-center gap-2 pt-2 border-t border-border mt-2">
               <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
