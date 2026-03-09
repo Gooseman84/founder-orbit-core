@@ -158,12 +158,13 @@ export function useNextStep() {
         };
       }
 
-      // 8. Check-in today? (daily_reflections with reflection_date = today)
+      // 8. Check-in today? (venture_daily_checkins — this is what the check-in form writes to)
       const { data: checkin } = await supabase
-        .from("daily_reflections")
+        .from("venture_daily_checkins")
         .select("id")
         .eq("user_id", uid)
-        .eq("reflection_date", today)
+        .eq("venture_id", venture.id)
+        .eq("checkin_date", today)
         .limit(1)
         .maybeSingle();
 

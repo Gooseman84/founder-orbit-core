@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,6 +50,13 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
     markTaskCompleted,
     refetch: refetchDailyExecution,
   } = useDailyExecution(venture);
+
+  // Auto-generate tasks when dashboard loads and none exist yet for today
+  useEffect(() => {
+    if (!isLoadingTasks && dailyTasks.length === 0 && !isGeneratingTasks) {
+      generateDailyTasks();
+    }
+  }, [isLoadingTasks, dailyTasks.length, isGeneratingTasks, generateDailyTasks]);
 
   const completedTasks = dailyTasks.filter((t) => t.completed).length;
   const totalTasks = dailyTasks.length;
@@ -282,6 +289,33 @@ function TodaysFocus({
   } | null>(null);
   const { user } = useAuth();
 
+  // Calculate consecutive check-in streak
+  const { data: streakDays = 0 } = useQuery({
+    queryKey: ["checkin-streak", venture.id, user?.id],
+    enabled: !!user,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("venture_daily_checkins")
+        .select("checkin_date")
+        .eq("venture_id", venture.id)
+        .eq("user_id", user!.id)
+        .order("checkin_date", { ascending: false })
+        .limit(60);
+      if (!data?.length) return 0;
+      let streak = 0;
+      const today = new Date();
+      for (let i = 0; i < data.length; i++) {
+        const expected = new Date(today);
+        expected.setDate(today.getDate() - i);
+        const expectedStr = expected.toISOString().split("T")[0];
+        if (data[i].checkin_date === expectedStr) streak++;
+        else break;
+      }
+      return streak;
+    },
+  });
+
   const moods = [
     { emoji: "🔥", label: "On fire", status: "yes" as const },
     { emoji: "😐", label: "Steady", status: "partial" as const },
@@ -339,6 +373,9 @@ function TodaysFocus({
           <div className="flex items-center gap-2 mb-1">
             <Flame className="h-4 w-4 text-primary" />
             <span className="label-mono">Today's Vibe</span>
+            {streakDays > 0 && (
+              <span className="label-mono text-primary ml-1">🔥 {streakDays}d</span>
+            )}
             <CheckCircle2 className="h-3.5 w-3.5 text-success ml-auto" />
           </div>
           <p className="text-sm text-muted-foreground line-clamp-2">{todayCheckin.reflection}</p>
@@ -367,11 +404,18 @@ function TodaysFocus({
 
   return (
     <div className="card-gold-accent p-5 space-y-3">
-      <div className="flex items-center gap-2">
-        <Flame className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium">
-          How are you feeling about <span className="text-primary font-display italic">{venture.name}</span> today?
-        </span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Flame className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">
+            How are you feeling about <span className="text-primary font-display italic">{venture.name}</span> today?
+          </span>
+        </div>
+        {streakDays > 0 && (
+          <span className="label-mono text-primary shrink-0">
+            🔥 {streakDays}d streak
+          </span>
+        )}
       </div>
         <div className="flex gap-2">
         {moods.map(({ emoji, label }) => (
