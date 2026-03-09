@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,29 +11,33 @@ import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { MainLayout } from "./components/layout/MainLayout";
 import { TrialExpiredGuard } from "@/components/billing/TrialExpiredGuard";
 import { PageHelpProvider } from "@/contexts/PageHelpContext";
+import { NorthStarRedirect } from "@/components/auth/NorthStarRedirect";
+
+// Eagerly loaded — needed immediately on first paint
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import Discover from "./pages/Discover";
-import DiscoverSummary from "./pages/DiscoverSummary";
-import DiscoverResults from "./pages/DiscoverResults";
-import Ideas from "./pages/Ideas";
-import IdeaDetail from "./pages/IdeaDetail";
-import CompareIdeas from "./pages/CompareIdeas";
-import FusionLab from "./pages/FusionLab";
-import { NorthStarRedirect } from "@/components/auth/NorthStarRedirect";
-import Tasks from "./pages/Tasks";
-import Radar from "./pages/Radar";
-import Profile from "./pages/Profile";
-import Dashboard from "./pages/Dashboard";
-import Workspace from "./pages/Workspace";
-import Billing from "./pages/Billing";
-import Blueprint from "./pages/Blueprint";
-import VentureReview from "./pages/VentureReview";
-import Commit from "./pages/Commit";
 import NotFound from "./pages/NotFound";
+
+// Lazily loaded — split into separate chunks, loaded on navigation
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Discover = lazy(() => import("./pages/Discover"));
+const DiscoverSummary = lazy(() => import("./pages/DiscoverSummary"));
+const DiscoverResults = lazy(() => import("./pages/DiscoverResults"));
+const Commit = lazy(() => import("./pages/Commit"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Ideas = lazy(() => import("./pages/Ideas"));
+const IdeaDetail = lazy(() => import("./pages/IdeaDetail"));
+const CompareIdeas = lazy(() => import("./pages/CompareIdeas"));
+const FusionLab = lazy(() => import("./pages/FusionLab"));
+const Tasks = lazy(() => import("./pages/Tasks"));
+const Radar = lazy(() => import("./pages/Radar"));
+const Workspace = lazy(() => import("./pages/Workspace"));
+const Blueprint = lazy(() => import("./pages/Blueprint"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Billing = lazy(() => import("./pages/Billing"));
+const VentureReview = lazy(() => import("./pages/VentureReview"));
 
 /** Logs a deprecation warning and redirects */
 function DeprecatedRedirect({ to, label }: { to: string; label: string }) {
@@ -52,6 +57,7 @@ const App = () => (
             <PageHelpProvider>
             <TrialExpiredGuard />
             <VentureStateGuard>
+              <Suspense fallback={null}>
               <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
@@ -246,6 +252,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
               </Routes>
+              </Suspense>
             </VentureStateGuard>
             </PageHelpProvider>
           </AuthProvider>
