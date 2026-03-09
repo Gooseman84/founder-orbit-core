@@ -301,21 +301,15 @@ const Tasks = () => {
               <div>
                 <p className="font-medium">Today's check-in complete</p>
                 <p className="text-sm text-muted-foreground">
-                  Status: {todayCheckin?.completion_status === "yes" ? "Completed" : 
+                  Status: {todayCheckin?.completion_status === "yes" ? "Completed" :
                           todayCheckin?.completion_status === "partial" ? "Partially completed" : "Not completed"}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-      ) : allTasksCompleted ? (
-        <DailyCheckinForm onSubmit={handleCheckinSubmit} isSubmitting={isSubmittingCheckin} />
       ) : (
-        <Card className="border-border/50">
-          <CardContent className="py-6 text-center text-muted-foreground">
-            <p>Complete all tasks to unlock today's check-in.</p>
-          </CardContent>
-        </Card>
+        <DailyCheckinForm onSubmit={handleCheckinSubmit} isSubmitting={isSubmittingCheckin} />
       )}
       <PageHelp
         title="Tasks & Execution"
