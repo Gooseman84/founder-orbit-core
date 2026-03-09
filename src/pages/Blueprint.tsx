@@ -408,6 +408,18 @@ const Blueprint = () => {
       {isFreshVisit && (
         <div className="mb-8">
           <FunnelStepper currentStep="blueprint" />
+          <div className="mt-4 card-gold-left p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[0.9rem] font-medium text-foreground">Your Blueprint is ready.</p>
+              <p className="text-[0.82rem] font-light text-muted-foreground">Review it below, then start building.</p>
+            </div>
+            <button
+              className="shrink-0 bg-primary text-primary-foreground text-[0.78rem] font-medium tracking-[0.06em] uppercase px-4 py-2 transition-opacity hover:opacity-90"
+              onClick={() => navigate("/dashboard")}
+            >
+              Start Building →
+            </button>
+          </div>
         </div>
       )}
 

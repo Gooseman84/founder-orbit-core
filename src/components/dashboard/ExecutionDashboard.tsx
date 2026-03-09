@@ -29,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface ExecutionDashboardProps {
   venture: Venture;
@@ -337,6 +338,12 @@ function TodaysFocus({
       explanation: note || undefined,
     });
 
+    if (!success) {
+      toast.error("Check-in failed. Please try again.");
+      setSubmitting(false);
+      return;
+    }
+
     if (success) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -609,15 +616,23 @@ function TodaysTasks({
           </div>
         ) : totalTasks === 0 ? (
           <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground mb-3">No tasks yet for today</p>
-            <button
-              onClick={onGenerate}
-              disabled={isGenerating}
-              className="py-3 px-6 bg-primary text-primary-foreground font-sans font-medium text-[0.85rem] tracking-[0.06em] uppercase inline-flex items-center gap-1.5 disabled:opacity-50"
-            >
-              {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              Generate Tasks
-            </button>
+            {isGenerating ? (
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Mavrik is generating your tasks…</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground mb-3">No tasks yet for today</p>
+                <button
+                  onClick={onGenerate}
+                  className="py-3 px-6 bg-primary text-primary-foreground font-sans font-medium text-[0.85rem] tracking-[0.06em] uppercase inline-flex items-center gap-1.5"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Generate Tasks
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>
