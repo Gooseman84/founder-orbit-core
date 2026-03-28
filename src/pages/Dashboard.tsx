@@ -1,12 +1,19 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useVentureState } from "@/hooks/useVentureState";
+import { useOnboardingGuard } from "@/hooks/useOnboardingGuard";
 import { ExecutionDashboard } from "@/components/dashboard/ExecutionDashboard";
 import { DiscoveryDashboard } from "@/components/dashboard/DiscoveryDashboard";
+import { ReEntryModal } from "@/components/dashboard/ReEntryModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHelp } from "@/components/shared/PageHelp";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { activeVenture, isLoading } = useVentureState();
-  
+  const { shouldShowReEntryModal, previousVenture } = useOnboardingGuard();
+  const [reEntryDismissed, setReEntryDismissed] = useState(false);
+
   // During execution or review, show focused execution dashboard
   const isExecuting = activeVenture?.venture_state === "executing" || activeVenture?.venture_state === "reviewed";
 
@@ -31,6 +38,13 @@ const Dashboard = () => {
   // Discovery mode: full dashboard with exploration
   return (
     <>
+      <ReEntryModal
+        isOpen={shouldShowReEntryModal && !reEntryDismissed}
+        previousVenture={previousVenture}
+        onStartFresh={() => navigate("/discover")}
+        onUseExisting={() => navigate("/ideas")}
+        onDismiss={() => setReEntryDismissed(true)}
+      />
       <DiscoveryDashboard />
       <PageHelp
         title="Dashboard"

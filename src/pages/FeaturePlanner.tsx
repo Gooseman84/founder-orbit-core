@@ -246,7 +246,7 @@ export default function FeaturePlanner() {
     
     setProgressMessageIndex(0);
     
-    const intervals: NodeJS.Timeout[] = [];
+    const intervals: ReturnType<typeof setTimeout>[] = [];
     let cumulativeTime = 0;
     
     PROGRESS_MESSAGES.forEach((_, index) => {

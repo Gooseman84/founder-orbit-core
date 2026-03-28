@@ -306,7 +306,7 @@ export default function Workspace() {
   // Debounced content update
   const debouncedUpdate = useCallback(
     (() => {
-      let timeoutId: NodeJS.Timeout;
+      let timeoutId: ReturnType<typeof setTimeout>;
       return (id: string, content: string) => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {

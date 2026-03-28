@@ -51,6 +51,15 @@ export interface NormalizedConfidence {
   overall: "high" | "medium" | "low";
 }
 
+export interface AuthorityAssessment {
+  tier: 1 | 2 | 3;
+  tierLabel: "borrowed" | "operational" | "earned";
+  earnedAuthorityEvidence: string[];
+  borrowedAuthorityFlags: string[];
+  consensusDeviation: string | null;
+  defensibilitySummary: string;
+}
+
 export interface NormalizedInterviewData {
   extractedInsights: NormalizedInsights;
   confidenceLevel: NormalizedConfidence;
@@ -58,6 +67,7 @@ export interface NormalizedInterviewData {
   ideaGenerationContext: string;
   keyQuotes: string[];
   redFlags: string[];
+  authorityAssessment: AuthorityAssessment | null;
 }
 
 export function normalizeInterviewInsights(raw: any): NormalizedInterviewData {
@@ -126,6 +136,7 @@ function normalizeNewSchema(raw: any): NormalizedInterviewData {
     ideaGenerationContext: raw.ideaGenerationContext || "",
     keyQuotes: raw.keyQuotes || [],
     redFlags: raw.redFlags || [],
+    authorityAssessment: raw.authorityAssessment ?? null,
   };
 }
 
@@ -158,6 +169,7 @@ function normalizeOldSchema(raw: any): NormalizedInterviewData {
     ideaGenerationContext: raw.ideaGenerationContext || "",
     keyQuotes: raw.keyQuotes || [],
     redFlags: raw.redFlags || [],
+    authorityAssessment: null,
   };
 }
 
@@ -187,5 +199,6 @@ function getEmptyNormalized(): NormalizedInterviewData {
     ideaGenerationContext: "",
     keyQuotes: [],
     redFlags: [],
+    authorityAssessment: null,
   };
 }

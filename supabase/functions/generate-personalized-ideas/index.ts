@@ -349,6 +349,16 @@ ONBOARDING DATA:
 - Commitment level: ${profile?.commitment_level_text || "Not specified"}
 - Future vision: ${profile?.future_vision || "Not specified"}
 
+LIGHTNING ROUND CONSTRAINTS (NON-NEGOTIABLE — filter every idea through these):
+- Available hours per week: ${profile?.hours_per_week ?? "not specified"}
+- Available startup capital: $${profile?.capital_available ?? "not specified"}
+- Risk tolerance: ${profile?.risk_tolerance ?? "not specified"}
+- Work personality: ${Array.isArray(profile?.work_personality) ? profile.work_personality.join(", ") : (profile?.work_personality ?? "not specified")}
+- Lifestyle goals: ${profile?.lifestyle_goals ?? "not specified"}
+- Hard NO filters (reject any idea that involves these): ${Array.isArray(profile?.hell_no_filters) ? profile.hell_no_filters.join(", ") : (profile?.hell_no_filters ?? "none")}
+
+CRITICAL CONSTRAINT RULES: Do not recommend any idea that violates the hard NO filters or requires more capital or weekly hours than stated. If capital is under $1,000, exclude ideas requiring paid advertising, inventory, or upfront hires. Adjust timeToFirstRevenue and capitalRequired fields to reflect these actual constraints.
+
 EXTRACTED INSIGHTS:
 ${JSON.stringify(extractedInsights, null, 2)}
 

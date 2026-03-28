@@ -38,6 +38,7 @@ interface AIResponse {
     competitiveDensity: DimensionScore;
     capitalRequirements: DimensionScore;
     founderMarketFit: DimensionScore;
+    authorityAlphaScore: DimensionScore;
   };
   summary: string;
   topRisk: string;
@@ -308,6 +309,17 @@ serve(async (req) => {
 
       if (interviewContext.founderSummary)
         contextParts.push(`Founder Summary: ${interviewContext.founderSummary}`);
+
+      // Authority Assessment for Dimension 7
+      const authority = interviewContext.authorityAssessment as any;
+      if (authority) {
+        contextParts.push(`Authority Tier: ${authority.tier} (${authority.tierLabel})`);
+        contextParts.push(`Defensibility Summary: ${authority.defensibilitySummary}`);
+        if (authority.earnedAuthorityEvidence?.length)
+          contextParts.push(`Earned Authority Evidence: ${authority.earnedAuthorityEvidence.join("; ")}`);
+        if (authority.consensusDeviation)
+          contextParts.push(`Consensus Deviation (competitive moat): ${authority.consensusDeviation}`);
+      }
     }
 
     // Add enriched idea source_meta
@@ -371,9 +383,21 @@ SCORE EACH DIMENSION 0-100:
    - Minimum viable investment to launch
    - Can this bootstrap or does it require funding?
 
-6. FOUNDER-MARKET FIT (10% weight)
+6. FOUNDER-MARKET FIT (9% weight)
    - Does the founder have relevant expertise?
    - Do they have access to the target market?
+
+7. AUTHORITY ALPHA SCORE (10% weight)
+   How defensible is THIS SPECIFIC FOUNDER's position — not just the idea?
+   Score based on the authority context provided:
+   - Tier 3 (earned authority) → base score 70-90
+   - Tier 2 (operational authority) → base score 40-70
+   - Tier 1 (borrowed authority) → base score 10-40
+   - No authority data → score 50, note "Insufficient data to assess"
+   Consider:
+   - synthetic_displacement_risk: Could an AI-generated company replicate this founder's advantage in 12 months?
+   - contextual_friction_evidence: How much real-world, firsthand contact is evident from the interview?
+   - relationship_leverage: Does the founder have access to non-obvious customer segments or gatekeepers?
 ${coreFrameworks ? `\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}\n` : ''}
 RISK AND OPPORTUNITY DETECTION:
 When generating topRisk and topOpportunity, look for these specific patterns:
@@ -406,7 +430,8 @@ Return ONLY valid JSON with this exact structure:
     "timeToRevenue": { "score": <0-100>, "rationale": "<2-3 sentences>" },
     "competitiveDensity": { "score": <0-100>, "rationale": "<2-3 sentences>" },
     "capitalRequirements": { "score": <0-100>, "rationale": "<2-3 sentences>" },
-    "founderMarketFit": { "score": <0-100>, "rationale": "<2-3 sentences>" }
+    "founderMarketFit": { "score": <0-100>, "rationale": "<2-3 sentences>" },
+    "authorityAlphaScore": { "score": <0-100>, "rationale": "<2-3 sentences citing specific evidence from the authority context>" }
   },
   "summary": "<3-4 sentence executive summary that references the business model type>",
   "topRisk": "<The #1 risk using the pattern detection above>",
@@ -418,12 +443,13 @@ Return ONLY valid JSON with this exact structure:
 ${ideaContextStr}
 
 Calculate the weighted composite score using:
-- Market Size: 20%
-- Unit Economics: 25%
-- Time to Revenue: 15%
-- Competitive Density: 15%
-- Capital Requirements: 15%
-- Founder-Market Fit: 10%`;
+- Market Size: 18%
+- Unit Economics: 22.5%
+- Time to Revenue: 13.5%
+- Competitive Density: 13.5%
+- Capital Requirements: 13.5%
+- Founder-Market Fit: 9%
+- Authority Alpha Score: 10%`;
 
     logStep("Calling AI Gateway");
 

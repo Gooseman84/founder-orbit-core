@@ -4,7 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useQuery } from "@tanstack/react-query";
 
-export const useOnboardingGuard = () => {
+export interface ReEntryVenture {
+  id: string;
+  name: string;
+  venture_state: string;
+}
+
+export interface OnboardingGuardResult {
+  shouldShowReEntryModal: boolean;
+  previousVenture: ReEntryVenture | null;
+}
+
+export const useOnboardingGuard = (): OnboardingGuardResult => {
   const { user, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -12,7 +23,7 @@ export const useOnboardingGuard = () => {
   const { data: onboardingStatus } = useQuery({
     queryKey: ["onboarding-status", user?.id],
     queryFn: async () => {
-      const [profileResult, interviewResult] = await Promise.all([
+      const [profileResult, interviewResult, activeVentureResult, previousVentureResult] = await Promise.all([
         supabase
           .from("founder_profiles")
           .select("id, interview_completed_at")
@@ -25,6 +36,21 @@ export const useOnboardingGuard = () => {
           .eq("status", "completed")
           .limit(1)
           .maybeSingle(),
+        supabase
+          .from("ventures")
+          .select("id, venture_state")
+          .eq("user_id", user!.id)
+          .in("venture_state", ["executing", "inactive"])
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("ventures")
+          .select("id, name, venture_state")
+          .eq("user_id", user!.id)
+          .in("venture_state", ["killed", "reviewed"])
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       if (profileResult.error) {
@@ -35,6 +61,8 @@ export const useOnboardingGuard = () => {
       return {
         profile: profileResult.data,
         hasCompletedInterview: !!interviewResult.data,
+        hasActiveVenture: !!activeVentureResult.data,
+        previousVenture: previousVentureResult.data as ReEntryVenture | null,
         error: false,
       };
     },
@@ -55,4 +83,19 @@ export const useOnboardingGuard = () => {
     // No profile at all → redirect to /discover (Mavrik interview)
     navigate("/discover", { replace: true });
   }, [user, loading, location.pathname, navigate, onboardingStatus]);
+
+  // Show re-entry modal when: has completed profile, no active venture, and has a previous ended venture
+  const shouldShowReEntryModal = !!(
+    onboardingStatus &&
+    !onboardingStatus.error &&
+    onboardingStatus.profile &&
+    onboardingStatus.hasCompletedInterview &&
+    !onboardingStatus.hasActiveVenture &&
+    onboardingStatus.previousVenture
+  );
+
+  return {
+    shouldShowReEntryModal,
+    previousVenture: onboardingStatus?.previousVenture ?? null,
+  };
 };

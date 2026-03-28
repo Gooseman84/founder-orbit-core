@@ -277,6 +277,14 @@ async function generateDocumentsInBackground(
     }, null, 2);
 
     // Build founder intelligence context string
+    const authority = (interviewContext as any)?.authorityAssessment;
+    const authorityStr = authority ? `
+
+FOUNDER AUTHORITY PROFILE (from Mavrik authority assessment):
+- Authority Tier: ${authority.tier} — ${authority.tierLabel}
+- Defensibility Summary: ${authority.defensibilitySummary}${authority.earnedAuthorityEvidence?.length ? `\n- Earned Authority Evidence: ${authority.earnedAuthorityEvidence.join("; ")}` : ""}${authority.consensusDeviation ? `\n- What founder knows that consensus gets wrong: ${authority.consensusDeviation}` : ""}${authority.tier === 1 ? "\n⚠️ Founder-Market Fit Warning: Current authority is primarily observational. Recommend direct customer exposure before building." : ""}
+` : "";
+
     const founderIntelStr = interviewContext ? `
 
 FOUNDER INTELLIGENCE (from Mavrik interview):
@@ -291,7 +299,7 @@ FOUNDER INTELLIGENCE (from Mavrik interview):
 - Customer Intimacy: ${JSON.stringify(interviewContext.extractedInsights?.customerIntimacy || [])}
 - Founder Summary: ${interviewContext.founderSummary || "N/A"}
 ${interviewContext.extractedInsights?.transferablePatterns?.length ? `- Transferable Patterns: ${JSON.stringify(interviewContext.extractedInsights.transferablePatterns)}` : ""}
-
+${authorityStr}
 If FOUNDER INTELLIGENCE is provided above, use it to:
 - Reference specific industry workflows, integrations, and terminology
 - Identify required third-party integrations based on the vertical (e.g., custodian APIs for wealth management, EHR systems for healthcare, POS systems for restaurants)
@@ -605,6 +613,17 @@ These are immutable principles that guide all product decisions:
 
 **Data Retention:**
 [Policy on how long data is kept]
+
+## 7. Founder Authority
+
+**Why this founder, specifically:**
+[Source from FOUNDER AUTHORITY PROFILE earned evidence — be specific about experience, not generic. If no authority data: "To be documented — founders should articulate their specific domain advantage before launch."]
+
+**What this founder knows that market consensus gets wrong:**
+[Source from the consensus deviation field. If none: "Research priority: identify and document the counter-intuitive insight that only firsthand experience reveals."]
+
+**The moat technology alone cannot replicate:**
+[Source from defensibility summary — what a well-funded competitor or AI-generated company could not copy in 12 months. If authority tier is 1: "⚠️ Founder-Market Fit requires strengthening. Prioritize direct customer exposure and workflow immersion before scaling."]
 
 ---
 

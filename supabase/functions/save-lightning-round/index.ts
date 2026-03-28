@@ -140,8 +140,9 @@ serve(async (req) => {
         let val = response.value;
         // Coerce string-encoded numbers to integers for integer columns
         if (INTEGER_COLUMNS.has(col) && typeof val === "string") {
-          const parsed = parseInt(val, 10);
-          val = isNaN(parsed) ? null : parsed;
+          const coerced = parseInt(val, 10);
+          if (isNaN(coerced)) continue;
+          val = coerced;
         }
         profileUpdate[col] = val;
       }

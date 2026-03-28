@@ -582,6 +582,7 @@ interface QuestionRequestBody {
   user_id?: string;
   interview_id?: string;
   mode?: "question" | "summary";
+  quickUpdate?: boolean;
   latestUserAnswer?: string;
 }
 
@@ -765,10 +766,10 @@ serve(async (req) => {
       messages.push(...mapTranscriptToMessages(transcript));
 
       const userAnswerCount = transcript.filter(t => t.role === "user").length;
-      const maxQuestions = 6;
+      const maxQuestions = body.quickUpdate ? 3 : 6;
 
       if (userAnswerCount >= maxQuestions) {
-        console.log(`dynamic-founder-interview: HARD STOP - ${userAnswerCount} user answers, max is ${maxQuestions}. Forcing completion.`);
+        console.log(`dynamic-founder-interview: HARD STOP - ${userAnswerCount} user answers, max is ${maxQuestions}${body.quickUpdate ? " (quick update mode)" : ""}. Forcing completion.`);
 
         const closingMessage = "Good — I've got what I need. Let's move to the quick-fire round to nail down the practical details, and then I'll generate ideas tailored to what you know. [INTERVIEW_COMPLETE]";
 

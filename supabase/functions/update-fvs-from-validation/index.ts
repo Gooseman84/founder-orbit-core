@@ -78,15 +78,17 @@ serve(async (req) => {
     const validDimensions = [
       "marketSize", "unitEconomics", "timeToRevenue",
       "competitiveDensity", "capitalRequirements", "founderMarketFit",
+      "authorityAlphaScore",
     ];
 
     const weights: Record<string, number> = {
-      marketSize: 0.20,
-      unitEconomics: 0.25,
-      timeToRevenue: 0.15,
-      competitiveDensity: 0.15,
-      capitalRequirements: 0.15,
-      founderMarketFit: 0.10,
+      marketSize: 0.18,
+      unitEconomics: 0.225,
+      timeToRevenue: 0.135,
+      competitiveDensity: 0.135,
+      capitalRequirements: 0.135,
+      founderMarketFit: 0.09,
+      authorityAlphaScore: 0.10,
     };
 
     const currentDims = (fvs.dimensions || {}) as Record<string, any>;
