@@ -129,7 +129,7 @@ export function useDailyExecution(venture: Venture | null): UseDailyExecutionRes
         .maybeSingle();
       
       if (error) throw error;
-      return data as DailyCheckin | null;
+      return data as unknown as DailyCheckin | null;
     },
     enabled: !!user && !!ventureId,
   });
