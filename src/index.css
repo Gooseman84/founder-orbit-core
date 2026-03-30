@@ -248,3 +248,113 @@
   opacity: 1;
   transform: translateY(0);
 }
+
+/* ─── Tiptap Rich Text Editor ─── */
+.tiptap-wrapper {
+  min-height: 400px;
+  cursor: text;
+}
+
+.tiptap-editor {
+  min-height: 360px;
+  outline: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: hsl(var(--card-foreground));
+}
+
+.tiptap-editor h1,
+.tiptap-editor h2,
+.tiptap-editor h3,
+.tiptap-editor h4 {
+  color: var(--gold);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  margin-top: 1.25em;
+  margin-bottom: 0.4em;
+}
+
+.tiptap-editor h1 { font-size: 1.5rem; }
+.tiptap-editor h2 { font-size: 1.25rem; }
+.tiptap-editor h3 { font-size: 1.1rem; }
+
+.tiptap-editor p {
+  margin-bottom: 0.75em;
+}
+
+.tiptap-editor ul,
+.tiptap-editor ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.75em;
+}
+
+.tiptap-editor li {
+  margin-bottom: 0.25em;
+}
+
+.tiptap-editor strong {
+  color: hsl(var(--foreground));
+  font-weight: 700;
+}
+
+.tiptap-editor em {
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+}
+
+.tiptap-editor blockquote {
+  border-left: 3px solid var(--gold);
+  padding-left: 1rem;
+  margin-left: 0;
+  color: hsl(var(--muted-foreground));
+}
+
+.tiptap-editor code {
+  background: hsl(var(--muted));
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
+  font-size: 0.85em;
+}
+
+.tiptap-editor pre {
+  background: hsl(var(--muted));
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin-bottom: 0.75em;
+}
+
+.tiptap-editor pre code {
+  background: none;
+  padding: 0;
+}
+
+.tiptap-editor hr {
+  border-color: hsl(var(--border));
+  margin: 1.5em 0;
+}
+
+.tiptap-editor ul[data-type="taskList"] {
+  padding-left: 0.25rem;
+  list-style: none;
+}
+
+.tiptap-editor ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.tiptap-editor ul[data-type="taskList"] li > label {
+  margin-top: 0.2em;
+}
+
+/* Placeholder */
+.tiptap-editor p.is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
