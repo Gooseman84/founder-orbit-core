@@ -10,6 +10,7 @@ import { useXP } from '@/hooks/useXP';
 import { useSubscription } from '@/hooks/useSubscription';
 import { recordXpEvent } from '@/lib/xpEngine';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeAuthedFunction } from '@/lib/invokeAuthedFunction';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -18,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, CheckCircle2, Download, Archive, Menu, Plus, FolderPlus, X, CheckSquare, Square, Rocket, Lock } from 'lucide-react';
+import { FileText, CheckCircle2, Download, Archive, Menu, Plus, FolderPlus, X, CheckSquare, Square, Rocket, Lock, Loader2 } from 'lucide-react';
 import { exportWorkspaceDocToPdf } from '@/lib/pdfExport';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
@@ -131,6 +132,7 @@ export default function Workspace() {
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [isScaffolding, setIsScaffolding] = useState(false);
   const [taskCompleted, setTaskCompleted] = useState(false);
   const [completingTask, setCompletingTask] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -323,6 +325,43 @@ export default function Workspace() {
     }
   };
 
+  // Auto-scaffold a newly created document using generate-workspace-doc.
+  // Fails silently — never blocks document creation.
+  const scaffoldDocument = async (docId: string) => {
+    setIsScaffolding(true);
+    try {
+      const timeoutPromise = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 8000)
+      );
+
+      const scaffoldPromise = invokeAuthedFunction<{
+        documentId: string;
+        suggested_title: string;
+        suggested_content: string;
+        section_suggestions: string[];
+      }>('generate-workspace-doc', { body: { documentId: docId } });
+
+      const result = await Promise.race([scaffoldPromise, timeoutPromise]);
+
+      if (result && result.data?.suggested_content) {
+        await supabase
+          .from('workspace_documents')
+          .update({
+            content: result.data.suggested_content,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', docId);
+
+        // Reload so the editor reflects the scaffolded content
+        await loadDocument(docId);
+      }
+    } catch {
+      // Intentional silent failure — editor opens blank
+    } finally {
+      setIsScaffolding(false);
+    }
+  };
+
   const handleCreateDocument = async () => {
     if (!newDocTitle.trim()) {
       toast({
@@ -358,6 +397,8 @@ export default function Workspace() {
         title: 'Document created',
         description: `Created ${doc.title}`,
       });
+      // Fire scaffolding in background — does not block navigation
+      scaffoldDocument(doc.id);
     }
   };
 
@@ -832,6 +873,13 @@ export default function Workspace() {
                 </div>
               </CardContent>
             </Card>
+          ) : isScaffolding ? (
+            <div className="flex-1 min-h-0 flex items-center justify-center">
+              <div className="text-center space-y-3 text-muted-foreground">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm font-medium">Mavrik is preparing your document...</p>
+              </div>
+            </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto px-1">
               <WorkspaceEditor document={currentDocument} onChange={handleEditorChange} />

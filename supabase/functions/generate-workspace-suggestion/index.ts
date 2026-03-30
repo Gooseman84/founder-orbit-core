@@ -82,7 +82,7 @@ serve(async (req) => {
     // 1) Fetch the document content with ownership check
     const { data: doc, error: docError } = await supabase
       .from("workspace_documents")
-      .select("id, title, content, doc_type, user_id")
+      .select("id, title, content, doc_type, user_id, venture_id")
       .eq("id", documentId)
       .maybeSingle();
 
@@ -108,6 +108,38 @@ serve(async (req) => {
     }
 
     const currentContent: string = doc.content || "";
+
+    // Cross-document context: fetch sibling docs from the same venture
+    const CROSS_DOC_CONTEXT_MAP: Record<string, string[]> = {
+      'landing_page': ['customer_research', 'outreach'],
+      'architecture_contract': ['north_star_spec'],
+      'outreach': ['customer_research'],
+      'launch_playbook': ['north_star_spec', 'vertical_slice_plan'],
+      'pitch_deck': ['customer_research', 'north_star_spec'],
+    };
+
+    let siblingContext = '';
+    const siblingDocTypes = CROSS_DOC_CONTEXT_MAP[doc.doc_type] || [];
+
+    if (siblingDocTypes.length > 0 && doc.venture_id) {
+      const { data: siblingDocs } = await supabase
+        .from('workspace_documents')
+        .select('doc_type, title, content, status')
+        .eq('venture_id', doc.venture_id)
+        .neq('id', documentId)
+        .in('doc_type', siblingDocTypes)
+        .in('status', ['in_progress', 'final'])
+        .order('updated_at', { ascending: false })
+        .limit(3);
+
+      if (siblingDocs && siblingDocs.length > 0) {
+        siblingContext = (siblingDocs as Array<{ doc_type: string; title: string; content: string | null; status: string }>)
+          .map(sibDoc =>
+            `--- ${sibDoc.doc_type.replace(/_/g, ' ').toUpperCase()} (${sibDoc.status}) ---\n${sibDoc.content?.substring(0, 1500) || 'No content yet'}`
+          )
+          .join('\n\n');
+      }
+    }
 
     // Fetch Mavrik interview for personalized suggestions
     const { data: interviewData } = await supabase
@@ -678,6 +710,10 @@ Output ONLY the refined content, no explanations or meta-commentary about the ch
 `;
     }
 
+    const contextSection = siblingContext
+      ? `\n\nRELATED VENTURE DOCUMENTS\nThe founder has these related documents in their workspace. Reference specific language, insights, and decisions from these when generating your suggestion:\n\n${siblingContext}\n`
+      : '';
+
     const userPrompt = `
 You are helping the founder make progress in this workspace document.
 
@@ -692,7 +728,7 @@ ${docTypeGuidance}
 
 TASK-CATEGORY GUIDANCE:
 ${categoryGuidance}
-
+${contextSection}
 Current document content (may be partially filled, messy, or a brain dump):
 
 """
