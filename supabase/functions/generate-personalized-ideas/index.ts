@@ -101,23 +101,21 @@ Deno.serve(async (req) => {
       throw new Error("ANTHROPIC_API_KEY not configured");
     }
 
-    // Create Supabase client with user's auth
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Create Supabase client for auth verification
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Verify JWT and get user
+    // Verify JWT server-side
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
     
-    if (claimsError || !claimsData?.claims) {
+    if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Invalid token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = user.id;
 
     // Parse request body
     const body: RequestBody = await req.json();
