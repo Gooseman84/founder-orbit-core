@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.84.0";
-import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.32.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,10 +94,13 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const anthropicApiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-    if (!anthropicApiKey) {
-      throw new Error("ANTHROPIC_API_KEY not configured");
+    if (!LOVABLE_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "AI service not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Create Supabase client for auth verification
@@ -107,7 +109,7 @@ Deno.serve(async (req) => {
     // Verify JWT server-side
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
-    
+
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Invalid token" }),
@@ -169,68 +171,53 @@ Deno.serve(async (req) => {
     // Build the system prompt
     const systemPrompt = buildIdeaGenerationPrompt(normalizedSummary, profile);
 
-    // Call Anthropic API
-    const anthropic = new Anthropic({ apiKey: anthropicApiKey });
-    
-    let response: GenerationResult | null = null;
-    let attempts = 0;
-    const maxAttempts = 2;
+    // Call Lovable AI gateway
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: "Generate personalized venture ideas for this founder based on their interview. Return only valid JSON." },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
 
-    while (attempts < maxAttempts && !response) {
-      attempts++;
-      
-      try {
-        const message = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4000,
-          temperature: 0.7,
-          system: systemPrompt,
-          messages: [
-            {
-              role: "user",
-              content: "Generate personalized venture ideas for this founder based on their interview. Return only valid JSON.",
-            },
-          ],
-        });
-
-        // Extract response text
-        const responseText = message.content
-          .filter((block): block is Anthropic.TextBlock => block.type === "text")
-          .map((block) => block.text)
-          .join("");
-
-        // Parse JSON
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new Error("No JSON found in response");
-        }
-        
-        response = JSON.parse(jsonMatch[0]) as GenerationResult;
-        
-        // Validate structure
-        if (!response.recommendations || !Array.isArray(response.recommendations)) {
-          throw new Error("Invalid response structure: missing recommendations array");
-        }
-        
-      } catch (parseError) {
-        console.error(`Attempt ${attempts} failed:`, parseError);
-        
-        if (attempts >= maxAttempts) {
-          return new Response(
-            JSON.stringify({ 
-              error: "Failed to generate ideas. Please try again.",
-              details: parseError instanceof Error ? parseError.message : "Unknown error"
-            }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        // Will retry with stricter formatting in next iteration
+    if (!aiResponse.ok) {
+      const status = aiResponse.status;
+      console.error("generate-personalized-ideas: AI gateway error:", status);
+      if (status === 429) {
+        return new Response(
+          JSON.stringify({ error: "AI rate limit exceeded, please wait and try again.", code: "rate_limited" }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
+      return new Response(
+        JSON.stringify({ error: "Failed to generate ideas" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    if (!response) {
+    const aiData = await aiResponse.json();
+    const responseText = aiData.choices?.[0]?.message?.content || "";
+
+    let response: GenerationResult | null = null;
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON found in response");
+      response = JSON.parse(jsonMatch[0]) as GenerationResult;
+      if (!response.recommendations || !Array.isArray(response.recommendations)) {
+        throw new Error("Invalid response structure: missing recommendations array");
+      }
+    } catch (parseError) {
+      console.error("Failed to parse AI response:", parseError);
       return new Response(
-        JSON.stringify({ error: "Failed to generate ideas after multiple attempts" }),
+        JSON.stringify({ error: "Failed to generate ideas. Please try again." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -331,7 +331,7 @@ const CompareIdeas = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { gate } = useFeatureAccess();
+  const { gate, isTrialExpired } = useFeatureAccess();
 
   // Variant comparison mode (when ?ids= is present)
   const idsParam = searchParams.get("ids");
@@ -1066,7 +1066,6 @@ const CompareIdeas = () => {
 
   // Feature gating - show promotional view if user doesn't have access
   if (!gate("compare_engine")) {
-    const { isTrialExpired } = useFeatureAccess();
     const ctaText = isTrialExpired ? "Subscribe to Pro" : "Upgrade to Pro";
     
     return (

@@ -14,11 +14,13 @@ import {
   Copy,
   Lock,
   Terminal,
+  Archive,
 } from "lucide-react";
 import { useImplementationKitByBlueprint, useCreateImplementationKit } from "@/hooks/useImplementationKit";
 import { useBlueprint } from "@/hooks/useBlueprint";
 import { useActiveVenture } from "@/hooks/useActiveVenture";
 import { downloadAsMarkdown } from "@/lib/documentExport";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TechStackDialog } from "./TechStackDialog";
 import { SpecValidationSection } from "./SpecValidationSection";
@@ -98,6 +100,7 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
   const { data: kit, isLoading: kitLoading } = useImplementationKitByBlueprint(blueprintId);
   const createKit = useCreateImplementationKit();
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  const [downloadingBundle, setDownloadingBundle] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
 
   const handleGenerateClick = () => {
@@ -154,6 +157,47 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
       toast({ title: "Copied", description: "Document reference copied to clipboard" });
     } catch {
       toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
+
+  const handleDownloadBundle = async () => {
+    if (!hasPro) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    setDownloadingBundle(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.access_token) {
+        toast({ title: "Not signed in", variant: "destructive" });
+        return;
+      }
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-venture-context-bundle`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ventureId }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "venture-context-bundle.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Bundle downloaded", description: "Drop CLAUDE.md into your project root." });
+    } catch {
+      toast({ title: "Download failed", variant: "destructive" });
+    } finally {
+      setDownloadingBundle(false);
     }
   };
 
@@ -566,6 +610,53 @@ export function ImplementationKitCard({ ventureId }: ImplementationKitCardProps)
                 </span>
               </div>
               <Download className="h-3 w-3 ml-auto" style={{ color: "hsl(220 12% 58%)" }} />
+            </button>
+          </div>
+        )}
+
+        {/* Download Context Bundle */}
+        {kit.status === "complete" && (
+          <div
+            className="mt-2 border"
+            style={{
+              borderColor: "hsl(240 10% 14%)",
+              background: "hsl(240 12% 7%)",
+            }}
+          >
+            <button
+              onClick={handleDownloadBundle}
+              disabled={downloadingBundle}
+              className="w-full flex items-center gap-3 sm:gap-4 min-h-[44px] transition-colors disabled:opacity-50"
+              style={{ padding: "16px 16px" }}
+              onMouseEnter={(e) => {
+                if (!downloadingBundle) e.currentTarget.style.background = "hsl(240 10% 10%)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              {downloadingBundle ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" style={{ color: "hsl(43 52% 54%)" }} />
+              ) : (
+                <Archive className="h-4 w-4 shrink-0" style={{ color: "hsl(43 52% 54%)" }} />
+              )}
+              <div className="text-left">
+                <span
+                  className="font-mono-tb text-[0.72rem] uppercase tracking-wider block"
+                  style={{ color: "hsl(40 15% 93%)" }}
+                >
+                  Download Context Bundle
+                </span>
+                <span
+                  className="font-mono-tb text-[0.6rem] block mt-0.5"
+                  style={{ color: "hsl(220 12% 58%)" }}
+                >
+                  ZIP with CLAUDE.md + all venture docs
+                </span>
+              </div>
+              {!downloadingBundle && (
+                <Download className="h-3 w-3 ml-auto" style={{ color: "hsl(220 12% 58%)" }} />
+              )}
             </button>
           </div>
         )}

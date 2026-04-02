@@ -123,6 +123,15 @@ function DomainCard({ insights }: { insights: NormalizedInterviewData }) {
       {depth === "tourist" && (
         <Badge variant="outline" className="text-xs text-muted-foreground">{depthLabel[depth]}</Badge>
       )}
+      {(() => {
+        const wedge = extractedInsights.ventureIntelligence.wedgeClarity;
+        if (!wedge || wedge === "unclear") return null;
+        return (
+          <Badge variant={wedge === "clear" ? "default" : "secondary"} className="text-xs">
+            {wedge === "clear" ? "Wedge: Clear" : "Wedge: Emerging"}
+          </Badge>
+        );
+      })()}
       <InsightPills items={extractedInsights.domainExpertise} />
       {extractedInsights.insiderKnowledge.length > 0 && (
         <div className="pt-1 space-y-1.5">

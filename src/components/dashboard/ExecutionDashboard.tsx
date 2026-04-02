@@ -18,11 +18,14 @@ import {
   Sparkles,
   Loader2,
   AlertCircle,
+  Brain,
+  Zap,
 } from "lucide-react";
 import type { Venture } from "@/types/venture";
 import { useDailyExecution } from "@/hooks/useDailyExecution";
 import { ImplementationKitCard } from "@/components/implementationKit/ImplementationKitCard";
 import { VentureDNACard } from "@/components/dashboard/VentureDNACard";
+import { MavrikCoachingCard } from "@/components/dashboard/MavrikCoachingCard";
 import { FounderPatternCard } from "@/components/patterns/FounderPatternCard";
 import { VentureDebugger } from "@/components/venture/VentureDebugger";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,10 +33,21 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 
 interface ExecutionDashboardProps {
   venture: Venture;
 }
+
+type MomentState = "STUCK" | "BUILDING_MOMENTUM" | "SCOPE_CREEPING" | "EXECUTION_PARALYSIS" | "APPROACHING_LAUNCH";
+
+const MOMENT_STATE_CONFIG: Record<MomentState, { label: string; borderClass: string; iconClass: string; badgeClass: string }> = {
+  STUCK:               { label: "You Seem Stuck",       borderClass: "border-l-amber-500",  iconClass: "text-amber-500",  badgeClass: "bg-amber-50 text-amber-700 border-amber-200" },
+  BUILDING_MOMENTUM:   { label: "Building Momentum",    borderClass: "border-l-green-500",  iconClass: "text-green-500",  badgeClass: "bg-green-50 text-green-700 border-green-200" },
+  SCOPE_CREEPING:      { label: "Scope Creep Detected", borderClass: "border-l-orange-500", iconClass: "text-orange-500", badgeClass: "bg-orange-50 text-orange-700 border-orange-200" },
+  EXECUTION_PARALYSIS: { label: "Execution Paralysis",  borderClass: "border-l-red-500",    iconClass: "text-red-500",    badgeClass: "bg-red-50 text-red-700 border-red-200" },
+  APPROACHING_LAUNCH:  { label: "Approaching Launch",   borderClass: "border-l-primary",    iconClass: "text-primary",    badgeClass: "bg-primary/10 text-primary border-primary/30" },
+};
 
 export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
   const navigate = useNavigate();
@@ -156,6 +170,9 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
       {/* Venture DNA */}
       <VentureDNACard venture={venture} commitmentProgress={commitmentProgress} />
 
+      {/* Mavrik Coaching Card */}
+      <MavrikCoachingCard venture={venture} />
+
       {/* ── TODAY'S FOCUS ZONE ── */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -164,27 +181,31 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
         </div>
 
         {/* Today's Check-in */}
-        <TodaysFocus
-          venture={venture}
-          hasCheckedInToday={hasCheckedInToday}
-          todayCheckin={todayCheckin}
-          submitCheckin={submitCheckin}
-        />
+        <div id="todays-checkin">
+          <TodaysFocus
+            venture={venture}
+            hasCheckedInToday={hasCheckedInToday}
+            todayCheckin={todayCheckin}
+            submitCheckin={submitCheckin}
+          />
+        </div>
 
         {/* Today's Tasks */}
-        <TodaysTasks
-          tasks={dailyTasks}
-          isLoading={isLoadingTasks}
-          isGenerating={isGeneratingTasks}
-          completedTasks={completedTasks}
-          totalTasks={totalTasks}
-          taskProgress={taskProgress}
-          onToggle={markTaskCompleted}
-          onGenerate={() => generateDailyTasks()}
-          ventureId={venture.id}
-          ventureName={venture.name}
-          onTaskAdded={refetchDailyExecution}
-        />
+        <div id="todays-tasks">
+          <TodaysTasks
+            tasks={dailyTasks}
+            isLoading={isLoadingTasks}
+            isGenerating={isGeneratingTasks}
+            completedTasks={completedTasks}
+            totalTasks={totalTasks}
+            taskProgress={taskProgress}
+            onToggle={markTaskCompleted}
+            onGenerate={() => generateDailyTasks()}
+            ventureId={venture.id}
+            ventureName={venture.name}
+            onTaskAdded={refetchDailyExecution}
+          />
+        </div>
       </div>
 
       {/* ── VENTURE TOOLS ── */}
@@ -212,6 +233,9 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
         open={debuggerOpen}
         onClose={() => setDebuggerOpen(false)}
       />
+
+      {/* Mavrik Coaching Moment */}
+      <MavrikMomentCard ventureId={venture.id} />
 
       {/* Quick Access */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -751,6 +775,57 @@ function VentureControlPanel({ venture }: { venture: Venture }) {
           <Skull className="h-4 w-4" />
           Kill
         </button>
+      </div>
+    </div>
+  );
+}
+
+function MavrikMomentCard({ ventureId }: { ventureId: string }) {
+  const { data: momentData, isLoading } = useQuery({
+    queryKey: ["founder-moment-state", ventureId],
+    queryFn: async () => {
+      const { data, error } = await invokeAuthedFunction<{
+        state: MomentState;
+        stateRationale: string;
+        mavrikIntent: string;
+      }>("compute-founder-moment-state", { body: { ventureId } });
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 10 * 60 * 1000,
+    enabled: !!ventureId,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="card-gold-accent p-4 space-y-2">
+        <Skeleton className="h-4 w-1/3" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-4/5" />
+      </div>
+    );
+  }
+
+  if (!momentData?.state) return null;
+
+  const config = MOMENT_STATE_CONFIG[momentData.state] ?? MOMENT_STATE_CONFIG.BUILDING_MOMENTUM;
+
+  return (
+    <div className={cn("card-gold-accent p-4 border-l-2 space-y-3", config.borderClass)}>
+      <div className="flex items-center gap-2">
+        <Brain className={cn("h-4 w-4 shrink-0", config.iconClass)} />
+        <span className="label-mono">Mavrik's Read</span>
+        <span className={cn("ml-auto text-[10px] font-mono px-2 py-0.5 border rounded-full", config.badgeClass)}>
+          {config.label}
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">{momentData.stateRationale}</p>
+      <div className="border-l-2 border-primary/30 pl-3 py-1">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Zap className="h-3 w-3 text-primary" />
+          <span className="text-[11px] font-medium text-primary uppercase tracking-wide">Focus</span>
+        </div>
+        <p className="text-sm text-foreground leading-relaxed">{momentData.mavrikIntent}</p>
       </div>
     </div>
   );
