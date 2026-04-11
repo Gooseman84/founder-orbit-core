@@ -2,7 +2,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useIdeas } from "@/hooks/useIdeas";
 import { useScoredFounderIdeas } from "@/hooks/useScoredFounderIdeas";
@@ -13,46 +12,24 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useIdeaSessionStore } from "@/store/ideaSessionStore";
-import { IdeaScoredCard } from "@/components/ideas/IdeaScoredCard";
-import { LibraryIdeaCard } from "@/components/ideas/LibraryIdeaCard";
-import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
-import { IdeaFilters, IdeaFiltersState } from "@/components/ideas/IdeaFilters";
-import { ModeSelector, type IdeaMode } from "@/components/ideas/ModeSelector";
-import { IdeaFusionPanel } from "@/components/ideas/IdeaFusionPanel";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
-import { SkeletonGrid } from "@/components/shared/SkeletonLoaders";
 import { MarketDomainViewer } from "@/components/admin/MarketDomainViewer";
 import { MarketSignalModal } from "@/components/ideas/MarketSignalModal";
 import { ImportIdeaModal } from "@/components/ideas/ImportIdeaModal";
-import { SourceTypeBadge, SOURCE_TYPE_FILTERS, type SourceTypeFilter } from "@/components/ideas/SourceTypeBadge";
+import { type SourceTypeFilter } from "@/components/ideas/SourceTypeBadge";
+import { GeneratedTab } from "@/components/ideas/GeneratedTab";
+import { LibraryTab } from "@/components/ideas/LibraryTab";
+import { isV6Idea, convertV6ToLegacy, type SortMode } from "@/components/ideas/ideaUtils";
+import { type IdeaFiltersState } from "@/components/ideas/IdeaFilters";
+import { type IdeaMode } from "@/components/ideas/ModeSelector";
 import { supabase } from "@/integrations/supabase/client";
-import { PLAN_ERROR_CODES, type PlanErrorCode } from "@/config/plans";
+import { PLAN_ERROR_CODES } from "@/config/plans";
 import type { PaywallReasonCode } from "@/config/paywallCopy";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, Scale, Sparkles, ArrowUpDown, Library, Combine, Trash2, Target, X, TrendingUp, Upload, AlertTriangle, Lock, RotateCcw } from "lucide-react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Scale, Sparkles, Combine, Lock, TrendingUp, Upload, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 import { PageHelp } from "@/components/shared/PageHelp";
-
-type SortMode = "fit_desc" | "fit_asc" | "title_asc";
-
-const SORT_OPTIONS: { value: SortMode; label: string }[] = [
-  { value: "fit_desc", label: "Highest Fit First" },
-  { value: "fit_asc", label: "Lowest Fit First" },
-  { value: "title_asc", label: "Alphabetical (Title)" },
-];
-
-// Helper to check if idea is v6
-function isV6Idea(idea: BusinessIdea | BusinessIdeaV6): idea is BusinessIdeaV6 {
-  return "engineVersion" in idea && idea.engineVersion === "v6";
-}
 
 const Ideas = () => {
   const queryClient = useQueryClient();
@@ -71,21 +48,11 @@ const Ideas = () => {
   const { user } = useAuth();
   const { track } = useAnalytics();
   const { hasPro, features: planFeatures } = useFeatureAccess();
-
-  // Venture state enforcement
-  const { 
-    canAccessIdeationTools, 
-    guardIdeationAccess, 
-    activeVenture 
-  } = useVentureState();
-
-  // Plan error from session store
+  const { canAccessIdeationTools, guardIdeationAccess, activeVenture } = useVentureState();
   const { planError: genPlanError, clearPlanError: clearGenPlanError } = useIdeaSessionStore();
-
-  // Session store for tracking saves
-  const { 
-    sessionIdeas, 
-    focusArea, 
+  const {
+    sessionIdeas,
+    focusArea,
     setFocusArea,
     currentMode,
     setCurrentMode,
@@ -130,10 +97,8 @@ const Ideas = () => {
     return sessionStorage.getItem("tb-active-venture-banner-dismissed") === "true";
   });
 
-  // Show paywall when plan errors occur
   useEffect(() => {
     if (genPlanError?.code || savePlanError?.code) {
-      // Map PLAN_ERROR_CODES to PaywallReasonCode
       const errorCode = genPlanError?.code || savePlanError?.code;
       const reasonMap: Record<string, PaywallReasonCode> = {
         [PLAN_ERROR_CODES.IDEA_LIMIT_REACHED]: "IDEA_LIMIT_REACHED",
@@ -156,18 +121,15 @@ const Ideas = () => {
     setDismissedBannerSession(true);
     sessionStorage.setItem("tb-active-venture-banner-dismissed", "true");
   };
-  
 
-  const handleProModeClick = (mode: IdeaMode) => {
+  const handleProModeClick = () => {
     setPaywallReasonCode("MODE_REQUIRES_PRO");
     setShowPaywall(true);
   };
 
-  // Derive available filter options
   const { availableArchetypes, availableMarkets } = useMemo(() => {
     const archetypeSet = new Set<string>();
     const marketSet = new Set<string>();
-
     founderScoredIdeas.forEach(({ idea }) => {
       if (isV6Idea(idea)) {
         archetypeSet.add(idea.category);
@@ -176,75 +138,51 @@ const Ideas = () => {
         idea.markets?.forEach((m) => marketSet.add(m));
       }
     });
-
     libraryIdeas.forEach((idea) => {
       if (idea.business_model_type) archetypeSet.add(idea.business_model_type);
       if (idea.category) archetypeSet.add(idea.category);
     });
-
     return {
       availableArchetypes: Array.from(archetypeSet).sort(),
       availableMarkets: Array.from(marketSet).sort(),
     };
   }, [founderScoredIdeas, libraryIdeas]);
 
-  // Filter and sort founder ideas
   const filteredFounderIdeas = useMemo(() => {
     const filtered = founderScoredIdeas.filter(({ idea }) => {
-      // For v6 ideas, filter by category instead of businessArchetype
       if (isV6Idea(idea)) {
-        if (filters.archetypes.length > 0 && !filters.archetypes.includes(idea.category)) {
-          return false;
-        }
+        if (filters.archetypes.length > 0 && !filters.archetypes.includes(idea.category)) return false;
       } else {
-        if (filters.archetypes.length > 0 && !filters.archetypes.includes(idea.businessArchetype || "")) {
-          return false;
-        }
-        if (filters.markets.length > 0 && !idea.markets?.some((m) => filters.markets.includes(m))) {
-          return false;
-        }
-        if (filters.riskLevels.length > 0 && !filters.riskLevels.includes(idea.riskLevel || "")) {
-          return false;
-        }
+        if (filters.archetypes.length > 0 && !filters.archetypes.includes(idea.businessArchetype || "")) return false;
+        if (filters.markets.length > 0 && !idea.markets?.some((m) => filters.markets.includes(m))) return false;
+        if (filters.riskLevels.length > 0 && !filters.riskLevels.includes(idea.riskLevel || "")) return false;
       }
       return true;
     });
-
     return [...filtered].sort((a, b) => {
       switch (sortMode) {
-        case "fit_desc":
-          return b.scores.overall - a.scores.overall;
-        case "fit_asc":
-          return a.scores.overall - b.scores.overall;
-        case "title_asc":
-          return a.idea.title.localeCompare(b.idea.title, undefined, { sensitivity: "base" });
-        default:
-          return 0;
+        case "fit_desc": return b.scores.overall - a.scores.overall;
+        case "fit_asc": return a.scores.overall - b.scores.overall;
+        case "title_asc": return a.idea.title.localeCompare(b.idea.title, undefined, { sensitivity: "base" });
+        default: return 0;
       }
     });
   }, [founderScoredIdeas, filters, sortMode]);
 
   const filteredLibraryIdeas = useMemo(() => {
     return libraryIdeas.filter((idea) => {
-      // Source type filter
       if (sourceTypeFilter !== "all") {
         const ideaSourceType = (idea as any).source_type || "generated";
-        if (ideaSourceType !== sourceTypeFilter) {
-          return false;
-        }
+        if (ideaSourceType !== sourceTypeFilter) return false;
       }
-      
       if (filters.archetypes.length > 0) {
         const ideaArchetype = idea.category || idea.business_model_type;
-        if (ideaArchetype && !filters.archetypes.includes(ideaArchetype)) {
-          return false;
-        }
+        if (ideaArchetype && !filters.archetypes.includes(ideaArchetype)) return false;
       }
       return true;
     });
   }, [libraryIdeas, filters, sourceTypeFilter]);
 
-  // Count ideas by source type for filter badges
   const sourceTypeCounts = useMemo(() => {
     const counts: Record<string, number> = { all: libraryIdeas.length };
     libraryIdeas.forEach((idea) => {
@@ -255,42 +193,26 @@ const Ideas = () => {
   }, [libraryIdeas]);
 
   const handleMarketSignalSuccess = () => {
-    // Refresh library ideas after market signal generation
     queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] });
     setActiveTab("library");
     setSourceTypeFilter("market_signal");
   };
 
   const handleImportSuccess = async (ideas: any[]) => {
-    // Track newly imported idea IDs for banner display
     const importedIds = ideas.map((idea) => idea.id);
     setNewlyImportedIds(importedIds);
-    
-    // Refresh library ideas and wait for cache to settle before navigating
     await queryClient.invalidateQueries({ queryKey: ["ideas", user?.id] });
     setActiveTab("library");
     setSourceTypeFilter("imported");
-    
-    // Navigate to first idea after cache has settled
-    if (ideas.length > 0) {
-      navigate(`/ideas/${ideas[0].id}`);
-    }
+    if (ideas.length > 0) navigate(`/ideas/${ideas[0].id}`);
   };
 
   const handleGenerateFounderIdeas = async () => {
-    // Venture state enforcement is handled by button disabled state
-    // Double-check guard for programmatic calls
     const guardError = guardIdeationAccess();
     if (guardError) {
-      toast({ 
-        title: "Ideation Locked", 
-        description: guardError, 
-        variant: "destructive" 
-      });
+      toast({ title: "Ideation Locked", description: guardError, variant: "destructive" });
       return;
     }
-    
-    // Free tier check: enforce maxIdeaGenerationsTotal from plan config
     if (!hasPro) {
       const { count, error: countErr } = await supabase
         .from("ideas")
@@ -304,25 +226,21 @@ const Ideas = () => {
         return;
       }
     }
-    
     try {
       setCurrentMode(selectedMode);
       await generateFounderIdeas({ mode: selectedMode, focus_area: focusArea || undefined });
       track("idea_generated", { mode: selectedMode, focusArea });
-      toast({ 
-        title: "Ideas Generated!", 
-        description: `${selectedMode === "breadth" ? "Standard" : selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1).replace("_", " ")} mode ideas are ready.` 
+      toast({
+        title: "Ideas Generated!",
+        description: `${selectedMode === "breadth" ? "Standard" : selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1).replace("_", " ")} mode ideas are ready.`,
       });
     } catch (error: any) {
       toast({ title: "Error", description: error.message ?? "Failed to generate ideas.", variant: "destructive" });
     }
   };
 
-  // Determine if ideation controls should be disabled
   const ideationDisabled = isGeneratingFounderIdeas || !canAccessIdeationTools;
-  const ideationDisabledReason = !canAccessIdeationTools 
-    ? "Focus on your current venture" 
-    : null;
+  const ideationDisabledReason = !canAccessIdeationTools ? "Focus on your current venture" : null;
 
   const handleClearSession = () => {
     clearGeneratedIdeas();
@@ -330,27 +248,23 @@ const Ideas = () => {
   };
 
   const handleSaveIdea = async (idea: BusinessIdea | BusinessIdeaV6): Promise<string | null> => {
-    // Free tier check: Max saved ideas from plan config
     if (!hasPro && libraryIdeas.length >= planFeatures.maxSavedIdeas) {
       setPaywallReasonCode("LIBRARY_FULL_TRIAL");
       setShowPaywall(true);
       return null;
     }
-    
     setSavingIdeaId(idea.id);
-    // Convert v6 idea to legacy format for saving
     const legacyIdea = isV6Idea(idea) ? convertV6ToLegacy(idea) : idea;
-    
-    // Find the scores for this idea from founderScoredIdeas
-    const scoredIdea = founderScoredIdeas.find(si => si.idea.id === idea.id);
-    const fitScores = scoredIdea ? {
-      overall: scoredIdea.scores.overall,
-      passion: scoredIdea.scores.founderFit, // founderFit evaluates passions/skills
-      skill: scoredIdea.scores.marketFit, // marketFit involves skill match for execution
-      constraints: scoredIdea.scores.constraintsFit,
-      lifestyle: scoredIdea.scores.economics, // economics reflects lifestyle balance
-    } : undefined;
-    
+    const scoredIdea = founderScoredIdeas.find((si) => si.idea.id === idea.id);
+    const fitScores = scoredIdea
+      ? {
+          overall: scoredIdea.scores.overall,
+          passion: scoredIdea.scores.founderFit,
+          skill: scoredIdea.scores.marketFit,
+          constraints: scoredIdea.scores.constraintsFit,
+          lifestyle: scoredIdea.scores.economics,
+        }
+      : undefined;
     const result = await saveIdea(legacyIdea, fitScores);
     setSavingIdeaId(null);
     if (result.success && result.id) {
@@ -364,22 +278,15 @@ const Ideas = () => {
 
   const handleViewDetails = async (idea: BusinessIdea | BusinessIdeaV6) => {
     setOpeningIdeaId(idea.id);
-    
-    // If already saved, navigate directly using the DB id
     const existingDbId = getDbId(idea.id);
     if (isIdeaSaved(idea.id) && existingDbId) {
       navigate(`/ideas/${existingDbId}`);
       setOpeningIdeaId(null);
       return;
     }
-    
-    // Save first, then navigate
     const savedId = await handleSaveIdea(idea);
     setOpeningIdeaId(null);
-    
-    if (savedId) {
-      navigate(`/ideas/${savedId}`);
-    }
+    if (savedId) navigate(`/ideas/${savedId}`);
   };
 
   const handlePromoteIdea = async (idea: BusinessIdea | BusinessIdeaV6) => {
@@ -394,10 +301,8 @@ const Ideas = () => {
   };
 
   const handlePromoteLibraryIdea = async (ideaId: string) => {
-    const idea = libraryIdeas.find(i => i.id === ideaId);
+    const idea = libraryIdeas.find((i) => i.id === ideaId);
     if (!idea) return;
-    
-    // Convert DB idea to BusinessIdea format for promote
     const businessIdea: BusinessIdea = {
       id: idea.id,
       title: idea.title,
@@ -429,7 +334,6 @@ const Ideas = () => {
       asyncDepthWork: 3,
       firstSteps: [],
     };
-    
     const result = await promote(businessIdea);
     if (result) {
       toast({ title: "Blueprint created!", description: `Document + ${result.taskIds.length} tasks created.` });
@@ -439,32 +343,14 @@ const Ideas = () => {
 
   const handleSetNorthStar = async (ideaId: string) => {
     if (!user) return;
-    
     try {
-      // 1. Clear any existing North Star
-      await supabase
-        .from("ideas")
-        .update({ status: "candidate" })
-        .eq("user_id", user.id)
-        .eq("status", "north_star");
-      
-      // 2. Set this idea as North Star
-      const { error: updateError } = await supabase
-        .from("ideas")
-        .update({ status: "north_star" })
-        .eq("id", ideaId)
-        .eq("user_id", user.id);
-      
+      await supabase.from("ideas").update({ status: "candidate" }).eq("user_id", user.id).eq("status", "north_star");
+      const { error: updateError } = await supabase.from("ideas").update({ status: "north_star" }).eq("id", ideaId).eq("user_id", user.id);
       if (updateError) throw updateError;
-      
-      // 3. Get the idea details
-      const idea = libraryIdeas.find(i => i.id === ideaId);
+      const idea = libraryIdeas.find((i) => i.id === ideaId);
       if (!idea) throw new Error("Idea not found");
-      
-      // 4. Create/update founder_blueprint with idea data
-      const { error: blueprintError } = await supabase
-        .from("founder_blueprints")
-        .upsert({
+      const { error: blueprintError } = await supabase.from("founder_blueprints").upsert(
+        {
           user_id: user.id,
           north_star_idea_id: ideaId,
           north_star_one_liner: idea.description || idea.title,
@@ -472,61 +358,29 @@ const Ideas = () => {
           problem_statement: idea.description || null,
           offer_model: idea.business_model_type || idea.category || null,
           updated_at: new Date().toISOString(),
-        }, {
-          onConflict: "user_id"
-        });
-      
-      if (blueprintError) {
-        console.error("Blueprint update failed:", blueprintError);
-        // Don't fail the whole flow if blueprint update fails
-      }
-      
-      // 5. Ensure venture exists for this idea
-      const { data: existingVenture } = await supabase
-        .from("ventures")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("idea_id", ideaId)
-        .maybeSingle();
-      
+        },
+        { onConflict: "user_id" }
+      );
+      if (blueprintError) console.error("Blueprint update failed:", blueprintError);
+      const { data: existingVenture } = await supabase.from("ventures").select("id").eq("user_id", user.id).eq("idea_id", ideaId).maybeSingle();
       let ventureId = existingVenture?.id;
-      
       if (!ventureId) {
         const { data: newVenture, error: ventureError } = await supabase
           .from("ventures")
-          .insert({
-            user_id: user.id,
-            idea_id: ideaId,
-            name: idea.title || "My Venture",
-            venture_state: "inactive",
-          })
+          .insert({ user_id: user.id, idea_id: ideaId, name: idea.title || "My Venture", venture_state: "inactive" })
           .select()
           .single();
-        
         if (ventureError) throw ventureError;
         ventureId = newVenture.id;
       }
-      
-      // Refresh queries
       queryClient.invalidateQueries({ queryKey: ["ideas", user.id] });
       queryClient.invalidateQueries({ queryKey: ["ventures"] });
       queryClient.invalidateQueries({ queryKey: ["founder-blueprint"] });
-      
-      toast({ 
-        title: "North Star Set!", 
-        description: "Now commit to your venture to start executing." 
-      });
-      
-      // Navigate to Commit page
+      toast({ title: "North Star Set!", description: "Now commit to your venture to start executing." });
       navigate(`/commit/${ideaId}`);
-      
     } catch (error: any) {
       console.error("Failed to set North Star:", error);
-      toast({ 
-        title: "Error", 
-        description: error.message || "Failed to set North Star", 
-        variant: "destructive" 
-      });
+      toast({ title: "Error", description: error.message || "Failed to set North Star", variant: "destructive" });
     }
   };
 
@@ -551,11 +405,7 @@ const Ideas = () => {
           <p className="text-[0.85rem] font-light text-foreground pr-8">
             You're currently building <strong className="text-primary">{activeVenture.name}</strong>. Browsing ideas won't affect your active venture.
           </p>
-          <button
-            onClick={handleDismissBanner}
-            className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
-            aria-label="Dismiss banner"
-          >
+          <button onClick={handleDismissBanner} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground" aria-label="Dismiss banner">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -583,17 +433,13 @@ const Ideas = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button 
+          <Button
             onClick={() => {
-              if (!hasPro) {
-                setPaywallReasonCode("FEATURE_REQUIRES_PRO");
-                setShowPaywall(true);
-                return;
-              }
+              if (!hasPro) { setPaywallReasonCode("FEATURE_REQUIRES_PRO"); setShowPaywall(true); return; }
               setShowMarketSignalModal(true);
-            }} 
-            variant="outline" 
-            size="sm" 
+            }}
+            variant="outline"
+            size="sm"
             className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
             disabled={!canAccessIdeationTools && hasPro}
             title={!hasPro ? "Upgrade to Pro to unlock Market Pain signals" : ideationDisabledReason || undefined}
@@ -603,17 +449,13 @@ const Ideas = () => {
             <span className="hidden sm:inline">Market Pain</span>
             <span className="sm:hidden">Market</span>
           </Button>
-          <Button 
+          <Button
             onClick={() => {
-              if (!hasPro) {
-                setPaywallReasonCode("FEATURE_REQUIRES_PRO");
-                setShowPaywall(true);
-                return;
-              }
+              if (!hasPro) { setPaywallReasonCode("FEATURE_REQUIRES_PRO"); setShowPaywall(true); return; }
               setShowImportModal(true);
-            }} 
-            variant="outline" 
-            size="sm" 
+            }}
+            variant="outline"
+            size="sm"
             className="gap-2 border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10"
             disabled={!canAccessIdeationTools && hasPro}
             title={!hasPro ? "Upgrade to Pro to import ideas" : ideationDisabledReason || undefined}
@@ -623,17 +465,13 @@ const Ideas = () => {
             <span className="hidden sm:inline">Import My Idea</span>
             <span className="sm:hidden">Import</span>
           </Button>
-          <Button 
+          <Button
             onClick={() => {
-              if (!hasPro) {
-                setPaywallReasonCode("FUSION_REQUIRES_PRO");
-                setShowPaywall(true);
-                return;
-              }
+              if (!hasPro) { setPaywallReasonCode("FUSION_REQUIRES_PRO"); setShowPaywall(true); return; }
               navigate("/fusion-lab");
             }}
-            variant="outline" 
-            size="sm" 
+            variant="outline"
+            size="sm"
             className="gap-2"
             title={!hasPro ? "Pro feature" : undefined}
           >
@@ -643,17 +481,13 @@ const Ideas = () => {
             <span className="sm:hidden">Fusion</span>
           </Button>
           {libraryIdeas.length >= 2 && (
-            <Button 
+            <Button
               onClick={() => {
-                if (!hasPro) {
-                  setPaywallReasonCode("COMPARE_REQUIRES_PRO");
-                  setShowPaywall(true);
-                  return;
-                }
+                if (!hasPro) { setPaywallReasonCode("COMPARE_REQUIRES_PRO"); setShowPaywall(true); return; }
                 navigate("/ideas/compare");
-              }} 
-              variant="outline" 
-              size="sm" 
+              }}
+              variant="outline"
+              size="sm"
               className="gap-2"
               title={!hasPro ? "Pro feature" : undefined}
             >
@@ -666,7 +500,7 @@ const Ideas = () => {
         </div>
       </div>
 
-      {/* Tabbed View: Generated vs Library */}
+      {/* Tabbed View */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="flex gap-1">
           <button
@@ -687,299 +521,73 @@ const Ideas = () => {
           </button>
         </div>
 
-        {/* Generated (v6) Tab */}
-        <TabsContent value="generated" className="space-y-4">
-          {/* Mode Selector with Focus Area */}
-          <div className="border border-border bg-card p-4">
-            <ModeSelector
-              selectedMode={selectedMode} 
-              onModeChange={setSelectedMode}
-              focusArea={focusArea}
-              onFocusAreaChange={setFocusArea}
-              edgyMode={edgyMode}
-              isPro={hasPro}
-              onProModeClick={handleProModeClick}
-            />
-            
-            {/* Active Focus Pill */}
-            {focusArea && (
-              <div className="mt-3 flex items-center gap-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 border border-primary/35 text-primary text-sm">
-                  <Target className="w-3.5 h-3.5" />
-                  <span>Focused on: "{focusArea.length > 30 ? focusArea.slice(0, 30) + "..." : focusArea}"</span>
-                  <button
-                    onClick={() => setFocusArea("")}
-                    className="ml-1 hover:bg-primary/20 p-0.5"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            <div className="mt-4 flex justify-between items-center gap-2">
-              {sessionIdeas.length > 0 && (
-                <Button 
-                  onClick={handleClearSession} 
-                  variant="ghost" 
-                  size="sm"
-                  className="gap-2 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Clear Session
-                </Button>
-              )}
-              <div className="flex-1" />
-              <Button 
-                onClick={handleGenerateFounderIdeas} 
-                disabled={ideationDisabled} 
-                className="gap-2"
-                title={ideationDisabledReason || undefined}
-              >
-                {isGeneratingFounderIdeas ? (
-                  <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />Generating...</>
-                ) : (
-                  <><Sparkles className="w-4 h-4" />Generate {selectedMode === "breadth" ? "" : selectedMode.replace("_", " ").charAt(0).toUpperCase() + selectedMode.replace("_", " ").slice(1)} Ideas</>
-                )}
-              </Button>
-            </div>
-            
-            {/* Free tier limit notice */}
-            {!hasPro && sessionIdeas.length > 0 && (
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                Free tier: 1 session only. Upgrade to Pro for unlimited generations.
-              </p>
-            )}
-          </div>
-
-          {/* Retry UI for truncated AI responses */}
-          {retryableError && (
-            <Alert className="border-amber-500/50 bg-amber-500/10">
-              <RotateCcw className="h-4 w-4 text-amber-500" />
-              <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <p className="font-medium text-foreground">Oops! The idea generation was interrupted.</p>
-                  <p className="text-sm text-muted-foreground">
-                    This sometimes happens when the AI response is incomplete. Click below to try again.
-                  </p>
-                </div>
-                <Button 
-                  onClick={handleGenerateFounderIdeas} 
-                  disabled={isGeneratingFounderIdeas}
-                  variant="outline"
-                  className="gap-2 shrink-0 border-amber-500/50 hover:bg-amber-500/10"
-                >
-                  {isGeneratingFounderIdeas ? (
-                    <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />Retrying...</>
-                  ) : (
-                    <><RotateCcw className="w-4 h-4" />Try Again</>
-                  )}
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {showFilters && (
-            <IdeaFilters 
-              filters={filters} 
-              onFiltersChange={setFilters} 
-              availableArchetypes={availableArchetypes} 
-              availableMarkets={availableMarkets} 
-            />
-          )}
-
-          {filteredFounderIdeas.length > 0 ? (
-            <section className="space-y-3">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                  <span className="label-mono-gold">GENERATED IDEAS</span>
-                  <p className="text-sm font-light text-muted-foreground mt-1">
-                    AI-powered ideas from your profile. Save the ones you like.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="label-mono">SORT:</span>
-                  <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
-                    <SelectTrigger className="w-[180px] border-border bg-card text-[0.75rem]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {SORT_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {filteredFounderIdeas.map(({ idea, scores }) => (
-                  <IdeaScoredCard
-                    key={idea.id}
-                    idea={idea}
-                    scores={scores}
-                    isSaved={isIdeaSaved(idea.id)}
-                    isSaving={isSaving || savingIdeaId === idea.id}
-                    isPromoting={isPromoting || promotingIdeaId === idea.id}
-                    isOpening={openingIdeaId === idea.id}
-                    onSave={() => handleSaveIdea(idea)}
-                    onPromote={() => handlePromoteIdea(idea)}
-                    onViewDetails={() => handleViewDetails(idea)}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : (
-            <EmptyIdeasState onGenerateIdeas={handleGenerateFounderIdeas} isGenerating={isGeneratingFounderIdeas} />
-          )}
-
-          {/* Fusion Panel in Generated tab - Pro only */}
-          {hasPro && (libraryIdeas.length + sessionIdeas.length) >= 2 && (
-            <IdeaFusionPanel 
-              ideas={libraryIdeas} 
-              sessionIdeas={sessionIdeas}
-              showSessionGroup
-              onFusionComplete={(fusedIdea) => {
-                toast({ 
-                  title: "New Fused Idea!", 
-                  description: `"${fusedIdea.title}" saved to Library.` 
-                });
-              }}
-            />
-          )}
+        <TabsContent value="generated">
+          <GeneratedTab
+            filteredFounderIdeas={filteredFounderIdeas}
+            isGeneratingFounderIdeas={isGeneratingFounderIdeas}
+            retryableError={!!retryableError}
+            selectedMode={selectedMode}
+            setSelectedMode={setSelectedMode}
+            focusArea={focusArea}
+            setFocusArea={setFocusArea}
+            edgyMode={edgyMode}
+            hasPro={hasPro}
+            sortMode={sortMode}
+            setSortMode={setSortMode}
+            filters={filters}
+            setFilters={setFilters}
+            availableArchetypes={availableArchetypes}
+            availableMarkets={availableMarkets}
+            showFilters={showFilters}
+            sessionIdeas={sessionIdeas}
+            libraryIdeas={libraryIdeas}
+            ideationDisabled={ideationDisabled}
+            ideationDisabledReason={ideationDisabledReason}
+            onGenerateIdeas={handleGenerateFounderIdeas}
+            onClearSession={handleClearSession}
+            onProModeClick={handleProModeClick}
+            onSaveIdea={handleSaveIdea}
+            onPromoteIdea={handlePromoteIdea}
+            onViewDetails={handleViewDetails}
+            isIdeaSaved={isIdeaSaved}
+            isSaving={isSaving}
+            savingIdeaId={savingIdeaId}
+            isPromoting={isPromoting}
+            promotingIdeaId={promotingIdeaId}
+            openingIdeaId={openingIdeaId}
+            onFusionComplete={(fusedIdea) => {
+              toast({ title: "New Fused Idea!", description: `"${fusedIdea.title}" saved to Library.` });
+            }}
+          />
         </TabsContent>
 
-        {/* Library Tab */}
-        <TabsContent value="library" className="space-y-4">
-          {filteredLibraryIdeas.length === 0 ? (
-            <div className="text-center py-12">
-              <span className="text-primary text-[1.5rem] block mb-5">◆</span>
-              <h3 className="font-display italic text-lg text-muted-foreground mb-2">Your library is empty</h3>
-              <p className="text-sm font-light text-muted-foreground mb-4">
-                Save generated ideas, variants, or fused concepts to build your library.
-              </p>
-              <button onClick={() => setActiveTab("generated")} className="border border-border text-muted-foreground font-medium text-[0.78rem] tracking-[0.06em] uppercase px-5 py-2.5 hover:text-foreground hover:bg-secondary transition-colors">
-                GO TO GENERATED IDEAS
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                  <span className="label-mono-gold">IDEAS LIBRARY</span>
-                  <p className="text-sm font-light text-muted-foreground mt-1">
-                    Your saved ideas, variants, and fused concepts.
-                  </p>
-                  {!hasPro && libraryIdeas.length >= 8 && (
-                    <p className="label-mono mt-1">
-                      {libraryIdeas.length}/10 IDEAS SAVED — UPGRADE FOR UNLIMITED
-                    </p>
-                  )}
-                </div>
-                {showFilters && (
-                  <IdeaFilters 
-                    filters={filters} 
-                    onFiltersChange={setFilters} 
-                    availableArchetypes={availableArchetypes} 
-                    availableMarkets={availableMarkets} 
-                  />
-                )}
-              </div>
-              
-              {/* Source Type Filter Chips */}
-              <div className="flex flex-wrap gap-2">
-                {SOURCE_TYPE_FILTERS.map((filter) => {
-                  const count = sourceTypeCounts[filter.value] || 0;
-                  if (filter.value !== "all" && count === 0) return null;
-                  return (
-                    <Button
-                      key={filter.value}
-                      variant={sourceTypeFilter === filter.value ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSourceTypeFilter(filter.value)}
-                      className="gap-1.5"
-                    >
-                      {filter.label}
-                      <span className="text-xs opacity-70">({filter.value === "all" ? libraryIdeas.length : count})</span>
-                    </Button>
-                  );
-                })}
-              </div>
-              
-              {/* Newly Imported Ideas Banner */}
-              {newlyImportedIds.length > 0 && sourceTypeFilter === "imported" && (
-                <div className="bg-violet-500/10 border border-violet-500/30 rounded-lg p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 flex-1">
-                    <Sparkles className="w-5 h-5 text-violet-500 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-violet-700 dark:text-violet-300">
-                        We generated {newlyImportedIds.length} variants. Pick the one you want to pursue.
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Each variant offers a different angle on your original idea.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {newlyImportedIds.length >= 2 && (
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/ideas/compare?ids=${newlyImportedIds.join(",")}`)}
-                        className="gap-2"
-                      >
-                        <Scale className="w-4 h-4" />
-                        Compare Variants
-                      </Button>
-                    )}
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setNewlyImportedIds([])}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-              
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredLibraryIdeas.map((idea) => (
-                  <LibraryIdeaCard 
-                    key={idea.id} 
-                    idea={idea} 
-                    onPromote={handlePromoteLibraryIdea}
-                    onSetNorthStar={!activeVenture ? handleSetNorthStar : undefined}
-                    hasActiveVenture={!!activeVenture}
-                  />
-                ))}
-              </div>
-            </>
-          )}
+        <TabsContent value="library">
+          <LibraryTab
+            filteredLibraryIdeas={filteredLibraryIdeas}
+            libraryIdeas={libraryIdeas}
+            sourceTypeFilter={sourceTypeFilter}
+            setSourceTypeFilter={setSourceTypeFilter}
+            sourceTypeCounts={sourceTypeCounts}
+            newlyImportedIds={newlyImportedIds}
+            setNewlyImportedIds={setNewlyImportedIds}
+            filters={filters}
+            setFilters={setFilters}
+            availableArchetypes={availableArchetypes}
+            availableMarkets={availableMarkets}
+            showFilters={showFilters}
+            hasPro={hasPro}
+            activeVenture={activeVenture}
+            onSetActiveTab={setActiveTab}
+            onPromoteLibraryIdea={handlePromoteLibraryIdea}
+            onSetNorthStar={handleSetNorthStar}
+          />
         </TabsContent>
       </Tabs>
 
-      {/* Pro Upgrade Modal */}
-      <ProUpgradeModal
-        open={showPaywall}
-        onClose={handleClosePaywall}
-        reasonCode={paywallReasonCode}
-      />
-
-      {/* Debug: Market Signal Domains (only visible when VITE_DEBUG_MODE=true) */}
+      <ProUpgradeModal open={showPaywall} onClose={handleClosePaywall} reasonCode={paywallReasonCode} />
       <MarketDomainViewer />
-
-      {/* Market Signal Modal */}
-      <MarketSignalModal
-        open={showMarketSignalModal}
-        onClose={() => setShowMarketSignalModal(false)}
-        onSuccess={handleMarketSignalSuccess}
-      />
-
-      {/* Import Idea Modal */}
-      <ImportIdeaModal
-        open={showImportModal}
-        onOpenChange={setShowImportModal}
-        onSuccess={handleImportSuccess}
-      />
+      <MarketSignalModal open={showMarketSignalModal} onClose={() => setShowMarketSignalModal(false)} onSuccess={handleMarketSignalSuccess} />
+      <ImportIdeaModal open={showImportModal} onOpenChange={setShowImportModal} onSuccess={handleImportSuccess} />
       <PageHelp
         title="Idea Lab"
         bullets={[
@@ -995,51 +603,5 @@ const Ideas = () => {
     </div>
   );
 };
-
-// Convert v6 idea to legacy format for saving/promoting
-function convertV6ToLegacy(idea: BusinessIdeaV6): BusinessIdea {
-  return {
-    id: idea.id,
-    title: idea.title,
-    oneLiner: idea.oneLiner,
-    description: idea.description,
-    problemStatement: idea.problemStatement,
-    targetCustomer: idea.targetCustomer,
-    revenueModel: idea.model,
-    mvpApproach: idea.mvpApproach,
-    goToMarket: idea.goToMarket,
-    competitiveAdvantage: idea.whyNow,
-    financialTrajectory: { month3: "", month6: "", month12: "", mrrCeiling: "" },
-    requiredToolsSkills: idea.aiPattern,
-    risksMitigation: "",
-    whyItFitsFounder: idea.whyItFitsFounder,
-    primaryPassionDomains: [idea.industry],
-    primarySkillNeeds: [],
-    markets: [idea.industry],
-    businessArchetype: idea.category,
-    hoursPerWeekMin: 5,
-    hoursPerWeekMax: 20,
-    capitalRequired: 0,
-    riskLevel: idea.difficulty === "easy" ? "low" : idea.difficulty === "hard" ? "high" : "medium",
-    timeToFirstRevenueMonths: idea.timeToRevenue === "0-30d" ? 1 : idea.timeToRevenue === "30-90d" ? 3 : 6,
-    requiresPublicPersonalBrand: idea.platform !== null,
-    requiresTeamSoon: !idea.soloFit,
-    requiresCoding: false,
-    salesIntensity: 3,
-    asyncDepthWork: 3,
-    firstSteps: idea.firstSteps,
-    category: idea.category,
-    mode: idea.mode,
-    platform: idea.platform,
-    shockFactor: idea.shockFactor,
-    viralityPotential: idea.viralityPotential,
-    leverageScore: idea.leverageScore,
-    automationDensity: idea.automationDensity,
-    autonomyLevel: idea.autonomyLevel,
-    cultureTailwind: idea.cultureTailwind,
-    chaosFactor: idea.chaosFactor,
-    engineVersion: idea.engineVersion,
-  };
-}
 
 export default Ideas;

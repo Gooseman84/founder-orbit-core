@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { VentureStateGuard } from "@/components/auth/VentureStateGuard";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { MainLayout } from "./components/layout/MainLayout";
+import { LazyErrorBoundary } from "@/components/shared/LazyErrorBoundary";
 import { TrialExpiredGuard } from "@/components/billing/TrialExpiredGuard";
 import { PageHelpProvider } from "@/contexts/PageHelpContext";
 import { NorthStarRedirect } from "@/components/auth/NorthStarRedirect";
@@ -57,6 +58,7 @@ const App = () => (
             <PageHelpProvider>
             <TrialExpiredGuard />
             <VentureStateGuard>
+              <LazyErrorBoundary>
               <Suspense fallback={null}>
               <Routes>
             <Route path="/" element={<Index />} />
@@ -233,7 +235,9 @@ const App = () => (
               path="/blueprint"
               element={
                 <ProtectedRoute>
-                  <Blueprint />
+                  <MainLayout>
+                    <Blueprint />
+                  </MainLayout>
                 </ProtectedRoute>
               }
             />
@@ -253,6 +257,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
               </Routes>
               </Suspense>
+              </LazyErrorBoundary>
             </VentureStateGuard>
             </PageHelpProvider>
           </AuthProvider>
