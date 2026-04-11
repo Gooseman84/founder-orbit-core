@@ -233,7 +233,9 @@ const App = () => (
               path="/blueprint"
               element={
                 <ProtectedRoute>
-                  <Blueprint />
+                  <MainLayout>
+                    <Blueprint />
+                  </MainLayout>
                 </ProtectedRoute>
               }
             />

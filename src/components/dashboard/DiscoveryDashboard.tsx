@@ -13,9 +13,7 @@ import { NorthStarCard } from "./NorthStarCard";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  Radar, 
   FileText, 
-  Flame, 
   BarChart3, 
   Crown, 
   Sparkles,
@@ -34,26 +32,7 @@ export function DiscoveryDashboard() {
   const isFree = plan === "free";
   const [paywallReason, setPaywallReason] = useState<string | null>(null);
 
-  const canShowRadar = features.canUseRadar !== "none";
   const canCompare = features.canCompareIdeas;
-
-  const { data: radarStats, isLoading: loadingRadar } = useQuery({
-    queryKey: ["dashboard-radar-stats", user?.id],
-    queryFn: async () => {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const { data: allSignals, error } = await supabase
-        .from("niche_radar")
-        .select("*")
-        .eq("user_id", user!.id)
-        .gte("created_at", sevenDaysAgo.toISOString())
-        .order("priority_score", { ascending: false });
-      if (error) throw error;
-      return { recentCount: allSignals?.length || 0, topSignal: allSignals?.[0] || null };
-    },
-    enabled: !!user,
-    staleTime: DASHBOARD_STALE_TIME,
-  });
 
   const { data: workspaceStats, isLoading: loadingWorkspace } = useQuery({
     queryKey: ["dashboard-workspace-stats", user?.id],
@@ -87,44 +66,16 @@ export function DiscoveryDashboard() {
     staleTime: DASHBOARD_STALE_TIME,
   });
 
-  const { data: reflectionStreak = 0, isLoading: loadingReflectionStreak } = useQuery({
-    queryKey: ["dashboard-reflection-streak", user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("daily_reflections")
-        .select("reflection_date")
-        .eq("user_id", user!.id)
-        .order("reflection_date", { ascending: false })
-        .limit(30);
-      if (error) throw error;
-      if (!data || data.length === 0) return 0;
-      let streak = 0;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      for (let i = 0; i < data.length; i++) {
-        const expected = new Date(today);
-        expected.setDate(expected.getDate() - i);
-        const dateStr = expected.toISOString().split("T")[0];
-        if (data[i].reflection_date === dateStr) {
-          streak++;
-        } else break;
-      }
-      return streak;
-    },
-    enabled: !!user,
-    staleTime: DASHBOARD_STALE_TIME,
-  });
-
   return (
     <div className="space-y-8">
       {/* Page Header */}
       <div>
-        <div className="eyebrow mb-3">VENTURE COMMAND CENTER</div>
+        <div className="eyebrow mb-3">YOUR LAUNCHPAD</div>
         <h1 className="font-display text-[2.5rem] font-bold leading-tight text-foreground">
-          Discover Your <em className="text-primary not-italic" style={{ fontStyle: "italic" }}>North Star</em>
+          Find Your <em className="text-primary not-italic" style={{ fontStyle: "italic" }}>North Star</em>
         </h1>
         <p className="mt-2 text-[0.95rem] font-light text-muted-foreground">
-          Explore ideas and find your next venture.
+          Explore ideas and discover your next venture.
         </p>
       </div>
 
@@ -163,26 +114,8 @@ export function DiscoveryDashboard() {
       {/* North Star Card */}
       <NorthStarCard />
 
-      {/* Stat Grid */}
+      {/* Stat Grid — only workspace + top score */}
       <div className="grid gap-4 grid-cols-2">
-        {canShowRadar && (
-          <div
-            className="card-gold-accent p-5 cursor-pointer transition-colors hover:bg-secondary"
-            onClick={() => navigate("/radar")}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Radar className="h-4 w-4 text-primary" />
-              <span className="label-mono">Niche Radar</span>
-            </div>
-            {loadingRadar ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <span className="font-display text-[2rem] font-bold text-foreground">{radarStats?.recentCount ?? 0}</span>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">signals this week</p>
-          </div>
-        )}
-
         <div
           className="card-gold-accent p-5 cursor-pointer transition-colors hover:bg-secondary"
           onClick={() => navigate("/workspace")}
@@ -217,19 +150,6 @@ export function DiscoveryDashboard() {
           <p className="text-xs text-muted-foreground mt-1 truncate">
             {highestScore?.ideas?.title || "No scores yet"}
           </p>
-        </div>
-
-        <div className="card-gold-accent p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Flame className={`h-4 w-4 ${reflectionStreak > 0 ? "text-primary" : "text-muted-foreground"}`} />
-            <span className="label-mono">Streak</span>
-          </div>
-          {loadingReflectionStreak ? (
-            <Skeleton className="h-8 w-16" />
-          ) : (
-            <span className="font-display text-[2rem] font-bold text-foreground">{reflectionStreak}</span>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">day{reflectionStreak !== 1 ? "s" : ""}</p>
         </div>
       </div>
 
