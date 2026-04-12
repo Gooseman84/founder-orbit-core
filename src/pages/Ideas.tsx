@@ -485,7 +485,7 @@ const Ideas = () => {
             setSelectedMode={setSelectedMode}
             focusArea={focusArea}
             setFocusArea={setFocusArea}
-            edgyMode={edgyMode}
+            
             hasPro={hasPro}
             sortMode={sortMode}
             setSortMode={setSortMode}

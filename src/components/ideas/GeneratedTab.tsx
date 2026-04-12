@@ -28,7 +28,7 @@ interface GeneratedTabProps {
   setSelectedMode: (mode: IdeaMode) => void;
   focusArea: string;
   setFocusArea: (area: string) => void;
-  edgyMode: string | null;
+  
   hasPro: boolean;
   sortMode: SortMode;
   setSortMode: (mode: SortMode) => void;
@@ -64,7 +64,7 @@ export function GeneratedTab({
   setSelectedMode,
   focusArea,
   setFocusArea,
-  edgyMode,
+  
   hasPro,
   sortMode,
   setSortMode,
@@ -100,7 +100,6 @@ export function GeneratedTab({
           onModeChange={setSelectedMode}
           focusArea={focusArea}
           onFocusAreaChange={setFocusArea}
-          edgyMode={edgyMode}
           isPro={hasPro}
           onProModeClick={onProModeClick}
         />
