@@ -1,12 +1,9 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFounderProfile } from "@/hooks/useFounderProfile";
-import { useXP } from "@/hooks/useXP";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LevelBadge } from "@/components/shared/LevelBadge";
-import { XpProgressBar } from "@/components/shared/XpProgressBar";
 import { ProfileEditDrawer, ProfileSection } from "@/components/profile/ProfileEditDrawer";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ContextInspector from "@/pages/ContextInspector";

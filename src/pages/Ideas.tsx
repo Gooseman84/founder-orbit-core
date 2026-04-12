@@ -14,7 +14,6 @@ import { useVentureState } from "@/hooks/useVentureState";
 import { useIdeaSessionStore } from "@/store/ideaSessionStore";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { MarketDomainViewer } from "@/components/admin/MarketDomainViewer";
-import { MarketSignalModal } from "@/components/ideas/MarketSignalModal";
 import { ImportIdeaModal } from "@/components/ideas/ImportIdeaModal";
 import { type SourceTypeFilter } from "@/components/ideas/SourceTypeBadge";
 import { GeneratedTab } from "@/components/ideas/GeneratedTab";
