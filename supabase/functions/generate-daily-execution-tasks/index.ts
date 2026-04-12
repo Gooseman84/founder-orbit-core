@@ -92,7 +92,7 @@ serve(async (req) => {
       supabaseService.from("venture_plans").select("summary").eq("venture_id", ventureId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabaseService.from("venture_daily_tasks").select("*").eq("venture_id", ventureId).eq("task_date", today).maybeSingle(),
       supabaseService.from("daily_reflections").select("reflection_date, energy_level, stress_level, mood_tags, what_did, blockers, top_priority, ai_summary").eq("user_id", user.id).order("reflection_date", { ascending: false }).limit(7),
-      supabaseService.from("venture_daily_checkins").select("checkin_date, completion_status, explanation, reflection").eq("venture_id", ventureId).order("checkin_date", { ascending: false }).limit(7),
+      supabaseService.from("venture_daily_checkins").select("checkin_date, completion_status, explanation, reflection, mavrik_response").eq("venture_id", ventureId).order("checkin_date", { ascending: false }).limit(7),
       supabaseService.from("workspace_documents").select("id, title, doc_type, updated_at, source_type").eq("user_id", user.id).eq("venture_id", ventureId).gte("updated_at", new Date(Date.now() - 7 * 86400000).toISOString()).order("updated_at", { ascending: false }).limit(10),
       supabaseService.from("founder_interviews").select("context_summary").eq("user_id", user.id).eq("status", "completed").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
       supabaseService.from("execution_strategies").select("strategy, behavioral_signals, updated_at").eq("venture_id", ventureId).maybeSingle(),
@@ -196,14 +196,29 @@ serve(async (req) => {
     const rawInterviewContext = interviewData?.context_summary as any ?? null;
     const interviewContext = selectInterviewContext("generate-daily-execution-tasks", rawInterviewContext);
 
+    // Extract yesterday's mavrik coaching directive
+    const yesterdayCheckin = recentCheckins?.[0] as any;
+    const mavrikResponse = yesterdayCheckin?.mavrik_response as any;
+    const tomorrowFocus = mavrikResponse?.tomorrowFocus || mavrikResponse?.tomorrow_focus || null;
+
+    // Compute 3-day energy trend
+    const last3Energy = (recentReflections || []).slice(0, 3).map((r: any) => r.energy_level).filter(Boolean);
+    const energyTrend = last3Energy.length >= 2
+      ? last3Energy[0] > last3Energy[last3Energy.length - 1] ? "rising" : last3Energy[0] < last3Energy[last3Energy.length - 1] ? "declining" : "stable"
+      : "unknown";
+
     const founderState = {
       latestEnergy: recentReflections?.[0]?.energy_level ?? null,
       latestStress: recentReflections?.[0]?.stress_level ?? null,
       latestBlockers: recentReflections?.[0]?.blockers ?? null,
       recentMoods: recentReflections?.[0]?.mood_tags ?? [],
       topPriority: recentReflections?.[0]?.top_priority ?? null,
-      yesterdayCompletion: recentCheckins?.[0]?.completion_status ?? null,
-      yesterdayExplanation: recentCheckins?.[0]?.explanation ?? null,
+      yesterdayCompletion: yesterdayCheckin?.completion_status ?? null,
+      yesterdayExplanation: yesterdayCheckin?.explanation ?? null,
+      yesterdayReflection: yesterdayCheckin?.reflection ?? null,
+      tomorrowFocus,
+      energyTrendLast3Days: energyTrend,
+      energyHistory: last3Energy,
       last7DaysPattern: recentCheckins?.map((c: any) => c.completion_status).join(", ") ?? "no data",
     };
 
@@ -262,9 +277,12 @@ ${frameworksBlock ? `## EXECUTION PLAYBOOKS\nUse these frameworks to determine w
 
 ## FOUNDER STATE
 - Energy Level: ${founderState.latestEnergy ?? "unknown"}/5
+- Energy Trend (3-day): ${founderState.energyTrendLast3Days} ${founderState.energyHistory.length > 0 ? `(${founderState.energyHistory.join(" → ")})` : ""}
 - Stress Level: ${founderState.latestStress ?? "unknown"}/5
 - Yesterday's Completion: ${founderState.yesterdayCompletion ?? "unknown"}
 - Yesterday's Explanation: ${founderState.yesterdayExplanation ?? "none"}
+${founderState.yesterdayReflection ? `- Yesterday's Reflection: "${founderState.yesterdayReflection}"` : ""}
+${founderState.tomorrowFocus ? `- Mavrik's Coaching Directive for Today: "${founderState.tomorrowFocus}" — USE THIS to shape today's first task` : ""}
 - Current Blockers: ${founderState.latestBlockers ?? "none stated"}
 - Top Priority: ${founderState.topPriority ?? "not specified"}
 - Last 7 Days Pattern: ${founderState.last7DaysPattern}
