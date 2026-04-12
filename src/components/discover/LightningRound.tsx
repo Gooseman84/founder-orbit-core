@@ -35,6 +35,19 @@ export function LightningRound({ interviewId, onComplete }: LightningRoundProps)
   const animDuration = prefersReduced ? 0 : 250;
 
   const question = LIGHTNING_ROUND_QUESTIONS[currentIndex];
+
+  // Initialize slider default values so Continue isn't disabled on first render
+  useEffect(() => {
+    if (question.inputType === "slider" && question.sliderConfig && !responses.has(question.id)) {
+      const defaultVal = Math.round((question.sliderConfig.min + question.sliderConfig.max) / 2);
+      setResponses((prev) => {
+        const next = new Map(prev);
+        next.set(question.id, defaultVal);
+        return next;
+      });
+    }
+  }, [question.id, question.inputType, question.sliderConfig]);
+
   const currentValue = responses.get(question.id);
   const progressPercent = ((currentIndex + (currentValue !== undefined ? 1 : 0)) / TOTAL) * 100;
 
