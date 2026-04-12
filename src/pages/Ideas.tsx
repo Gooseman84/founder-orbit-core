@@ -81,6 +81,7 @@ const Ideas = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [newlyImportedIds, setNewlyImportedIds] = useState<string[]>([]);
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
+  const [selectedProblems, setSelectedProblems] = useState<string[]>([]);
   const [dismissedBannerSession, setDismissedBannerSession] = useState(() => {
     return sessionStorage.getItem("tb-active-venture-banner-dismissed") === "true";
   });
