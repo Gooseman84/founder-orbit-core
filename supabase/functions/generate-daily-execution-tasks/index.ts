@@ -257,6 +257,7 @@ IMPORTANT: Use this strategy to calibrate task count, difficulty, and focus. Thi
 
     const systemPrompt = injectCognitiveMode(`You are Mavrik, an execution-focused co-pilot for founders. Generate ${taskCount} concrete, actionable tasks for TODAY only.
 
+${strategyBlock}
 ${frameworksBlock ? `## EXECUTION PLAYBOOKS\nUse these frameworks to determine what kinds of tasks are appropriate right now:\n\n${frameworksBlock}\n\n---` : ""}
 
 ## FOUNDER STATE
