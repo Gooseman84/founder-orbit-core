@@ -125,7 +125,7 @@ function SectionCard({
 const Profile = () => {
   const navigate = useNavigate();
   const { profile, loading, error, refresh } = useFounderProfile();
-  const { xpSummary, loading: xpLoading } = useXP();
+  
 
   const [editSection, setEditSection] = useState<ProfileSection | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -209,27 +209,8 @@ const Profile = () => {
               Everything below powers your FVS, Mavrik interview, and all AI recommendations.
             </p>
           </div>
-          {!xpLoading && xpSummary && (
-            <LevelBadge level={xpSummary.level} />
-          )}
         </div>
       </div>
-
-      {/* XP Progress */}
-      {!xpLoading && xpSummary && (
-        <div
-          className="border p-5"
-          style={{ borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
-        >
-          <XpProgressBar
-            totalXp={xpSummary.totalXp}
-            level={xpSummary.level}
-            nextLevelXp={xpSummary.nextLevelXp}
-            currentLevelMinXp={xpSummary.currentLevelMinXp}
-            progressPercent={xpSummary.progressPercent}
-          />
-        </div>
-      )}
 
       {/* Mavrik Interview Status Card */}
       <div
