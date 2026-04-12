@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.84.0";
-import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.32.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,11 +49,7 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const anthropicApiKey = Deno.env.get("ANTHROPIC_API_KEY");
-
-    if (!anthropicApiKey) {
-      throw new Error("ANTHROPIC_API_KEY not configured");
-    }
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
 
     // Create Supabase client with user's auth
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
@@ -112,26 +107,27 @@ Deno.serve(async (req) => {
     // Build the correction prompt
     const correctionPrompt = buildCorrectionPrompt(existingContextSummary, corrections);
 
-    // Call Anthropic API
-    const anthropic = new Anthropic({ apiKey: anthropicApiKey });
-    
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      temperature: 0.5,
-      messages: [
-        {
-          role: "user",
-          content: correctionPrompt,
-        },
-      ],
+    // Call Lovable AI Gateway
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "user", content: correctionPrompt }],
+        temperature: 0.5,
+        max_tokens: 2000,
+      }),
     });
 
-    // Extract response text
-    const responseText = message.content
-      .filter((block): block is Anthropic.TextBlock => block.type === "text")
-      .map((block) => block.text)
-      .join("");
+    if (!aiResponse.ok) {
+      throw new Error(`AI request failed: ${aiResponse.status}`);
+    }
+
+    const aiData = await aiResponse.json();
+    const responseText = aiData.choices?.[0]?.message?.content || "";
 
     // Parse the updated JSON
     let updatedInsights;
