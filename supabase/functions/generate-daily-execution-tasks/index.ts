@@ -277,9 +277,12 @@ ${frameworksBlock ? `## EXECUTION PLAYBOOKS\nUse these frameworks to determine w
 
 ## FOUNDER STATE
 - Energy Level: ${founderState.latestEnergy ?? "unknown"}/5
+- Energy Trend (3-day): ${founderState.energyTrendLast3Days} ${founderState.energyHistory.length > 0 ? `(${founderState.energyHistory.join(" → ")})` : ""}
 - Stress Level: ${founderState.latestStress ?? "unknown"}/5
 - Yesterday's Completion: ${founderState.yesterdayCompletion ?? "unknown"}
 - Yesterday's Explanation: ${founderState.yesterdayExplanation ?? "none"}
+${founderState.yesterdayReflection ? `- Yesterday's Reflection: "${founderState.yesterdayReflection}"` : ""}
+${founderState.tomorrowFocus ? `- Mavrik's Coaching Directive for Today: "${founderState.tomorrowFocus}" — USE THIS to shape today's first task` : ""}
 - Current Blockers: ${founderState.latestBlockers ?? "none stated"}
 - Top Priority: ${founderState.topPriority ?? "not specified"}
 - Last 7 Days Pattern: ${founderState.last7DaysPattern}
