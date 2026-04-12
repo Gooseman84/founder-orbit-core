@@ -13,9 +13,7 @@ export function ShareVentureButton({ venture }: ShareVentureButtonProps) {
 
   const generateShareText = () => {
     const lines = [
-      `🔥 Building: ${venture.idea_title || "My Venture"}`,
-      "",
-      venture.idea_description ? `${venture.idea_description.slice(0, 200)}${venture.idea_description.length > 200 ? "..." : ""}` : "",
+      `🔥 Building: ${venture.name || "My Venture"}`,
       "",
       venture.success_metric ? `🎯 Goal: ${venture.success_metric}` : "",
       venture.commitment_window_days ? `⏱️ ${venture.commitment_window_days}-day sprint` : "",
