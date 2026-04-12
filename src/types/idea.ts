@@ -1,17 +1,7 @@
 // Type definitions for ideas and idea-related data structures
 
-// Generation modes for EPIC v6 idea engine
-export type IdeaGenerationMode = 
-  | "breadth" 
-  | "focus" 
-  | "creator" 
-  | "automation" 
-  | "persona" 
-  | "boundless" 
-  | "locker_room" 
-  | "chaos" 
-  | "money_printer" 
-  | "memetic";
+// Generation modes — consolidated to 3 core modes
+export type IdeaGenerationMode = "breadth" | "focus" | "adjacent";
 
 export interface Idea {
   id: string;

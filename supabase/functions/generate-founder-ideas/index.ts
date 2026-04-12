@@ -10,18 +10,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// EPIC v6/v7 Generation Modes
-type IdeaGenerationMode = 
-  | "breadth" 
-  | "focus" 
-  | "creator" 
-  | "automation" 
-  | "persona" 
-  | "boundless" 
-  | "locker_room" 
-  | "chaos" 
-  | "money_printer" 
-  | "memetic";
+// Consolidated generation modes (v2.0)
+type IdeaGenerationMode = "breadth" | "focus" | "adjacent";
 
 type GenerationTone = "standard" | "exciting";
 
@@ -212,20 +202,13 @@ Return ONLY: { "refined_ideas": [...] }
 
 function buildModeContext(mode: IdeaGenerationMode, focusArea?: string): string {
   const modeDescriptions: Record<IdeaGenerationMode, string> = {
-    breadth: "Generate a wide variety of ideas across all categories. Mix business types, platforms, and approaches. GO WILD.",
-    focus: focusArea 
-      ? `Deep-dive on: "${focusArea}". All ideas should explore wild angles within this specific niche.`
-      : "Generate focused ideas in the founder's strongest domain. Push boundaries.",
-    creator: "Focus on content empires, creator economy tools, audience monetization. Make creators RICH.",
-    automation: "Focus on workflow automation, AI agents, background services. Build things that run while you sleep.",
-    persona: "Focus on AI characters, avatars, companions, mentors. Create digital beings people LOVE.",
-    boundless: "IGNORE all conventional wisdom. Maximum creativity. Maximum leverage. BREAK THE RULES.",
-    locker_room: "Bold, culture-first, viral ideas. Things that make people say 'this shouldn't exist but I love it.'",
-    chaos: "Mash categories together in unexpected ways. High shock value. Wild combinations. The weirder, the better.",
-    money_printer: "Systems over businesses. Recurring revenue. Automation-heavy. Things that PRINT MONEY while you sleep.",
-    memetic: "Ideas that spread like memes. Humor, cultural hooks, shareability. Must also make money.",
+    breadth: "Generate a wide variety of ideas across all categories. Mix business types, platforms, and approaches. Explore SaaS, services, content, automation, and hybrid models.",
+    focus: focusArea
+      ? `Deep-dive on: "${focusArea}". All ideas should explore creative angles within this specific niche.`
+      : "Generate focused ideas in the founder's strongest domain. Push boundaries within their expertise.",
+    adjacent: "Cross-industry pattern transfer: take proven business models from OTHER industries and apply them to the founder's domain. Look for what works in healthcare → apply to education. What works in fintech → apply to real estate. Find non-obvious connections.",
   };
-  
+
   return modeDescriptions[mode];
 }
 
@@ -651,8 +634,8 @@ serve(async (req) => {
       }
     }
 
-    // ===== PLAN CHECK: Mode restrictions (TRIAL = breadth, focus, creator only) =====
-    const TRIAL_MODES = ["breadth", "focus", "creator"];
+    // ===== PLAN CHECK: Mode restrictions (TRIAL = breadth, focus, adjacent) =====
+    const TRIAL_MODES = ["breadth", "focus", "adjacent"];
     if (isTrialUser && !TRIAL_MODES.includes(mode)) {
       console.log(`generate-founder-ideas: TRIAL user ${userId} tried Pro mode ${mode}`);
       return new Response(
@@ -669,7 +652,7 @@ serve(async (req) => {
     // Load founder profile
     const { data: profileRow, error: profileError } = await supabaseAdmin
       .from("founder_profiles")
-      .select("profile, work_personality, creator_platforms, edgy_mode, wants_money_systems, open_to_personas, open_to_memetic_ideas")
+      .select("profile, work_personality, creator_platforms")
       .eq("user_id", userId)
       .single();
 
@@ -679,17 +662,6 @@ serve(async (req) => {
         JSON.stringify({ error: "Founder profile not found. Please complete onboarding first." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-    }
-
-    // Check if locker_room mode is allowed
-    if (mode === "locker_room") {
-      const edgyMode = profileRow.edgy_mode;
-      if (edgyMode !== "bold" && edgyMode !== "unhinged") {
-        return new Response(
-          JSON.stringify({ error: "Locker Room mode requires edgy_mode to be 'bold' or 'unhinged'." }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
     }
 
     // Load interview context summary
@@ -712,10 +684,6 @@ serve(async (req) => {
         ...profileRow.profile,
         workPersonality: profileRow.work_personality || [],
         creatorPlatforms: profileRow.creator_platforms || [],
-        edgyMode: profileRow.edgy_mode || "safe",
-        wantsMoneySystems: profileRow.wants_money_systems || false,
-        openToPersonas: profileRow.open_to_personas || false,
-        openToMemeticIdeas: profileRow.open_to_memetic_ideas || false,
       },
       contextSummary,
     };

@@ -25,18 +25,8 @@ export const PLAN_ERROR_CODES = {
 
 export type PlanErrorCode = typeof PLAN_ERROR_CODES[keyof typeof PLAN_ERROR_CODES];
 
-// Idea generation modes
-export type IdeaMode = 
-  | "breadth" 
-  | "focus" 
-  | "creator" 
-  | "automation" 
-  | "persona" 
-  | "boundless" 
-  | "chaos" 
-  | "money_printer" 
-  | "memetic" 
-  | "locker_room";
+// Idea generation modes — consolidated to 3 core modes
+export type IdeaMode = "breadth" | "focus" | "adjacent";
 
 // Mode configuration with plan requirements
 export interface ModeConfig {
@@ -47,20 +37,13 @@ export interface ModeConfig {
 }
 
 export const IDEA_MODES: ModeConfig[] = [
-  { mode: "breadth", label: "Standard", description: "Wide sampling across all sane categories", requiresPro: false },
-  { mode: "focus", label: "Focus", description: "Deep exploration of one niche or theme", requiresPro: false },
-  { mode: "creator", label: "Creator", description: "Content empires, creator tools, monetization", requiresPro: false },
-  { mode: "automation", label: "Automation", description: "Workflow, RPA, agents, 'do it for me' backends", requiresPro: true },
-  { mode: "persona", label: "Persona", description: "AI characters, avatars, companions, mentors", requiresPro: true },
-  { mode: "boundless", label: "Boundless", description: "Ignore conventions; maximize creativity", requiresPro: true },
-  { mode: "chaos", label: "Chaos", description: "Wild combinations; high shock, high leverage", requiresPro: true },
-  { mode: "money_printer", label: "Money Printer", description: "Systems that earn while you sleep", requiresPro: true },
-  { mode: "memetic", label: "Memetic", description: "Ideas that spread as jokes/memes with monetization", requiresPro: true },
-  { mode: "locker_room", label: "Locker Room", description: "Bold, culture-first, 'shouldn't exist but could'", requiresPro: true },
+  { mode: "breadth", label: "Explore", description: "Wide sampling across industries, models, and approaches", requiresPro: false },
+  { mode: "focus", label: "Focus", description: "Deep exploration of one specific niche or theme", requiresPro: false },
+  { mode: "adjacent", label: "Adjacent", description: "Cross-industry pattern transfer from your domain expertise", requiresPro: false },
 ];
 
-// Free plan modes for quick lookup
-export const FREE_MODES: IdeaMode[] = ["breadth", "focus", "creator"];
+// All modes are free now — no Pro gating on modes
+export const FREE_MODES: IdeaMode[] = ["breadth", "focus", "adjacent"];
 
 // Prompt types for North Star prompts
 export type PromptType = "strategy" | "lovable" | "cursor" | "v0";

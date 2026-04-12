@@ -298,13 +298,13 @@ export function refinedToBusinessIdea(refined: RefinedIdeaV7, tone: GenerationTo
     Fusion: "system",
   };
   
-  // Infer generation mode
+  // Infer generation mode — map all legacy modes to the 3 consolidated modes
   const modeMap: Record<IdeaModeV7, IdeaGenerationMode> = {
     Standard: "breadth",
-    Persona: "persona",
-    Chaos: "chaos",
-    Memetic: "memetic",
-    Fusion: "boundless",
+    Persona: "breadth",
+    Chaos: "breadth",
+    Memetic: "breadth",
+    Fusion: "adjacent",
   };
   
   // Infer difficulty
