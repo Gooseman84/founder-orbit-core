@@ -555,81 +555,28 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
           { role: "system", content: resolvedPassAPrompt },
           { role: "user", content: passAMessage },
         ],
+        tools: [PASS_A_TOOL],
+        tool_choice: { type: "function", function: { name: "generate_raw_ideas" } },
       }),
     });
 
     if (!passAResponse.ok) {
       const status = passAResponse.status;
       const text = await passAResponse.text();
-      console.error("generate-founder-ideas: Pass A AI error", status, text);
-      
-      if (status === 429) {
-        return new Response(
-          JSON.stringify({ error: "AI rate limit exceeded, please wait and try again.", code: "rate_limited" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      if (status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted, please add funds.", code: "payment_required" }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      return new Response(
-        JSON.stringify({ error: "AI generation failed in Pass A" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      const errResp = handleAIError(status, text, "Pass A");
+      if (errResp) return errResp;
     }
 
     const passAData = await passAResponse.json();
-    const passAContent = passAData.choices?.[0]?.message?.content as string | undefined;
-
-    if (!passAContent) {
-      console.error("generate-founder-ideas: Pass A empty response");
-      return new Response(
-        JSON.stringify({ error: "Pass A returned empty response" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
 
     let rawIdeas: any[];
     try {
-      // Log raw content for debugging (first 500 chars)
-      console.log("generate-founder-ideas: Pass A raw response preview:", passAContent.slice(0, 500));
-      
-      const parsed = extractJSON(passAContent);
-      
-      // Handle various possible response formats
-      if (Array.isArray(parsed)) {
-        // Direct array response
-        rawIdeas = parsed;
-      } else if (parsed.raw_ideas && Array.isArray(parsed.raw_ideas)) {
-        // Expected format: { raw_ideas: [...] }
-        rawIdeas = parsed.raw_ideas;
-      } else if (parsed.ideas && Array.isArray(parsed.ideas)) {
-        // Alternate format: { ideas: [...] }
-        rawIdeas = parsed.ideas;
-      } else {
-        // Try to find any array property
-        const arrayProp = Object.values(parsed).find((v) => Array.isArray(v)) as any[] | undefined;
-        if (arrayProp && arrayProp.length > 0) {
-          rawIdeas = arrayProp;
-        } else {
-          console.error("generate-founder-ideas: Pass A response structure unexpected:", Object.keys(parsed));
-          return new Response(
-            JSON.stringify({ error: "Pass A response format unexpected" }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
-      }
+      const parsed = parseToolCallResponse(passAData, "generate_raw_ideas");
+      rawIdeas = parsed.raw_ideas || parsed.ideas || (Array.isArray(parsed) ? parsed : []);
     } catch (e) {
-      console.error("generate-founder-ideas: Pass A JSON parse error", e, "Content preview:", passAContent.slice(0, 300));
+      console.error("generate-founder-ideas: Pass A parse error", e);
       return new Response(
-        JSON.stringify({ 
-          error: "The AI response was incomplete. Please try generating ideas again.",
-          code: "ai_response_truncated",
-          retryable: true
-        }),
+        JSON.stringify({ error: "The AI response was incomplete. Please try generating ideas again.", code: "ai_response_truncated", retryable: true }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
