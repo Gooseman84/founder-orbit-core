@@ -212,318 +212,127 @@ function buildModeContext(mode: IdeaGenerationMode, focusArea?: string): string 
   return modeDescriptions[mode];
 }
 
-// Helper to extract individual complete idea objects from potentially truncated JSON
-// This is a last-resort salvage operation that looks for complete idea objects
-function extractPartialIdeas(content: string): any[] {
-  const ideas: any[] = [];
-  const cleaned = content.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
-  
-  // Pattern to find potential idea object starts
-  // Look for patterns like: { "title": "..." or {"title":"..."
-  const ideaStartPattern = /\{\s*"(?:title|id|raw_title)"\s*:/g;
-  let match;
-  
-  while ((match = ideaStartPattern.exec(cleaned)) !== null) {
-    const startIdx = match.index;
-    
-    // Try to find the matching closing brace for this object
-    let depth = 0;
-    let inString = false;
-    let escape = false;
-    let endIdx = -1;
-    
-    for (let i = startIdx; i < cleaned.length; i++) {
-      const ch = cleaned[i];
-      
-      if (inString) {
-        if (escape) {
-          escape = false;
-        } else if (ch === "\\") {
-          escape = true;
-        } else if (ch === '"') {
-          inString = false;
-        }
-        continue;
-      }
-      
-      if (ch === '"') {
-        inString = true;
-        continue;
-      }
-      
-      if (ch === "{") depth++;
-      if (ch === "}") {
-        depth--;
-        if (depth === 0) {
-          endIdx = i;
-          break;
-        }
-      }
-    }
-    
-    if (endIdx !== -1) {
-      const objStr = cleaned.slice(startIdx, endIdx + 1);
-      try {
-        const parsed = JSON.parse(objStr);
-        // Validate it looks like an idea (has title or hook)
-        if (parsed.title || parsed.hook || parsed.raw_title) {
-          ideas.push(parsed);
-        }
-      } catch {
-        // This object was incomplete or malformed, skip it
-      }
-    }
-  }
-  
-  console.log(`generate-founder-ideas: extractPartialIdeas found ${ideas.length} complete ideas from truncated response`);
-  return ideas;
-}
+// ============================================
+// TOOL DEFINITIONS FOR STRUCTURED OUTPUT
+// ============================================
 
-// Helper to extract valid JSON from potentially messy AI response
-function extractJSON(content: string): any {
-  // First try direct parse
-  try {
-    return JSON.parse(content);
-  } catch {}
-  
-  // Remove markdown code blocks if present
-  let cleaned = content.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
-  
-  // Try parsing cleaned content
-  try {
-    return JSON.parse(cleaned);
-  } catch {}
-  
-  // Find the outermost { } pair by counting braces
-  const firstBrace = cleaned.indexOf("{");
-  if (firstBrace === -1) {
-    // Try to find an array instead
-    const firstBracket = cleaned.indexOf("[");
-    if (firstBracket !== -1) {
-      let depth = 0;
-      let endIndex = -1;
-      for (let i = firstBracket; i < cleaned.length; i++) {
-        if (cleaned[i] === "[") depth++;
-        else if (cleaned[i] === "]") {
-          depth--;
-          if (depth === 0) {
-            endIndex = i;
-            break;
-          }
-        }
-      }
-      if (endIndex !== -1) {
-        try {
-          return JSON.parse(cleaned.slice(firstBracket, endIndex + 1));
-        } catch {}
-      }
-    }
-    
-    // Last resort: try extracting partial ideas
-    const partialIdeas = extractPartialIdeas(content);
-    if (partialIdeas.length > 0) {
-      return { raw_ideas: partialIdeas, _partial: true };
-    }
-    
-    throw new Error("No JSON object found in response");
-  }
-  
-  let depth = 0;
-  let endIndex = -1;
-  for (let i = firstBrace; i < cleaned.length; i++) {
-    if (cleaned[i] === "{") depth++;
-    else if (cleaned[i] === "}") {
-      depth--;
-      if (depth === 0) {
-        endIndex = i;
-        break;
-      }
-    }
-  }
-  
-  // If we found a complete object, parse it
-  if (endIndex !== -1) {
-    const jsonStr = cleaned.slice(firstBrace, endIndex + 1);
-    return JSON.parse(jsonStr);
-  }
-  
-  // JSON is truncated - attempt repair by finding last complete object in array
-  console.warn("generate-founder-ideas: Attempting to repair truncated JSON");
-  
-  // Find all complete objects by tracking the last valid closing brace at depth 1
-  let lastCompleteObjectEnd = -1;
-  depth = 0;
-  for (let i = firstBrace; i < cleaned.length; i++) {
-    if (cleaned[i] === "{") depth++;
-    else if (cleaned[i] === "}") {
-      depth--;
-      if (depth === 1) {
-        // This closes an object inside the main object/array
-        lastCompleteObjectEnd = i;
-      }
-    }
-  }
-  
-  if (lastCompleteObjectEnd !== -1) {
-    // Close the array and object
-    const repairedJson = cleaned.slice(firstBrace, lastCompleteObjectEnd + 1) + "]}";
-    try {
-      const parsed = JSON.parse(repairedJson);
-      console.log("generate-founder-ideas: Successfully repaired truncated JSON");
-      return parsed;
-    } catch {}
-  }
-  
-  // Final fallback: try extracting individual complete idea objects
-  const partialIdeas = extractPartialIdeas(content);
-  if (partialIdeas.length > 0) {
-    console.log(`generate-founder-ideas: Salvaged ${partialIdeas.length} ideas from severely truncated response`);
-    return { raw_ideas: partialIdeas, _partial: true };
-  }
-  
-  throw new Error("No matching closing brace found and repair failed");
-}
-
-// Helper to parse refined ideas from AI response (robust version)
-function parseRefinedIdeas(content: string): any[] {
-  // Log raw content for debugging (first 500 chars)
-  console.log("generate-founder-ideas: Pass B raw response preview:", content.slice(0, 500));
-  
-  const parsed = extractJSON(content);
-  
-  // Handle various possible response formats
-  if (Array.isArray(parsed)) {
-    return parsed;
-  } else if (parsed.refined_ideas && Array.isArray(parsed.refined_ideas)) {
-    return parsed.refined_ideas;
-  } else if (parsed.ideas && Array.isArray(parsed.ideas)) {
-    return parsed.ideas;
-  } else {
-    // Try to find any array property
-    const arrayProp = Object.values(parsed).find((v) => Array.isArray(v)) as any[] | undefined;
-    if (arrayProp && arrayProp.length > 0) {
-      return arrayProp;
-    }
-    console.error("generate-founder-ideas: Pass B response structure unexpected:", Object.keys(parsed));
-    return [];
-  }
-}
-
-// Generic model call wrapper - returns string only, throws on error
-async function callModel(
-  apiKey: string,
-  systemPrompt: string,
-  userMessage: string,
-  opts?: { maxTokens?: number; temperature?: number }
-): Promise<string> {
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
+const PASS_A_TOOL = {
+  type: "function",
+  function: {
+    name: "generate_raw_ideas",
+    description: "Return 12-20 raw, unfiltered business ideas for a founder.",
+    parameters: {
+      type: "object",
+      properties: {
+        raw_ideas: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string", description: "Short punchy name" },
+              hook: { type: "string", description: "One sentence that sparks interest" },
+              twist: { type: "string", description: "What makes this non-obvious" },
+              who: { type: "string", description: "Specific person who'd pay" },
+              mode: { type: "string", enum: ["Standard", "Persona", "Chaos", "Memetic", "Fusion"] },
+            },
+            required: ["title", "hook", "twist", "who", "mode"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["raw_ideas"],
+      additionalProperties: false,
     },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      max_tokens: opts?.maxTokens ?? 6000,
-      temperature: opts?.temperature ?? 0.6,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userMessage },
-      ],
-    }),
-  });
+  },
+};
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    const err = new Error(`Model call failed: ${response.status}`);
-    (err as any).status = response.status;
-    (err as any).body = errorText;
-    throw err;
-  }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content as string | undefined;
-
-  if (!content) {
-    throw new Error("Empty response from model");
-  }
-
-  return content;
+function buildPassBTool(ideaCount: number) {
+  return {
+    type: "function",
+    function: {
+      name: "refine_ideas",
+      description: `Select and refine the top ${ideaCount} ideas with commercial viability scoring.`,
+      parameters: {
+        type: "object",
+        properties: {
+          refined_ideas: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                title: { type: "string", description: "Max 60 chars" },
+                pitch: { type: "string", description: "One sentence, max 120 chars" },
+                problem: { type: "string", description: "Max 200 chars" },
+                solution: { type: "string", description: "Max 200 chars" },
+                customer: { type: "string", description: "Max 100 chars" },
+                model: { type: "string", enum: ["subscription", "one-time", "usage", "affiliate", "ads"] },
+                steps: { type: "array", items: { type: "string" }, description: "Exactly 3 steps" },
+                scores: {
+                  type: "object",
+                  properties: {
+                    shock: { type: "number" },
+                    viral: { type: "number" },
+                    leverage: { type: "number" },
+                    automation: { type: "number" },
+                    autonomy: { type: "number" },
+                    culture: { type: "number" },
+                    chaos: { type: "number" },
+                  },
+                  required: ["shock", "viral", "leverage", "automation", "autonomy", "culture", "chaos"],
+                  additionalProperties: false,
+                },
+                is_wildcard: { type: "boolean" },
+                idea_mode: { type: "string" },
+              },
+              required: ["id", "title", "pitch", "problem", "solution", "customer", "model", "steps", "scores"],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ["refined_ideas"],
+        additionalProperties: false,
+      },
+    },
+  };
 }
 
-// Repair JSON using model - returns parsed JSON or throws
-async function repairJsonWithModel(apiKey: string, rawText: string): Promise<any> {
-  const repairPrompt =
-    "Fix this into valid JSON only. Do not add new content. Preserve as much as possible. If truncated, remove the incomplete trailing item and close all brackets properly. Return ONLY valid JSON.";
+// Helper: parse tool call response, with fallback to content JSON extraction
+function parseToolCallResponse(data: any, toolName: string): any {
+  // Primary: tool_calls
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (toolCall?.function?.arguments) {
+    return JSON.parse(toolCall.function.arguments);
+  }
+  // Fallback: content (some models return JSON in content even with tool_choice)
+  const content = data.choices?.[0]?.message?.content;
+  if (content) {
+    const cleaned = content.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) return JSON.parse(jsonMatch[0]);
+  }
+  throw new Error(`No ${toolName} tool call or parseable content in response`);
+}
 
-  const repairedText = await callModel(
-    apiKey,
-    "You are a JSON repair assistant. Output JSON only.",
-    `${repairPrompt}\n\n---\n${rawText}`,
-    { maxTokens: 2000, temperature: 0.2 }
+// Helper: handle AI error responses
+function handleAIError(status: number, text: string, passLabel: string): Response | null {
+  if (status === 429) {
+    return new Response(
+      JSON.stringify({ error: "AI rate limit exceeded, please wait and try again.", code: "rate_limited" }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  if (status === 402) {
+    return new Response(
+      JSON.stringify({ error: "AI credits exhausted, please add funds.", code: "payment_required" }),
+      { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  console.error(`generate-founder-ideas: ${passLabel} AI error`, status, text);
+  return new Response(
+    JSON.stringify({ error: `AI generation failed in ${passLabel}` }),
+    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
-
-  return extractJSON(repairedText);
-}
-
-// Last-resort salvage: keep only complete objects inside refined_ideas
-function salvagePassBJsonLastCompleteObject(rawText: string): string | null {
-  console.warn("Pass B salvage used: truncated JSON");
-  
-  const cleaned = rawText.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
-  const keyIdx = cleaned.indexOf('"refined_ideas"');
-  if (keyIdx === -1) return null;
-  const arrStart = cleaned.indexOf("[", keyIdx);
-  if (arrStart === -1) return null;
-
-  // Find the first object AFTER the array bracket
-  const firstObjStart = cleaned.indexOf("{", arrStart);
-  if (firstObjStart === -1) return null;
-
-  // Walk the array and track depth/inString/escape
-  let depth = 0;
-  let inString = false;
-  let escape = false;
-  let lastObjEnd = -1;
-
-  for (let i = firstObjStart; i < cleaned.length; i++) {
-    const ch = cleaned[i];
-
-    if (inString) {
-      if (escape) {
-        escape = false;
-      } else if (ch === "\\") {
-        escape = true;
-      } else if (ch === '"') {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (ch === '"') {
-      inString = true;
-      continue;
-    }
-
-    if (ch === "{") depth++;
-    if (ch === "}") {
-      depth--;
-      if (depth === 0) {
-        lastObjEnd = i;
-      }
-    }
-
-    // Stop at closing bracket of refined_ideas array (depth=0, not in string, have at least one object)
-    if (ch === "]" && depth === 0 && !inString && lastObjEnd !== -1) {
-      break;
-    }
-  }
-
-  if (lastObjEnd === -1) return null;
-
-  // Slice from first object through last complete object
-  const arrBody = cleaned.slice(firstObjStart, lastObjEnd + 1);
-  return `{ "refined_ideas": [${arrBody}] }`;
 }
 
 serve(async (req) => {
@@ -746,81 +555,28 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
           { role: "system", content: resolvedPassAPrompt },
           { role: "user", content: passAMessage },
         ],
+        tools: [PASS_A_TOOL],
+        tool_choice: { type: "function", function: { name: "generate_raw_ideas" } },
       }),
     });
 
     if (!passAResponse.ok) {
       const status = passAResponse.status;
       const text = await passAResponse.text();
-      console.error("generate-founder-ideas: Pass A AI error", status, text);
-      
-      if (status === 429) {
-        return new Response(
-          JSON.stringify({ error: "AI rate limit exceeded, please wait and try again.", code: "rate_limited" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      if (status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted, please add funds.", code: "payment_required" }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      return new Response(
-        JSON.stringify({ error: "AI generation failed in Pass A" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      const errResp = handleAIError(status, text, "Pass A");
+      if (errResp) return errResp;
     }
 
     const passAData = await passAResponse.json();
-    const passAContent = passAData.choices?.[0]?.message?.content as string | undefined;
-
-    if (!passAContent) {
-      console.error("generate-founder-ideas: Pass A empty response");
-      return new Response(
-        JSON.stringify({ error: "Pass A returned empty response" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
 
     let rawIdeas: any[];
     try {
-      // Log raw content for debugging (first 500 chars)
-      console.log("generate-founder-ideas: Pass A raw response preview:", passAContent.slice(0, 500));
-      
-      const parsed = extractJSON(passAContent);
-      
-      // Handle various possible response formats
-      if (Array.isArray(parsed)) {
-        // Direct array response
-        rawIdeas = parsed;
-      } else if (parsed.raw_ideas && Array.isArray(parsed.raw_ideas)) {
-        // Expected format: { raw_ideas: [...] }
-        rawIdeas = parsed.raw_ideas;
-      } else if (parsed.ideas && Array.isArray(parsed.ideas)) {
-        // Alternate format: { ideas: [...] }
-        rawIdeas = parsed.ideas;
-      } else {
-        // Try to find any array property
-        const arrayProp = Object.values(parsed).find((v) => Array.isArray(v)) as any[] | undefined;
-        if (arrayProp && arrayProp.length > 0) {
-          rawIdeas = arrayProp;
-        } else {
-          console.error("generate-founder-ideas: Pass A response structure unexpected:", Object.keys(parsed));
-          return new Response(
-            JSON.stringify({ error: "Pass A response format unexpected" }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
-      }
+      const parsed = parseToolCallResponse(passAData, "generate_raw_ideas");
+      rawIdeas = parsed.raw_ideas || parsed.ideas || (Array.isArray(parsed) ? parsed : []);
     } catch (e) {
-      console.error("generate-founder-ideas: Pass A JSON parse error", e, "Content preview:", passAContent.slice(0, 300));
+      console.error("generate-founder-ideas: Pass A parse error", e);
       return new Response(
-        JSON.stringify({ 
-          error: "The AI response was incomplete. Please try generating ideas again.",
-          code: "ai_response_truncated",
-          retryable: true
-        }),
+        JSON.stringify({ error: "The AI response was incomplete. Please try generating ideas again.", code: "ai_response_truncated", retryable: true }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -841,6 +597,8 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
     console.log("generate-founder-ideas v7: Starting Pass B (Commercial Refinement)...");
 
     const passBSystemPrompt = buildPassBSystemPrompt(wildcardMode);
+    const ideaCount = 6;
+    const nonWildcardCount = wildcardMode ? 5 : 6;
 
     // Reduce Pass B payload size: only pass minimal raw idea fields
     const rawIdeasSlim = rawIdeas.map((idea: any, idx: number) => ({
@@ -852,11 +610,7 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
       mode: idea?.mode ?? idea?.idea_mode ?? "Standard",
     }));
 
-    const buildPassBMessage = (retryWithStricterInstruction = false) => {
-      const ideaCount = wildcardMode ? 6 : 6;
-      const nonWildcardCount = wildcardMode ? 5 : 6;
-
-      let message = `FOUNDER CONTEXT:
+    let passBMessage = `FOUNDER CONTEXT:
 ${JSON.stringify(founderPayload, null, 2)}
 
 RAW IDEAS FROM PASS A (${rawIdeasSlim.length} ideas; minimal fields):
@@ -866,116 +620,61 @@ TONE: ${tone}
 WILDCARD_MODE: ${wildcardMode}
 
 Select the TOP ${nonWildcardCount} ideas based on founder fit + first-dollar potential + excitement.
-Then rewrite them to match the STRICT schema.
+Refine them using the provided tool schema.
 
 HARD LIMITS:
 - refined_ideas must contain exactly ${ideaCount} items total.
-- problem max 240 chars
-- solution max 240 chars
-- ideal_customer max 160 chars
-- first_steps must be exactly 3 strings, each max 120 chars
-- If you exceed limits, shorten text.
-- Do NOT add extra fields.
-- Do NOT use markdown.
+- problem max 240 chars, solution max 240 chars, customer max 160 chars
+- steps must be exactly 3 strings, each max 120 chars
 `;
 
-      if (wildcardMode) {
-        message += `
-Add exactly one wildcard idea as the LAST item in refined_ideas.
-Mark it with is_wildcard=true and idea_mode="Wildcard".
-`;
-      }
-
-      if (retryWithStricterInstruction) {
-        message += `
-CRITICAL: You forgot the wildcard in your previous response.
-Add it as the LAST item. This is mandatory when WILDCARD_MODE is true.
-`;
-      }
-
-      message += `
-Return ONLY: { "refined_ideas": [...] }`;
-
-      return message;
-    };
-
-    // First Pass B attempt
-    let passBContent: string;
-    try {
-      passBContent = await callModel(
-        LOVABLE_API_KEY,
-        passBSystemPrompt,
-        buildPassBMessage(false),
-        { maxTokens: 6000, temperature: 0.6 }
-      );
-    } catch (err: any) {
-      const status = err.status;
-      console.error("generate-founder-ideas: Pass B AI error", status, err.body || err.message);
-      
-      if (status === 429) {
-        return new Response(
-          JSON.stringify({ error: "AI rate limit exceeded, please wait and try again.", code: "rate_limited" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      if (status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted, please add funds.", code: "payment_required" }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      return new Response(
-        JSON.stringify({ error: "AI generation failed in Pass B" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    if (wildcardMode) {
+      passBMessage += `\nAdd exactly one wildcard idea as the LAST item. Set is_wildcard=true and idea_mode="Wildcard".\n`;
     }
+
+    const passBTool = buildPassBTool(ideaCount);
+
+    const passBResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        max_tokens: 6000,
+        temperature: 0.6,
+        messages: [
+          { role: "system", content: passBSystemPrompt },
+          { role: "user", content: passBMessage },
+        ],
+        tools: [passBTool],
+        tool_choice: { type: "function", function: { name: "refine_ideas" } },
+      }),
+    });
+
+    if (!passBResponse.ok) {
+      const status = passBResponse.status;
+      const text = await passBResponse.text();
+      const errResp = handleAIError(status, text, "Pass B");
+      if (errResp) return errResp;
+    }
+
+    const passBData = await passBResponse.json();
 
     let refinedIdeas: any[] = [];
     try {
-      refinedIdeas = parseRefinedIdeas(passBContent);
+      const parsed = parseToolCallResponse(passBData, "refine_ideas");
+      refinedIdeas = parsed.refined_ideas || parsed.ideas || (Array.isArray(parsed) ? parsed : []);
     } catch (e) {
       console.error("generate-founder-ideas: Pass B parse error", e);
-      console.log("generate-founder-ideas: Pass B parse failed; attempting JSON repair");
-
-      // 1) Retry once with a JSON repair prompt (fast + cheap)
-      try {
-        const repaired = await repairJsonWithModel(LOVABLE_API_KEY, passBContent);
-        if (repaired.refined_ideas && Array.isArray(repaired.refined_ideas)) {
-          refinedIdeas = repaired.refined_ideas;
-        } else if (Array.isArray(repaired)) {
-          refinedIdeas = repaired;
-        }
-      } catch (e2) {
-        console.warn("generate-founder-ideas: JSON repair failed", e2);
-      }
-
-      // 2) Last-resort salvage: truncate to last complete object
-      if (!refinedIdeas || !Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
-        const salvaged = salvagePassBJsonLastCompleteObject(passBContent);
-        if (salvaged) {
-          try {
-            refinedIdeas = parseRefinedIdeas(salvaged);
-          } catch (e3) {
-            console.warn("generate-founder-ideas: salvage parse failed", e3);
-          }
-        }
-      }
-
-      // 3) Graceful failure (no unhandled exception)
-      if (!refinedIdeas || !Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
-        return new Response(
-          JSON.stringify({
-            error: "AI returned malformed JSON. Please retry.",
-            code: "parse_failed",
-            message: "AI returned malformed JSON. Please retry.",
-          }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      return new Response(
+        JSON.stringify({ error: "AI returned malformed response. Please retry.", code: "parse_failed", retryable: true }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     if (!Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
-      console.error("generate-founder-ideas: Pass B returned no ideas");
       return new Response(
         JSON.stringify({ error: "Pass B returned no refined ideas" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -985,36 +684,8 @@ Return ONLY: { "refined_ideas": [...] }`;
     // ===== WILDCARD SAFETY GUARD =====
     if (wildcardMode) {
       const hasWildcard = refinedIdeas.some((idea: any) => idea.is_wildcard === true);
-      
       if (!hasWildcard) {
-        console.log("generate-founder-ideas v7: Wildcard missing, retrying Pass B with stricter instruction...");
-        
-        // Retry with stricter instruction
-        try {
-          const retryContent = await callModel(
-            LOVABLE_API_KEY,
-            passBSystemPrompt,
-            buildPassBMessage(true),
-            { maxTokens: 6000, temperature: 0.6 }
-          );
-
-          try {
-            const retryIdeas = parseRefinedIdeas(retryContent);
-            if (Array.isArray(retryIdeas) && retryIdeas.length > 0) {
-              const retryHasWildcard = retryIdeas.some((idea: any) => idea.is_wildcard === true);
-              if (retryHasWildcard) {
-                refinedIdeas = retryIdeas;
-                console.log("generate-founder-ideas v7: Wildcard recovered on retry");
-              } else {
-                console.warn("generate-founder-ideas v7: Wildcard still missing after retry, proceeding without");
-              }
-            }
-          } catch (e) {
-            console.warn("generate-founder-ideas v7: Retry parse failed, proceeding without wildcard", e);
-          }
-        } catch (e) {
-          console.warn("generate-founder-ideas v7: Retry failed, proceeding without wildcard", e);
-        }
+        console.warn("generate-founder-ideas v7: Wildcard missing from tool response, proceeding without");
       }
     }
 
