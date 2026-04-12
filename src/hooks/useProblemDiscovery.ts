@@ -36,13 +36,19 @@ export function useProblemDiscovery() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await invokeAuthedFunction("discover-validated-problems", {
-        domain,
-        sub_domain: subDomain || undefined,
-        target_roles: targetRoles?.length ? targetRoles : undefined,
-      });
-      setResult(data as ProblemDiscoveryResult);
-      return data as ProblemDiscoveryResult;
+      const { data, error: fnError } = await invokeAuthedFunction<ProblemDiscoveryResult>(
+        "discover-validated-problems",
+        {
+          body: {
+            domain,
+            sub_domain: subDomain || undefined,
+            target_roles: targetRoles?.length ? targetRoles : undefined,
+          },
+        }
+      );
+      if (fnError) throw fnError;
+      setResult(data);
+      return data;
     } catch (err: any) {
       const msg = err?.message || "Failed to discover problems";
       setError(msg);
