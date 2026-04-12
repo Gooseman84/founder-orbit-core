@@ -530,6 +530,27 @@ const Ideas = () => {
           />
         </TabsContent>
 
+        <TabsContent value="problems">
+          <ProblemDiscoveryTab
+            selectedProblems={selectedProblems}
+            onToggleProblem={(id) =>
+              setSelectedProblems((prev) =>
+                prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+              )
+            }
+            onGenerateFromProblem={(problem: DiscoveredProblem) => {
+              setFocusArea(`Solve: ${problem.title} — ${problem.description}`);
+              setSelectedMode("focus");
+              setCurrentMode("focus");
+              setActiveTab("generated");
+              toast({
+                title: "Problem loaded",
+                description: `Generate ideas to solve: "${problem.title}"`,
+              });
+            }}
+          />
+        </TabsContent>
+
         <TabsContent value="library">
           <LibraryTab
             filteredLibraryIdeas={filteredLibraryIdeas}
