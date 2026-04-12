@@ -86,7 +86,7 @@ const IdeaDetail = () => {
   const { activeVenture: currentActiveVenture } = useVentureState();
   const [savedToLibrary, setSavedToLibrary] = useState(false);
   const fvsWasCalculating = useRef(false);
-
+  const { result: marketResult, isValidating: marketValidating, error: marketError, validate: validateMarket } = useMarketValidation();
   // Validation display props for FVS (use active venture if idea matches)
   const ventureIdForValidation = currentActiveVenture?.idea_id === id ? currentActiveVenture?.id : null;
   const { confidenceShift, lastValidatedAt, dimensionEvidenceCounts } = useValidationDisplayProps(ventureIdForValidation);
@@ -1069,7 +1069,18 @@ const IdeaDetail = () => {
           </CardContent>
         </Card>
       ) : null}
-
+      {/* Market Validation — real-time Perplexity-powered */}
+      <MarketValidationCard
+        result={marketResult}
+        isValidating={marketValidating}
+        error={marketError}
+        onValidate={() => validateMarket({
+          idea_title: idea.title,
+          idea_description: idea.description || idea.title,
+          target_customer: idea.target_customer || undefined,
+        })}
+        ideaTitle={idea.title}
+      />
 
 
 
