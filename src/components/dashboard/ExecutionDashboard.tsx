@@ -40,15 +40,6 @@ interface ExecutionDashboardProps {
   venture: Venture;
 }
 
-type MomentState = "STUCK" | "BUILDING_MOMENTUM" | "SCOPE_CREEPING" | "EXECUTION_PARALYSIS" | "APPROACHING_LAUNCH";
-
-const MOMENT_STATE_CONFIG: Record<MomentState, { label: string; borderClass: string; iconClass: string; badgeClass: string }> = {
-  STUCK:               { label: "You Seem Stuck",       borderClass: "border-l-amber-500",  iconClass: "text-amber-500",  badgeClass: "bg-amber-50 text-amber-700 border-amber-200" },
-  BUILDING_MOMENTUM:   { label: "Building Momentum",    borderClass: "border-l-green-500",  iconClass: "text-green-500",  badgeClass: "bg-green-50 text-green-700 border-green-200" },
-  SCOPE_CREEPING:      { label: "Scope Creep Detected", borderClass: "border-l-orange-500", iconClass: "text-orange-500", badgeClass: "bg-orange-50 text-orange-700 border-orange-200" },
-  EXECUTION_PARALYSIS: { label: "Execution Paralysis",  borderClass: "border-l-red-500",    iconClass: "text-red-500",    badgeClass: "bg-red-50 text-red-700 border-red-200" },
-  APPROACHING_LAUNCH:  { label: "Approaching Launch",   borderClass: "border-l-primary",    iconClass: "text-primary",    badgeClass: "bg-primary/10 text-primary border-primary/30" },
-};
 
 export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
   const navigate = useNavigate();
@@ -237,9 +228,6 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
         open={debuggerOpen}
         onClose={() => setDebuggerOpen(false)}
       />
-
-      {/* Mavrik Coaching Moment */}
-      <MavrikMomentCard ventureId={venture.id} />
 
       {/* Quick Access */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
