@@ -133,20 +133,7 @@ async function buildWorkspaceInput(supabase: any, userId: string, doc: any) {
       summary: "User started a manual document.",
     };
 
-    if (doc.source_type === "feed" && doc.source_id) {
-      const { data: feedItem, error: feedError } = await supabase
-        .from("feed_items")
-        .select("title, body")
-        .eq("id", doc.source_id)
-        .maybeSingle();
-
-      if (!feedError && feedItem) {
-        triggerContext = {
-          type: "feed",
-          summary: `${feedItem.title}: ${feedItem.body}`,
-        };
-      }
-    } else if (doc.source_type === "task" && doc.source_id) {
+    if (doc.source_type === "task" && doc.source_id) {
       const { data: task, error: taskError } = await supabase
         .from("tasks")
         .select("title, description")
