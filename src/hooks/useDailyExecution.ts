@@ -202,6 +202,17 @@ export function useDailyExecution(venture: Venture | null): UseDailyExecutionRes
       
       if (error) throw error;
       
+      // Trigger feedback loop: adapt execution strategy for tomorrow (non-blocking)
+      invokeAuthedFunction("adapt-execution-strategy", {
+        body: { ventureId },
+      }).then(({ error: strategyError }) => {
+        if (strategyError) {
+          console.warn("Strategy adaptation failed (non-critical):", strategyError);
+        } else {
+          console.log("Execution strategy adapted for tomorrow");
+        }
+      });
+      
       await refetchCheckin();
       return true;
     } catch (err) {
