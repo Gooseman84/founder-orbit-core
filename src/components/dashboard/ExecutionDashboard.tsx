@@ -24,6 +24,7 @@ import { useDailyExecution } from "@/hooks/useDailyExecution";
 import { ImplementationKitCard } from "@/components/implementationKit/ImplementationKitCard";
 import { VentureDNACard } from "@/components/dashboard/VentureDNACard";
 import { MavrikCoachingCard } from "@/components/dashboard/MavrikCoachingCard";
+import { VentureMilestoneTracker } from "@/components/dashboard/VentureMilestoneTracker";
 import { FounderPatternCard } from "@/components/patterns/FounderPatternCard";
 import { VentureDebugger } from "@/components/venture/VentureDebugger";
 import { VentureTimeline } from "@/components/dashboard/VentureTimeline";
@@ -159,6 +160,9 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
 
       {/* Venture DNA */}
       <VentureDNACard venture={venture} commitmentProgress={commitmentProgress} />
+
+      {/* Milestone Progress */}
+      <VentureMilestoneTracker ventureId={venture.id} ideaId={venture.idea_id} />
 
       {/* Venture Timeline */}
       <VentureTimeline venture={venture} />

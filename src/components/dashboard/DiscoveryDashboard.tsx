@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { NorthStarCard } from "./NorthStarCard";
+import { VentureMilestoneTracker } from "./VentureMilestoneTracker";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -85,6 +86,9 @@ export function DiscoveryDashboard() {
           <UpgradeButton variant="full" />
         </div>
       )}
+
+      {/* Milestone Progress */}
+      <VentureMilestoneTracker />
 
       {/* North Star Card */}
       <NorthStarCard />
