@@ -677,16 +677,43 @@ function FinalCTA({ onAuth }: { onAuth: () => void }) {
    SOCIAL PROOF BAR
    ═══════════════════════════════════════════ */
 function SocialProof() {
+  const testimonials = [
+    { name: "Sarah K.", role: "First-time Founder", quote: "I went from 10 scattered ideas to one focused venture in 48 hours. The AI interview understood my strengths better than I did." },
+    { name: "Marcus D.", role: "Side-Project Builder", quote: "The Financial Viability Score killed two of my ideas — and saved me months. The one it greenlit is now generating revenue." },
+    { name: "Priya R.", role: "Career Pivoter", quote: "I was drowning in possibilities. TrueBlazer forced me to commit and gave me the execution roadmap I couldn't build alone." },
+  ];
+
   return (
-    <div className="px-4 py-6 md:px-12 md:py-8" style={{ background: "var(--ink)", borderBottom: "1px solid var(--border-subtle)" }}>
-      <div style={{ maxWidth: 800, margin: "0 auto" }}>
-        <p className="text-sm sm:text-base" style={{ textAlign: "center", lineHeight: 1.7, color: "var(--silver)", fontFamily: "'DM Sans', sans-serif", fontWeight: 300 }}>
+    <section className="px-4 py-16 md:px-12 md:py-24" style={{ background: "var(--ink)", borderBottom: "1px solid var(--border-subtle)" }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+        {/* Credibility bar */}
+        <p className="text-sm sm:text-base" style={{ textAlign: "center", lineHeight: 1.7, color: "var(--silver)", fontFamily: "'DM Sans', sans-serif", fontWeight: 300, marginBottom: 48 }}>
           Built by a{" "}
           <span style={{ color: "var(--gold)", fontWeight: 500 }}>CFA Charterholder &amp; CFP</span>{" "}
           who evaluates business models for a living. The only founder intelligence platform designed to be consumed by the AI agents building your product.
         </p>
+
+        {/* Testimonials */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {testimonials.map((t, i) => (
+            <div key={i} style={{ border: "1px solid var(--border-subtle)", padding: 24, background: "var(--card-bg)" }}>
+              <p className="text-sm" style={{ color: "var(--white-dim)", lineHeight: 1.7, fontStyle: "italic", marginBottom: 16 }}>
+                "{t.quote}"
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 32, height: 32, background: "var(--gold-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Mono', monospace", fontSize: "0.7rem", color: "var(--gold)", fontWeight: 500 }}>
+                  {t.name[0]}
+                </div>
+                <div>
+                  <span className="text-sm" style={{ color: "var(--white)", fontWeight: 500, display: "block" }}>{t.name}</span>
+                  <span style={{ fontSize: "0.7rem", color: "var(--silver)", fontFamily: "'DM Mono', monospace" }}>{t.role}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
