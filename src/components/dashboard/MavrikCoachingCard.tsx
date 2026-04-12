@@ -174,7 +174,14 @@ export function MavrikCoachingCard({ venture }: MavrikCoachingCardProps) {
   };
 
   return (
-    <div className={cn("card-gold-accent border-l-2", content.borderClass)}>
+    <div className={cn("card-gold-accent border-l-2 relative", content.borderClass)}>
+      <button
+        onClick={handleDismiss}
+        className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="Dismiss for today"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
       <button
         className="w-full flex items-center gap-2 p-4 text-left min-h-[44px]"
         onClick={() => setCollapsed((c) => !c)}
