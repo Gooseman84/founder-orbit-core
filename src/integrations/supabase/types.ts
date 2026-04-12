@@ -155,33 +155,6 @@ export type Database = {
         }
         Relationships: []
       }
-      check_ins: {
-        Row: {
-          created_at: string
-          feelings: string | null
-          id: string
-          user_id: string
-          what_did: string | null
-          what_learned: string | null
-        }
-        Insert: {
-          created_at?: string
-          feelings?: string | null
-          id?: string
-          user_id: string
-          what_did?: string | null
-          what_learned?: string | null
-        }
-        Update: {
-          created_at?: string
-          feelings?: string | null
-          id?: string
-          user_id?: string
-          what_did?: string | null
-          what_learned?: string | null
-        }
-        Relationships: []
-      }
       daily_reflections: {
         Row: {
           ai_micro_actions: Json | null
@@ -387,48 +360,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      feed_items: {
-        Row: {
-          body: string
-          created_at: string
-          cta_action: string | null
-          cta_label: string | null
-          id: string
-          idea_id: string | null
-          metadata: Json | null
-          title: string
-          type: string
-          user_id: string
-          xp_reward: number | null
-        }
-        Insert: {
-          body: string
-          created_at?: string
-          cta_action?: string | null
-          cta_label?: string | null
-          id?: string
-          idea_id?: string | null
-          metadata?: Json | null
-          title: string
-          type: string
-          user_id: string
-          xp_reward?: number | null
-        }
-        Update: {
-          body?: string
-          created_at?: string
-          cta_action?: string | null
-          cta_label?: string | null
-          id?: string
-          idea_id?: string | null
-          metadata?: Json | null
-          title?: string
-          type?: string
-          user_id?: string
-          xp_reward?: number | null
-        }
-        Relationships: []
       }
       financial_viability_scores: {
         Row: {
@@ -1332,30 +1263,6 @@ export type Database = {
         }
         Relationships: []
       }
-      onboarding_analytics: {
-        Row: {
-          created_at: string | null
-          event_type: string
-          id: string
-          metadata: Json | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          event_type: string
-          id?: string
-          metadata?: Json | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          event_type?: string
-          id?: string
-          metadata?: Json | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       opportunity_scores: {
         Row: {
           created_at: string
@@ -1431,45 +1338,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      pulse_checks: {
-        Row: {
-          ai_insight: string | null
-          created_at: string
-          emotional_state: string | null
-          energy_level: number | null
-          id: string
-          metadata: Json | null
-          recommended_action: string | null
-          reflection: string | null
-          stress_level: number | null
-          user_id: string
-        }
-        Insert: {
-          ai_insight?: string | null
-          created_at?: string
-          emotional_state?: string | null
-          energy_level?: number | null
-          id?: string
-          metadata?: Json | null
-          recommended_action?: string | null
-          reflection?: string | null
-          stress_level?: number | null
-          user_id: string
-        }
-        Update: {
-          ai_insight?: string | null
-          created_at?: string
-          emotional_state?: string | null
-          energy_level?: number | null
-          id?: string
-          metadata?: Json | null
-          recommended_action?: string | null
-          reflection?: string | null
-          stress_level?: number | null
-          user_id?: string
-        }
-        Relationships: []
       }
       support_tickets: {
         Row: {
