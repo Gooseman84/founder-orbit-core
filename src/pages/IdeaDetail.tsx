@@ -1068,15 +1068,8 @@ const IdeaDetail = () => {
         </Card>
       ) : null}
 
-      {/* Variant Generator Section */}
-      {user && founderProfile && (
-        <IdeaVariantGenerator
-          idea={idea}
-          userId={user.id}
-          founderProfile={founderProfile}
-          onVariantsGenerated={(variants) => setGeneratedVariants((prev) => [...prev, ...variants])}
-        />
-      )}
+
+
 
       <ProUpgradeModal 
         open={showPaywall} 
