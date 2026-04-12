@@ -272,6 +272,44 @@ export type Database = {
         }
         Relationships: []
       }
+      execution_strategies: {
+        Row: {
+          behavioral_signals: Json
+          created_at: string
+          id: string
+          strategy: Json
+          updated_at: string
+          user_id: string
+          venture_id: string
+        }
+        Insert: {
+          behavioral_signals?: Json
+          created_at?: string
+          id?: string
+          strategy?: Json
+          updated_at?: string
+          user_id: string
+          venture_id: string
+        }
+        Update: {
+          behavioral_signals?: Json
+          created_at?: string
+          id?: string
+          strategy?: Json
+          updated_at?: string
+          user_id?: string
+          venture_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_strategies_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: true
+            referencedRelation: "ventures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_prds: {
         Row: {
           acceptance_criteria: Json | null
@@ -1138,6 +1176,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      market_validations: {
+        Row: {
+          competitor_landscape: Json
+          created_at: string
+          demand_signals: Json
+          id: string
+          idea_id: string
+          market_timing: string | null
+          raw_response: Json | null
+          user_id: string
+          validated_at: string
+          validation_score: number
+        }
+        Insert: {
+          competitor_landscape?: Json
+          created_at?: string
+          demand_signals?: Json
+          id?: string
+          idea_id: string
+          market_timing?: string | null
+          raw_response?: Json | null
+          user_id: string
+          validated_at?: string
+          validation_score?: number
+        }
+        Update: {
+          competitor_landscape?: Json
+          created_at?: string
+          demand_signals?: Json
+          id?: string
+          idea_id?: string
+          market_timing?: string | null
+          raw_response?: Json | null
+          user_id?: string
+          validated_at?: string
+          validation_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_validations_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       master_prompts: {
         Row: {

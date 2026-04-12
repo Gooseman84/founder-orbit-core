@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
+import { useAuth } from "./useAuth";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface DemandSignal {
   source: string;
@@ -24,6 +26,7 @@ export interface MarketValidationResult {
 }
 
 export const useMarketValidation = () => {
+  const { user } = useAuth();
   const [result, setResult] = useState<MarketValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +34,7 @@ export const useMarketValidation = () => {
   const validate = useCallback(async (params: {
     idea_title: string;
     idea_description: string;
+    idea_id?: string;
     target_customer?: string;
     founder_domain?: string;
   }) => {
@@ -47,6 +51,25 @@ export const useMarketValidation = () => {
       if (!data) throw new Error("No data returned");
 
       setResult(data);
+
+      // Persist to market_validations table for the feedback loop
+      if (user?.id && params.idea_id) {
+        supabase
+          .from("market_validations")
+          .insert({
+            user_id: user.id,
+            idea_id: params.idea_id,
+            validation_score: data.validation_score,
+            demand_signals: data.demand_signals as any,
+            competitor_landscape: data.competitor_landscape as any,
+            market_timing: data.market_timing,
+            raw_response: data as any,
+          })
+          .then(({ error: dbErr }) => {
+            if (dbErr) console.warn("Failed to persist market validation:", dbErr);
+          });
+      }
+
       return data;
     } catch (err: any) {
       const message = err?.message || "Market validation failed";
@@ -55,7 +78,7 @@ export const useMarketValidation = () => {
     } finally {
       setIsValidating(false);
     }
-  }, []);
+  }, [user]);
 
   return { result, isValidating, error, validate };
 };
