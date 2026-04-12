@@ -122,7 +122,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Main Content */}
       <main className="pt-14 pb-16 md:pt-0 md:pb-0 md:pl-[220px] min-w-0 overflow-x-hidden">
-        <div className="py-10 px-3 md:px-12 max-w-7xl overflow-hidden break-words">
+        <div className="py-6 sm:py-10 px-4 sm:px-6 md:px-12 max-w-7xl overflow-hidden break-words">
           <NextStepBanner />
           {children}
         </div>
