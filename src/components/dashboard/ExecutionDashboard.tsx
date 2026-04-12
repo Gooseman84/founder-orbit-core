@@ -171,6 +171,9 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
       {/* Venture DNA */}
       <VentureDNACard venture={venture} commitmentProgress={commitmentProgress} />
 
+      {/* Venture Timeline */}
+      <VentureTimeline venture={venture} />
+
       {/* Mavrik Coaching Card */}
       <MavrikCoachingCard venture={venture} />
 
