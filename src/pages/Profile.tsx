@@ -1,12 +1,9 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFounderProfile } from "@/hooks/useFounderProfile";
-import { useXP } from "@/hooks/useXP";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LevelBadge } from "@/components/shared/LevelBadge";
-import { XpProgressBar } from "@/components/shared/XpProgressBar";
 import { ProfileEditDrawer, ProfileSection } from "@/components/profile/ProfileEditDrawer";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ContextInspector from "@/pages/ContextInspector";
@@ -128,7 +125,7 @@ function SectionCard({
 const Profile = () => {
   const navigate = useNavigate();
   const { profile, loading, error, refresh } = useFounderProfile();
-  const { xpSummary, loading: xpLoading } = useXP();
+  
 
   const [editSection, setEditSection] = useState<ProfileSection | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -212,27 +209,8 @@ const Profile = () => {
               Everything below powers your FVS, Mavrik interview, and all AI recommendations.
             </p>
           </div>
-          {!xpLoading && xpSummary && (
-            <LevelBadge level={xpSummary.level} />
-          )}
         </div>
       </div>
-
-      {/* XP Progress */}
-      {!xpLoading && xpSummary && (
-        <div
-          className="border p-5"
-          style={{ borderColor: "hsl(240 10% 14%)", background: "hsl(240 12% 7%)" }}
-        >
-          <XpProgressBar
-            totalXp={xpSummary.totalXp}
-            level={xpSummary.level}
-            nextLevelXp={xpSummary.nextLevelXp}
-            currentLevelMinXp={xpSummary.currentLevelMinXp}
-            progressPercent={xpSummary.progressPercent}
-          />
-        </div>
-      )}
 
       {/* Mavrik Interview Status Card */}
       <div

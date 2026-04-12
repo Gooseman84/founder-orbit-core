@@ -31,9 +31,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Ideas = lazy(() => import("./pages/Ideas"));
 const IdeaDetail = lazy(() => import("./pages/IdeaDetail"));
 const CompareIdeas = lazy(() => import("./pages/CompareIdeas"));
-const FusionLab = lazy(() => import("./pages/FusionLab"));
 const Tasks = lazy(() => import("./pages/Tasks"));
-const Radar = lazy(() => import("./pages/Radar"));
 const Workspace = lazy(() => import("./pages/Workspace"));
 const Blueprint = lazy(() => import("./pages/Blueprint"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -128,17 +126,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/fusion-lab"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <FusionLab />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            {/* Safety Redirects for Legacy Routes */}
+            <Route path="/fusion-lab" element={<Navigate to="/ideas" replace />} />
             <Route path="/onboarding" element={<DeprecatedRedirect to="/discover" label="structured onboarding" />} />
             <Route path="/onboarding/*" element={<DeprecatedRedirect to="/discover" label="structured onboarding" />} />
             <Route path="/pulse" element={<Navigate to="/dashboard" replace />} />
@@ -171,16 +159,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/radar"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <Radar />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/radar" element={<Navigate to="/dashboard" replace />} />
             <Route
               path="/profile"
               element={

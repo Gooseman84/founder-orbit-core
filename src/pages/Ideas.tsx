@@ -14,7 +14,6 @@ import { useVentureState } from "@/hooks/useVentureState";
 import { useIdeaSessionStore } from "@/store/ideaSessionStore";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { MarketDomainViewer } from "@/components/admin/MarketDomainViewer";
-import { MarketSignalModal } from "@/components/ideas/MarketSignalModal";
 import { ImportIdeaModal } from "@/components/ideas/ImportIdeaModal";
 import { type SourceTypeFilter } from "@/components/ideas/SourceTypeBadge";
 import { GeneratedTab } from "@/components/ideas/GeneratedTab";
@@ -26,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PLAN_ERROR_CODES } from "@/config/plans";
 import type { PaywallReasonCode } from "@/config/paywallCopy";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Scale, Sparkles, Combine, Lock, TrendingUp, Upload, X } from "lucide-react";
+import { Scale, Sparkles, Lock, TrendingUp, Upload, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 import { PageHelp } from "@/components/shared/PageHelp";
@@ -89,7 +88,6 @@ const Ideas = () => {
   const [activeTab, setActiveTab] = useState<string>("generated");
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReasonCode, setPaywallReasonCode] = useState<PaywallReasonCode | undefined>();
-  const [showMarketSignalModal, setShowMarketSignalModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [newlyImportedIds, setNewlyImportedIds] = useState<string[]>([]);
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
@@ -436,22 +434,6 @@ const Ideas = () => {
           <Button
             onClick={() => {
               if (!hasPro) { setPaywallReasonCode("FEATURE_REQUIRES_PRO"); setShowPaywall(true); return; }
-              setShowMarketSignalModal(true);
-            }}
-            variant="outline"
-            size="sm"
-            className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
-            disabled={!canAccessIdeationTools && hasPro}
-            title={!hasPro ? "Upgrade to Pro to unlock Market Pain signals" : ideationDisabledReason || undefined}
-          >
-            {!hasPro && <Lock className="w-3 h-3" />}
-            <TrendingUp className="w-4 h-4" />
-            <span className="hidden sm:inline">Market Pain</span>
-            <span className="sm:hidden">Market</span>
-          </Button>
-          <Button
-            onClick={() => {
-              if (!hasPro) { setPaywallReasonCode("FEATURE_REQUIRES_PRO"); setShowPaywall(true); return; }
               setShowImportModal(true);
             }}
             variant="outline"
@@ -464,21 +446,6 @@ const Ideas = () => {
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">Import My Idea</span>
             <span className="sm:hidden">Import</span>
-          </Button>
-          <Button
-            onClick={() => {
-              if (!hasPro) { setPaywallReasonCode("FUSION_REQUIRES_PRO"); setShowPaywall(true); return; }
-              navigate("/fusion-lab");
-            }}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            title={!hasPro ? "Pro feature" : undefined}
-          >
-            {!hasPro && <Lock className="w-3 h-3" />}
-            <Combine className="w-4 h-4" />
-            <span className="hidden sm:inline">Fusion Lab</span>
-            <span className="sm:hidden">Fusion</span>
           </Button>
           {libraryIdeas.length >= 2 && (
             <Button
@@ -586,7 +553,6 @@ const Ideas = () => {
 
       <ProUpgradeModal open={showPaywall} onClose={handleClosePaywall} reasonCode={paywallReasonCode} />
       <MarketDomainViewer />
-      <MarketSignalModal open={showMarketSignalModal} onClose={() => setShowMarketSignalModal(false)} onSuccess={handleMarketSignalSuccess} />
       <ImportIdeaModal open={showImportModal} onOpenChange={setShowImportModal} onSuccess={handleImportSuccess} />
       <PageHelp
         title="Idea Lab"

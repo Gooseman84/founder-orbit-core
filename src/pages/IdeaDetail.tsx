@@ -15,7 +15,6 @@ import { FinancialViabilityScore } from "@/components/opportunity/FinancialViabi
 import { useFinancialViabilityScore } from "@/hooks/useFinancialViabilityScore";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
 import { PaywallModal } from "@/components/billing/PaywallModal";
-import { IdeaVariantGenerator } from "@/components/ideas/IdeaVariantGenerator";
 import { IdeaOptimizerBar } from "@/components/shared/IdeaOptimizerBar";
 import { V6MetricsGrid } from "@/components/shared/V6MetricBadge";
 import { ModeBadge } from "@/components/shared/ModeBadge";
@@ -1069,15 +1068,8 @@ const IdeaDetail = () => {
         </Card>
       ) : null}
 
-      {/* Variant Generator Section */}
-      {user && founderProfile && (
-        <IdeaVariantGenerator
-          idea={idea}
-          userId={user.id}
-          founderProfile={founderProfile}
-          onVariantsGenerated={(variants) => setGeneratedVariants((prev) => [...prev, ...variants])}
-        />
-      )}
+
+
 
       <ProUpgradeModal 
         open={showPaywall} 

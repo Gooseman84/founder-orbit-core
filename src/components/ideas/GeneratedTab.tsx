@@ -3,7 +3,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { IdeaScoredCard } from "@/components/ideas/IdeaScoredCard";
 import { EmptyIdeasState } from "@/components/ideas/EmptyIdeasState";
 import { IdeaFilters, type IdeaFiltersState } from "@/components/ideas/IdeaFilters";
-import { IdeaFusionPanel } from "@/components/ideas/IdeaFusionPanel";
 import { ModeSelector, type IdeaMode } from "@/components/ideas/ModeSelector";
 import { SORT_OPTIONS, type SortMode } from "./ideaUtils";
 import {
@@ -208,15 +207,6 @@ export function GeneratedTab({
         <EmptyIdeasState onGenerateIdeas={onGenerateIdeas} isGenerating={isGeneratingFounderIdeas} />
       )}
 
-      {/* Fusion Panel - Pro only */}
-      {hasPro && (libraryIdeas.length + sessionIdeas.length) >= 2 && (
-        <IdeaFusionPanel
-          ideas={libraryIdeas}
-          sessionIdeas={sessionIdeas}
-          showSessionGroup
-          onFusionComplete={onFusionComplete}
-        />
-      )}
     </div>
   );
 }

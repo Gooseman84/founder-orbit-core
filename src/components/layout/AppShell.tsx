@@ -4,10 +4,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarNav } from "./SidebarNav";
 import { MobileBottomNav } from "./MobileBottomNav";
-import { LevelBadge } from "@/components/shared/LevelBadge";
 import { HelpPopover } from "@/components/layout/HelpPopover";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useXP } from "@/hooks/useXP";
 import { useOnboardingGuard } from "@/hooks/useOnboardingGuard";
 import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { NextStepBanner } from "@/components/shared/NextStepBanner";
@@ -19,7 +16,6 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { xpSummary, loading } = useXP();
   const location = useLocation();
   useOnboardingGuard();
 
@@ -59,11 +55,6 @@ export function AppShell({ children }: AppShellProps) {
 
           <div className="w-10 flex items-center justify-end gap-1">
             <HelpPopover />
-            {loading ? (
-              <Skeleton className="h-6 w-16" />
-            ) : xpSummary ? (
-              <LevelBadge level={xpSummary.level} />
-            ) : null}
           </div>
         </div>
       </header>
@@ -73,7 +64,6 @@ export function AppShell({ children }: AppShellProps) {
         className="fixed left-0 top-0 bottom-0 w-[220px] border-r border-border overflow-y-auto hidden md:flex md:flex-col z-40"
         style={{ background: "hsl(240 14% 4%)" }}
       >
-        {/* Logo */}
         <div className="flex items-center h-[60px] px-6 border-b border-border shrink-0">
           <h1 className="font-display text-[1.25rem] font-bold">
             <span className="text-foreground">True</span>
@@ -81,12 +71,10 @@ export function AppShell({ children }: AppShellProps) {
           </h1>
         </div>
 
-        {/* Nav */}
         <div className="flex-1 overflow-y-auto">
           <SidebarNav />
         </div>
 
-        {/* Support */}
         <div className="px-5 py-3 border-t border-border">
           <a
             href="mailto:support@trueblazer.ai"
