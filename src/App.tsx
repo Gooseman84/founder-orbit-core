@@ -126,17 +126,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/fusion-lab"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <FusionLab />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            {/* Safety Redirects for Legacy Routes */}
+            <Route path="/fusion-lab" element={<Navigate to="/ideas" replace />} />
             <Route path="/onboarding" element={<DeprecatedRedirect to="/discover" label="structured onboarding" />} />
             <Route path="/onboarding/*" element={<DeprecatedRedirect to="/discover" label="structured onboarding" />} />
             <Route path="/pulse" element={<Navigate to="/dashboard" replace />} />
@@ -169,16 +159,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/radar"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <Radar />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/radar" element={<Navigate to="/dashboard" replace />} />
             <Route
               path="/profile"
               element={
