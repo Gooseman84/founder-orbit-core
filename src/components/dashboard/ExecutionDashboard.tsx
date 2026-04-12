@@ -18,8 +18,6 @@ import {
   Sparkles,
   Loader2,
   AlertCircle,
-  Brain,
-  Zap,
 } from "lucide-react";
 import type { Venture } from "@/types/venture";
 import { useDailyExecution } from "@/hooks/useDailyExecution";
