@@ -68,7 +68,7 @@ export function DiscoveryDashboard() {
       {/* Page Header */}
       <div>
         <div className="eyebrow mb-3">YOUR LAUNCHPAD</div>
-        <h1 className="font-display text-[2.5rem] font-bold leading-tight text-foreground">
+        <h1 className="font-display text-[1.75rem] sm:text-[2.5rem] font-bold leading-tight text-foreground">
           Find Your <em className="text-primary not-italic" style={{ fontStyle: "italic" }}>North Star</em>
         </h1>
         <p className="mt-2 text-[0.95rem] font-light text-muted-foreground">
@@ -78,7 +78,7 @@ export function DiscoveryDashboard() {
 
       {/* Pro Upgrade CTA */}
       {isFree && (
-        <div className="card-gold-accent p-5 flex items-center justify-between gap-3">
+        <div className="card-gold-accent p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Crown className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium">Unlock TrueBlazer Pro</span>
@@ -94,9 +94,9 @@ export function DiscoveryDashboard() {
       <NorthStarCard />
 
       {/* Stat Grid — workspace + top score */}
-      <div className="grid gap-4 grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2">
         <div
-          className="card-gold-accent p-5 cursor-pointer transition-colors hover:bg-secondary"
+          className="card-gold-accent p-4 sm:p-5 cursor-pointer transition-colors hover:bg-secondary"
           onClick={() => navigate("/workspace")}
         >
           <div className="flex items-center gap-2 mb-3">
@@ -112,7 +112,7 @@ export function DiscoveryDashboard() {
         </div>
 
         <div
-          className="card-gold-accent p-5 cursor-pointer transition-colors hover:bg-secondary"
+          className="card-gold-accent p-4 sm:p-5 cursor-pointer transition-colors hover:bg-secondary"
           onClick={() => navigate("/ideas")}
         >
           <div className="flex items-center gap-2 mb-3">
@@ -122,7 +122,7 @@ export function DiscoveryDashboard() {
           {loadingScore ? (
             <Skeleton className="h-8 w-16" />
           ) : highestScore ? (
-            <span className="font-display text-[2.5rem] font-bold text-primary">{highestScore.total_score}</span>
+            <span className="font-display text-[2rem] sm:text-[2.5rem] font-bold text-primary">{highestScore.total_score}</span>
           ) : (
             <span className="font-display text-[2rem] font-bold text-muted-foreground">—</span>
           )}
@@ -133,7 +133,7 @@ export function DiscoveryDashboard() {
       </div>
 
       {/* Primary Actions */}
-      <div className="grid gap-3 grid-cols-2">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
         <button
           className="py-3 px-6 bg-primary text-primary-foreground font-sans font-medium text-[0.85rem] tracking-[0.06em] uppercase transition-colors hover:brightness-110 flex items-center justify-center gap-2"
           onClick={() => navigate("/ideas")}
