@@ -121,6 +121,17 @@ export function MavrikCoachingCard({ venture }: MavrikCoachingCardProps) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
+  const today = new Date().toISOString().split("T")[0];
+  const dismissKey = `mavrik-coaching-dismissed-${venture.id}-${today}`;
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem(dismissKey) === "1"; } catch { return false; }
+  });
+
+  const handleDismiss = () => {
+    try { localStorage.setItem(dismissKey, "1"); } catch {}
+    setDismissed(true);
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ["founder-moment-state", venture.id],
     queryFn: async () => {
