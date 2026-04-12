@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowLeft, Sparkles, Star, StarOff, Clock, Users, BarChart3, Target, TrendingUp, GitMerge, AlertCircle, Lightbulb, ListChecks, Radio, Upload, MoreVertical, RefreshCw, Rocket, Heart, Lock } from "lucide-react";
+import { useMarketValidation } from "@/hooks/useMarketValidation";
+import { MarketValidationCard } from "@/components/ideas/MarketValidationCard";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useValidationDisplayProps } from "@/hooks/useValidationDisplayProps";
 import { useRef } from "react";
