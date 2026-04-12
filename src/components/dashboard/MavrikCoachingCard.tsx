@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
