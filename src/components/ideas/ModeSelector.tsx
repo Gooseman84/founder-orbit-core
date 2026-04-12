@@ -35,7 +35,7 @@ export function ModeSelector({
         <h3 className="font-semibold text-sm">Generation Mode</h3>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         {IDEA_MODES.map((option) => {
           const Icon = MODE_ICONS[option.mode];
           const isSelected = selectedMode === option.mode;

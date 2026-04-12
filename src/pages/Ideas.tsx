@@ -460,7 +460,7 @@ const Ideas = () => {
 
       {/* Tabbed View */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <div className="flex gap-1">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide -mx-1 px-1">
           <button
             onClick={() => setActiveTab("generated")}
             className={`font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase px-4 py-2.5 border transition-colors ${

@@ -42,7 +42,7 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar, has
 
   return (
     <div
-      className={`relative flex flex-col justify-between p-7 border transition-all duration-200 group cursor-pointer ${
+      className={`relative flex flex-col justify-between p-5 sm:p-7 border transition-all duration-200 group cursor-pointer ${
         isNorthStar
           ? "border-primary/50"
           : "border-border hover:border-l-2 hover:border-l-primary hover:bg-secondary"
@@ -131,7 +131,7 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar, has
       )}
 
       {/* Actions */}
-      <div className="flex gap-2 mt-4 pt-3 border-t border-border" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-border" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={() => navigate(`/ideas/${idea.id}`)}
           className="flex items-center gap-1.5 bg-primary text-primary-foreground font-medium text-[0.78rem] tracking-[0.06em] uppercase px-5 py-2.5 transition-opacity hover:opacity-90"

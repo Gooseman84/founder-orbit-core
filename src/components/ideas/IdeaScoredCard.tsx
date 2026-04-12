@@ -33,7 +33,7 @@ export function IdeaScoredCard({
   const isV6 = isV6Idea(idea);
 
   return (
-    <div className="relative flex flex-col justify-between p-7 border border-border transition-all duration-200 group hover:bg-secondary hover:border-l-2 hover:border-l-primary" style={{ background: "hsl(240 12% 7%)" }}>
+    <div className="relative flex flex-col justify-between p-5 sm:p-7 border border-border transition-all duration-200 group hover:bg-secondary hover:border-l-2 hover:border-l-primary" style={{ background: "hsl(240 12% 7%)" }}>
       <div className="space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
@@ -120,7 +120,7 @@ export function IdeaScoredCard({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-2 mt-4 pt-3 border-t border-border">
+      <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-border">
         <button
           onClick={onSave}
           disabled={isSaved || isSaving}
