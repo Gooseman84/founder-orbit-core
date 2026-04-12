@@ -684,10 +684,6 @@ serve(async (req) => {
         ...profileRow.profile,
         workPersonality: profileRow.work_personality || [],
         creatorPlatforms: profileRow.creator_platforms || [],
-        edgyMode: profileRow.edgy_mode || "safe",
-        wantsMoneySystems: profileRow.wants_money_systems || false,
-        openToPersonas: profileRow.open_to_personas || false,
-        openToMemeticIdeas: profileRow.open_to_memetic_ideas || false,
       },
       contextSummary,
     };
