@@ -155,6 +155,7 @@ export function MavrikCoachingCard({ venture }: MavrikCoachingCardProps) {
     );
   }
 
+  if (dismissed) return null;
   if (!data?.state || data.state === "BUILDING_MOMENTUM" || !data.signals) return null;
 
   const content = getCardContent(data.state, data.signals);
