@@ -580,13 +580,13 @@ const Ideas = () => {
       <PageHelp
         title="Idea Lab"
         bullets={[
-          "Switch between 'Generated' and 'Library' tabs — generated ideas are session-only until you save them.",
-          "Choose a generation mode (Breadth, Deep Niche, Contrarian, etc.) to control what kind of ideas Mavrik produces.",
+          "Switch between 'Generated', 'Problems', and 'Library' tabs — generated ideas are session-only until you save them.",
+          "Choose a generation mode (Breadth, Focus, or Adjacent) to control what kind of ideas Mavrik produces.",
           "Use the focus area field to steer generation toward a specific industry, skill, or problem space.",
           "Save ideas to your Library to keep them across sessions, then click any card for deep-dive analysis.",
           "Import your own idea or generate Market Signal ideas based on real community pain points.",
           "Filter and sort ideas by archetype, source type, or fit score to find the best matches quickly.",
-          "Use Fusion Lab to combine two saved ideas into a hybrid concept.",
+          "Market validation badges show real evidence scores when available — look for the MKT badge on cards.",
         ]}
       />
     </div>

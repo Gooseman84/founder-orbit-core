@@ -4,6 +4,7 @@ import { V6MetricsInline } from "@/components/shared/V6MetricBadge";
 import { SourceTypeBadge } from "@/components/ideas/SourceTypeBadge";
 import { PainThemesPanel } from "@/components/ideas/PainThemesPanel";
 import { FinancialViabilityScoreInline } from "@/components/opportunity/FinancialViabilityScore";
+import { MarketValidationBadge } from "@/components/ideas/MarketValidationBadge";
 import type { Idea } from "@/hooks/useIdeas";
 
 interface LibraryIdeaCardProps {
@@ -110,6 +111,9 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar, has
           </span>
         )}
       </div>
+
+      {/* Market Validation Badge */}
+      <MarketValidationBadge ideaId={idea.id} size="sm" />
 
       {/* V6 Metrics */}
       <V6MetricsInline
