@@ -47,7 +47,7 @@ export function LibraryIdeaCard({ idea, onDelete, onPromote, onSetNorthStar, has
           ? "border-primary/50"
           : "border-border hover:border-l-2 hover:border-l-primary hover:bg-secondary"
       }`}
-      style={{ background: isNorthStar ? undefined : "hsl(240 12% 7%)" }}>
+      style={{ background: isNorthStar ? undefined : "hsl(240 12% 7%)" }}
       onClick={() => navigate(`/ideas/${idea.id}`)}
     >
       {/* Active venture top accent */}
