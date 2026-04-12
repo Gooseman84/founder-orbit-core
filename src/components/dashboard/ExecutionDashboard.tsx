@@ -28,6 +28,7 @@ import { VentureDNACard } from "@/components/dashboard/VentureDNACard";
 import { MavrikCoachingCard } from "@/components/dashboard/MavrikCoachingCard";
 import { FounderPatternCard } from "@/components/patterns/FounderPatternCard";
 import { VentureDebugger } from "@/components/venture/VentureDebugger";
+import { VentureTimeline } from "@/components/dashboard/VentureTimeline";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
