@@ -597,6 +597,8 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
     console.log("generate-founder-ideas v7: Starting Pass B (Commercial Refinement)...");
 
     const passBSystemPrompt = buildPassBSystemPrompt(wildcardMode);
+    const ideaCount = 6;
+    const nonWildcardCount = wildcardMode ? 5 : 6;
 
     // Reduce Pass B payload size: only pass minimal raw idea fields
     const rawIdeasSlim = rawIdeas.map((idea: any, idx: number) => ({
@@ -608,11 +610,7 @@ Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [.
       mode: idea?.mode ?? idea?.idea_mode ?? "Standard",
     }));
 
-    const buildPassBMessage = (retryWithStricterInstruction = false) => {
-      const ideaCount = wildcardMode ? 6 : 6;
-      const nonWildcardCount = wildcardMode ? 5 : 6;
-
-      let message = `FOUNDER CONTEXT:
+    let passBMessage = `FOUNDER CONTEXT:
 ${JSON.stringify(founderPayload, null, 2)}
 
 RAW IDEAS FROM PASS A (${rawIdeasSlim.length} ideas; minimal fields):
@@ -622,116 +620,61 @@ TONE: ${tone}
 WILDCARD_MODE: ${wildcardMode}
 
 Select the TOP ${nonWildcardCount} ideas based on founder fit + first-dollar potential + excitement.
-Then rewrite them to match the STRICT schema.
+Refine them using the provided tool schema.
 
 HARD LIMITS:
 - refined_ideas must contain exactly ${ideaCount} items total.
-- problem max 240 chars
-- solution max 240 chars
-- ideal_customer max 160 chars
-- first_steps must be exactly 3 strings, each max 120 chars
-- If you exceed limits, shorten text.
-- Do NOT add extra fields.
-- Do NOT use markdown.
+- problem max 240 chars, solution max 240 chars, customer max 160 chars
+- steps must be exactly 3 strings, each max 120 chars
 `;
 
-      if (wildcardMode) {
-        message += `
-Add exactly one wildcard idea as the LAST item in refined_ideas.
-Mark it with is_wildcard=true and idea_mode="Wildcard".
-`;
-      }
-
-      if (retryWithStricterInstruction) {
-        message += `
-CRITICAL: You forgot the wildcard in your previous response.
-Add it as the LAST item. This is mandatory when WILDCARD_MODE is true.
-`;
-      }
-
-      message += `
-Return ONLY: { "refined_ideas": [...] }`;
-
-      return message;
-    };
-
-    // First Pass B attempt
-    let passBContent: string;
-    try {
-      passBContent = await callModel(
-        LOVABLE_API_KEY,
-        passBSystemPrompt,
-        buildPassBMessage(false),
-        { maxTokens: 6000, temperature: 0.6 }
-      );
-    } catch (err: any) {
-      const status = err.status;
-      console.error("generate-founder-ideas: Pass B AI error", status, err.body || err.message);
-      
-      if (status === 429) {
-        return new Response(
-          JSON.stringify({ error: "AI rate limit exceeded, please wait and try again.", code: "rate_limited" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      if (status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted, please add funds.", code: "payment_required" }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      return new Response(
-        JSON.stringify({ error: "AI generation failed in Pass B" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    if (wildcardMode) {
+      passBMessage += `\nAdd exactly one wildcard idea as the LAST item. Set is_wildcard=true and idea_mode="Wildcard".\n`;
     }
+
+    const passBTool = buildPassBTool(ideaCount);
+
+    const passBResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        max_tokens: 6000,
+        temperature: 0.6,
+        messages: [
+          { role: "system", content: passBSystemPrompt },
+          { role: "user", content: passBMessage },
+        ],
+        tools: [passBTool],
+        tool_choice: { type: "function", function: { name: "refine_ideas" } },
+      }),
+    });
+
+    if (!passBResponse.ok) {
+      const status = passBResponse.status;
+      const text = await passBResponse.text();
+      const errResp = handleAIError(status, text, "Pass B");
+      if (errResp) return errResp;
+    }
+
+    const passBData = await passBResponse.json();
 
     let refinedIdeas: any[] = [];
     try {
-      refinedIdeas = parseRefinedIdeas(passBContent);
+      const parsed = parseToolCallResponse(passBData, "refine_ideas");
+      refinedIdeas = parsed.refined_ideas || parsed.ideas || (Array.isArray(parsed) ? parsed : []);
     } catch (e) {
       console.error("generate-founder-ideas: Pass B parse error", e);
-      console.log("generate-founder-ideas: Pass B parse failed; attempting JSON repair");
-
-      // 1) Retry once with a JSON repair prompt (fast + cheap)
-      try {
-        const repaired = await repairJsonWithModel(LOVABLE_API_KEY, passBContent);
-        if (repaired.refined_ideas && Array.isArray(repaired.refined_ideas)) {
-          refinedIdeas = repaired.refined_ideas;
-        } else if (Array.isArray(repaired)) {
-          refinedIdeas = repaired;
-        }
-      } catch (e2) {
-        console.warn("generate-founder-ideas: JSON repair failed", e2);
-      }
-
-      // 2) Last-resort salvage: truncate to last complete object
-      if (!refinedIdeas || !Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
-        const salvaged = salvagePassBJsonLastCompleteObject(passBContent);
-        if (salvaged) {
-          try {
-            refinedIdeas = parseRefinedIdeas(salvaged);
-          } catch (e3) {
-            console.warn("generate-founder-ideas: salvage parse failed", e3);
-          }
-        }
-      }
-
-      // 3) Graceful failure (no unhandled exception)
-      if (!refinedIdeas || !Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
-        return new Response(
-          JSON.stringify({
-            error: "AI returned malformed JSON. Please retry.",
-            code: "parse_failed",
-            message: "AI returned malformed JSON. Please retry.",
-          }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      return new Response(
+        JSON.stringify({ error: "AI returned malformed response. Please retry.", code: "parse_failed", retryable: true }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     if (!Array.isArray(refinedIdeas) || refinedIdeas.length === 0) {
-      console.error("generate-founder-ideas: Pass B returned no ideas");
       return new Response(
         JSON.stringify({ error: "Pass B returned no refined ideas" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -741,36 +684,8 @@ Return ONLY: { "refined_ideas": [...] }`;
     // ===== WILDCARD SAFETY GUARD =====
     if (wildcardMode) {
       const hasWildcard = refinedIdeas.some((idea: any) => idea.is_wildcard === true);
-      
       if (!hasWildcard) {
-        console.log("generate-founder-ideas v7: Wildcard missing, retrying Pass B with stricter instruction...");
-        
-        // Retry with stricter instruction
-        try {
-          const retryContent = await callModel(
-            LOVABLE_API_KEY,
-            passBSystemPrompt,
-            buildPassBMessage(true),
-            { maxTokens: 6000, temperature: 0.6 }
-          );
-
-          try {
-            const retryIdeas = parseRefinedIdeas(retryContent);
-            if (Array.isArray(retryIdeas) && retryIdeas.length > 0) {
-              const retryHasWildcard = retryIdeas.some((idea: any) => idea.is_wildcard === true);
-              if (retryHasWildcard) {
-                refinedIdeas = retryIdeas;
-                console.log("generate-founder-ideas v7: Wildcard recovered on retry");
-              } else {
-                console.warn("generate-founder-ideas v7: Wildcard still missing after retry, proceeding without");
-              }
-            }
-          } catch (e) {
-            console.warn("generate-founder-ideas v7: Retry parse failed, proceeding without wildcard", e);
-          }
-        } catch (e) {
-          console.warn("generate-founder-ideas v7: Retry failed, proceeding without wildcard", e);
-        }
+        console.warn("generate-founder-ideas v7: Wildcard missing from tool response, proceeding without");
       }
     }
 
