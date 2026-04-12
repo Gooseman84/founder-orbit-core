@@ -25,6 +25,7 @@ import { ImplementationKitCard } from "@/components/implementationKit/Implementa
 import { VentureDNACard } from "@/components/dashboard/VentureDNACard";
 import { MavrikCoachingCard } from "@/components/dashboard/MavrikCoachingCard";
 import { VentureMilestoneTracker } from "@/components/dashboard/VentureMilestoneTracker";
+import { ValidationProgressCard } from "@/components/dashboard/ValidationProgressCard";
 import { FounderPatternCard } from "@/components/patterns/FounderPatternCard";
 import { VentureDebugger } from "@/components/venture/VentureDebugger";
 import { VentureTimeline } from "@/components/dashboard/VentureTimeline";
@@ -271,6 +272,9 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
           <span className="text-[10px] text-muted-foreground">End / Pivot</span>
         </div>
       </div>
+
+      {/* Validation Progress */}
+      <ValidationProgressCard ventureId={venture.id} />
 
       {/* Founder Patterns */}
       <FounderPatternCard ventureId={venture.id} />
