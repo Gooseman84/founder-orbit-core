@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useXP } from "@/hooks/useXP";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { LevelBadge } from "@/components/shared/LevelBadge";
-import { XpProgressBar } from "@/components/shared/XpProgressBar";
 import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { NorthStarCard } from "./NorthStarCard";
 import { ProUpgradeModal } from "@/components/billing/ProUpgradeModal";
@@ -25,9 +22,8 @@ const DASHBOARD_STALE_TIME = 3 * 60 * 1000;
 
 export function DiscoveryDashboard() {
   const { user } = useAuth();
-  const { xpSummary, loading, error } = useXP();
   const { plan } = useSubscription();
-  const { hasPro, hasFounder, features } = useFeatureAccess();
+  const { hasPro, features } = useFeatureAccess();
   const navigate = useNavigate();
   const isFree = plan === "free";
   const [paywallReason, setPaywallReason] = useState<string | null>(null);
@@ -79,27 +75,6 @@ export function DiscoveryDashboard() {
         </p>
       </div>
 
-      {/* XP Progress */}
-      <div className="card-gold-accent p-5">
-        <div className="flex items-center justify-between mb-3">
-          <span className="label-mono">Founder Progress</span>
-          {!loading && xpSummary && <LevelBadge level={xpSummary.level} />}
-        </div>
-        {loading ? (
-          <Skeleton className="h-2 w-full" />
-        ) : error ? (
-          <p className="text-xs text-destructive">{error}</p>
-        ) : xpSummary ? (
-          <XpProgressBar
-            totalXp={xpSummary.totalXp}
-            level={xpSummary.level}
-            nextLevelXp={xpSummary.nextLevelXp}
-            currentLevelMinXp={xpSummary.currentLevelMinXp}
-            progressPercent={xpSummary.progressPercent}
-          />
-        ) : null}
-      </div>
-
       {/* Pro Upgrade CTA */}
       {isFree && (
         <div className="card-gold-accent p-5 flex items-center justify-between gap-3">
@@ -114,7 +89,7 @@ export function DiscoveryDashboard() {
       {/* North Star Card */}
       <NorthStarCard />
 
-      {/* Stat Grid — only workspace + top score */}
+      {/* Stat Grid — workspace + top score */}
       <div className="grid gap-4 grid-cols-2">
         <div
           className="card-gold-accent p-5 cursor-pointer transition-colors hover:bg-secondary"
