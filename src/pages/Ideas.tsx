@@ -25,7 +25,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { PLAN_ERROR_CODES } from "@/config/plans";
 import type { PaywallReasonCode } from "@/config/paywallCopy";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { Scale, Sparkles, Lock, TrendingUp, Upload, X } from "lucide-react";
+import { Scale, Sparkles, Lock, TrendingUp, Upload, X, AlertTriangle } from "lucide-react";
+import { ProblemDiscoveryTab } from "@/components/ideas/ProblemDiscoveryTab";
+import type { DiscoveredProblem } from "@/hooks/useProblemDiscovery";
 import { useNavigate } from "react-router-dom";
 import type { BusinessIdea, BusinessIdeaV6 } from "@/types/businessIdea";
 import { PageHelp } from "@/components/shared/PageHelp";
@@ -79,6 +81,7 @@ const Ideas = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [newlyImportedIds, setNewlyImportedIds] = useState<string[]>([]);
   const [sourceTypeFilter, setSourceTypeFilter] = useState<SourceTypeFilter>("all");
+  const [selectedProblems, setSelectedProblems] = useState<string[]>([]);
   const [dismissedBannerSession, setDismissedBannerSession] = useState(() => {
     return sessionStorage.getItem("tb-active-venture-banner-dismissed") === "true";
   });
@@ -467,6 +470,17 @@ const Ideas = () => {
             GENERATED ({filteredFounderIdeas.length})
           </button>
           <button
+            onClick={() => setActiveTab("problems")}
+            className={`font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase px-4 py-2.5 border transition-colors ${
+              activeTab === "problems" ? "border-primary/35 text-primary bg-primary/10" : "border-border text-muted-foreground bg-card hover:text-foreground hover:bg-secondary"
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle className="w-3 h-3" />
+              PROBLEMS
+            </span>
+          </button>
+          <button
             onClick={() => setActiveTab("library")}
             className={`font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase px-4 py-2.5 border transition-colors ${
               activeTab === "library" ? "border-primary/35 text-primary bg-primary/10" : "border-border text-muted-foreground bg-card hover:text-foreground hover:bg-secondary"
@@ -512,6 +526,27 @@ const Ideas = () => {
             openingIdeaId={openingIdeaId}
             onFusionComplete={(fusedIdea) => {
               toast({ title: "New Fused Idea!", description: `"${fusedIdea.title}" saved to Library.` });
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="problems">
+          <ProblemDiscoveryTab
+            selectedProblems={selectedProblems}
+            onToggleProblem={(id) =>
+              setSelectedProblems((prev) =>
+                prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+              )
+            }
+            onGenerateFromProblem={(problem: DiscoveredProblem) => {
+              setFocusArea(`Solve: ${problem.title} — ${problem.description}`);
+              setSelectedMode("focus");
+              setCurrentMode("focus");
+              setActiveTab("generated");
+              toast({
+                title: "Problem loaded",
+                description: `Generate ideas to solve: "${problem.title}"`,
+              });
             }}
           />
         </TabsContent>
