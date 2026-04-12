@@ -196,14 +196,29 @@ serve(async (req) => {
     const rawInterviewContext = interviewData?.context_summary as any ?? null;
     const interviewContext = selectInterviewContext("generate-daily-execution-tasks", rawInterviewContext);
 
+    // Extract yesterday's mavrik coaching directive
+    const yesterdayCheckin = recentCheckins?.[0] as any;
+    const mavrikResponse = yesterdayCheckin?.mavrik_response as any;
+    const tomorrowFocus = mavrikResponse?.tomorrowFocus || mavrikResponse?.tomorrow_focus || null;
+
+    // Compute 3-day energy trend
+    const last3Energy = (recentReflections || []).slice(0, 3).map((r: any) => r.energy_level).filter(Boolean);
+    const energyTrend = last3Energy.length >= 2
+      ? last3Energy[0] > last3Energy[last3Energy.length - 1] ? "rising" : last3Energy[0] < last3Energy[last3Energy.length - 1] ? "declining" : "stable"
+      : "unknown";
+
     const founderState = {
       latestEnergy: recentReflections?.[0]?.energy_level ?? null,
       latestStress: recentReflections?.[0]?.stress_level ?? null,
       latestBlockers: recentReflections?.[0]?.blockers ?? null,
       recentMoods: recentReflections?.[0]?.mood_tags ?? [],
       topPriority: recentReflections?.[0]?.top_priority ?? null,
-      yesterdayCompletion: recentCheckins?.[0]?.completion_status ?? null,
-      yesterdayExplanation: recentCheckins?.[0]?.explanation ?? null,
+      yesterdayCompletion: yesterdayCheckin?.completion_status ?? null,
+      yesterdayExplanation: yesterdayCheckin?.explanation ?? null,
+      yesterdayReflection: yesterdayCheckin?.reflection ?? null,
+      tomorrowFocus,
+      energyTrendLast3Days: energyTrend,
+      energyHistory: last3Energy,
       last7DaysPattern: recentCheckins?.map((c: any) => c.completion_status).join(", ") ?? "no data",
     };
 
