@@ -470,6 +470,17 @@ const Ideas = () => {
             GENERATED ({filteredFounderIdeas.length})
           </button>
           <button
+            onClick={() => setActiveTab("problems")}
+            className={`font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase px-4 py-2.5 border transition-colors ${
+              activeTab === "problems" ? "border-primary/35 text-primary bg-primary/10" : "border-border text-muted-foreground bg-card hover:text-foreground hover:bg-secondary"
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle className="w-3 h-3" />
+              PROBLEMS
+            </span>
+          </button>
+          <button
             onClick={() => setActiveTab("library")}
             className={`font-mono-tb text-[0.65rem] tracking-[0.08em] uppercase px-4 py-2.5 border transition-colors ${
               activeTab === "library" ? "border-primary/35 text-primary bg-primary/10" : "border-border text-muted-foreground bg-card hover:text-foreground hover:bg-secondary"
