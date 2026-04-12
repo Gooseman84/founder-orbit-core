@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { ShareVentureButton } from "@/components/venture/ShareVentureButton";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -149,14 +150,17 @@ export function ExecutionDashboard({ venture }: ExecutionDashboardProps) {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <div className="eyebrow mb-3">VENTURE COMMAND CENTER</div>
-        <h1 className="font-display text-[1.75rem] sm:text-[2.5rem] font-bold leading-tight text-foreground break-words">
-          <em className="text-primary not-italic" style={{ fontStyle: "italic" }}>{venture.name}</em>
-        </h1>
-        <p className="mt-2 text-[0.95rem] font-light text-muted-foreground">
-          Your execution dashboard. Stay focused, ship daily.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="eyebrow mb-3">VENTURE COMMAND CENTER</div>
+          <h1 className="font-display text-[1.75rem] sm:text-[2.5rem] font-bold leading-tight text-foreground break-words">
+            <em className="text-primary not-italic" style={{ fontStyle: "italic" }}>{venture.name}</em>
+          </h1>
+          <p className="mt-2 text-[0.95rem] font-light text-muted-foreground">
+            Your execution dashboard. Stay focused, ship daily.
+          </p>
+        </div>
+        <ShareVentureButton venture={venture} />
       </div>
 
       {/* Venture DNA */}
