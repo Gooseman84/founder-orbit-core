@@ -30,7 +30,7 @@ export function ShareVentureButton({ venture }: ShareVentureButtonProps) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Building: ${venture.idea_title || "My Venture"}`,
+          title: `Building: ${venture.name || "My Venture"}`,
           text,
         });
         return;
