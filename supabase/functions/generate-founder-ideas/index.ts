@@ -634,8 +634,8 @@ serve(async (req) => {
       }
     }
 
-    // ===== PLAN CHECK: Mode restrictions (TRIAL = breadth, focus, creator only) =====
-    const TRIAL_MODES = ["breadth", "focus", "creator"];
+    // ===== PLAN CHECK: Mode restrictions (TRIAL = breadth, focus, adjacent) =====
+    const TRIAL_MODES = ["breadth", "focus", "adjacent"];
     if (isTrialUser && !TRIAL_MODES.includes(mode)) {
       console.log(`generate-founder-ideas: TRIAL user ${userId} tried Pro mode ${mode}`);
       return new Response(
@@ -652,7 +652,7 @@ serve(async (req) => {
     // Load founder profile
     const { data: profileRow, error: profileError } = await supabaseAdmin
       .from("founder_profiles")
-      .select("profile, work_personality, creator_platforms, edgy_mode, wants_money_systems, open_to_personas, open_to_memetic_ideas")
+      .select("profile, work_personality, creator_platforms")
       .eq("user_id", userId)
       .single();
 
@@ -662,17 +662,6 @@ serve(async (req) => {
         JSON.stringify({ error: "Founder profile not found. Please complete onboarding first." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-    }
-
-    // Check if locker_room mode is allowed
-    if (mode === "locker_room") {
-      const edgyMode = profileRow.edgy_mode;
-      if (edgyMode !== "bold" && edgyMode !== "unhinged") {
-        return new Response(
-          JSON.stringify({ error: "Locker Room mode requires edgy_mode to be 'bold' or 'unhinged'." }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
     }
 
     // Load interview context summary
