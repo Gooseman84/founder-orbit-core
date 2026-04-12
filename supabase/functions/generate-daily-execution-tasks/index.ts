@@ -92,7 +92,7 @@ serve(async (req) => {
       supabaseService.from("venture_plans").select("summary").eq("venture_id", ventureId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabaseService.from("venture_daily_tasks").select("*").eq("venture_id", ventureId).eq("task_date", today).maybeSingle(),
       supabaseService.from("daily_reflections").select("reflection_date, energy_level, stress_level, mood_tags, what_did, blockers, top_priority, ai_summary").eq("user_id", user.id).order("reflection_date", { ascending: false }).limit(7),
-      supabaseService.from("venture_daily_checkins").select("checkin_date, completion_status, explanation, reflection").eq("venture_id", ventureId).order("checkin_date", { ascending: false }).limit(7),
+      supabaseService.from("venture_daily_checkins").select("checkin_date, completion_status, explanation, reflection, mavrik_response").eq("venture_id", ventureId).order("checkin_date", { ascending: false }).limit(7),
       supabaseService.from("workspace_documents").select("id, title, doc_type, updated_at, source_type").eq("user_id", user.id).eq("venture_id", ventureId).gte("updated_at", new Date(Date.now() - 7 * 86400000).toISOString()).order("updated_at", { ascending: false }).limit(10),
       supabaseService.from("founder_interviews").select("context_summary").eq("user_id", user.id).eq("status", "completed").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
       supabaseService.from("execution_strategies").select("strategy, behavioral_signals, updated_at").eq("venture_id", ventureId).maybeSingle(),
