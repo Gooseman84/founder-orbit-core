@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -121,6 +121,17 @@ export function MavrikCoachingCard({ venture }: MavrikCoachingCardProps) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
+  const today = new Date().toISOString().split("T")[0];
+  const dismissKey = `mavrik-coaching-dismissed-${venture.id}-${today}`;
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem(dismissKey) === "1"; } catch { return false; }
+  });
+
+  const handleDismiss = () => {
+    try { localStorage.setItem(dismissKey, "1"); } catch {}
+    setDismissed(true);
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ["founder-moment-state", venture.id],
     queryFn: async () => {
@@ -144,6 +155,7 @@ export function MavrikCoachingCard({ venture }: MavrikCoachingCardProps) {
     );
   }
 
+  if (dismissed) return null;
   if (!data?.state || data.state === "BUILDING_MOMENTUM" || !data.signals) return null;
 
   const content = getCardContent(data.state, data.signals);
@@ -162,7 +174,14 @@ export function MavrikCoachingCard({ venture }: MavrikCoachingCardProps) {
   };
 
   return (
-    <div className={cn("card-gold-accent border-l-2", content.borderClass)}>
+    <div className={cn("card-gold-accent border-l-2 relative", content.borderClass)}>
+      <button
+        onClick={handleDismiss}
+        className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="Dismiss for today"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
       <button
         className="w-full flex items-center gap-2 p-4 text-left min-h-[44px]"
         onClick={() => setCollapsed((c) => !c)}
