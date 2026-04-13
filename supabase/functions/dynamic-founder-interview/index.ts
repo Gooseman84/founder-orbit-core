@@ -889,15 +889,46 @@ The extractionProgress reflects your CURRENT assessment of signal quality for ea
       }
 
       const data = await response.json();
-      let question: string =
+      let rawQuestion: string =
         data.choices?.[0]?.message?.content?.trim?.() ||
         "What specific skill have people paid you for that you think gives you an edge?";
 
-      if (question.startsWith("{")) {
+      let question = rawQuestion;
+      let extractionProgress: { expertise: string; customerPain: string; workflow: string } | null = null;
+
+      // Try to parse structured response with extractionProgress
+      if (rawQuestion.startsWith("{")) {
         try {
-          const parsed = JSON.parse(question);
-          if (parsed.question) question = parsed.question;
+          const parsed = JSON.parse(rawQuestion);
+          if (parsed.question) {
+            question = parsed.question;
+            if (parsed.extractionProgress) {
+              extractionProgress = {
+                expertise: parsed.extractionProgress.expertise || "none",
+                customerPain: parsed.extractionProgress.customerPain || "none",
+                workflow: parsed.extractionProgress.workflow || "none",
+              };
+            }
+          }
         } catch { }
+      }
+      
+      // Strip markdown fences if present
+      if (question.startsWith("```")) {
+        const inner = question.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+        try {
+          const parsed = JSON.parse(inner);
+          if (parsed.question) {
+            question = parsed.question;
+            if (parsed.extractionProgress) {
+              extractionProgress = {
+                expertise: parsed.extractionProgress.expertise || "none",
+                customerPain: parsed.extractionProgress.customerPain || "none",
+                workflow: parsed.extractionProgress.workflow || "none",
+              };
+            }
+          }
+        } catch { question = inner; }
       }
 
       transcript = [
