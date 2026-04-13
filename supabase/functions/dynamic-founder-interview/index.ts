@@ -565,6 +565,29 @@ Field definitions:
   emerged naturally from the conversation (NOT from structured
   inputs — those come from the Lightning Round).
 
+- routingSignal.suggestedArchetype: Based on ALL interview evidence,
+  classify which archetype best fits this founder's situation:
+  "vertical_saas" = building software for a specific industry vertical
+  "marketplace" = connecting two sides of a market
+  "service_to_product" = productizing an existing service/consulting practice
+  "info_product" = courses, templates, communities, content businesses
+  "tool_builder" = developer tools, APIs, infrastructure
+  "agency_to_saas" = transitioning from agency/freelance to scalable product
+  "unknown" = insufficient signal to classify
+
+- routingSignal.buyerAccess: Based on the founder's responses about
+  their target customer, assess whether they can actually reach buyers.
+  hasDirectAccess = true if they personally know potential buyers or
+  are embedded in communities where buyers congregate.
+  reachabilityDescription = 1-2 sentences about HOW they'd reach buyers.
+  namedBuyerOrChannel = specific person, community, or channel mentioned.
+  If no buyer access was discussed, set hasDirectAccess to false and
+  note "Not assessed during interview" in reachabilityDescription.
+
+- routingSignal.confidenceForRouting: How confident are you that the
+  archetype classification is correct? "high" = clear signals across
+  multiple responses. "medium" = reasonable inference. "low" = guessing.
+
 - authorityAssessment.tier: 1 (borrowed), 2 (operational), or 3 (earned).
   Based on cumulative interview evidence, not a single response.
 
