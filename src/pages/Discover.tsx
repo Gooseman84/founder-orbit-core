@@ -33,6 +33,7 @@ export default function Discover() {
   const [existingInterview, setExistingInterview] = useState<any>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [summaryData, setSummaryData] = useState<any>(null);
+  const [extractionProgress, setExtractionProgress] = useState<{ expertise: string; customerPain: string; workflow: string } | null>(null);
 
   useEffect(() => {
     document.title = "Discover | TrueBlazer";
@@ -142,6 +143,7 @@ export default function Discover() {
           interviewId: string;
           forceComplete?: boolean;
           canFinalize?: boolean;
+          extractionProgress?: { expertise: string; customerPain: string; workflow: string } | null;
         }>("dynamic-founder-interview", {
           body: {
             interview_id: activeInterviewId || undefined,
@@ -167,6 +169,9 @@ export default function Discover() {
 
         setInterviewId(newInterviewId);
         setTranscript(newTranscript);
+        if (data.extractionProgress) {
+          setExtractionProgress(data.extractionProgress);
+        }
 
         const lastAiMessage = newTranscript
           .filter((t) => t.role === "ai")
@@ -384,6 +389,7 @@ export default function Discover() {
           estimatedTotal={estimatedTotal}
           canFinalize={canFinalize}
           isComplete={interviewState === "complete"}
+          extractionProgress={extractionProgress}
           onSendMessage={handleSendMessage}
           onFinalize={handleInterviewComplete}
         />
