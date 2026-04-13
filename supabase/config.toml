@@ -1,178 +1,123 @@
 project_id = "empldatnfyczyiatmnfa"
 
-[functions.generate-venture-plan]
-verify_jwt = false
-
-[functions.create-customer-portal]
-verify_jwt = false
-
-[functions.generate-ideas]
-verify_jwt = false
-
-[functions.generate-pulse-check]
-verify_jwt = false
-
-[functions.analyze-idea]
-verify_jwt = false
-
-[functions.generate-master-prompt]
-verify_jwt = false
-
-[functions.generate-micro-tasks]
-verify_jwt = false
-
-[functions.record-xp-event]
-verify_jwt = false
-
-[functions.generate-feed-items]
-verify_jwt = false
-
-[functions.refresh-daily-feed]
-verify_jwt = false
-
-[functions.generate-niche-radar]
-verify_jwt = false
-
-[functions.refresh-niche-radar]
-verify_jwt = false
-
-[functions.generate-workspace-doc]
-verify_jwt = false
-
-[functions.generate-workspace-suggestion]
-verify_jwt = false
-
-[functions.update-daily-streak]
-verify_jwt = false
-
-[functions.check-missed-streaks]
-verify_jwt = false
-
-[functions.generate-opportunity-score]
-verify_jwt = false
-
-[functions.opportunity-report]
-verify_jwt = false
-
-[functions.create-checkout-session]
-verify_jwt = false
-
-[functions.stripe-webhook]
-verify_jwt = false
-
-[functions.refresh-blueprint]
-verify_jwt = false
-
-[functions.generate-blueprint]
-verify_jwt = false
-
-[functions.generate-daily-reflection]
-verify_jwt = false
-
-[functions.generate-weekly-summary]
-verify_jwt = false
-
-[functions.generate-context-interpretation]
-verify_jwt = false
-
-[functions.generate-context-doc]
-verify_jwt = false
-
-[functions.generate-founder-ideas]
-verify_jwt = false
-
-[functions.save-founder-idea]
-verify_jwt = false
-
-[functions.dynamic-founder-interview]
-verify_jwt = false
-
-[functions.finalize-founder-profile]
-verify_jwt = false
-
-[functions.normalize-founder-profile]
-verify_jwt = false
-
-[functions.promote-idea-to-workspace]
-verify_jwt = false
-
-[functions.fuse-ideas]
-verify_jwt = false
-
-[functions.generate-market-signal-ideas]
-verify_jwt = false
-
-[functions.normalize-imported-idea]
-verify_jwt = false
-
-[functions.set-north-star-idea]
-verify_jwt = false
-
-[functions.unset-north-star-idea]
-verify_jwt = false
-
-[functions.repair-north-star-sync]
-verify_jwt = false
-
-[functions.score-idea-fit]
-verify_jwt = false
-
-[functions.generate-daily-execution-tasks]
-verify_jwt = false
-
-[functions.venture-review-decision]
-verify_jwt = false
-
-[functions.code-architect-agent]
-verify_jwt = false
-
-[functions.feature-implementation-agent]
-verify_jwt = false
-
-[functions.generate-implementation-kit]
-verify_jwt = false
-
-[functions.mavrik-interview]
-verify_jwt = false
-
-[functions.mavrik-apply-corrections]
-verify_jwt = false
-
-[functions.generate-personalized-ideas]
-verify_jwt = false
-
-[functions.calculate-financial-viability]
-verify_jwt = false
-
-[functions.generate-validation-plan]
-verify_jwt = false
-
-[functions.generate-checkin-response]
-verify_jwt = false
-
-[functions.log-validation-evidence]
-verify_jwt = false
-
-[functions.analyze-validation-session]
-verify_jwt = false
-
-[functions.update-fvs-from-validation]
-verify_jwt = false
-
-[functions.detect-founder-patterns]
-verify_jwt = false
-
-[functions.generate-revenue-stack-brief]
-verify_jwt = false
-
-[functions.submit-feedback]
-verify_jwt = false
-
-[functions.venture-debugger]
-verify_jwt = false
-
-[functions.save-lightning-round]
-verify_jwt = false
-
-[functions.process-email-queue]
-verify_jwt = true
+[functions]
+  [functions.analyze-idea]
+    verify_jwt = false
+  [functions.analyze-validation-session]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.calculate-financial-viability]
+    verify_jwt = false
+  [functions.check-missed-streaks]
+    verify_jwt = false
+  [functions.code-architect-agent]
+    verify_jwt = false
+  [functions.create-checkout-session]
+    verify_jwt = false
+  [functions.create-customer-portal]
+    verify_jwt = false
+  [functions.detect-founder-patterns]
+    verify_jwt = false
+  [functions.dynamic-founder-interview]
+    verify_jwt = false
+  [functions.feature-implementation-agent]
+    verify_jwt = false
+  [functions.finalize-founder-profile]
+    verify_jwt = false
+  [functions.fuse-ideas]
+    verify_jwt = false
+  [functions.generate-blueprint]
+    verify_jwt = false
+  [functions.generate-checkin-response]
+    verify_jwt = false
+  [functions.generate-context-doc]
+    verify_jwt = false
+  [functions.generate-context-interpretation]
+    verify_jwt = false
+  [functions.generate-daily-execution-tasks]
+    verify_jwt = false
+  [functions.generate-daily-reflection]
+    verify_jwt = false
+  [functions.generate-feed-items]
+    verify_jwt = false
+  [functions.generate-founder-ideas]
+    verify_jwt = false
+  [functions.generate-ideas]
+    verify_jwt = false
+  [functions.generate-implementation-kit]
+    verify_jwt = false
+  [functions.generate-market-signal-ideas]
+    verify_jwt = false
+  [functions.generate-master-prompt]
+    verify_jwt = false
+  [functions.generate-micro-tasks]
+    verify_jwt = false
+  [functions.generate-niche-radar]
+    verify_jwt = false
+  [functions.generate-opportunity-score]
+    verify_jwt = false
+  [functions.generate-personalized-ideas]
+    verify_jwt = false
+  [functions.generate-pulse-check]
+    verify_jwt = false
+  [functions.generate-revenue-stack-brief]
+    verify_jwt = false
+  [functions.generate-validation-plan]
+    verify_jwt = false
+  [functions.generate-venture-plan]
+    verify_jwt = false
+  [functions.generate-weekly-summary]
+    verify_jwt = false
+  [functions.generate-workspace-doc]
+    verify_jwt = false
+  [functions.generate-workspace-suggestion]
+    verify_jwt = false
+  [functions.log-validation-evidence]
+    verify_jwt = false
+  [functions.mavrik-apply-corrections]
+    verify_jwt = false
+  [functions.mavrik-interview]
+    verify_jwt = false
+  [functions.normalize-founder-profile]
+    verify_jwt = false
+  [functions.normalize-imported-idea]
+    verify_jwt = false
+  [functions.opportunity-report]
+    verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.promote-idea-to-workspace]
+    verify_jwt = false
+  [functions.record-xp-event]
+    verify_jwt = false
+  [functions.refresh-blueprint]
+    verify_jwt = false
+  [functions.refresh-daily-feed]
+    verify_jwt = false
+  [functions.refresh-niche-radar]
+    verify_jwt = false
+  [functions.repair-north-star-sync]
+    verify_jwt = false
+  [functions.save-founder-idea]
+    verify_jwt = false
+  [functions.save-lightning-round]
+    verify_jwt = false
+  [functions.score-idea-fit]
+    verify_jwt = false
+  [functions.set-north-star-idea]
+    verify_jwt = false
+  [functions.stripe-webhook]
+    verify_jwt = false
+  [functions.submit-feedback]
+    verify_jwt = false
+  [functions.unset-north-star-idea]
+    verify_jwt = false
+  [functions.update-daily-streak]
+    verify_jwt = false
+  [functions.update-fvs-from-validation]
+    verify_jwt = false
+  [functions.venture-debugger]
+    verify_jwt = false
+  [functions.venture-review-decision]
+    verify_jwt = false
