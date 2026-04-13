@@ -954,7 +954,7 @@ The extractionProgress reflects your CURRENT assessment of signal quality for ea
       const approachingLimit = updatedAiCount >= (maxQuestions - 1);
 
       return new Response(
-        JSON.stringify({ interviewId, question, transcript, canFinalize, approachingLimit }),
+        JSON.stringify({ interviewId, question, transcript, canFinalize, approachingLimit, extractionProgress }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
