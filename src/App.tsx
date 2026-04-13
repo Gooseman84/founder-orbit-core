@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 
 // Lazily loaded — split into separate chunks, loaded on navigation
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Discover = lazy(() => import("./pages/Discover"));
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route
               path="/discover"
               element={

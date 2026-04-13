@@ -148,6 +148,14 @@ const Auth = () => {
         if (profile) {
           navigate("/dashboard");
         } else {
+          // New user — send welcome email (fire-and-forget, idempotent)
+          supabase.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "welcome",
+              recipientEmail: signedInUser.email,
+              idempotencyKey: `welcome-${signedInUser.id}`,
+            },
+          }).catch((err) => console.warn("Welcome email failed:", err));
           navigate("/discover");
         }
       }
