@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Lock, Check } from "lucide-react";
+import { Check } from "lucide-react";
 
 /* ───────────────────────────────────────────
    Scroll-reveal hook
@@ -52,12 +52,12 @@ const Index = () => {
 
       <Nav onAuth={goAuth} />
       <Hero onAuth={goAuth} />
-      <SocialProof />
       <Ticker />
       <Problem />
       <FVSSection />
       <HowItWorks />
       <Mavrik />
+      <ExecutionEngine />
       <Moat />
       <Outcomes />
       <Pricing onAuth={goAuth} />
@@ -141,7 +141,7 @@ function Nav({ onAuth }: { onAuth: () => void }) {
 function Hero({ onAuth }: { onAuth: () => void }) {
   return (
     <section className="px-4 pt-[100px] pb-14 md:px-12 md:pt-[120px] md:pb-20 relative overflow-hidden" style={{ minHeight: "100vh", background: "var(--ink)" }}>
-      {/* Radial glow — clamped to not cause overflow */}
+      {/* Radial glow */}
       <div style={{ position: "absolute", top: -200, right: -200, width: 800, height: 800, background: "radial-gradient(circle, rgba(200,168,75,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
 
       {/* Eyebrow */}
@@ -167,9 +167,9 @@ function Hero({ onAuth }: { onAuth: () => void }) {
         that makes it build the right thing.
       </h1>
 
-      {/* Subheading */}
-      <p className="lp-fadeUp text-base sm:text-lg md:text-xl" style={{ animationDelay: "0.5s", marginTop: 28, maxWidth: 560, lineHeight: 1.65, color: "var(--white-dim)" }}>
-        TrueBlazer is where your venture lives — interview data, financial scores, architecture decisions, and build specs, all in one place. Every AI tool you use to build draws from context that exists nowhere else.
+      {/* Subheading — updated to reflect market validation + execution */}
+      <p className="lp-fadeUp text-base sm:text-lg md:text-xl" style={{ animationDelay: "0.5s", marginTop: 28, maxWidth: 580, lineHeight: 1.65, color: "var(--white-dim)" }}>
+        Interview data, market signals, financial scores, execution plans, and build specs — all in one place. From validated idea to daily execution, every AI tool you use draws from context that exists nowhere else.
       </p>
 
       {/* Buttons */}
@@ -213,6 +213,13 @@ function Hero({ onAuth }: { onAuth: () => void }) {
           </div>
         ))}
       </div>
+
+      {/* Credibility line — consolidated from old SocialProof */}
+      <p className="lp-fadeUp mt-10 text-sm sm:text-base" style={{ animationDelay: "0.9s", lineHeight: 1.7, color: "var(--silver)", maxWidth: 700 }}>
+        Built by a{" "}
+        <span style={{ color: "var(--gold)", fontWeight: 500 }}>CFA Charterholder &amp; CFP</span>{" "}
+        who evaluates business models for a living. The only founder intelligence platform designed to be consumed by the AI agents building your product.
+      </p>
     </section>
   );
 }
@@ -227,7 +234,7 @@ function Ticker() {
     { text: "Defensible AI startups: ", val: "attracting capital", dir: "up" },
     { text: "AI SaaS without moat: ", val: "acqui-hire timeline", dir: "down" },
     { text: "Proprietary data moats: ", val: "outperforming", dir: "up" },
-    { text: "Founders with FVS validation: ", val: "building with conviction", dir: "up" },
+    { text: "Founders with market-validated ideas: ", val: "building with conviction", dir: "up" },
   ];
   const doubled = [...items, ...items];
 
@@ -259,7 +266,7 @@ function Problem() {
     { label: "Founders who validate before building", value: "18%" },
     { label: "Generic AI SaaS startups filtered out by VCs in 2026", value: "70%" },
     { label: "Average months before founders realize wrong direction", value: "14" },
-    { label: "Founders with a financially rigorous validation score", value: "~0%" },
+    { label: "Validated ideas that fail due to no execution discipline", value: "63%" },
   ];
 
   return (
@@ -277,7 +284,8 @@ function Problem() {
           <div className="mt-6 md:mt-8 text-sm sm:text-base" style={{ lineHeight: 1.75, color: "var(--white-dim)" }}>
             <p style={{ marginBottom: 20 }}>You can build anything now. Lovable. Cursor. v0. The execution tools are commoditized. What isn't commoditized is knowing whether what you're building is actually worth your time, money, and next two years of your life.</p>
             <p style={{ marginBottom: 20 }}>AI chatbots give you ideas. VCs give you opinions. Accelerators give you cohorts. None of them give you a <span style={{ color: "var(--white)", fontWeight: 500 }}>disciplined, financially-grounded verdict</span> on your specific venture — before you're too deep to turn back.</p>
-            <p>That's the gap TrueBlazer fills.</p>
+            <p style={{ marginBottom: 20 }}>And even when founders pick the right idea, most still fail — because <span style={{ color: "var(--white)", fontWeight: 500 }}>choosing right without executing daily</span> is just a slower way to stall. The gap isn't just validation. It's sustained execution.</p>
+            <p>That's the gap TrueBlazer fills — from market-validated idea to daily coaching that keeps you building.</p>
           </div>
         </div>
         {/* Right — stat table */}
@@ -375,35 +383,47 @@ function FVSSection() {
 }
 
 /* ═══════════════════════════════════════════
-   SECTION 6 — HOW IT WORKS
+   SECTION 6 — HOW IT WORKS (5 steps)
    ═══════════════════════════════════════════ */
 function HowItWorks() {
   const { ref, visible } = useReveal();
   const steps = [
-    { num: "01", title: "Mavrik interviews you", desc: "TrueBlazer's AI interview agent doesn't ask generic questions. Mavrik reads between the lines — your motivations, constraints, domain knowledge, and risk tolerance — to build a founder intelligence profile that informs everything downstream." },
-    { num: "02", title: "Your FVS™ is generated", desc: "Mavrik's findings feed into the Financial Viability Score engine. Six dimensions analyzed. A score produced. A verdict delivered. Not 'this looks promising' — an actual number with actual reasoning, built on CFA-level financial methodology." },
-    { num: "03", title: "Your Implementation Kit unlocks", desc: "If the FVS clears the bar, your full Implementation Kit generates: North Star Spec, Architecture Contract, Thin Vertical Slice Plan, and Launch Playbook. Everything to hand to an AI coding tool and start building with conviction." },
+    { num: "01", title: "Mavrik interviews you", desc: "TrueBlazer's AI interview agent doesn't ask generic questions. Mavrik reads between the lines — your motivations, constraints, domain knowledge, and risk tolerance — to build a founder intelligence profile." },
+    { num: "02", title: "Market-validated ideas are generated", desc: "Your founder profile intersects with real-world demand signals and cross-industry patterns. TrueBlazer generates personalized venture ideas scored across 6 financial dimensions — not generic brainstorming, but market-validated opportunities." },
+    { num: "03", title: "You commit to your North Star", desc: "One venture. Full conviction. You review your scored ideas, compare financial viability, and commit to the one worth building. TrueBlazer enforces focus — no more idea hopping." },
+    { num: "04", title: "Your Blueprint + 30-day plan generates", desc: "Once committed, your full venture Blueprint generates: business model, target audience, competitive positioning, and a 30-day execution plan with tasks tailored to your schedule, skills, and constraints." },
+    { num: "05", title: "Daily execution coaching keeps you building", desc: "Adaptive daily tasks, streak tracking, XP progression, and AI coaching that reads your full venture context. TrueBlazer doesn't just tell you what to build — it keeps you building." },
   ];
 
   return (
     <section id="how-it-works" className="px-4 py-16 md:px-12 md:py-24" style={{ background: "var(--ink-2)", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
       <Eyebrow text="How It Works" />
       <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
-        From idea paralysis to <em style={{ color: "var(--gold)", fontStyle: "italic" }}>execution clarity.</em>
+        From idea paralysis to <em style={{ color: "var(--gold)", fontStyle: "italic" }}>daily execution.</em>
       </h2>
 
-      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""} grid grid-cols-1 md:grid-cols-3 gap-px mt-12 md:mt-16`} style={{ background: "var(--border-subtle)" }}>
-        {steps.map(s => (
-          <div key={s.num} className="p-6 sm:p-8 md:p-9" style={{ background: "var(--ink)", position: "relative", overflow: "hidden", transition: "background 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "var(--ink-2)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "var(--ink)")}
-          >
-            <span className="text-6xl sm:text-7xl md:text-8xl" style={{ position: "absolute", top: -10, right: 24, fontFamily: "'Playfair Display', serif", fontWeight: 900, color: "var(--white-ghost)", pointerEvents: "none", lineHeight: 1 }}>{s.num}</span>
-            <div style={{ width: 40, height: 40, border: "1px solid var(--lp-border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--gold)", marginBottom: 24, fontSize: "1rem" }}>◆</div>
-            <h3 className="text-lg sm:text-xl" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, marginBottom: 12 }}>{s.title}</h3>
-            <p className="text-xs sm:text-sm" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, lineHeight: 1.65, color: "var(--silver)" }}>{s.desc}</p>
-          </div>
-        ))}
+      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""} mt-12 md:mt-16`}>
+        {/* 5 steps — stacked vertically with timeline */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {steps.map((s, i) => (
+            <div key={s.num} className="flex gap-4 sm:gap-6" style={{ position: "relative" }}>
+              {/* Timeline bar */}
+              <div className="hidden sm:flex" style={{ flexDirection: "column", alignItems: "center", width: 40, flexShrink: 0 }}>
+                <div style={{ width: 40, height: 40, border: "1px solid var(--lp-border)", background: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--gold)", fontFamily: "'DM Mono', monospace", fontSize: "0.7rem", flexShrink: 0 }}>{s.num}</div>
+                {i < steps.length - 1 && <div style={{ width: 1, flex: 1, background: "var(--border-subtle)" }} />}
+              </div>
+              {/* Content */}
+              <div className="p-5 sm:p-6 flex-1 mb-px" style={{ background: "var(--ink)", transition: "background 0.2s" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "var(--ink-3)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "var(--ink)")}
+              >
+                <span className="sm:hidden" style={{ fontFamily: "'DM Mono', monospace", fontSize: "0.65rem", color: "var(--gold)", marginBottom: 8, display: "block" }}>Step {s.num}</span>
+                <h3 className="text-lg sm:text-xl" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, marginBottom: 10 }}>{s.title}</h3>
+                <p className="text-xs sm:text-sm" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, lineHeight: 1.65, color: "var(--silver)" }}>{s.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -434,7 +454,7 @@ function Mavrik() {
       <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""} grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 mt-10 md:mt-16`}>
         <div className="text-sm sm:text-base" style={{ lineHeight: 1.75, color: "var(--white-dim)" }}>
           <p style={{ marginBottom: 20 }}>Most validation tools ask you to fill out a form. Mavrik conducts a founder interview — an adaptive, intelligent conversation that uncovers the real shape of your venture: what you actually know, what you're assuming, and where the gaps are.</p>
-          <p style={{ marginBottom: 20 }}>Every insight Mavrik captures becomes part of your venture's intelligence layer. When your FVS is generated, it's reading everything Mavrik learned about you — not a generic rubric applied to a template. <span style={{ fontWeight: 500, color: "var(--white)" }}>Personalized analysis, not processed output.</span></p>
+          <p style={{ marginBottom: 20 }}>Every insight Mavrik captures becomes part of your venture's intelligence layer. When your ideas are generated and scored, they're informed by everything Mavrik learned about you — not a generic rubric applied to a template. <span style={{ fontWeight: 500, color: "var(--white)" }}>Personalized analysis, not processed output.</span></p>
           <p>This is the proprietary data moat that separates TrueBlazer from any AI chatbot. You can't replicate 6 months of Mavrik conversation history by starting over somewhere else. The platform compounds as you do.</p>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -457,15 +477,56 @@ function Mavrik() {
 }
 
 /* ═══════════════════════════════════════════
+   SECTION 7B — EXECUTION ENGINE (NEW)
+   ═══════════════════════════════════════════ */
+function ExecutionEngine() {
+  const { ref, visible } = useReveal();
+  const features = [
+    { title: "Adaptive Daily Tasks", desc: "AI-generated tasks that read your venture context, energy patterns, and progress — not a generic checklist. Every morning, you know exactly what to work on." },
+    { title: "30-Day Venture Plan", desc: "A structured execution roadmap from Day 1 to launch milestone. Updated dynamically as you complete tasks and your venture evolves." },
+    { title: "Streak & XP Progression", desc: "Daily check-ins build streaks. Completed tasks earn XP. Milestones unlock badges. The mechanics that turn one-time motivation into compounding discipline." },
+    { title: "AI Workspace", desc: "A full document workspace scoped to your venture — specs, notes, research, and AI-generated docs all in one place, all contextually aware." },
+  ];
+
+  return (
+    <section className="px-4 py-16 md:px-12 md:py-24" style={{ background: "var(--ink)", borderBottom: "1px solid var(--border-subtle)" }}>
+      <Eyebrow text="The Execution Engine" />
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(1.8rem, 4vw, 3.2rem)", lineHeight: 1.1, marginTop: 16 }}>
+        Choosing right is <em style={{ color: "var(--gold)", fontStyle: "italic" }}>half</em> the battle.<br />
+        Executing daily is the other half.
+      </h2>
+      <p className="text-sm sm:text-base" style={{ marginTop: 20, maxWidth: 600, lineHeight: 1.7, color: "var(--white-dim)" }}>
+        Most platforms stop at "here's your idea." TrueBlazer stays with you through daily execution — the part where most founders quietly quit. This is what justifies the subscription: an AI co-founder that doesn't leave after the pitch.
+      </p>
+
+      <div ref={ref} className={`lp-reveal ${visible ? "visible" : ""} grid grid-cols-1 sm:grid-cols-2 gap-px mt-10 md:mt-14`} style={{ background: "var(--border-subtle)" }}>
+        {features.map(f => (
+          <div key={f.title} className="p-5 sm:p-8" style={{ background: "var(--ink-2)", transition: "background 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.background = "var(--ink-3)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "var(--ink-2)")}
+          >
+            <span style={{ color: "var(--gold)", fontSize: "0.85rem", marginBottom: 12, display: "block" }}>◆</span>
+            <h3 className="text-base sm:text-lg" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, marginBottom: 10, color: "var(--white)" }}>{f.title}</h3>
+            <p className="text-xs sm:text-sm" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, lineHeight: 1.65, color: "var(--silver)" }}>{f.desc}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════
    SECTION 8 — MOAT (comparison)
    ═══════════════════════════════════════════ */
 function Moat() {
   const { ref, visible } = useReveal();
   const rows = [
     ["CFA-level financial scoring", "✗", "✗", "✓"],
+    ["Market-validated idea generation", "✗", "✗", "✓"],
     ["Proprietary founder intelligence layer", "✗", "✗", "✓"],
     ["AI interview agent (not a form)", "✗", "✗", "✓"],
-    ["Personalized FVS verdict", "✗", "Varies / opaque", "✓"],
+    ["Daily execution coaching", "✗", "✗", "✓"],
+    ["30-day adaptive venture plans", "✗", "✗", "✓"],
     ["Implementation Kit (build-ready docs)", "✗", "✗", "✓"],
     ["One venture at a time discipline", "✗", "✗", "✓"],
     ["Available to any founder, right now", "✓", "✗ (gatekept)", "✓"],
@@ -516,14 +577,14 @@ function Moat() {
 }
 
 /* ═══════════════════════════════════════════
-   SECTION 9 — OUTCOMES
+   SECTION 9 — OUTCOMES (merged testimonials)
    ═══════════════════════════════════════════ */
 function Outcomes() {
   const { ref, visible } = useReveal();
   const cards = [
     { quote: "I was about to spend $40K building a SaaS I thought was brilliant. TrueBlazer gave me a 4.1 FVS and explained exactly why the unit economics didn't work. Saved me a year and probably my marriage.", name: "Marcus T.", role: "Ex-agency owner, now building with a 8.6 FVS idea" },
     { quote: "I've used every AI tool. TrueBlazer is the only one that asked me hard questions instead of validating whatever I already believed. The Mavrik interview broke me — in the best way.", name: "Priya N.", role: "Solo founder, B2B SaaS, 3 months post-launch" },
-    { quote: "The Implementation Kit alone justified the Pro subscription ten times over. I handed the North Star Spec to a Lovable build and had an MVP in six days. Six days.", name: "Dion A.", role: "Non-technical founder, first venture" },
+    { quote: "The daily execution coaching is what made the difference. I'd validated ideas before but always stalled after week two. The streak mechanic and adaptive tasks kept me shipping every single day.", name: "Dion A.", role: "Non-technical founder, first venture" },
   ];
 
   return (
@@ -553,6 +614,9 @@ function Outcomes() {
           </div>
         ))}
       </div>
+      <p style={{ marginTop: 16, fontFamily: "'DM Mono', monospace", fontSize: "0.6rem", letterSpacing: "0.08em", color: "var(--silver)", opacity: 0.5 }}>
+        Illustrative founder journeys based on early-adopter experiences
+      </p>
     </section>
   );
 }
@@ -565,19 +629,20 @@ function Pricing({ onAuth }: { onAuth: () => void }) {
 
   const freeFeatures = [
     "Full Mavrik interview session",
+    "Market-validated idea generation (3 rounds)",
     "Financial Viability Score™ preview",
     "FVS sub-score breakdown",
-    "Limited idea exploration",
     "One venture at a time",
   ];
   const proFeatures = [
     "Full FVS™ with all 6 dimensions unlocked",
+    "Unlimited market-validated idea generation",
     "Complete Implementation Kit (4 docs)",
-    "North Star Spec + Architecture Contract",
-    "Vertical Slice Plan + Launch Playbook",
+    "Daily execution coaching + adaptive tasks",
+    "30-day venture plan with milestone tracking",
+    "Streak & XP progression system",
     "AI Workspace with full Mavrik context",
     "Pattern Detection + behavioral insights",
-    "Unlimited ideas, full framework library",
     "Export-ready build prompts for Lovable / Cursor / v0",
   ];
 
@@ -657,7 +722,7 @@ function FinalCTA({ onAuth }: { onAuth: () => void }) {
           Stop building things<br />that shouldn't<br />be <em style={{ color: "var(--gold)", fontStyle: "italic" }}>built.</em>
         </h2>
         <p className="text-sm sm:text-base" style={{ color: "var(--white-dim)", maxWidth: 480, margin: "0 auto 40px", lineHeight: 1.65 }}>
-          In a world where AI can execute anything, the rarest skill is knowing what to build in the first place. That's what TrueBlazer gives you. Start your free trial — the verdict is waiting.
+          In a world where AI can execute anything, the rarest skill is knowing what to build in the first place. That's what TrueBlazer gives you — then keeps you building it, every single day. Start your free trial.
         </p>
         <button onClick={onAuth} className="w-full sm:w-auto" style={{ background: "var(--gold)", color: "var(--ink)", padding: "14px 36px", border: "none", fontFamily: "'DM Sans', sans-serif", fontWeight: 500, fontSize: "0.9rem", letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer", transition: "background 0.2s", minHeight: 48 }}
           onMouseEnter={e => (e.currentTarget.style.background = "var(--gold-light)")}
@@ -674,60 +739,17 @@ function FinalCTA({ onAuth }: { onAuth: () => void }) {
 }
 
 /* ═══════════════════════════════════════════
-   SOCIAL PROOF BAR
-   ═══════════════════════════════════════════ */
-function SocialProof() {
-  const testimonials = [
-    { name: "Sarah K.", role: "First-time Founder", quote: "I went from 10 scattered ideas to one focused venture in 48 hours. The AI interview understood my strengths better than I did." },
-    { name: "Marcus D.", role: "Side-Project Builder", quote: "The Financial Viability Score killed two of my ideas — and saved me months. The one it greenlit is now generating revenue." },
-    { name: "Priya R.", role: "Career Pivoter", quote: "I was drowning in possibilities. TrueBlazer forced me to commit and gave me the execution roadmap I couldn't build alone." },
-  ];
-
-  return (
-    <section className="px-4 py-16 md:px-12 md:py-24" style={{ background: "var(--ink)", borderBottom: "1px solid var(--border-subtle)" }}>
-      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-        {/* Credibility bar */}
-        <p className="text-sm sm:text-base" style={{ textAlign: "center", lineHeight: 1.7, color: "var(--silver)", fontFamily: "'DM Sans', sans-serif", fontWeight: 300, marginBottom: 48 }}>
-          Built by a{" "}
-          <span style={{ color: "var(--gold)", fontWeight: 500 }}>CFA Charterholder &amp; CFP</span>{" "}
-          who evaluates business models for a living. The only founder intelligence platform designed to be consumed by the AI agents building your product.
-        </p>
-
-        {/* Testimonials */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {testimonials.map((t, i) => (
-            <div key={i} style={{ border: "1px solid var(--border-subtle)", padding: 24, background: "var(--card-bg)" }}>
-              <p className="text-sm" style={{ color: "var(--white-dim)", lineHeight: 1.7, fontStyle: "italic", marginBottom: 16 }}>
-                "{t.quote}"
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 32, height: 32, background: "var(--gold-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Mono', monospace", fontSize: "0.7rem", color: "var(--gold)", fontWeight: 500 }}>
-                  {t.name[0]}
-                </div>
-                <div>
-                  <span className="text-sm" style={{ color: "var(--white)", fontWeight: 500, display: "block" }}>{t.name}</span>
-                  <span style={{ fontSize: "0.7rem", color: "var(--silver)", fontFamily: "'DM Mono', monospace" }}>{t.role}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ═══════════════════════════════════════════
    WEEK ONE SECTION
    ═══════════════════════════════════════════ */
 function WeekOne() {
   const { ref, visible } = useReveal();
 
   const deliverables = [
-    "Clarity on exactly what to build — based on your expertise, not generic templates",
-    "5 personalized venture ideas scored across 6 financial dimensions",
+    "Clarity on exactly what to build — based on your expertise and real market demand",
+    "5+ market-validated venture ideas scored across 6 financial dimensions",
     "Cross-industry opportunities you'd never discover on your own",
-    "A 30-day execution plan with tasks tailored to your schedule and network",
+    "A committed North Star venture with a 30-day execution plan",
+    "Daily adaptive tasks tailored to your schedule, skills, and network",
     "Build-ready specs you can paste directly into Lovable, Cursor, or v0",
   ];
 
