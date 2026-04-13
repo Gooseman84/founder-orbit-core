@@ -34,7 +34,7 @@ interface DiscoverChatContainerProps {
   estimatedTotal: number;
   canFinalize: boolean;
   isComplete: boolean;
-  extractionProgress: ExtractionProgress | null;
+  extractionProgress: ExtractionProgress | { expertise: string; customerPain: string; workflow: string } | null;
   onSendMessage: (message: string) => void;
   onFinalize: () => void;
 }
