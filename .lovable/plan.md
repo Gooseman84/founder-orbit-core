@@ -1,37 +1,40 @@
 
 
-# Set Up Branded Auth Email Templates
+# Add Welcome Email (Transactional) After Signup
 
 ## What
-Scaffold and brand all 6 auth email templates (signup confirmation, password reset, magic link, invite, email change, reauthentication) to match TrueBlazer's gold-and-ink aesthetic.
-
-## Brand Extraction
-From `src/index.css`:
-- **Primary (gold):** `hsl(43, 52%, 54%)` → button backgrounds
-- **Primary foreground (dark):** `hsl(240, 14%, 4%)` → button text
-- **Foreground:** `hsl(40, 15%, 93%)` → but emails use dark text on white, so headings will be `hsl(240, 14%, 4%)`
-- **Muted foreground:** `hsl(220, 12%, 58%)` → body text color
-- **Border radius:** `0rem` → sharp corners on buttons
-- **Font:** Sans-serif stack
-- **Email body background:** Always white (#ffffff) per email rules
+Send a branded welcome email when a new user signs up and confirms their email. This uses Lovable's built-in app email infrastructure on the already-verified `notify.trueblazer.ai` domain.
 
 ## Steps
 
-1. **Scaffold templates** — creates `auth-email-hook` edge function and 6 template files
-2. **Brand all 6 templates** — apply TrueBlazer gold button color, dark headings, sharp corners, and app tone ("TrueBlazer" branding, mentor-like voice)
-3. **Deploy** `auth-email-hook` edge function
-4. **Confirm** — provide preview links for signup and recovery templates
+1. **Scaffold transactional email infrastructure** — creates `send-transactional-email`, `handle-email-unsubscribe`, and `handle-email-suppression` edge functions, plus a template registry and sample template
+2. **Create welcome email template** — a branded React Email component (`welcome.tsx`) in `_shared/transactional-email-templates/` matching TrueBlazer's gold-and-ink aesthetic (gold CTA button, Playfair Display headings, DM Sans body, sharp corners)
+3. **Register template** in the registry as `welcome`
+4. **Create unsubscribe page** — a new route in the app for handling email unsubscribe links (required by the email system)
+5. **Wire the trigger** — in `src/pages/Auth.tsx`, after successful signup confirmation and first sign-in, invoke `send-transactional-email` with `templateName: 'welcome'` and an idempotency key of `welcome-${user.id}`
+6. **Deploy edge functions** — deploy `send-transactional-email`, `handle-email-unsubscribe`, `handle-email-suppression`
 
-## Template Styling
-- Button: gold background `hsl(43, 52%, 54%)`, dark text `hsl(240, 14%, 4%)`, `borderRadius: '0px'`
-- Headings: dark `hsl(240, 14%, 4%)`
-- Body text: muted `hsl(220, 12%, 58%)`
-- Body background: `#ffffff`
-- Copy tone: confident, direct, action-oriented — matching TrueBlazer's mentor personality
+## Welcome Email Content
+- **Subject:** "Welcome to TrueBlazer — let's build something real"
+- **Heading:** "You're in."
+- **Body:** Brief, mentor-like copy about what to expect: Mavrik interview, market-validated ideas, execution coaching
+- **CTA button:** "Start Your Interview" → links to `/discover`
+- **Footer:** TrueBlazer branding, muted text
+
+## Technical Details
+- Uses `email_domain--scaffold_transactional_email` tool to create the base infrastructure
+- Template styled to match existing auth email templates (same color palette, typography, button style)
+- Welcome email fires once per user via idempotency key `welcome-${user.id}`
+- Trigger point: `Auth.tsx` `handleSignIn` after detecting a new user (no founder profile yet)
+- Unsubscribe page path determined by scaffold tool output
 
 ## Files Created/Modified
-- `supabase/functions/auth-email-hook/index.ts`
-- `supabase/functions/auth-email-hook/deno.json`
-- `supabase/functions/_shared/email-templates/*.tsx` (6 templates)
-- `supabase/config.toml` (function config)
+- `supabase/functions/send-transactional-email/index.ts` (scaffolded)
+- `supabase/functions/handle-email-unsubscribe/index.ts` (scaffolded)
+- `supabase/functions/handle-email-suppression/index.ts` (scaffolded)
+- `supabase/functions/_shared/transactional-email-templates/welcome.tsx` (new)
+- `supabase/functions/_shared/transactional-email-templates/registry.ts` (updated)
+- `src/pages/Auth.tsx` (add welcome email trigger)
+- `src/pages/Unsubscribe.tsx` (new)
+- `src/App.tsx` (add unsubscribe route)
 
