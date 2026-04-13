@@ -7,6 +7,7 @@ import {
   Container,
   Head,
   Heading,
+  Hr,
   Html,
   Preview,
   Text,
@@ -19,15 +20,17 @@ interface ReauthenticationEmailProps {
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Your verification code</Preview>
+    <Preview>Your verification code for TrueBlazer.</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm reauthentication</Heading>
+        <Text style={eyebrow}>◆ TRUEBLAZER</Text>
+        <Heading style={h1}>Verify your identity.</Heading>
         <Text style={text}>Use the code below to confirm your identity:</Text>
         <Text style={codeStyle}>{token}</Text>
+        <Hr style={divider} />
         <Text style={footer}>
-          This code will expire shortly. If you didn't request this, you can
-          safely ignore this email.
+          This code expires shortly. If you didn't request this, you can safely
+          ignore this email.
         </Text>
       </Container>
     </Body>
@@ -36,25 +39,36 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
 
 export default ReauthenticationEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = { backgroundColor: '#ffffff', fontFamily: "'DM Sans', Arial, sans-serif" }
+const container = { padding: '40px 32px' }
+const eyebrow = {
+  fontFamily: "'DM Mono', Courier, monospace",
+  fontSize: '11px',
+  letterSpacing: '0.2em',
+  textTransform: 'uppercase' as const,
+  color: 'hsl(43, 52%, 54%)',
+  margin: '0 0 24px',
+}
 const h1 = {
-  fontSize: '22px',
+  fontFamily: "'Playfair Display', Georgia, serif",
+  fontSize: '28px',
   fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
+  color: 'hsl(240, 14%, 4%)',
+  margin: '0 0 16px',
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
+  fontSize: '15px',
+  color: 'hsl(220, 12%, 58%)',
+  lineHeight: '1.6',
+  margin: '0 0 28px',
 }
 const codeStyle = {
-  fontFamily: 'Courier, monospace',
-  fontSize: '22px',
+  fontFamily: "'DM Mono', Courier, monospace",
+  fontSize: '28px',
   fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 30px',
+  color: 'hsl(43, 52%, 54%)',
+  letterSpacing: '0.15em',
+  margin: '0 0 32px',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const divider = { borderColor: '#e5e5e5', margin: '32px 0' }
+const footer = { fontSize: '12px', color: '#999999', margin: '0', lineHeight: '1.5' }
