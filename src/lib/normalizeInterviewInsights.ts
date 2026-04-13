@@ -68,6 +68,15 @@ export interface NormalizedInterviewData {
   keyQuotes: string[];
   redFlags: string[];
   authorityAssessment: AuthorityAssessment | null;
+  routingSignal: {
+    suggestedArchetype: string;
+    buyerAccess: {
+      hasDirectAccess: boolean;
+      reachabilityDescription: string;
+      namedBuyerOrChannel: string | null;
+    };
+    confidenceForRouting: string;
+  } | null;
 }
 
 export function normalizeInterviewInsights(raw: any): NormalizedInterviewData {
@@ -137,6 +146,7 @@ function normalizeNewSchema(raw: any): NormalizedInterviewData {
     keyQuotes: raw.keyQuotes || [],
     redFlags: raw.redFlags || [],
     authorityAssessment: raw.authorityAssessment ?? null,
+    routingSignal: raw.routingSignal ?? null,
   };
 }
 
@@ -170,6 +180,7 @@ function normalizeOldSchema(raw: any): NormalizedInterviewData {
     keyQuotes: raw.keyQuotes || [],
     redFlags: raw.redFlags || [],
     authorityAssessment: null,
+    routingSignal: null,
   };
 }
 
@@ -200,5 +211,6 @@ function getEmptyNormalized(): NormalizedInterviewData {
     keyQuotes: [],
     redFlags: [],
     authorityAssessment: null,
+    routingSignal: null,
   };
 }
