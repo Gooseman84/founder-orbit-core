@@ -13,18 +13,19 @@ export type InterviewContextSlice = {
   customerPain?: Record<string, any>;
   interviewSignalQuality?: Record<string, any>;
   authorityAssessment?: Record<string, any>;
+  routingSignal?: Record<string, any>;
 };
 
 const FUNCTION_FIELD_MAP: Record<string, (keyof InterviewContextSlice)[]> = {
   "generate-ideas": ["ideaGenerationContext", "founderSummary", "transferablePatterns", "energyDrainers"],
-  "generate-founder-ideas": ["founderSummary", "ventureIntelligence", "extractedInsights", "ideaGenerationContext"],
-  "generate-blueprint": ["ventureIntelligence", "constraints", "energyDrainers", "founderSummary", "extractedInsights", "domainExpertise", "customerPain", "interviewSignalQuality", "transferablePatterns", "ideaGenerationContext", "authorityAssessment"],
-  "generate-venture-plan": ["constraints", "ventureIntelligence", "founderSummary", "networkStrength"],
+  "generate-founder-ideas": ["founderSummary", "ventureIntelligence", "extractedInsights", "ideaGenerationContext", "routingSignal"],
+  "generate-blueprint": ["ventureIntelligence", "constraints", "energyDrainers", "founderSummary", "extractedInsights", "domainExpertise", "customerPain", "interviewSignalQuality", "transferablePatterns", "ideaGenerationContext", "authorityAssessment", "routingSignal"],
+  "generate-venture-plan": ["constraints", "ventureIntelligence", "founderSummary", "networkStrength", "routingSignal"],
   "generate-daily-execution-tasks": ["constraints", "energyDrainers", "founderSummary", "transferablePatterns"],
-  "refresh-blueprint": ["founderSummary", "constraints", "ventureIntelligence", "extractedInsights"],
+  "refresh-blueprint": ["founderSummary", "constraints", "ventureIntelligence", "extractedInsights", "routingSignal"],
   "dynamic-founder-interview": ["founderSummary", "extractedInsights", "ventureIntelligence"],
-  "calculate-financial-viability": ["constraints", "networkStrength", "ventureIntelligence", "founderSummary", "authorityAssessment"],
-  "generate-implementation-kit": ["ventureIntelligence", "constraints", "founderSummary", "authorityAssessment"],
+  "calculate-financial-viability": ["constraints", "networkStrength", "ventureIntelligence", "founderSummary", "authorityAssessment", "routingSignal"],
+  "generate-implementation-kit": ["ventureIntelligence", "constraints", "founderSummary", "authorityAssessment", "routingSignal"],
   "venture-debugger": ["constraints", "energyDrainers", "founderSummary", "transferablePatterns", "ventureIntelligence", "extractedInsights"],
   "feature-builder": ["ventureIntelligence", "constraints", "founderSummary", "extractedInsights"],
 };
@@ -86,5 +87,6 @@ function normalizeForBackend(ctx: any): any {
     ventureIntelligence: ctx.ventureIntelligence || {},
     interviewSignalQuality: ctx.interviewSignalQuality || {},
     authorityAssessment: ctx.authorityAssessment ?? null,
+    routingSignal: ctx.routingSignal ?? null,
   };
 }

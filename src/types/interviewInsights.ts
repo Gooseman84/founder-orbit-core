@@ -76,4 +76,23 @@ export interface NewSchemaInterviewInsights {
   redFlags: string[];
   founderSummary: string;
   ideaGenerationContext: string;
+  routingSignal?: RoutingSignal;
+}
+
+// Routing signal emitted by Mavrik interview summary
+export interface RoutingSignal {
+  suggestedArchetype: "vertical_saas" | "marketplace" | "service_to_product" | "info_product" | "tool_builder" | "agency_to_saas" | "unknown";
+  buyerAccess: {
+    hasDirectAccess: boolean;
+    reachabilityDescription: string;
+    namedBuyerOrChannel: string | null;
+  };
+  confidenceForRouting: "high" | "medium" | "low";
+}
+
+// Extraction progress emitted during the interview (per-question)
+export interface ExtractionProgress {
+  expertise: "none" | "low" | "medium" | "high";
+  customerPain: "none" | "low" | "medium" | "high";
+  workflow: "none" | "low" | "medium" | "high";
 }

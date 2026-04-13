@@ -5,6 +5,26 @@ import { DiscoverChatInput } from "./DiscoverChatInput";
 import { DiscoverTypingIndicator } from "./DiscoverTypingIndicator";
 import { Button } from "@/components/ui/button";
 import type { InterviewTurn } from "@/types/founderInterview";
+import type { ExtractionProgress } from "@/types/interviewInsights";
+
+const SIGNAL_LEVELS = ["none", "low", "medium", "high"] as const;
+
+function SignalDots({ level }: { level: string }) {
+  const idx = SIGNAL_LEVELS.indexOf(level as any);
+  const filled = idx >= 0 ? idx : 0;
+  return (
+    <span className="inline-flex gap-[3px]">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className={`w-[6px] h-[6px] rounded-full transition-colors duration-300 ${
+            i < filled ? "bg-primary" : "bg-muted-foreground/20"
+          }`}
+        />
+      ))}
+    </span>
+  );
+}
 
 interface DiscoverChatContainerProps {
   transcript: InterviewTurn[];
@@ -14,6 +34,7 @@ interface DiscoverChatContainerProps {
   estimatedTotal: number;
   canFinalize: boolean;
   isComplete: boolean;
+  extractionProgress: ExtractionProgress | { expertise: string; customerPain: string; workflow: string } | null;
   onSendMessage: (message: string) => void;
   onFinalize: () => void;
 }
@@ -26,6 +47,7 @@ export function DiscoverChatContainer({
   estimatedTotal,
   canFinalize,
   isComplete,
+  extractionProgress,
   onSendMessage,
   onFinalize,
 }: DiscoverChatContainerProps) {
@@ -72,6 +94,23 @@ export function DiscoverChatContainer({
             </button>
           )}
         </div>
+
+        {/* Extraction Progress Indicators */}
+        {extractionProgress && (
+          <div className="flex items-center gap-4 mt-3 text-[0.7rem] tracking-[0.08em] uppercase text-muted-foreground font-medium">
+            <span className="inline-flex items-center gap-1.5">
+              EXPERTISE <SignalDots level={extractionProgress.expertise} />
+            </span>
+            <span className="text-border">|</span>
+            <span className="inline-flex items-center gap-1.5">
+              CUSTOMER PAIN <SignalDots level={extractionProgress.customerPain} />
+            </span>
+            <span className="text-border">|</span>
+            <span className="inline-flex items-center gap-1.5">
+              WORKFLOW <SignalDots level={extractionProgress.workflow} />
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Separator */}

@@ -57,6 +57,25 @@ reconciling invoices across two systems that don't talk to each other."
 LOW signal: "Small businesses struggle with accounting." This tells
 you nothing. Push for the specific person and the specific moment.
 
+GOAL 2B — BUYER REACHABILITY (conditional, after Goal 2 reaches medium+)
+
+Once you have a specific customer pain with a named role, probe whether
+the founder can actually REACH those buyers. This is the bridge between
+"good idea" and "can actually sell it."
+
+Ask ONE question like:
+"You've described [role] dealing with [problem]. Do you personally know
+someone in that role — or know where to find 10 of them within a week?"
+
+You're looking for:
+- Direct access (knows people personally, has a mailing list, is in communities)
+- Indirect access (knows how to find them via LinkedIn, events, subreddits)
+- No access (would have to cold-start from zero)
+
+This does NOT add to your question count — fold it into an existing
+question or append it as a brief follow-up within the same turn.
+Capture the answer for the summary's routingSignal.buyerAccess field.
+
 GOAL 3 — WORKFLOW DEPTH
 
 Can they walk you through exactly how the target customer currently
@@ -493,6 +512,15 @@ You MUST respond with ONLY a valid JSON object matching this schema:
       "structuralSimilarity": string
     }
   ],
+  "routingSignal": {
+    "suggestedArchetype": "vertical_saas" | "marketplace" | "service_to_product" | "info_product" | "tool_builder" | "agency_to_saas" | "unknown",
+    "buyerAccess": {
+      "hasDirectAccess": boolean,
+      "reachabilityDescription": string,
+      "namedBuyerOrChannel": string | null
+    },
+    "confidenceForRouting": "high" | "medium" | "low"
+  },
   "keyQuotes": string[],
   "redFlags": string[],
   "founderSummary": string,
@@ -536,6 +564,29 @@ Field definitions:
   understanding level, and any constraints or preferences that
   emerged naturally from the conversation (NOT from structured
   inputs — those come from the Lightning Round).
+
+- routingSignal.suggestedArchetype: Based on ALL interview evidence,
+  classify which archetype best fits this founder's situation:
+  "vertical_saas" = building software for a specific industry vertical
+  "marketplace" = connecting two sides of a market
+  "service_to_product" = productizing an existing service/consulting practice
+  "info_product" = courses, templates, communities, content businesses
+  "tool_builder" = developer tools, APIs, infrastructure
+  "agency_to_saas" = transitioning from agency/freelance to scalable product
+  "unknown" = insufficient signal to classify
+
+- routingSignal.buyerAccess: Based on the founder's responses about
+  their target customer, assess whether they can actually reach buyers.
+  hasDirectAccess = true if they personally know potential buyers or
+  are embedded in communities where buyers congregate.
+  reachabilityDescription = 1-2 sentences about HOW they'd reach buyers.
+  namedBuyerOrChannel = specific person, community, or channel mentioned.
+  If no buyer access was discussed, set hasDirectAccess to false and
+  note "Not assessed during interview" in reachabilityDescription.
+
+- routingSignal.confidenceForRouting: How confident are you that the
+  archetype classification is correct? "high" = clear signals across
+  multiple responses. "medium" = reasonable inference. "low" = guessing.
 
 - authorityAssessment.tier: 1 (borrowed), 2 (operational), or 3 (earned).
   Based on cumulative interview evidence, not a single response.
@@ -799,7 +850,9 @@ serve(async (req) => {
       messages.push({
         role: "user" as const,
         content:
-          "Ask the next interview question now. Remember: respond with the question text only, no explanations.",
+          `Ask the next interview question now. Respond with ONLY a JSON object in this format:
+{"question":"your question text here","extractionProgress":{"expertise":"none|low|medium|high","customerPain":"none|low|medium|high","workflow":"none|low|medium|high"}}
+The extractionProgress reflects your CURRENT assessment of signal quality for each goal based on all answers so far. No markdown, no prose — just the JSON.`,
       });
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -836,15 +889,46 @@ serve(async (req) => {
       }
 
       const data = await response.json();
-      let question: string =
+      let rawQuestion: string =
         data.choices?.[0]?.message?.content?.trim?.() ||
         "What specific skill have people paid you for that you think gives you an edge?";
 
-      if (question.startsWith("{")) {
+      let question = rawQuestion;
+      let extractionProgress: { expertise: string; customerPain: string; workflow: string } | null = null;
+
+      // Try to parse structured response with extractionProgress
+      if (rawQuestion.startsWith("{")) {
         try {
-          const parsed = JSON.parse(question);
-          if (parsed.question) question = parsed.question;
+          const parsed = JSON.parse(rawQuestion);
+          if (parsed.question) {
+            question = parsed.question;
+            if (parsed.extractionProgress) {
+              extractionProgress = {
+                expertise: parsed.extractionProgress.expertise || "none",
+                customerPain: parsed.extractionProgress.customerPain || "none",
+                workflow: parsed.extractionProgress.workflow || "none",
+              };
+            }
+          }
         } catch { }
+      }
+      
+      // Strip markdown fences if present
+      if (question.startsWith("```")) {
+        const inner = question.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+        try {
+          const parsed = JSON.parse(inner);
+          if (parsed.question) {
+            question = parsed.question;
+            if (parsed.extractionProgress) {
+              extractionProgress = {
+                expertise: parsed.extractionProgress.expertise || "none",
+                customerPain: parsed.extractionProgress.customerPain || "none",
+                workflow: parsed.extractionProgress.workflow || "none",
+              };
+            }
+          }
+        } catch { question = inner; }
       }
 
       transcript = [
@@ -870,7 +954,7 @@ serve(async (req) => {
       const approachingLimit = updatedAiCount >= (maxQuestions - 1);
 
       return new Response(
-        JSON.stringify({ interviewId, question, transcript, canFinalize, approachingLimit }),
+        JSON.stringify({ interviewId, question, transcript, canFinalize, approachingLimit, extractionProgress }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
