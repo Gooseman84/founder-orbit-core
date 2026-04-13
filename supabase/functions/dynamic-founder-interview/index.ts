@@ -57,6 +57,25 @@ reconciling invoices across two systems that don't talk to each other."
 LOW signal: "Small businesses struggle with accounting." This tells
 you nothing. Push for the specific person and the specific moment.
 
+GOAL 2B — BUYER REACHABILITY (conditional, after Goal 2 reaches medium+)
+
+Once you have a specific customer pain with a named role, probe whether
+the founder can actually REACH those buyers. This is the bridge between
+"good idea" and "can actually sell it."
+
+Ask ONE question like:
+"You've described [role] dealing with [problem]. Do you personally know
+someone in that role — or know where to find 10 of them within a week?"
+
+You're looking for:
+- Direct access (knows people personally, has a mailing list, is in communities)
+- Indirect access (knows how to find them via LinkedIn, events, subreddits)
+- No access (would have to cold-start from zero)
+
+This does NOT add to your question count — fold it into an existing
+question or append it as a brief follow-up within the same turn.
+Capture the answer for the summary's routingSignal.buyerAccess field.
+
 GOAL 3 — WORKFLOW DEPTH
 
 Can they walk you through exactly how the target customer currently
@@ -493,6 +512,15 @@ You MUST respond with ONLY a valid JSON object matching this schema:
       "structuralSimilarity": string
     }
   ],
+  "routingSignal": {
+    "suggestedArchetype": "vertical_saas" | "marketplace" | "service_to_product" | "info_product" | "tool_builder" | "agency_to_saas" | "unknown",
+    "buyerAccess": {
+      "hasDirectAccess": boolean,
+      "reachabilityDescription": string,
+      "namedBuyerOrChannel": string | null
+    },
+    "confidenceForRouting": "high" | "medium" | "low"
+  },
   "keyQuotes": string[],
   "redFlags": string[],
   "founderSummary": string,
