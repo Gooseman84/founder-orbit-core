@@ -850,7 +850,9 @@ serve(async (req) => {
       messages.push({
         role: "user" as const,
         content:
-          "Ask the next interview question now. Remember: respond with the question text only, no explanations.",
+          `Ask the next interview question now. Respond with ONLY a JSON object in this format:
+{"question":"your question text here","extractionProgress":{"expertise":"none|low|medium|high","customerPain":"none|low|medium|high","workflow":"none|low|medium|high"}}
+The extractionProgress reflects your CURRENT assessment of signal quality for each goal based on all answers so far. No markdown, no prose — just the JSON.`,
       });
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
