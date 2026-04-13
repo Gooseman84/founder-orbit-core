@@ -87,5 +87,6 @@ function normalizeForBackend(ctx: any): any {
     ventureIntelligence: ctx.ventureIntelligence || {},
     interviewSignalQuality: ctx.interviewSignalQuality || {},
     authorityAssessment: ctx.authorityAssessment ?? null,
+    routingSignal: ctx.routingSignal ?? null,
   };
 }
