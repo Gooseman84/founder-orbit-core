@@ -1,60 +1,68 @@
 
 
-# High-Impact Improvements to Make TrueBlazer Super Successful
+# Landing Page Copy Audit: Alignment with TrueBlazer's Actual Product
 
-## 1. Custom OG Image & SEO Meta Tags
-**Current state:** The `og:image` still points to a generic Lovable placeholder (`lovable.dev/opengraph-image-p98pqg.png`). No favicon is set.
-**Impact:** Every social share, link preview, and Google result looks generic — kills credibility instantly.
-**Work:** Create a branded OG image (1200×630), add a TrueBlazer favicon, update `index.html` meta tags.
+## What's Working Well
+- **"System of Record" positioning** — strong, accurate, differentiated
+- **FVS section** — well-explained, compelling, matches the product
+- **Mavrik section** — accurately describes the interview experience
+- **Final CTA** — "Stop building things that shouldn't be built" is sharp
+- **Gold & Ink aesthetic** — premium, matches the in-app experience
 
-## 2. Welcome / Onboarding Email
-**Current state:** No transactional emails configured. Users sign up, verify, and get zero follow-up.
-**Impact:** First-touch email drives 50%+ of return visits for new products. Without it, users who bounce after signup are lost forever.
-**Work:** Set up email infrastructure via Lovable Cloud, create a welcome email template that fires on signup confirmation.
+## What's Misaligned or Missing
 
-## 3. PWA / "Add to Home Screen" Support
-**Current state:** No `manifest.json`, no service worker, no PWA metadata.
-**Impact:** TrueBlazer's daily check-in / streak mechanic is perfect for mobile home screen. PWA makes it feel like a native app and dramatically increases daily return rate.
-**Work:** Add `manifest.json` with TrueBlazer branding, add a basic service worker for offline shell, add `<link rel="manifest">` to `index.html`.
+### 1. V2's Core Differentiator Is Invisible
+The v2 rebuild is about **market-validated ventures** — intersecting founder intelligence with real-world demand signals. The landing page doesn't mention market validation, problem discovery, or demand signals anywhere except the ticker. The copy reads like v1: "we interview you and score your idea." The actual product now discovers validated problems, generates market-signal ideas, and scores them against real data. This is the biggest gap.
 
-## 4. Error Tracking & Monitoring
-**Current state:** Errors are caught by `ErrorBoundary` but only shown in-app. No external error reporting.
-**Impact:** You have no visibility into production crashes. Users hit errors and silently churn.
-**Work:** Add a lightweight error reporter (e.g., log errors to a Supabase `error_logs` table via an edge function, or integrate Sentry). Wire into `ErrorBoundary` and `invokeAuthedFunction` error paths.
+### 2. How It Works Is Outdated (3-Step → Actual 5-Step)
+Current copy: Interview → FVS → Implementation Kit.
+Actual flow: Interview → AI-Generated Ideas (with market validation) → Commit to North Star → Blueprint + 30-Day Plan → Execution Dashboard.
+The landing page skips the entire idea generation, commitment, and execution coaching phases — which are arguably the most compelling parts of the product.
 
-## 5. Share Your Venture / Export
-**Current state:** No way to share a venture summary, blueprint, or progress externally. No social proof loop.
-**Impact:** Sharing is the #1 organic growth driver. Founders want to show off their progress and get feedback.
-**Work:** Add a "Share Venture" button that generates a public read-only summary page or a shareable image/PDF of the blueprint + progress milestones.
+### 3. Two Duplicate Testimonial Sections
+`SocialProof` (Sarah K., Marcus D., Priya R.) and `Outcomes` (Marcus T., Priya N., Dion A.) are both fabricated testimonial sections with similar-sounding quotes and overlapping names. This creates a credibility risk and wastes scroll depth. Should consolidate into one section with clearly labeled early-adopter or illustrative quotes.
 
-## 6. Push Notification Reminders (via PWA)
-**Current state:** Streak/XP system exists but relies entirely on users remembering to open the app.
-**Impact:** Push notifications for daily check-ins could 3-5x streak retention.
-**Work:** Implement web push via PWA service worker + a simple notification preferences UI. Trigger via a scheduled edge function.
+### 4. Execution Layer Not Mentioned
+The product has daily check-ins, streak tracking, XP/badges, adaptive task generation, a 30-day venture plan, and a workspace. None of this is on the landing page. For founders who are "execution-constrained" (the stated target persona), this is a major selling point being left on the table.
 
-## 7. Landing Page Social Proof Section
-**Current state:** The 774-line landing page has features, pricing, and CTA — but no testimonials, user count, or trust signals.
-**Impact:** Social proof is the single biggest conversion lever on landing pages.
-**Work:** Add a "Founders Building With TrueBlazer" section with testimonial cards (even placeholder/early-adopter quotes) and a live user/venture count pulled from the database.
+### 5. Week One Deliverables Are Good But Underweight
+"5 personalized venture ideas scored across 6 financial dimensions" is accurate but doesn't mention they're market-validated or cross-industry. "Build-ready specs" is accurate but could emphasize the agent-ready output angle more.
 
----
+### 6. Pricing Copy vs. Actual Product
+The free tier lists "Limited idea exploration" — vague. The pro tier mentions "Implementation Kit (4 docs)" but doesn't mention the execution dashboard, daily coaching, or workspace — the features that justify $49/mo ongoing vs. a one-time report.
 
-## Recommended Priority Order
+## Proposed Changes
 
-| Priority | Item | Effort | Impact |
-|----------|------|--------|--------|
-| 1 | Custom OG image + favicon | 30 min | High — every share looks professional |
-| 2 | PWA manifest + home screen | 45 min | High — daily retention mechanic |
-| 3 | Welcome email | 1 hr | High — re-engagement of new signups |
-| 4 | Landing page social proof | 1 hr | High — conversion rate |
-| 5 | Share venture | 2 hr | Medium — organic growth |
-| 6 | Error tracking | 1 hr | Medium — operational visibility |
-| 7 | Push notifications | 2 hr | Medium — streak retention |
+### A. Update Hero subheading
+Add market validation angle: "Interview data, market signals, financial scores, and build specs — all in one place."
 
-## Technical Notes
-- OG image can be generated as a static asset or dynamically via an edge function
-- PWA requires `manifest.json` in `/public` and a service worker registration in `main.tsx`
-- Welcome email uses the Lovable Cloud email infrastructure tools
-- Error tracking can be self-hosted via a simple `app_errors` table + edge function (no third-party needed)
-- Share venture could use a public route like `/v/:ventureId/share` with a read-only view
+### B. Rewrite How It Works to 5 steps
+1. Mavrik interviews you
+2. Market-validated ideas are generated
+3. You commit to your North Star venture
+4. Your Blueprint + 30-day plan generates
+5. Daily execution coaching keeps you building
+
+### C. Merge testimonial sections
+Remove the `SocialProof` component. Keep `Outcomes` as the single testimonial section, positioned after Moat. Add a small disclaimer like "Illustrative founder journeys" if these aren't real users.
+
+### D. Add an "Execution Engine" section
+Between Mavrik and Moat, add a section highlighting: daily tasks, streak mechanics, adaptive coaching, workspace, 30-day plans. This is what justifies the subscription and differentiates from a one-time report.
+
+### E. Update Pricing feature lists
+- Free: mention "Market-validated idea generation" instead of "Limited idea exploration"
+- Pro: add "Daily execution coaching", "30-day venture plan", "Streak & XP progression"
+
+### F. Update Problem section copy
+Add a line about how even validated ideas fail without execution discipline. Connects the "idea paralysis" problem to the "execution gap" that TrueBlazer also solves.
+
+### G. Update Moat table
+Add rows for: "Market-validated idea generation", "Daily execution coaching", "30-day adaptive plans"
+
+## Technical Details
+- All changes are in `src/pages/Index.tsx`
+- No database or backend changes needed
+- Removes the `SocialProof` component entirely
+- Adds a new `ExecutionEngine` section component
+- Updates copy in Hero, Problem, HowItWorks, Moat, Pricing, WeekOne sections
 
