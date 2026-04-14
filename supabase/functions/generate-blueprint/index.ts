@@ -932,8 +932,18 @@ CRITICAL: Never return null for these 4 fields. Even with minimal data, you can 
       ? `\n## RECENT FOUNDER STATE (from reflections)\nAvg Energy: ${(reflectionEnergy.reduce((a: number, b: number) => a + b, 0) / reflectionEnergy.length).toFixed(1)}/5\nAvg Stress: ${reflectionStress.length > 0 ? (reflectionStress.reduce((a: number, b: number) => a + b, 0) / reflectionStress.length).toFixed(1) : "unknown"}/5\nBlockers: ${reflectionBlockers.join(" | ") || "none"}\n\nCalibrate recommendations to the founder's current energy and stress levels.\n`
       : "";
 
-    // Fetch compounded snapshot
-    const compoundedSnapshot = await getCompoundedContext(supabase, userId, chosenIdea?.id ? ventureId : "");
+    // Fetch compounded snapshot — find the user's active venture
+    let compoundedSnapshot: any = null;
+    const { data: activeVenture } = await supabase
+      .from("ventures")
+      .select("id")
+      .eq("user_id", userId)
+      .in("venture_state", ["executing", "committed"])
+      .limit(1)
+      .maybeSingle();
+    if (activeVenture?.id) {
+      compoundedSnapshot = await getCompoundedContext(supabase, userId, activeVenture.id);
+    }
     const snapshotBlock = compoundedSnapshot ? `\n${formatSnapshotForPrompt(compoundedSnapshot)}\n\nUse this pre-computed founder intelligence to calibrate recommendations, energy expectations, and market grounding.\n` : "";
 
     const enrichedInstructions = interviewInstructions + marketBlock + patternsBlock + reflectionsBlock + snapshotBlock;
