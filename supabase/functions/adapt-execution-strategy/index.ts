@@ -201,6 +201,9 @@ Name: ${venture.name}
 Success Metric: ${venture.success_metric || "not set"}
 ${blueprint?.ai_summary ? `Blueprint: ${blueprint.ai_summary}` : "No blueprint yet"}
 
+## FOUNDER INTELLIGENCE
+${interviewContext ? `Founder Summary: ${(interviewContext as any).founderSummary || "none"}\nConstraints: ${JSON.stringify((interviewContext as any).constraints || {})}\nEnergy Drainers: ${((interviewContext as any).energyDrainers || []).join(", ") || "none"}\nTransferable Patterns: ${JSON.stringify((interviewContext as any).transferablePatterns || [])}\nRouting Signal: ${JSON.stringify((interviewContext as any).routingSignal || null)}` : "No interview context available — strategy based on behavioral data only."}
+
 Generate the execution strategy for tomorrow.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
