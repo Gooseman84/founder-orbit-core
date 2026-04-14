@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
 import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
+import { getCompoundedContext, formatSnapshotForPrompt } from "../_shared/getCompoundedContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -225,6 +226,7 @@ serve(async (req) => {
       { data: activePatterns },
       { data: executionStrategy },
       frameworksText,
+      compoundedSnapshot,
     ] = await Promise.all([
       supabaseService
         .from("ventures")
@@ -281,6 +283,7 @@ serve(async (req) => {
         injectionRole: "core",
         maxTokens: 600,
       }),
+      getCompoundedContext(supabaseService, user.id, ventureId),
     ]);
 
     if (!venture) {
@@ -396,6 +399,8 @@ ${executionStrategy?.strategy ? `- Focus: ${(executionStrategy.strategy as any).
 
 ## FOUNDER CONTEXT
 ${interviewContext ? JSON.stringify(interviewContext, null, 2) : "No interview context available."}
+
+${compoundedSnapshot ? formatSnapshotForPrompt(compoundedSnapshot) : ""}
 
 Run the four-step diagnostic protocol now. Return ONLY the JSON object.`;
 

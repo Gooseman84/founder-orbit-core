@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
+import { getCompoundedContext, formatSnapshotForPrompt } from "../_shared/getCompoundedContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -931,7 +932,11 @@ CRITICAL: Never return null for these 4 fields. Even with minimal data, you can 
       ? `\n## RECENT FOUNDER STATE (from reflections)\nAvg Energy: ${(reflectionEnergy.reduce((a: number, b: number) => a + b, 0) / reflectionEnergy.length).toFixed(1)}/5\nAvg Stress: ${reflectionStress.length > 0 ? (reflectionStress.reduce((a: number, b: number) => a + b, 0) / reflectionStress.length).toFixed(1) : "unknown"}/5\nBlockers: ${reflectionBlockers.join(" | ") || "none"}\n\nCalibrate recommendations to the founder's current energy and stress levels.\n`
       : "";
 
-    const enrichedInstructions = interviewInstructions + marketBlock + patternsBlock + reflectionsBlock;
+    // Fetch compounded snapshot
+    const compoundedSnapshot = await getCompoundedContext(supabase, userId, chosenIdea?.id ? ventureId : "");
+    const snapshotBlock = compoundedSnapshot ? `\n${formatSnapshotForPrompt(compoundedSnapshot)}\n\nUse this pre-computed founder intelligence to calibrate recommendations, energy expectations, and market grounding.\n` : "";
+
+    const enrichedInstructions = interviewInstructions + marketBlock + patternsBlock + reflectionsBlock + snapshotBlock;
 
     console.log("[generate-blueprint] Calling Lovable AI gateway with payload");
 
