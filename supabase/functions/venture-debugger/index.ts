@@ -289,15 +289,26 @@ serve(async (req) => {
       });
     }
 
-    // Fetch idea details if venture has an idea_id
+    // Fetch idea details and market validation if venture has an idea_id
     let ideaData: any = null;
+    let marketValidation: any = null;
     if (venture.idea_id) {
-      const { data } = await supabaseService
-        .from("ideas")
-        .select("title, description, business_model_type")
-        .eq("id", venture.idea_id)
-        .maybeSingle();
-      ideaData = data;
+      const [ideaResult, marketResult] = await Promise.all([
+        supabaseService
+          .from("ideas")
+          .select("title, description, business_model_type")
+          .eq("id", venture.idea_id)
+          .maybeSingle(),
+        supabaseService
+          .from("market_validations")
+          .select("validation_score, demand_signals, competitor_landscape, market_timing")
+          .eq("idea_id", venture.idea_id)
+          .order("validated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      ideaData = ideaResult.data;
+      marketValidation = marketResult.data;
     }
 
     // ── Compute Founder Moment State (inlined) ──
