@@ -549,13 +549,17 @@ serve(async (req) => {
     // ============================================
     console.log("generate-founder-ideas v7: Starting Pass A (Creative Divergence)...");
     
+    const marketIntelBlock = marketIntelligence
+      ? `\n## PREVIOUSLY VALIDATED MARKET SIGNALS\nThe founder has already run market validation on previous ideas. Use these signals to bias toward niches with proven demand:\n${JSON.stringify(marketIntelligence, null, 2)}\n\nPrioritize ideas that align with validated demand signals. Avoid niches where validation showed weak timing or low scores.\n`
+      : "";
+
     const passAMessage = `MODE: ${mode}
 MODE INSTRUCTIONS: ${modeContext}
 TONE: ${tone}
 
 FOUNDER CONTEXT:
 ${JSON.stringify(founderPayload, null, 2)}
-
+${marketIntelBlock}
 Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [...] }`;
 
     const passAResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
