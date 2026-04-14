@@ -222,6 +222,8 @@ serve(async (req) => {
       { data: fvsData },
       { data: recentReflections },
       { data: founderProfile },
+      { data: activePatterns },
+      { data: executionStrategy },
       frameworksText,
     ] = await Promise.all([
       supabaseService
@@ -261,6 +263,18 @@ serve(async (req) => {
         .from("founder_profiles")
         .select("context_summary")
         .eq("user_id", user.id)
+        .maybeSingle(),
+      supabaseService
+        .from("founder_patterns")
+        .select("pattern_type, pattern_description, advisor_note, severity")
+        .eq("venture_id", ventureId)
+        .eq("status", "active"),
+      supabaseService
+        .from("execution_strategies")
+        .select("strategy")
+        .eq("venture_id", ventureId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle(),
       fetchFrameworks(supabaseService, {
         functions: ["venture-debugger"],
