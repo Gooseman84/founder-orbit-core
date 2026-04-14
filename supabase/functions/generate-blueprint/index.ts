@@ -782,6 +782,9 @@ serve(async (req) => {
         ideaAnalysis.workflow_context = `Current workflow (${pain.currentWorkflow.length} steps): ${pain.currentWorkflow.join(' → ')}`;
       }
 
+      console.log("[generate-blueprint] Enriched idea_analysis from Mavrik interview data");
+    }
+
     // Fetch market validation, founder patterns, and recent reflections for richer context
     let marketValidation: any = null;
     if (chosenIdea?.id) {
