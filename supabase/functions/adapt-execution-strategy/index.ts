@@ -5,6 +5,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -76,20 +77,34 @@ serve(async (req) => {
       { data: recentReflections },
       { data: recentTaskRows },
       { data: activePatterns },
-      { data: marketValidations },
       { data: blueprint },
+      { data: interviewData },
     ] = await Promise.all([
       supabaseService.from("ventures").select("name, idea_id, venture_state, commitment_start_at, commitment_window_days, success_metric").eq("id", ventureId).single(),
       supabaseService.from("venture_daily_checkins").select("checkin_date, completion_status, explanation, reflection, mavrik_response").eq("venture_id", ventureId).order("checkin_date", { ascending: false }).limit(7),
       supabaseService.from("daily_reflections").select("reflection_date, energy_level, stress_level, mood_tags, blockers, top_priority, what_did, what_learned").eq("user_id", user.id).order("reflection_date", { ascending: false }).limit(7),
       supabaseService.from("venture_daily_tasks").select("tasks, task_date, phase").eq("venture_id", ventureId).gte("task_date", sevenDaysAgo).order("task_date", { ascending: false }).limit(7),
       supabaseService.from("founder_patterns").select("pattern_type, pattern_description, advisor_note, severity").eq("venture_id", ventureId).eq("status", "active"),
-      // Get market validation if idea exists
-      venture?.idea_id
-        ? supabaseService.from("market_validations").select("validation_score, demand_signals, competitor_landscape, market_timing, validated_at").eq("idea_id", venture.idea_id).order("validated_at", { ascending: false }).limit(1).maybeSingle()
-        : Promise.resolve({ data: null }),
       supabaseService.from("founder_blueprints").select("ai_summary, focus_quarters").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+      supabaseService.from("founder_interviews").select("context_summary").eq("user_id", user.id).eq("status", "completed").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
+
+    if (!venture) {
+      return new Response(JSON.stringify({ error: "Venture not found" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Fetch market validation separately (needs venture.idea_id)
+    let marketValidations: any = null;
+    if (venture.idea_id) {
+      const { data } = await supabaseService.from("market_validations").select("validation_score, demand_signals, competitor_landscape, market_timing, validated_at").eq("idea_id", venture.idea_id).order("validated_at", { ascending: false }).limit(1).maybeSingle();
+      marketValidations = data;
+    }
+
+    // Build interview context slice
+    const rawInterviewContext = interviewData?.context_summary || {};
+    const interviewContext = selectInterviewContext("adapt-execution-strategy", rawInterviewContext);
 
     if (!venture) {
       return new Response(JSON.stringify({ error: "Venture not found" }), {
