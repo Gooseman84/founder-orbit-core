@@ -948,7 +948,7 @@ CRITICAL: Never return null for these 4 fields. Even with minimal data, you can 
               coreFrameworks ? `\n\n## TRUEBLAZER FRAMEWORKS\n${coreFrameworks}` : '',
               conditionalFrameworks ? `\n\n## CONDITIONAL FRAMEWORKS\n${conditionalFrameworks}` : '',
             ].filter(Boolean).join('') || ''
-          ) + interviewInstructions },
+          ) + enrichedInstructions },
           { role: "user", content: JSON.stringify(payload) },
         ],
         response_format: { type: "json_object" },
