@@ -6,7 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles } from "lucide-react";
 import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
-import { useActiveVenture } from "@/hooks/useActiveVenture";
+import { useNorthStarVenture } from "@/hooks/useNorthStarVenture";
 
 const MOOD_OPTIONS = [
   "Motivated", "Focused", "Anxious", "Tired", "Energized", 
@@ -38,7 +38,7 @@ interface DailyReflectionFormProps {
 }
 
 export function DailyReflectionForm({ onSubmit, isLoading, initialValues }: DailyReflectionFormProps) {
-  const { venture } = useActiveVenture();
+  const { venture } = useNorthStarVenture();
   const [energyLevel, setEnergyLevel] = useState(initialValues?.energy_level ?? 3);
   const [stressLevel, setStressLevel] = useState(initialValues?.stress_level ?? 3);
   const [moodTags, setMoodTags] = useState<string[]>(initialValues?.mood_tags ?? []);
