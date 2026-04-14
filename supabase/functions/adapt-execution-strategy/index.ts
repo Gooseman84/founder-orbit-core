@@ -6,6 +6,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
+import { getCompoundedContext, formatSnapshotForPrompt } from "../_shared/getCompoundedContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -94,6 +95,10 @@ serve(async (req) => {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Fetch compounded context snapshot
+    const snapshot = await getCompoundedContext(supabaseService, user.id, ventureId);
+    console.log("[adapt-execution-strategy] hasSnapshot:", !!snapshot);
 
     // Fetch market validation separately (needs venture.idea_id)
     let marketValidations: any = null;
@@ -203,6 +208,8 @@ ${blueprint?.ai_summary ? `Blueprint: ${blueprint.ai_summary}` : "No blueprint y
 
 ## FOUNDER INTELLIGENCE
 ${interviewContext ? `Founder Summary: ${(interviewContext as any).founderSummary || "none"}\nConstraints: ${JSON.stringify((interviewContext as any).constraints || {})}\nEnergy Drainers: ${((interviewContext as any).energyDrainers || []).join(", ") || "none"}\nTransferable Patterns: ${JSON.stringify((interviewContext as any).transferablePatterns || [])}\nRouting Signal: ${JSON.stringify((interviewContext as any).routingSignal || null)}` : "No interview context available — strategy based on behavioral data only."}
+
+${snapshot ? formatSnapshotForPrompt(snapshot) : ""}
 
 Generate the execution strategy for tomorrow.`;
 
