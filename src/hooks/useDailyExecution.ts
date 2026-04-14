@@ -213,6 +213,11 @@ export function useDailyExecution(venture: Venture | null): UseDailyExecutionRes
         }
       });
       
+      // Trigger context compounding (non-blocking)
+      invokeAuthedFunction("compound-founder-context", {
+        body: { ventureId, triggerEvent: "checkin" },
+      }).catch((err) => console.warn("Context compounding failed (non-critical):", err));
+      
       await refetchCheckin();
       return true;
     } catch (err) {

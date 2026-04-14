@@ -5,6 +5,8 @@ import { TextareaWithVoice } from "@/components/ui/textarea-with-voice";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles } from "lucide-react";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
+import { useNorthStarVenture } from "@/hooks/useNorthStarVenture";
 
 const MOOD_OPTIONS = [
   "Motivated", "Focused", "Anxious", "Tired", "Energized", 
@@ -36,6 +38,7 @@ interface DailyReflectionFormProps {
 }
 
 export function DailyReflectionForm({ onSubmit, isLoading, initialValues }: DailyReflectionFormProps) {
+  const { northStarVenture } = useNorthStarVenture();
   const [energyLevel, setEnergyLevel] = useState(initialValues?.energy_level ?? 3);
   const [stressLevel, setStressLevel] = useState(initialValues?.stress_level ?? 3);
   const [moodTags, setMoodTags] = useState<string[]>(initialValues?.mood_tags ?? []);
@@ -79,6 +82,13 @@ export function DailyReflectionForm({ onSubmit, isLoading, initialValues }: Dail
       top_priority: topPriority,
       blockers: blockers,
     });
+
+    // Fire-and-forget context compounding
+    if (northStarVenture?.id) {
+      invokeAuthedFunction("compound-founder-context", {
+        body: { ventureId: northStarVenture.id, triggerEvent: "reflection" },
+      }).catch(() => {});
+    }
   };
 
   const getEnergyLabel = (value: number) => {

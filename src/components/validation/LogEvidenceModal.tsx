@@ -94,6 +94,11 @@ export function LogEvidenceModal({
       resetForm();
       onOpenChange(false);
       onSuccess();
+
+      // Fire-and-forget context compounding
+      invokeAuthedFunction("compound-founder-context", {
+        body: { ventureId, triggerEvent: "validation_evidence" },
+      }).catch(() => {});
     } catch (err) {
       toast({
         title: "Failed to log evidence",

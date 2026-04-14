@@ -648,6 +648,44 @@ export type Database = {
         }
         Relationships: []
       }
+      founder_context_snapshots: {
+        Row: {
+          created_at: string
+          id: string
+          snapshot: Json
+          trigger_event: string
+          user_id: string
+          venture_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          snapshot?: Json
+          trigger_event: string
+          user_id: string
+          venture_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          snapshot?: Json
+          trigger_event?: string
+          user_id?: string
+          venture_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "founder_context_snapshots_venture_id_fkey"
+            columns: ["venture_id"]
+            isOneToOne: false
+            referencedRelation: "ventures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       founder_generated_ideas: {
         Row: {
           created_at: string | null
