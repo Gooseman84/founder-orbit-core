@@ -38,6 +38,7 @@ interface DailyReflectionFormProps {
 }
 
 export function DailyReflectionForm({ onSubmit, isLoading, initialValues }: DailyReflectionFormProps) {
+  const { venture } = useActiveVenture();
   const [energyLevel, setEnergyLevel] = useState(initialValues?.energy_level ?? 3);
   const [stressLevel, setStressLevel] = useState(initialValues?.stress_level ?? 3);
   const [moodTags, setMoodTags] = useState<string[]>(initialValues?.mood_tags ?? []);
@@ -81,6 +82,13 @@ export function DailyReflectionForm({ onSubmit, isLoading, initialValues }: Dail
       top_priority: topPriority,
       blockers: blockers,
     });
+
+    // Fire-and-forget context compounding
+    if (venture?.id) {
+      invokeAuthedFunction("compound-founder-context", {
+        body: { ventureId: venture.id, triggerEvent: "reflection" },
+      }).catch(() => {});
+    }
   };
 
   const getEnergyLabel = (value: number) => {
