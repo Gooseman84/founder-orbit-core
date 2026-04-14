@@ -28,6 +28,7 @@ const FUNCTION_FIELD_MAP: Record<string, (keyof InterviewContextSlice)[]> = {
   "generate-implementation-kit": ["ventureIntelligence", "constraints", "founderSummary", "authorityAssessment", "routingSignal"],
   "venture-debugger": ["constraints", "energyDrainers", "founderSummary", "transferablePatterns", "ventureIntelligence", "extractedInsights"],
   "feature-builder": ["ventureIntelligence", "constraints", "founderSummary", "extractedInsights"],
+  "adapt-execution-strategy": ["founderSummary", "constraints", "energyDrainers", "transferablePatterns", "routingSignal"],
 };
 
 export function selectInterviewContext(

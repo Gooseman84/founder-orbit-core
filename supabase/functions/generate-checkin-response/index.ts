@@ -1,6 +1,5 @@
 // supabase/functions/generate-checkin-response/index.ts
 // Mavrik generates a real-time, personalized response immediately after a founder submits their daily check-in.
-// This is what makes the post-paywall experience feel like a co-pilot, not a task manager.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
@@ -52,15 +51,23 @@ serve(async (req) => {
       });
     }
 
-    // ── Fetch Context ─────────────────────────────────────────
+    // ── Fetch Context (enriched with reflections, patterns, strategy, blueprint) ──
     const [
       { data: venture },
       { data: recentCheckins },
       { data: interviewData },
+      { data: recentReflections },
+      { data: activePatterns },
+      { data: executionStrategy },
+      { data: blueprint },
     ] = await Promise.all([
       supabaseService.from("ventures").select("name, success_metric, commitment_start_at, commitment_window_days, idea_id").eq("id", ventureId).single(),
       supabaseService.from("venture_daily_checkins").select("checkin_date, completion_status, explanation").eq("venture_id", ventureId).order("checkin_date", { ascending: false }).limit(7),
       supabaseService.from("founder_interviews").select("context_summary").eq("user_id", user.id).eq("status", "completed").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+      supabaseService.from("daily_reflections").select("reflection_date, energy_level, stress_level, mood_tags, blockers, what_learned").eq("user_id", user.id).order("reflection_date", { ascending: false }).limit(3),
+      supabaseService.from("founder_patterns").select("pattern_type, pattern_description, advisor_note, severity").eq("venture_id", ventureId).eq("status", "active"),
+      supabaseService.from("execution_strategies").select("strategy").eq("venture_id", ventureId).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+      supabaseService.from("founder_blueprints").select("ai_summary, focus_quarters, validation_stage").eq("user_id", user.id).eq("status", "active").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
 
     if (!venture) {
@@ -71,7 +78,6 @@ serve(async (req) => {
 
     const isStagnating = detectStagnation(recentCheckins || []);
     const interviewContext = interviewData?.context_summary as any ?? null;
-    const founderName = interviewContext?.founderSummary ? "founder" : "founder";
 
     // Calculate day in commitment
     const dayInCommitment = venture.commitment_start_at
@@ -80,7 +86,30 @@ serve(async (req) => {
     const totalDays = venture.commitment_window_days || 30;
     const daysRemaining = Math.max(0, totalDays - dayInCommitment);
 
-    // ── Compute Founder Moment State ──────────────────────────
+    // ── Build enriched context blocks ──
+    const reflections = recentReflections || [];
+    const energyLevels = reflections.map((r: any) => r.energy_level).filter((e: any) => e != null);
+    const avgEnergy = energyLevels.length > 0 ? (energyLevels.reduce((a: number, b: number) => a + b, 0) / energyLevels.length).toFixed(1) : "unknown";
+    const stressLevels = reflections.map((r: any) => r.stress_level).filter((s: any) => s != null);
+    const avgStress = stressLevels.length > 0 ? (stressLevels.reduce((a: number, b: number) => a + b, 0) / stressLevels.length).toFixed(1) : "unknown";
+    const recentBlockers = reflections.filter((r: any) => r.blockers?.trim()).map((r: any) => r.blockers).slice(0, 2);
+    const recentLearnings = reflections.filter((r: any) => r.what_learned?.trim()).map((r: any) => r.what_learned).slice(0, 2);
+
+    const patterns = activePatterns || [];
+    const patternBlock = patterns.length > 0
+      ? `Active Behavioral Patterns:\n${patterns.map((p: any) => `- ${p.pattern_type} (${p.severity}): ${p.pattern_description}`).join("\n")}`
+      : "";
+
+    const strategyData = (executionStrategy?.strategy as any) || null;
+    const strategyBlock = strategyData
+      ? `Execution Strategy Focus: ${strategyData.primary_focus || "none"}\nEnergy Calibration: ${strategyData.energy_calibration || "normal"}\nDirectives: ${(strategyData.directives || []).join("; ") || "none"}`
+      : "";
+
+    const blueprintBlock = blueprint
+      ? `Blueprint: ${blueprint.ai_summary || "no summary"}\nValidation Stage: ${blueprint.validation_stage || "unknown"}\nCurrent Quarter Focus: ${Array.isArray(blueprint.focus_quarters) ? blueprint.focus_quarters[0] || "none" : "none"}`
+      : "";
+
+    // ── Compute Founder Moment State ──
     let founderMomentState = "BUILDING_MOMENTUM";
     let mavrikIntent = "";
     let mavrikRoleBlock = "";
@@ -109,7 +138,7 @@ serve(async (req) => {
       console.warn("[generate-checkin-response] Moment state error (defaulting):", momentError);
     }
 
-    // ── Build Prompt ──────────────────────────────────────────
+    // ── Build Prompt ──
     const systemPrompt = injectCognitiveMode(`You are Mavrik, an AI co-founder and execution coach. You just received a founder's daily check-in.
 
 ${mavrikRoleBlock ? `${mavrikRoleBlock}\n\n` : ""}${mavrikIntent ? `## MAVRIK INTENT\n${mavrikIntent}\n\nFounder Moment State: ${founderMomentState}\n` : ""}
@@ -131,6 +160,16 @@ SITUATION AWARENESS:
 - Founder Reflection: "${reflection || "none provided"}"
 - Stagnation Pattern: ${isStagnating ? "YES — 3+ consecutive days of incomplete execution. This needs a real response." : "No — normal variance."}
 - Recent Pattern (last 7 days): ${recentCheckins?.map((c: any) => c.completion_status).join(", ") || "first check-in"}
+
+## FOUNDER ENERGY & STRESS (from recent reflections)
+- Average Energy: ${avgEnergy}/5
+- Average Stress: ${avgStress}/5
+- Recent Blockers: ${recentBlockers.length > 0 ? recentBlockers.join(" | ") : "none reported"}
+- Recent Learnings: ${recentLearnings.length > 0 ? recentLearnings.join(" | ") : "none recorded"}
+
+${patternBlock ? `## ACTIVE BEHAVIORAL PATTERNS\n${patternBlock}\n` : ""}
+${strategyBlock ? `## EXECUTION STRATEGY\n${strategyBlock}\n` : ""}
+${blueprintBlock ? `## BLUEPRINT CONTEXT\n${blueprintBlock}\n` : ""}
 
 ${isStagnating ? `
 STAGNATION RESPONSE PROTOCOL:
@@ -156,7 +195,7 @@ Respond with STRICT JSON only:
   "isStagnationIntervention": ${isStagnating}
 }`, 'converge');
 
-    // ── Call AI ───────────────────────────────────────────────
+    // ── Call AI ──
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -184,7 +223,7 @@ Respond with STRICT JSON only:
     const aiData = await aiResponse.json();
     const content = aiData.choices?.[0]?.message?.content || "{}";
 
-    // ── Parse Response ────────────────────────────────────────
+    // ── Parse Response ──
     let mavrikResponse = {
       message: "Good work logging in today. Come back tomorrow ready to execute.",
       tomorrowFocus: "Pick one thing and finish it.",
@@ -201,8 +240,7 @@ Respond with STRICT JSON only:
       console.warn("[generate-checkin-response] Parse fallback used");
     }
 
-    // ── Optionally Persist Response ───────────────────────────
-    // Store on the check-in row for future reference (non-blocking)
+    // ── Optionally Persist Response ──
     const today = new Date().toISOString().split("T")[0];
     supabaseService
       .from("venture_daily_checkins")
