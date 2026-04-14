@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
 import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
+import { getCompoundedContext, formatSnapshotForPrompt } from "../_shared/getCompoundedContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -352,6 +353,10 @@ serve(async (req) => {
     const interviewContext = selectInterviewContext("generate-venture-plan", rawInterviewContext);
     console.log("generate-venture-plan: hasInterviewContext =", !!interviewContext);
 
+    // Fetch compounded context snapshot
+    const snapshot = await getCompoundedContext(supabase, userId, ventureId);
+    console.log("generate-venture-plan: hasSnapshot =", !!snapshot);
+
     // Detect business model for framework filtering
     const detectedModel = idea?.business_model_type || "all";
     console.log("generate-venture-plan: detectedModel =", detectedModel);
@@ -404,6 +409,7 @@ serve(async (req) => {
         ventureIntelligence: interviewContext.ventureIntelligence || {},
         transferablePatterns: interviewContext.extractedInsights?.transferablePatterns || [],
       } : null,
+      founderSnapshot: snapshot ? formatSnapshotForPrompt(snapshot) : null,
     };
 
     console.log("generate-venture-plan: calling AI with payload", JSON.stringify(payload).slice(0, 500));
