@@ -385,6 +385,15 @@ ${fvsData ? `- Composite: ${fvsData.composite_score}/100\n- Top Risk: ${fvsData.
 ## REFLECTIONS (last 3)
 ${reflections.length > 0 ? reflections.map((r: any) => `- Energy: ${r.energy_level ?? "?"}/5, Stress: ${r.stress_level ?? "?"}/5${r.blockers ? `, Blocker: "${r.blockers}"` : ""}`).join("\n") : "No reflections recorded."}
 
+## ACTIVE BEHAVIORAL PATTERNS
+${(activePatterns || []).length > 0 ? (activePatterns || []).map((p: any) => `- ${p.pattern_type} (${p.severity}): ${p.pattern_description}`).join("\n") : "No patterns detected."}
+
+## MARKET VALIDATION
+${marketValidation ? `- Score: ${marketValidation.validation_score}/100\n- Market Timing: ${marketValidation.market_timing || "unknown"}\n- Demand Signals: ${JSON.stringify(marketValidation.demand_signals || [])}\n- Competitors: ${JSON.stringify(marketValidation.competitor_landscape || [])}` : "No market validation data."}
+
+## EXECUTION STRATEGY
+${executionStrategy?.strategy ? `- Focus: ${(executionStrategy.strategy as any).primary_focus || "none"}\n- Energy Calibration: ${(executionStrategy.strategy as any).energy_calibration || "normal"}\n- Directives: ${((executionStrategy.strategy as any).directives || []).join("; ") || "none"}\n- Pattern Warnings: ${((executionStrategy.strategy as any).active_pattern_warnings || []).join("; ") || "none"}` : "No execution strategy generated yet."}
+
 ## FOUNDER CONTEXT
 ${interviewContext ? JSON.stringify(interviewContext, null, 2) : "No interview context available."}
 
