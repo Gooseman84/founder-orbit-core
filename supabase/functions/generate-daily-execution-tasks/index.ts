@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
 import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
+import { getCompoundedContext, formatSnapshotForPrompt } from "../_shared/getCompoundedContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -86,6 +87,7 @@ serve(async (req) => {
       { data: recentWorkspaceDocs },
       { data: interviewData },
       { data: executionStrategy },
+      compoundedSnapshot,
     ] = await Promise.all([
       supabaseService.from("ventures").select("*").eq("id", ventureId).single(),
       supabaseService.from("founder_blueprints").select("ai_summary, ai_recommendations").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
@@ -96,6 +98,7 @@ serve(async (req) => {
       supabaseService.from("workspace_documents").select("id, title, doc_type, updated_at, source_type").eq("user_id", user.id).eq("venture_id", ventureId).gte("updated_at", new Date(Date.now() - 7 * 86400000).toISOString()).order("updated_at", { ascending: false }).limit(10),
       supabaseService.from("founder_interviews").select("context_summary").eq("user_id", user.id).eq("status", "completed").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
       supabaseService.from("execution_strategies").select("strategy, behavioral_signals, updated_at").eq("venture_id", ventureId).maybeSingle(),
+      getCompoundedContext(supabaseService, user.id, ventureId),
     ]);
 
     if (!venture) {
