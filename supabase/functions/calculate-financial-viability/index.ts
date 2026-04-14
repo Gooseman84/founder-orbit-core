@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 import { selectInterviewContext } from "../_shared/selectInterviewContext.ts";
+import { getCompoundedContext, formatSnapshotForPrompt } from "../_shared/getCompoundedContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -259,7 +260,24 @@ serve(async (req) => {
       .maybeSingle();
 
     const sourceMeta = fullIdea?.source_meta as any || null;
-    logStep("Enriched context fetched", { hasInterview: !!interviewContext, hasSourceMeta: !!sourceMeta });
+    
+    // Fetch compounded context snapshot for execution patterns
+    let snapshotStr = "";
+    const { data: activeVenture } = await adminClient
+      .from("ventures")
+      .select("id")
+      .eq("user_id", userId)
+      .in("venture_state", ["executing", "committed"])
+      .limit(1)
+      .maybeSingle();
+    if (activeVenture) {
+      const snapshot = await getCompoundedContext(adminClient, userId, activeVenture.id);
+      if (snapshot) {
+        snapshotStr = `\n${formatSnapshotForPrompt(snapshot)}\n`;
+      }
+    }
+    
+    logStep("Enriched context fetched", { hasInterview: !!interviewContext, hasSourceMeta: !!sourceMeta, hasSnapshot: !!snapshotStr });
 
     // Build context string for AI
     const contextParts: string[] = [];
@@ -334,7 +352,7 @@ serve(async (req) => {
         contextParts.push(`This is a cross-industry pattern transfer from ${sourceMeta.transfer_from} to ${sourceMeta.transfer_to}`);
     }
 
-    const ideaContextStr = contextParts.join("\n");
+    const ideaContextStr = contextParts.join("\n") + snapshotStr;
     logStep("Context built", { contextLength: ideaContextStr.length });
 
     // Detect business model for framework filtering

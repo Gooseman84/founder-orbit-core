@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { getCompoundedContext, formatSnapshotForPrompt } from '../_shared/getCompoundedContext.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,7 +109,11 @@ serve(async (req) => {
       .maybeSingle();
 
     const interviewContext = interviewData?.context_summary as any || null;
-    console.log('[generate-implementation-kit] hasInterviewContext:', !!interviewContext);
+    
+    // Fetch compounded context snapshot
+    const snapshot = await getCompoundedContext(supabase, userId, ventureId);
+    
+    console.log('[generate-implementation-kit] hasInterviewContext:', !!interviewContext, 'hasSnapshot:', !!snapshot);
 
     console.log('Creating implementation kit record...');
 
@@ -184,7 +189,8 @@ serve(async (req) => {
       userId,
       ventureId,
       folder?.id || null,
-      interviewContext
+      interviewContext,
+      snapshot
     );
 
     return response;
@@ -210,7 +216,8 @@ async function generateDocumentsInBackground(
   userId: string,
   ventureId: string,
   folderId: string | null,
-  interviewContext: any
+  interviewContext: any,
+  snapshot: any
 ) {
   // Create a new supabase client for background work
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -300,6 +307,7 @@ FOUNDER INTELLIGENCE (from Mavrik interview):
 - Founder Summary: ${interviewContext.founderSummary || "N/A"}
 ${interviewContext.extractedInsights?.transferablePatterns?.length ? `- Transferable Patterns: ${JSON.stringify(interviewContext.extractedInsights.transferablePatterns)}` : ""}
 ${authorityStr}
+${snapshot ? formatSnapshotForPrompt(snapshot) : ""}
 If FOUNDER INTELLIGENCE is provided above, use it to:
 - Reference specific industry workflows, integrations, and terminology
 - Identify required third-party integrations based on the vertical (e.g., custodian APIs for wealth management, EHR systems for healthcare, POS systems for restaurants)
