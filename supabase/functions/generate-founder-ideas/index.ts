@@ -4,6 +4,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
+import { getCompoundedContext, formatSnapshotForPrompt } from "../_shared/getCompoundedContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -500,6 +501,25 @@ serve(async (req) => {
         }))
       : null;
 
+    // Fetch compounded context snapshot (venture-agnostic — use latest for any venture)
+    // For idea generation, we look up the user's active venture to get the snapshot
+    let snapshotBlock = "";
+    const { data: activeVenture } = await supabaseAdmin
+      .from("ventures")
+      .select("id")
+      .eq("user_id", userId)
+      .in("venture_state", ["executing", "committed"])
+      .limit(1)
+      .maybeSingle();
+
+    if (activeVenture) {
+      const snapshot = await getCompoundedContext(supabaseAdmin, userId, activeVenture.id);
+      if (snapshot) {
+        snapshotBlock = `\n${formatSnapshotForPrompt(snapshot)}\n`;
+        console.log("generate-founder-ideas: snapshot injected");
+      }
+    }
+
     // Build payload
     const founderPayload = {
       mode,
@@ -559,7 +579,7 @@ TONE: ${tone}
 
 FOUNDER CONTEXT:
 ${JSON.stringify(founderPayload, null, 2)}
-${marketIntelBlock}
+${marketIntelBlock}${snapshotBlock}
 Generate 12-20 RAW, WILD ideas now. NO FILTERING. Return ONLY: { "raw_ideas": [...] }`;
 
     const passAResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
