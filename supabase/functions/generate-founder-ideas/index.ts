@@ -484,6 +484,22 @@ serve(async (req) => {
 
     const contextSummary = interviewRows?.[0]?.context_summary ?? null;
 
+    // Fetch existing market validations to inform idea generation
+    const { data: marketValidations } = await supabaseAdmin
+      .from("market_validations")
+      .select("validation_score, demand_signals, market_timing, validated_at")
+      .eq("user_id", userId)
+      .order("validated_at", { ascending: false })
+      .limit(3);
+
+    const marketIntelligence = (marketValidations || []).length > 0
+      ? (marketValidations || []).map((mv: any) => ({
+          score: mv.validation_score,
+          timing: mv.market_timing,
+          signals: mv.demand_signals,
+        }))
+      : null;
+
     // Build payload
     const founderPayload = {
       mode,
@@ -495,6 +511,7 @@ serve(async (req) => {
         creatorPlatforms: profileRow.creator_platforms || [],
       },
       contextSummary,
+      marketIntelligence,
     };
 
     const modeContext = buildModeContext(mode, focusArea);
