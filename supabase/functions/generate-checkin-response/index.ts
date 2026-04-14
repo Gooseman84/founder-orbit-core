@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
+import { getCompoundedContext, formatSnapshotForPrompt } from "../_shared/getCompoundedContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,7 +52,7 @@ serve(async (req) => {
       });
     }
 
-    // ── Fetch Context (enriched with reflections, patterns, strategy, blueprint) ──
+    // ── Fetch Context (enriched with reflections, patterns, strategy, blueprint, snapshot) ──
     const [
       { data: venture },
       { data: recentCheckins },
@@ -60,6 +61,7 @@ serve(async (req) => {
       { data: activePatterns },
       { data: executionStrategy },
       { data: blueprint },
+      compoundedSnapshot,
     ] = await Promise.all([
       supabaseService.from("ventures").select("name, success_metric, commitment_start_at, commitment_window_days, idea_id").eq("id", ventureId).single(),
       supabaseService.from("venture_daily_checkins").select("checkin_date, completion_status, explanation").eq("venture_id", ventureId).order("checkin_date", { ascending: false }).limit(7),
@@ -68,6 +70,7 @@ serve(async (req) => {
       supabaseService.from("founder_patterns").select("pattern_type, pattern_description, advisor_note, severity").eq("venture_id", ventureId).eq("status", "active"),
       supabaseService.from("execution_strategies").select("strategy").eq("venture_id", ventureId).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
       supabaseService.from("founder_blueprints").select("ai_summary, focus_quarters, validation_stage").eq("user_id", user.id).eq("status", "active").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+      getCompoundedContext(supabaseService, user.id, ventureId),
     ]);
 
     if (!venture) {
@@ -184,6 +187,8 @@ DO:
 - Give ONE clear, tiny action that resets momentum for tomorrow
 - Be the steady co-founder who has seen this before and knows how to get out of it
 ` : ""}
+
+${compoundedSnapshot ? formatSnapshotForPrompt(compoundedSnapshot) : ""}
 
 ${interviewContext?.founderSummary ? `Founder Context: ${interviewContext.founderSummary}` : ""}
 
