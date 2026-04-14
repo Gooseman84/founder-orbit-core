@@ -912,6 +912,24 @@ NO INTERVIEW DATA — use all available context to fill business sections:
 CRITICAL: Never return null for these 4 fields. Even with minimal data, you can always derive a concrete answer from the business model type, the founder's skills, and the idea description.
 `;
 
+    // Build market validation + patterns + reflections context block
+    const marketBlock = marketValidation
+      ? `\n## MARKET VALIDATION EVIDENCE\nValidation Score: ${marketValidation.validation_score}/100\nMarket Timing: ${marketValidation.market_timing || "unknown"}\nDemand Signals: ${JSON.stringify(marketValidation.demand_signals || [])}\nCompetitor Landscape: ${JSON.stringify(marketValidation.competitor_landscape || [])}\n\nUse this real market evidence to ground your recommendations. Validated demand signals should directly inform distribution_channels and ai_recommendations.\n`
+      : "";
+
+    const patternsBlock = (founderPatterns || []).length > 0
+      ? `\n## ACTIVE FOUNDER PATTERNS\n${(founderPatterns || []).map((p: any) => `- ${p.pattern_type} (${p.severity}): ${p.pattern_description}`).join("\n")}\n\nAccount for these patterns in your ai_recommendations. For example, a founder with a "scope_creep" pattern needs recommendations that emphasize constraint and focus.\n`
+      : "";
+
+    const reflectionEnergy = (recentReflections || []).map((r: any) => r.energy_level).filter((e: any) => e != null);
+    const reflectionStress = (recentReflections || []).map((r: any) => r.stress_level).filter((s: any) => s != null);
+    const reflectionBlockers = (recentReflections || []).filter((r: any) => r.blockers?.trim()).map((r: any) => r.blockers).slice(0, 3);
+    const reflectionsBlock = reflectionEnergy.length > 0
+      ? `\n## RECENT FOUNDER STATE (from reflections)\nAvg Energy: ${(reflectionEnergy.reduce((a: number, b: number) => a + b, 0) / reflectionEnergy.length).toFixed(1)}/5\nAvg Stress: ${reflectionStress.length > 0 ? (reflectionStress.reduce((a: number, b: number) => a + b, 0) / reflectionStress.length).toFixed(1) : "unknown"}/5\nBlockers: ${reflectionBlockers.join(" | ") || "none"}\n\nCalibrate recommendations to the founder's current energy and stress levels.\n`
+      : "";
+
+    const enrichedInstructions = interviewInstructions + marketBlock + patternsBlock + reflectionsBlock;
+
     console.log("[generate-blueprint] Calling Lovable AI gateway with payload");
 
     // Call Lovable AI Gateway (OpenAI-compatible)
