@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { getCompoundedContext, formatSnapshotForPrompt } from "../_shared/getCompoundedContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -120,10 +121,14 @@ serve(async (req) => {
     const northStar = northStarRes.data as any;
     const fvs = fvsRes.data as any;
 
+    // Fetch compounded context snapshot
+    const snapshot = await getCompoundedContext(admin, userId, venture_id);
+
     log("Context fetched", {
       hasInterview: !!interview?.context_summary,
       hasNorthStar: !!northStar?.content,
       hasFVS: !!fvs,
+      hasSnapshot: !!snapshot,
     });
 
     // === Build user prompt ===
@@ -154,7 +159,7 @@ ${fvs?.summary || "No FVS summary available"}
 NORTH STAR SPEC (excerpt):
 ${northStarExcerpt}
 
-Generate the Revenue Stack Brief for this venture.`;
+${snapshot ? formatSnapshotForPrompt(snapshot) + "\n\n" : ""}Generate the Revenue Stack Brief for this venture.`;
 
     const systemPrompt = `You are Mavrik, a financially grounded startup advisor with CFA and CFP credentials. You analyze business ventures through a revenue architecture lens — identifying not just the obvious monetization path but the full stack of revenue opportunities available to a founder based on their specific venture, skills, and market.
 

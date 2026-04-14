@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { fetchFrameworks } from "../_shared/fetchFrameworks.ts";
 import { injectCognitiveMode } from "../_shared/cognitiveMode.ts";
+import { getCompoundedContext, formatSnapshotForPrompt } from "../_shared/getCompoundedContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -460,9 +461,26 @@ serve(async (req) => {
     const docsSnippet = formatDocsForPrompt(userContext.recentDocs);
     const reflectionsSnippet = formatReflectionsForPrompt(userContext.recentReflections);
 
+    // Fetch compounded context snapshot (need active venture)
+    let snapshotBlock = "";
+    const { data: activeVenture } = await supabaseAdmin
+      .from("ventures")
+      .select("id")
+      .eq("user_id", userId)
+      .in("venture_state", ["executing", "committed"])
+      .limit(1)
+      .maybeSingle();
+    if (activeVenture) {
+      const snapshot = await getCompoundedContext(supabaseAdmin, userId, activeVenture.id);
+      if (snapshot) {
+        snapshotBlock = `\n${formatSnapshotForPrompt(snapshot)}\n`;
+      }
+    }
+
     console.log("[refresh-blueprint] Context loaded - profile:", !!userContext.profile,
       "idea:", !!userContext.chosenIdea, "analysis:", !!userContext.ideaAnalysis,
-      "docs:", userContext.recentDocs.length, "reflections:", userContext.recentReflections.length);
+      "docs:", userContext.recentDocs.length, "reflections:", userContext.recentReflections.length,
+      "hasSnapshot:", !!snapshotBlock);
 
     // --- Build rich user prompt ---
     const userPrompt = `Refresh this founder's blueprint based on their complete context - especially their recent work and reflection patterns.
@@ -549,7 +567,7 @@ Based on ALL this context, generate an updated blueprint that:
 3. Addresses any recurring blockers from their reflections
 4. Builds on momentum they already have (continue what's working)
 5. Is specific to THEIR situation, not generic advice
-
+${snapshotBlock}
 Return ONLY the JSON with ai_summary and ai_recommendations.`;
 
     // Detect business model and fetch frameworks
