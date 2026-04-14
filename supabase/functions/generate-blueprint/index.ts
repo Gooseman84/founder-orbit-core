@@ -782,8 +782,26 @@ serve(async (req) => {
         ideaAnalysis.workflow_context = `Current workflow (${pain.currentWorkflow.length} steps): ${pain.currentWorkflow.join(' → ')}`;
       }
 
-      console.log("[generate-blueprint] Enriched idea_analysis from Mavrik interview data");
+    // Fetch market validation, founder patterns, and recent reflections for richer context
+    let marketValidation: any = null;
+    if (chosenIdea?.id) {
+      const { data } = await supabase
+        .from("market_validations")
+        .select("validation_score, demand_signals, competitor_landscape, market_timing")
+        .eq("idea_id", chosenIdea.id)
+        .order("validated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      marketValidation = data;
     }
+
+    const [
+      { data: founderPatterns },
+      { data: recentReflections },
+    ] = await Promise.all([
+      supabase.from("founder_patterns").select("pattern_type, pattern_description, severity").eq("user_id", userId).eq("status", "active"),
+      supabase.from("daily_reflections").select("energy_level, stress_level, blockers, what_learned").eq("user_id", userId).order("reflection_date", { ascending: false }).limit(5),
+    ]);
 
     // Fetch dynamic frameworks from the frameworks table
     const detectedBusinessModel = chosenIdea?.business_model_type || 'all';
