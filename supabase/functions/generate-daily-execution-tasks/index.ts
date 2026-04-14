@@ -300,6 +300,8 @@ ${interviewContext.ventureIntelligence?.verticalIdentified ? `- Vertical: ${inte
 ${interviewContext.ventureIntelligence?.industryAccess ? `- Industry Access: ${interviewContext.ventureIntelligence.industryAccess}` : ""}
 ` : "No interview context available"}
 
+${compoundedSnapshot ? formatSnapshotForPrompt(compoundedSnapshot) : ""}
+
 ${ideaSourceMeta ? `## IDEA CONTEXT
 - Why This Founder: ${ideaSourceMeta.whyThisFounder || ideaSourceMeta.why_it_fits || "N/A"}
 - Key Risk: ${ideaSourceMeta.keyRisk || "N/A"}
