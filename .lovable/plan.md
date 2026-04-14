@@ -1,108 +1,191 @@
 
 
-# Audit: Edge Function Context Consumption Gaps
+# Context Compounding: Persistent Founder Intelligence Snapshots
 
-## Summary
+## What This Does
 
-After reviewing all 12 core edge functions, I found that most functions only consume **interview context** and miss 3-5 other available data sources. The richest function is `generate-daily-execution-tasks` (7 sources); the poorest is `generate-founder-ideas` (2 sources). Here's the full gap map.
+Creates an automated system that periodically synthesizes a founder's completed tasks, validation evidence, reflections, and behavioral patterns into a compact, versioned "intelligence snapshot." Core edge functions then consume the latest snapshot instead of re-aggregating raw data on every call — making Mavrik's responses faster, more contextually aware, and progressively sharper as evidence accumulates.
 
-## Data Sources Available
-
-| Source | Table | Signal Value |
-|--------|-------|-------------|
-| Interview Context | `founder_interviews.context_summary` | Expertise, pain, routing |
-| Reflections | `daily_reflections` | Energy, stress, blockers, learnings |
-| Check-ins | `venture_daily_checkins` | Completion patterns, explanations |
-| Founder Patterns | `founder_patterns` | Detected behavioral warnings |
-| Market Validation | `market_validations` | Demand signals, competitors, timing |
-| Execution Strategy | `execution_strategies` | Calibrated focus + directives |
-| FVS Scores | `financial_viability_scores` | Dimension scores, risks, opportunities |
-| Validation Evidence | `validation_evidence` + `validation_summaries` | Real-world proof points |
-| Blueprint | `founder_blueprints` | AI summary, focus quarters |
-| Task History | `venture_daily_tasks` | Completion rates by category |
-
-## Gap Matrix
+## Architecture
 
 ```text
-Function                       | Interview | Reflect | Checkin | Patterns | Market | FVS | Strategy | Blueprint | Tasks
--------------------------------|-----------|---------|--------|----------|--------|-----|----------|-----------|------
-generate-daily-execution-tasks | ✅        | ✅      | ✅     | ✗ GAP    | ✗ GAP  | ✗   | ✅       | ✅        | ✅
-adapt-execution-strategy       | ✗ GAP     | ✅      | ✅     | ✅       | ✅     | ✗   | n/a      | ✅        | ✅
-generate-checkin-response      | ✅        | ✗ GAP   | ✅     | ✗ GAP    | ✗      | ✗   | ✗ GAP    | ✗ GAP     | ✗
-generate-blueprint             | ✅        | ✗ GAP   | ✗      | ✗ GAP    | ✗ GAP  | ✗   | ✗        | n/a       | ✗
-generate-founder-ideas         | ✅        | ✗       | ✗      | ✗        | ✗ GAP  | ✗   | ✗        | ✗         | ✗
-calculate-financial-viability  | ✅        | ✗       | ✗      | ✗ GAP    | ✅     | n/a | ✗        | ✗         | ✗
-generate-implementation-kit    | ✅        | ✗       | ✗      | ✗        | ✗ GAP  | ✅  | ✗        | ✅        | ✗
-generate-validation-plan       | ✅        | ✗       | ✗      | ✗        | ✗      | ✅  | ✗        | ✗         | ✗
-venture-debugger               | ✅        | ✗ GAP   | ✗ GAP  | ✅       | ✗ GAP  | ✗   | ✗ GAP    | ✗         | ✗ GAP
-generate-venture-plan          | ✅        | ✗       | ✗      | ✗ GAP    | ✗ GAP  | ✗   | ✗        | ✅        | ✗
-generate-revenue-stack-brief   | ✅        | ✗       | ✗      | ✗        | ✗ GAP  | ✅  | ✗        | ✗         | ✗
+┌─────────────────────────────────────────────────┐
+│  Triggers (any of these fire compounding)       │
+│  • Daily check-in submitted                     │
+│  • Validation evidence logged                   │
+│  • Reflection saved                             │
+│  • Strategy adapted                             │
+└──────────────────┬──────────────────────────────┘
+                   ▼
+        ┌──────────────────────┐
+        │ compound-founder-    │
+        │ context (edge fn)    │
+        │                      │
+        │ Fetches:             │
+        │ • Task completion %  │
+        │ • Energy/stress avg  │
+        │ • Top blockers       │
+        │ • Validated learnings│
+        │ • Active patterns    │
+        │ • Market evidence    │
+        │ • Routing signal     │
+        │                      │
+        │ Outputs: compact     │
+        │ JSON snapshot        │
+        └──────────┬───────────┘
+                   ▼
+        ┌──────────────────────┐
+        │ founder_context_     │
+        │ snapshots (table)    │
+        │                      │
+        │ • venture_id         │
+        │ • snapshot (jsonb)   │
+        │ • version (int)      │
+        │ • trigger_event      │
+        │ • created_at         │
+        └──────────┬───────────┘
+                   ▼
+        ┌──────────────────────┐
+        │ Consumer functions   │
+        │ • generate-checkin   │
+        │ • generate-tasks     │
+        │ • venture-debugger   │
+        │ • generate-blueprint │
+        │                      │
+        │ getCompoundedContext()│
+        │ → latest snapshot    │
+        └──────────────────────┘
 ```
 
-`✗ GAP` = data exists and would meaningfully improve output quality.
-`✗` = data exists but marginal value for this function's purpose.
+## Database Change
 
-## Top 5 Highest-Impact Gaps
+**New table: `founder_context_snapshots`**
 
-### 1. `generate-checkin-response` — Missing reflections, patterns, strategy, blueprint
-**Impact: HIGH.** This is the daily Mavrik coaching response. It currently sees only check-in history and raw interview context. It has no idea about:
-- The founder's energy/stress trend (reflections)
-- Active behavioral patterns ("scope creep", "perfectionism")
-- The execution strategy's calibrated focus
-- The blueprint's quarterly priorities
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| user_id | uuid NOT NULL | RLS scoped |
+| venture_id | uuid NOT NULL | |
+| version | integer NOT NULL DEFAULT 1 | Auto-incremented per venture |
+| snapshot | jsonb NOT NULL | The compounded intelligence |
+| trigger_event | text NOT NULL | e.g. "checkin", "reflection", "validation_evidence" |
+| created_at | timestamptz DEFAULT now() | |
 
-**Fix:** Add 4 parallel fetches for `daily_reflections` (last 3), `founder_patterns` (active), `execution_strategies`, and `founder_blueprints`. Inject as structured context into the prompt.
+RLS: Users can SELECT/INSERT their own rows. Service role has full access (edge functions write via service client).
 
-### 2. `adapt-execution-strategy` — Missing interview context
-**Impact: HIGH.** The strategy optimizer doesn't know the founder's expertise, constraints, or routing signal. It calibrates task focus without knowing what the founder is actually good at.
+## Snapshot Schema (jsonb)
 
-**Fix:** Add `founder_interviews.context_summary` fetch + `selectInterviewContext("adapt-execution-strategy", ...)`. Add entry to `FUNCTION_FIELD_MAP`.
+```json
+{
+  "executionProfile": {
+    "completionRate7d": 0.71,
+    "completionRate30d": 0.65,
+    "avgEnergyLevel": 3.8,
+    "avgStressLevel": 2.1,
+    "energyTrend": "rising",
+    "topCategories": ["validation", "build"],
+    "weakCategories": ["marketing"]
+  },
+  "validatedLearnings": [
+    "Target users prefer async communication",
+    "Pricing above $49/mo met resistance in 3 interviews"
+  ],
+  "activeBlockers": ["Need to find technical co-founder"],
+  "behavioralFlags": ["scope_creep (medium)"],
+  "marketIntelligence": {
+    "strongDemandSignals": ["remote team tooling"],
+    "competitorCount": 4,
+    "timingAssessment": "favorable"
+  },
+  "founderStrengths": ["domain expertise in healthcare IT", "strong network in target market"],
+  "routingSignal": { "suggestedArchetype": "vertical_saas", "confidence": "high" },
+  "snapshotSummary": "Founder is 12 days into a 30-day sprint with 71% task completion. Energy rising. One active pattern (scope creep). Market timing is favorable with 2 strong demand signals."
+}
+```
 
-### 3. `venture-debugger` — Missing reflections, check-ins, tasks, market validation, strategy
-**Impact: HIGH.** The debugger diagnoses venture problems but only sees interview context and patterns. It can't see actual execution data (completion rates, energy trends, market evidence).
+## New Edge Function: `compound-founder-context`
 
-**Fix:** Add fetches for `daily_reflections`, `venture_daily_checkins`, `venture_daily_tasks`, `market_validations`, and `execution_strategies`. This makes the debugger a true diagnostic tool.
+**Purpose:** Aggregates raw signals into a compact snapshot. Called after key events (not on every request).
 
-### 4. `generate-blueprint` — Missing market validation, patterns, reflections
-**Impact: MEDIUM.** Blueprints are generated without real market evidence or behavioral pattern awareness. A blueprint for a founder with a "scope creep" pattern should proactively address that.
+**Data sources fetched:**
+1. `venture_daily_tasks` — completion rates (7d and 30d)
+2. `daily_reflections` — energy/stress averages and trends (last 7)
+3. `founder_patterns` — active behavioral flags
+4. `market_validations` — demand signals, competitor count, timing
+5. `validation_evidence` + `validation_summaries` — validated learnings
+6. `execution_strategies` — current strategic focus
+7. `founder_interviews` — routing signal, founder strengths
+8. `venture_daily_checkins` — recent blockers from explanations
 
-**Fix:** Add `market_validations`, `founder_patterns` (active), and `daily_reflections` (last 5) to the context.
+**Logic:** Pure aggregation — no AI call needed. Deterministic computation of averages, trends, and compact summaries. Fast and cheap.
 
-### 5. `generate-founder-ideas` — Missing market validation data
-**Impact: MEDIUM.** Ideas are generated without knowing what's already been validated in the market. If Perplexity found strong demand signals for a niche, that should bias idea generation.
+**Versioning:** Each call inserts a new row (append-only). Old snapshots are preserved for trend analysis. A cleanup policy can prune snapshots older than 90 days later.
 
-**Fix:** Fetch `market_validations` for the user's previously validated ideas and inject as "market intelligence" context.
+**Throttling:** If the latest snapshot is less than 4 hours old, skip recomputation and return the existing one. This prevents spam from rapid successive events.
 
-## Implementation Plan
+## Shared Utility: `_shared/getCompoundedContext.ts`
 
-### Step 1: Enrich `generate-checkin-response`
-Add 4 data sources (reflections, patterns, strategy, blueprint) to the parallel fetch. Update the system prompt to reference this context.
+```typescript
+export async function getCompoundedContext(
+  supabase: SupabaseClient,
+  userId: string,
+  ventureId: string
+): Promise<any | null> {
+  const { data } = await supabase
+    .from("founder_context_snapshots")
+    .select("snapshot")
+    .eq("user_id", userId)
+    .eq("venture_id", ventureId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.snapshot ?? null;
+}
+```
 
-### Step 2: Add interview context to `adapt-execution-strategy`
-Add `founder_interviews` fetch and `selectInterviewContext` call. Add `"adapt-execution-strategy"` to `FUNCTION_FIELD_MAP` with fields: `["founderSummary", "constraints", "energyDrainers", "transferablePatterns", "routingSignal"]`.
+## Consumer Integration
 
-### Step 3: Enrich `venture-debugger`
-Add 5 data sources. This is the biggest single-function change but also the highest-leverage — founders use the debugger when something feels wrong.
+Wire `getCompoundedContext()` into 4 high-impact functions. The snapshot gets injected as a `## Founder Intelligence Snapshot` block in the system prompt — replacing the current multi-fetch approach where feasible, or supplementing it with pre-computed trends that can't be derived inline.
 
-### Step 4: Add market validation + patterns to `generate-blueprint`
-Add `market_validations` and `founder_patterns` fetches. Update the prompt to include validated demand signals and pattern warnings.
+| Function | How it uses snapshot |
+|----------|-------------------|
+| `generate-checkin-response` | Energy trend, active blockers, completion rate → calibrate tone |
+| `generate-daily-execution-tasks` | Weak categories, validated learnings → task selection bias |
+| `venture-debugger` | Full snapshot → diagnostic baseline |
+| `generate-blueprint` | Market intelligence, validated learnings → grounded recommendations |
 
-### Step 5: Add market intelligence to `generate-founder-ideas`
-Fetch the user's existing `market_validations` rows and inject as "previously validated market signals" context.
+## Trigger Points (client-side)
 
-### Step 6: Update `selectInterviewContext` FUNCTION_FIELD_MAP
-Add `adapt-execution-strategy` entry.
+Fire-and-forget calls to `compound-founder-context` after:
+1. Daily check-in submission (in `useDailyExecution` hook)
+2. Validation evidence logged (in `LogEvidenceModal`)
+3. Daily reflection saved (in `DailyReflectionForm`)
 
-## Files Modified
+These are non-blocking — the user never waits for compounding.
 
-- `supabase/functions/generate-checkin-response/index.ts`
-- `supabase/functions/adapt-execution-strategy/index.ts`
-- `supabase/functions/venture-debugger/index.ts`
-- `supabase/functions/generate-blueprint/index.ts`
-- `supabase/functions/generate-founder-ideas/index.ts`
-- `supabase/functions/_shared/selectInterviewContext.ts`
+## Files Modified/Created
 
-## Token Budget Consideration
+| File | Action |
+|------|--------|
+| Migration SQL | Create `founder_context_snapshots` table + RLS |
+| `supabase/functions/compound-founder-context/index.ts` | New edge function |
+| `supabase/functions/_shared/getCompoundedContext.ts` | New shared utility |
+| `supabase/functions/generate-checkin-response/index.ts` | Add snapshot consumption |
+| `supabase/functions/generate-daily-execution-tasks/index.ts` | Add snapshot consumption |
+| `supabase/functions/venture-debugger/index.ts` | Add snapshot consumption |
+| `supabase/functions/generate-blueprint/index.ts` | Add snapshot consumption |
+| `src/hooks/useDailyExecution.ts` | Fire compounding after check-in |
+| `src/components/reflection/DailyReflectionForm.tsx` | Fire compounding after reflection |
+| `src/components/validation/LogEvidenceModal.tsx` | Fire compounding after evidence |
 
-Each additional data source adds ~200-500 tokens. The functions using Gemini Flash have generous context windows. I'll keep injections compact — structured summaries, not raw dumps. Estimated total token increase per function: 300-800 tokens, well within budget.
+## Token Budget
+
+The snapshot adds ~300-500 tokens to each consumer prompt — less than the current multi-source approach because it's pre-aggregated. Net effect is a token reduction for functions that currently do 4+ parallel fetches for raw data.
+
+## What This Does NOT Do
+
+- No AI call in the compounding step (pure computation)
+- No UI changes (snapshots are invisible infrastructure)
+- No breaking changes to existing function signatures
+- No removal of existing data fetches (snapshot supplements, doesn't replace — functions can still fetch real-time data for freshness-critical fields)
 
