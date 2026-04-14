@@ -5,6 +5,8 @@ import { TextareaWithVoice } from "@/components/ui/textarea-with-voice";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles } from "lucide-react";
+import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
+import { useActiveVenture } from "@/hooks/useActiveVenture";
 
 const MOOD_OPTIONS = [
   "Motivated", "Focused", "Anxious", "Tired", "Energized", 
