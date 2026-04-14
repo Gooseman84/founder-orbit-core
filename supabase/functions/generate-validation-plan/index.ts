@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { getCompoundedContext, formatSnapshotForPrompt } from "../_shared/getCompoundedContext.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -106,10 +107,14 @@ serve(async (req) => {
     const fvs = fvsRes.data as any || null;
     const northStarSpec = northStarRes.data?.content || null;
 
+    // Fetch compounded context snapshot
+    const snapshot = await getCompoundedContext(admin, userId, venture_id);
+
     log("Context fetched", {
       hasInterview: !!interview,
       hasFVS: !!fvs,
       hasNorthStar: !!northStarSpec,
+      hasSnapshot: !!snapshot,
     });
 
     // --- Create validation session ---
@@ -202,7 +207,7 @@ FVS SUMMARY: ${fvs?.summary ?? "N/A"}
 FVS TOP RISK: ${fvs?.top_risk ?? "N/A"}
 ${interviewStr}
 ${northStarStr}
-
+${snapshot ? "\n" + formatSnapshotForPrompt(snapshot) + "\n" : ""}
 Identify the 3 highest-uncertainty FVS dimensions and generate validation missions.`;
 
     log("Calling AI Gateway");
