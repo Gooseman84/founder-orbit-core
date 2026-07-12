@@ -42,7 +42,7 @@ export function assertP1(win: ActionTemplate | null, _s: MoneyPathStage, bn: Bot
   const isOfferRefine = win?.addresses_bottleneck === "B_NO_OFFER";
 
   const checks: AssertionResult[] = [
-    { label: "leverage-aware: bottleneck shifted off B_NO_BUYER_LIST", passed: bn === "B_NO_BUYER_LIST" ? false : true, detail: `bottleneck=${bn}` },
+    { label: "leverage bypass fired (warm_direct_ask wins)", passed: isDirectAsk, detail: `winner=${win?.code ?? "—"}` },
     { label: "produces direct external outreach THIS session", passed: producesExternalContact },
     { label: "does NOT terminate at 'build a list'", passed: !isListBuild },
     { label: "does NOT re-open offer refinement", passed: !isOfferRefine },
