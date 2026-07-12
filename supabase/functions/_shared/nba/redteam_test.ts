@@ -236,6 +236,9 @@ Deno.test("RED TEAM — 7 personas, live template set", async () => {
   lines.push("═════════════════════════════════════════════════════════════════════");
 
   const report = lines.join("\n");
+  // Print matrix FIRST so it survives stdout truncation.
+  const matrixTail = lines.slice(-20).join("\n");
+  console.log("\n▶ FINAL MATRIX (printed first to survive stdout truncation):\n" + matrixTail + "\n");
   console.log(report);
   try { await Deno.writeTextFile(new URL("./redteam_report.txt", import.meta.url), report); } catch { /* --allow-write not granted by test runner; report is in stdout */ }
 
