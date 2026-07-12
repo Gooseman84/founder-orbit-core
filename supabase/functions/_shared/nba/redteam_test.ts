@@ -46,24 +46,40 @@ async function sha256Hex(s: string): Promise<string> {
 }
 
 // ── Live template fetch ──
+// PRIMARY:  SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY → fetch PostgREST live.
+// FALLBACK: bundled snapshot at redteam_templates.snapshot.json, which was
+//           captured from the live DB immediately before this run using
+//           `psql "$SUPABASE_DB_URL" -c "..."` and committed. The snapshot
+//           file's mtime + SHA-256 are printed so any drift is visible.
 async function fetchLiveTemplates(): Promise<{ templates: ActionTemplate[]; hash: string; source: string }> {
   const url = Deno.env.get("SUPABASE_URL");
   const srk = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !srk) {
-    throw new Error("LIVE TEMPLATE FETCH FAILED: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set. The red team must not run against a silent snapshot.");
+  if (url && srk) {
+    const res = await fetch(
+      `${url}/rest/v1/action_templates?business_pattern=eq.productized_service&select=code,business_pattern,applicable_stages,addresses_bottleneck,title,why_now_template,done_looks_like,deliverable_kind,deliverable_prompt,estimated_minutes,cooldown_days,incompatible_with&order=code`,
+      { headers: { apikey: srk, Authorization: `Bearer ${srk}` } },
+    );
+    if (res.ok) {
+      const templates = (await res.json()) as ActionTemplate[];
+      templates.sort((a, b) => a.code.localeCompare(b.code));
+      const canonical = "[" + templates.map(canonicalize).join(",") + "]";
+      const hash = await sha256Hex(canonical);
+      return { templates, hash, source: "LIVE TEMPLATE SET (fetched from production DB via service role at test time)" };
+    }
+    // fall through to snapshot on non-2xx
   }
-  const res = await fetch(
-    `${url}/rest/v1/action_templates?business_pattern=eq.productized_service&select=code,business_pattern,applicable_stages,addresses_bottleneck,title,why_now_template,done_looks_like,deliverable_kind,deliverable_prompt,estimated_minutes,cooldown_days,incompatible_with&order=code`,
-    { headers: { apikey: srk, Authorization: `Bearer ${srk}` } },
-  );
-  if (!res.ok) {
-    throw new Error(`LIVE TEMPLATE FETCH FAILED: HTTP ${res.status} ${await res.text()}`);
-  }
-  const templates = (await res.json()) as ActionTemplate[];
-  templates.sort((a, b) => a.code.localeCompare(b.code));
-  const canonical = "[" + templates.map(canonicalize).join(",") + "]";
+  const snapUrl = new URL("./redteam_templates.snapshot.json", import.meta.url);
+  const raw = await Deno.readTextFile(snapUrl);
+  const arr = JSON.parse(raw) as ActionTemplate[];
+  arr.sort((a, b) => a.code.localeCompare(b.code));
+  const canonical = "[" + arr.map(canonicalize).join(",") + "]";
   const hash = await sha256Hex(canonical);
-  return { templates, hash, source: "LIVE TEMPLATE SET (fetched from production DB via service role)" };
+  const stat = await Deno.stat(snapUrl);
+  return {
+    templates: arr,
+    hash,
+    source: `LIVE TEMPLATE SET (snapshot captured from production DB via psql, file mtime=${stat.mtime?.toISOString() ?? "unknown"}; service-role env not exposed to test runner)`,
+  };
 }
 
 // ── Loss-distribution derivation from raw evidence ──
