@@ -28,9 +28,12 @@ async function readState(
   supabase: ReturnType<typeof createClient>,
   moneyPathId: string,
 ): Promise<MoneyPathState | null> {
-  const [stageRes, bnRes] = await Promise.all([
+  const [stageRes, bnRes, chanRes] = await Promise.all([
     supabase.from("v_money_path_stage").select("*").eq("money_path_id", moneyPathId).maybeSingle(),
     supabase.from("v_active_bottleneck").select("*").eq("money_path_id", moneyPathId).maybeSingle(),
+    // Winning channel = source_channel of the most recent revenue event.
+    // Path-scoped by design; never persisted on the founder.
+    supabase.from("revenue_events").select("source_channel, occurred_at").eq("money_path_id", moneyPathId).order("occurred_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (!stageRes.data || !bnRes.data) return null;
   const s = stageRes.data as any;
@@ -46,6 +49,7 @@ async function readState(
       offer_sent_count: Number(s.offer_sent_count ?? 0),
       total_conv: Number(s.contacted_count ?? 0),
     },
+    winning_channel: (chanRes.data as any)?.source_channel ?? null,
   };
 }
 
@@ -72,8 +76,56 @@ async function readContext(
     existing_audience_channel: adv.existing_audience_channel ?? null,
     platform_strengths: adv.platform_strengths ?? [],
     existing_client_access: !!adv.existing_client_access,
+    // ── Economic leverage snapshot (Repair Block 1.1) ──
+    reachable_buyer_count: Number(adv.reachable_buyer_count ?? 0),
+    activatable_audience: !!adv.activatable_audience,
+    has_prior_paid_proof: !!adv.has_prior_paid_proof,
   };
 }
+
+// ── readLossDistribution: recent-30d loss reason buckets for this path ──
+async function readLossDistribution(
+  supabase: ReturnType<typeof createClient>,
+  moneyPathId: string,
+): Promise<LossDistribution> {
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from("buyer_conversations")
+    .select("loss_reason, updated_at, status")
+    .eq("money_path_id", moneyPathId)
+    .eq("status", "lost")
+    .gte("updated_at", cutoff);
+
+  const rows = (data ?? []) as Array<{ loss_reason: string | null }>;
+  const counts = new Map<string, number>();
+  let recent_unknown = 0;
+  for (const r of rows) {
+    if (r.loss_reason == null) { recent_unknown++; continue; }
+    counts.set(r.loss_reason, (counts.get(r.loss_reason) ?? 0) + 1);
+  }
+  const buckets = Array.from(counts.entries())
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count);
+  return { buckets, recent_total: rows.length, recent_unknown };
+}
+
+// ── readSignals: unresolved founder_signals rows for this path ──
+async function readSignals(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  moneyPathId: string,
+): Promise<ActiveSignals> {
+  const { data } = await supabase
+    .from("founder_signals")
+    .select("kind, resolved_at")
+    .eq("user_id", userId)
+    .eq("money_path_id", moneyPathId)
+    .is("resolved_at", null);
+  const rows = (data ?? []) as Array<{ kind: string }>;
+  return { avoids_ask: rows.some((r) => r.kind === "SIG_AVOIDS_ASK") };
+}
+
+
 
 // ── fillDeliverable: single LLM call, safe fallback on failure ──
 async function fillDeliverable(
