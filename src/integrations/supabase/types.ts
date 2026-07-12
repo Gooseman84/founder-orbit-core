@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_templates: {
+        Row: {
+          active: boolean
+          addresses_bottleneck: Database["public"]["Enums"]["bottleneck_kind"]
+          applicable_stages: Database["public"]["Enums"]["money_path_stage"][]
+          business_pattern: Database["public"]["Enums"]["business_pattern"]
+          code: string
+          cooldown_days: number
+          created_at: string
+          deliverable_kind: string
+          deliverable_prompt: string
+          done_looks_like: string
+          estimated_minutes: number
+          id: string
+          incompatible_with: string[]
+          title: string
+          updated_at: string
+          version: number
+          why_now_template: string
+        }
+        Insert: {
+          active?: boolean
+          addresses_bottleneck: Database["public"]["Enums"]["bottleneck_kind"]
+          applicable_stages: Database["public"]["Enums"]["money_path_stage"][]
+          business_pattern: Database["public"]["Enums"]["business_pattern"]
+          code: string
+          cooldown_days?: number
+          created_at?: string
+          deliverable_kind: string
+          deliverable_prompt: string
+          done_looks_like: string
+          estimated_minutes?: number
+          id?: string
+          incompatible_with?: string[]
+          title: string
+          updated_at?: string
+          version?: number
+          why_now_template: string
+        }
+        Update: {
+          active?: boolean
+          addresses_bottleneck?: Database["public"]["Enums"]["bottleneck_kind"]
+          applicable_stages?: Database["public"]["Enums"]["money_path_stage"][]
+          business_pattern?: Database["public"]["Enums"]["business_pattern"]
+          code?: string
+          cooldown_days?: number
+          created_at?: string
+          deliverable_kind?: string
+          deliverable_prompt?: string
+          done_looks_like?: string
+          estimated_minutes?: number
+          id?: string
+          incompatible_with?: string[]
+          title?: string
+          updated_at?: string
+          version?: number
+          why_now_template?: string
+        }
+        Relationships: []
+      }
       agent_decisions: {
         Row: {
           agent_name: string
@@ -154,6 +214,80 @@ export type Database = {
           venture_id?: string | null
         }
         Relationships: []
+      }
+      buyer_conversations: {
+        Row: {
+          channel: string | null
+          created_at: string
+          handle: string
+          id: string
+          last_activity_at: string
+          money_path_id: string
+          notes: string | null
+          outcome: string | null
+          revenue_event_id: string | null
+          status: Database["public"]["Enums"]["conversation_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          handle: string
+          id?: string
+          last_activity_at?: string
+          money_path_id: string
+          notes?: string | null
+          outcome?: string | null
+          revenue_event_id?: string | null
+          status?: Database["public"]["Enums"]["conversation_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          handle?: string
+          id?: string
+          last_activity_at?: string
+          money_path_id?: string
+          notes?: string | null
+          outcome?: string | null
+          revenue_event_id?: string | null
+          status?: Database["public"]["Enums"]["conversation_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_conversations_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "money_paths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_conversations_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_bottleneck"
+            referencedColumns: ["money_path_id"]
+          },
+          {
+            foreignKeyName: "buyer_conversations_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "v_money_path_stage"
+            referencedColumns: ["money_path_id"]
+          },
+          {
+            foreignKeyName: "buyer_conversations_revenue_event_id_fkey"
+            columns: ["revenue_event_id"]
+            isOneToOne: false
+            referencedRelation: "revenue_events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_reflections: {
         Row: {
@@ -531,6 +665,45 @@ export type Database = {
           },
         ]
       }
+      founder_advantages: {
+        Row: {
+          created_at: string
+          domain_authority_signals: string[]
+          existing_audience_channel: string | null
+          existing_audience_size: number
+          existing_client_access: boolean
+          id: string
+          platform_strengths: string[]
+          updated_at: string
+          user_id: string
+          warm_network_strength: Database["public"]["Enums"]["warm_network_strength"]
+        }
+        Insert: {
+          created_at?: string
+          domain_authority_signals?: string[]
+          existing_audience_channel?: string | null
+          existing_audience_size?: number
+          existing_client_access?: boolean
+          id?: string
+          platform_strengths?: string[]
+          updated_at?: string
+          user_id: string
+          warm_network_strength?: Database["public"]["Enums"]["warm_network_strength"]
+        }
+        Update: {
+          created_at?: string
+          domain_authority_signals?: string[]
+          existing_audience_channel?: string | null
+          existing_audience_size?: number
+          existing_client_access?: boolean
+          id?: string
+          platform_strengths?: string[]
+          updated_at?: string
+          user_id?: string
+          warm_network_strength?: Database["public"]["Enums"]["warm_network_strength"]
+        }
+        Relationships: []
+      }
       founder_blueprints: {
         Row: {
           ai_recommendations: Json | null
@@ -743,6 +916,44 @@ export type Database = {
         }
         Relationships: []
       }
+      founder_overrides: {
+        Row: {
+          chosen_alternative: string
+          created_at: string
+          direction: string | null
+          id: string
+          nba_history_id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          chosen_alternative: string
+          created_at?: string
+          direction?: string | null
+          id?: string
+          nba_history_id: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          chosen_alternative?: string
+          created_at?: string
+          direction?: string | null
+          id?: string
+          nba_history_id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "founder_overrides_nba_history_id_fkey"
+            columns: ["nba_history_id"]
+            isOneToOne: false
+            referencedRelation: "nba_history"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       founder_patterns: {
         Row: {
           advisor_note: string
@@ -918,6 +1129,67 @@ export type Database = {
           work_personality?: string[] | null
         }
         Relationships: []
+      }
+      founder_signals: {
+        Row: {
+          context: Json | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["signal_kind"]
+          money_path_id: string
+          opened_at: string
+          resolved_at: string | null
+          severity: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["signal_kind"]
+          money_path_id: string
+          opened_at?: string
+          resolved_at?: string | null
+          severity?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["signal_kind"]
+          money_path_id?: string
+          opened_at?: string
+          resolved_at?: string | null
+          severity?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "founder_signals_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "money_paths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "founder_signals_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_bottleneck"
+            referencedColumns: ["money_path_id"]
+          },
+          {
+            foreignKeyName: "founder_signals_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "v_money_path_stage"
+            referencedColumns: ["money_path_id"]
+          },
+        ]
       }
       frameworks: {
         Row: {
@@ -1385,6 +1657,133 @@ export type Database = {
         }
         Relationships: []
       }
+      money_paths: {
+        Row: {
+          business_pattern: Database["public"]["Enums"]["business_pattern"]
+          buyer_segment: string | null
+          created_at: string
+          current_revenue_cents: number
+          delivery_format: string | null
+          id: string
+          offer_description: string | null
+          offer_locked_at: string | null
+          offer_title: string | null
+          price_cents: number | null
+          sales_complexity:
+            | Database["public"]["Enums"]["sales_complexity"]
+            | null
+          target_customers_for_first_10k: number | null
+          updated_at: string
+          user_id: string
+          venture_id: string
+        }
+        Insert: {
+          business_pattern?: Database["public"]["Enums"]["business_pattern"]
+          buyer_segment?: string | null
+          created_at?: string
+          current_revenue_cents?: number
+          delivery_format?: string | null
+          id?: string
+          offer_description?: string | null
+          offer_locked_at?: string | null
+          offer_title?: string | null
+          price_cents?: number | null
+          sales_complexity?:
+            | Database["public"]["Enums"]["sales_complexity"]
+            | null
+          target_customers_for_first_10k?: number | null
+          updated_at?: string
+          user_id: string
+          venture_id: string
+        }
+        Update: {
+          business_pattern?: Database["public"]["Enums"]["business_pattern"]
+          buyer_segment?: string | null
+          created_at?: string
+          current_revenue_cents?: number
+          delivery_format?: string | null
+          id?: string
+          offer_description?: string | null
+          offer_locked_at?: string | null
+          offer_title?: string | null
+          price_cents?: number | null
+          sales_complexity?:
+            | Database["public"]["Enums"]["sales_complexity"]
+            | null
+          target_customers_for_first_10k?: number | null
+          updated_at?: string
+          user_id?: string
+          venture_id?: string
+        }
+        Relationships: []
+      }
+      nba_history: {
+        Row: {
+          bottleneck_at_serve: Database["public"]["Enums"]["bottleneck_kind"]
+          created_at: string
+          deliverable_snapshot: Json | null
+          id: string
+          money_path_id: string
+          outcome: Database["public"]["Enums"]["nba_outcome"]
+          outcome_at: string | null
+          served_at: string
+          stage_at_serve: Database["public"]["Enums"]["money_path_stage"]
+          template_code: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bottleneck_at_serve: Database["public"]["Enums"]["bottleneck_kind"]
+          created_at?: string
+          deliverable_snapshot?: Json | null
+          id?: string
+          money_path_id: string
+          outcome?: Database["public"]["Enums"]["nba_outcome"]
+          outcome_at?: string | null
+          served_at?: string
+          stage_at_serve: Database["public"]["Enums"]["money_path_stage"]
+          template_code: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bottleneck_at_serve?: Database["public"]["Enums"]["bottleneck_kind"]
+          created_at?: string
+          deliverable_snapshot?: Json | null
+          id?: string
+          money_path_id?: string
+          outcome?: Database["public"]["Enums"]["nba_outcome"]
+          outcome_at?: string | null
+          served_at?: string
+          stage_at_serve?: Database["public"]["Enums"]["money_path_stage"]
+          template_code?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nba_history_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "money_paths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nba_history_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_bottleneck"
+            referencedColumns: ["money_path_id"]
+          },
+          {
+            foreignKeyName: "nba_history_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "v_money_path_stage"
+            referencedColumns: ["money_path_id"]
+          },
+        ]
+      }
       niche_radar: {
         Row: {
           created_at: string
@@ -1497,6 +1896,64 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "founder_interviews"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      revenue_events: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          money_path_id: string
+          notes: string | null
+          occurred_at: string
+          source_channel: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          id?: string
+          money_path_id: string
+          notes?: string | null
+          occurred_at?: string
+          source_channel?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          money_path_id?: string
+          notes?: string | null
+          occurred_at?: string
+          source_channel?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_events_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "money_paths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenue_events_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_bottleneck"
+            referencedColumns: ["money_path_id"]
+          },
+          {
+            foreignKeyName: "revenue_events_money_path_id_fkey"
+            columns: ["money_path_id"]
+            isOneToOne: false
+            referencedRelation: "v_money_path_stage"
+            referencedColumns: ["money_path_id"]
           },
         ]
       }
@@ -2394,7 +2851,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_active_bottleneck: {
+        Row: {
+          bottleneck: Database["public"]["Enums"]["bottleneck_kind"] | null
+          money_path_id: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      v_money_path_stage: {
+        Row: {
+          contacted_count: number | null
+          money_path_id: string | null
+          offer_sent_count: number | null
+          replied_count: number | null
+          revenue_cents: number | null
+          revenue_count: number | null
+          stage: Database["public"]["Enums"]["money_path_stage"] | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       delete_email: {
@@ -2406,6 +2883,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      ensure_money_path: { Args: { p_venture_id: string }; Returns: string }
       get_user_subscription: {
         Args: { p_user_id: string }
         Returns: {
@@ -2440,13 +2918,57 @@ export type Database = {
       }
     }
     Enums: {
+      bottleneck_kind:
+        | "B_NO_OFFER"
+        | "B_NO_BUYER_LIST"
+        | "B_NO_OUTREACH"
+        | "B_NO_REPLIES"
+        | "B_REPLIES_NO_CALLS"
+        | "B_CALLS_NO_OFFERS"
+        | "B_OFFERS_NO_CLOSE"
+        | "B_PRICE_OBJECTION"
+        | "B_CHANNEL_EXHAUSTED"
+        | "B_DELIVERY_STUCK"
+      business_pattern:
+        | "productized_service"
+        | "advisory"
+        | "cohort"
+        | "digital_product"
+        | "licensing"
+        | "micro_saas"
+      conversation_status:
+        | "identified"
+        | "contacted"
+        | "replied"
+        | "call_booked"
+        | "offer_sent"
+        | "won"
+        | "lost"
+        | "ghosted"
       idea_source_type: "generated" | "market_signal" | "imported" | "fused"
+      money_path_stage:
+        | "S1_OFFER_SHAPING"
+        | "S2_OUTREACH"
+        | "S3_CONVERSATIONS"
+        | "S4_OFFERS_OUT"
+        | "S5_FIRST_REVENUE"
+        | "S6_REPEATABLE"
+        | "S7_SCALE"
+      nba_outcome: "pending" | "done" | "skipped" | "overridden" | "expired"
+      sales_complexity: "self_serve" | "light_touch" | "high_touch"
+      signal_kind:
+        | "polishing"
+        | "ghosting"
+        | "scope_creep"
+        | "cheap_signal_loop"
+        | "silent_stall"
       venture_state:
         | "inactive"
         | "committed"
         | "executing"
         | "reviewed"
         | "killed"
+      warm_network_strength: "none" | "weak" | "moderate" | "strong"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2574,7 +3096,55 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      bottleneck_kind: [
+        "B_NO_OFFER",
+        "B_NO_BUYER_LIST",
+        "B_NO_OUTREACH",
+        "B_NO_REPLIES",
+        "B_REPLIES_NO_CALLS",
+        "B_CALLS_NO_OFFERS",
+        "B_OFFERS_NO_CLOSE",
+        "B_PRICE_OBJECTION",
+        "B_CHANNEL_EXHAUSTED",
+        "B_DELIVERY_STUCK",
+      ],
+      business_pattern: [
+        "productized_service",
+        "advisory",
+        "cohort",
+        "digital_product",
+        "licensing",
+        "micro_saas",
+      ],
+      conversation_status: [
+        "identified",
+        "contacted",
+        "replied",
+        "call_booked",
+        "offer_sent",
+        "won",
+        "lost",
+        "ghosted",
+      ],
       idea_source_type: ["generated", "market_signal", "imported", "fused"],
+      money_path_stage: [
+        "S1_OFFER_SHAPING",
+        "S2_OUTREACH",
+        "S3_CONVERSATIONS",
+        "S4_OFFERS_OUT",
+        "S5_FIRST_REVENUE",
+        "S6_REPEATABLE",
+        "S7_SCALE",
+      ],
+      nba_outcome: ["pending", "done", "skipped", "overridden", "expired"],
+      sales_complexity: ["self_serve", "light_touch", "high_touch"],
+      signal_kind: [
+        "polishing",
+        "ghosting",
+        "scope_creep",
+        "cheap_signal_loop",
+        "silent_stall",
+      ],
       venture_state: [
         "inactive",
         "committed",
@@ -2582,6 +3152,7 @@ export const Constants = {
         "reviewed",
         "killed",
       ],
+      warm_network_strength: ["none", "weak", "moderate", "strong"],
     },
   },
 } as const
