@@ -186,12 +186,14 @@ serve(async (req) => {
     const { data: mpId, error: rpcErr } = await supabase.rpc("ensure_money_path", { p_venture_id: ventureId });
     if (rpcErr || !mpId) return json({ error: "money path unavailable" }, 404);
 
-    // Read state + context + templates + history in parallel.
-    const [state, ctx, tplRes, histRes] = await Promise.all([
+    // Read state + context + templates + history + loss dist + signals in parallel.
+    const [state, ctx, tplRes, histRes, lossDist, signals] = await Promise.all([
       readState(supabase, mpId as string),
       readContext(supabase, user.id, mpId as string),
       supabase.from("action_templates").select("*").eq("active", true).eq("business_pattern", "productized_service"),
       supabase.from("nba_history").select("template_code, served_at, outcome").eq("user_id", user.id).eq("money_path_id", mpId).order("served_at", { ascending: false }).limit(50),
+      readLossDistribution(supabase, mpId as string),
+      readSignals(supabase, user.id, mpId as string),
     ]);
 
     if (!state || !ctx) return json({ error: "state or context missing" }, 500);
@@ -212,10 +214,12 @@ serve(async (req) => {
     }));
     const history: NbaHistoryEntry[] = (histRes.data ?? []) as any;
 
-    const selection = selectAction(templates, state, ctx, history);
+    const extras: SelectExtras = { loss_distribution: lossDist, signals };
+    const selection = selectAction(templates, state, ctx, history, new Date(), extras);
     if (!selection.primary) {
       return json({ state, context: ctx, selection: null, message: "No matching action templates." });
     }
+
 
     // Personalize the primary deliverable — safe fallback on failure.
     const { deliverable, personalized } = await fillDeliverable(selection.primary.template, ctx, state);
