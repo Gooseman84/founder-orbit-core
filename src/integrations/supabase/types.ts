@@ -222,6 +222,9 @@ export type Database = {
           handle: string
           id: string
           last_activity_at: string
+          loss_note: string | null
+          loss_reason: Database["public"]["Enums"]["loss_reason"] | null
+          loss_recorded_at: string | null
           money_path_id: string
           notes: string | null
           outcome: string | null
@@ -236,6 +239,9 @@ export type Database = {
           handle: string
           id?: string
           last_activity_at?: string
+          loss_note?: string | null
+          loss_reason?: Database["public"]["Enums"]["loss_reason"] | null
+          loss_recorded_at?: string | null
           money_path_id: string
           notes?: string | null
           outcome?: string | null
@@ -250,6 +256,9 @@ export type Database = {
           handle?: string
           id?: string
           last_activity_at?: string
+          loss_note?: string | null
+          loss_reason?: Database["public"]["Enums"]["loss_reason"] | null
+          loss_recorded_at?: string | null
           money_path_id?: string
           notes?: string | null
           outcome?: string | null
@@ -667,37 +676,46 @@ export type Database = {
       }
       founder_advantages: {
         Row: {
+          activatable_audience: boolean
           created_at: string
           domain_authority_signals: string[]
           existing_audience_channel: string | null
           existing_audience_size: number
           existing_client_access: boolean
+          has_prior_paid_proof: boolean
           id: string
           platform_strengths: string[]
+          reachable_buyer_count: number
           updated_at: string
           user_id: string
           warm_network_strength: Database["public"]["Enums"]["warm_network_strength"]
         }
         Insert: {
+          activatable_audience?: boolean
           created_at?: string
           domain_authority_signals?: string[]
           existing_audience_channel?: string | null
           existing_audience_size?: number
           existing_client_access?: boolean
+          has_prior_paid_proof?: boolean
           id?: string
           platform_strengths?: string[]
+          reachable_buyer_count?: number
           updated_at?: string
           user_id: string
           warm_network_strength?: Database["public"]["Enums"]["warm_network_strength"]
         }
         Update: {
+          activatable_audience?: boolean
           created_at?: string
           domain_authority_signals?: string[]
           existing_audience_channel?: string | null
           existing_audience_size?: number
           existing_client_access?: boolean
+          has_prior_paid_proof?: boolean
           id?: string
           platform_strengths?: string[]
+          reachable_buyer_count?: number
           updated_at?: string
           user_id?: string
           warm_network_strength?: Database["public"]["Enums"]["warm_network_strength"]
@@ -2929,6 +2947,8 @@ export type Database = {
         | "B_PRICE_OBJECTION"
         | "B_CHANNEL_EXHAUSTED"
         | "B_DELIVERY_STUCK"
+        | "B_NOT_YET_REPEATABLE"
+        | "B_LOSS_REASON_UNKNOWN"
       business_pattern:
         | "productized_service"
         | "advisory"
@@ -2946,6 +2966,14 @@ export type Database = {
         | "lost"
         | "ghosted"
       idea_source_type: "generated" | "market_signal" | "imported" | "fused"
+      loss_reason:
+        | "price"
+        | "roi_unclear"
+        | "timing"
+        | "trust"
+        | "poor_fit"
+        | "competitor"
+        | "unknown"
       money_path_stage:
         | "S1_OFFER_SHAPING"
         | "S2_OUTREACH"
@@ -2962,6 +2990,7 @@ export type Database = {
         | "scope_creep"
         | "cheap_signal_loop"
         | "silent_stall"
+        | "SIG_AVOIDS_ASK"
       venture_state:
         | "inactive"
         | "committed"
@@ -3107,6 +3136,8 @@ export const Constants = {
         "B_PRICE_OBJECTION",
         "B_CHANNEL_EXHAUSTED",
         "B_DELIVERY_STUCK",
+        "B_NOT_YET_REPEATABLE",
+        "B_LOSS_REASON_UNKNOWN",
       ],
       business_pattern: [
         "productized_service",
@@ -3127,6 +3158,15 @@ export const Constants = {
         "ghosted",
       ],
       idea_source_type: ["generated", "market_signal", "imported", "fused"],
+      loss_reason: [
+        "price",
+        "roi_unclear",
+        "timing",
+        "trust",
+        "poor_fit",
+        "competitor",
+        "unknown",
+      ],
       money_path_stage: [
         "S1_OFFER_SHAPING",
         "S2_OUTREACH",
@@ -3144,6 +3184,7 @@ export const Constants = {
         "scope_creep",
         "cheap_signal_loop",
         "silent_stall",
+        "SIG_AVOIDS_ASK",
       ],
       venture_state: [
         "inactive",
