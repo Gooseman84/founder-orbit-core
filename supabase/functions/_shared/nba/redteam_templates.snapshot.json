@@ -1,1 +1,462 @@
-[]
+[
+  {
+    "code": "ps.call.book_conversion_line",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S3_CONVERSATIONS"
+    ],
+    "addresses_bottleneck": "B_REPLIES_NO_CALLS",
+    "title": "Ask for the 15-min call directly",
+    "why_now_template": "They replied. You are still chatting. Ask for the call now with a specific window.",
+    "done_looks_like": "Call-booking message sent to every current replier.",
+    "deliverable_kind": "message_draft",
+    "deliverable_prompt": "Draft the exact reply that transitions from chat to a 15-minute call, including 2 specific time windows.",
+    "estimated_minutes": 15,
+    "cooldown_days": 2,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.call.value_first_agenda",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S3_CONVERSATIONS"
+    ],
+    "addresses_bottleneck": "B_REPLIES_NO_CALLS",
+    "title": "Send a 3-bullet call agenda",
+    "why_now_template": "People say no to open-ended calls. A tight agenda with what they get raises accept-rate.",
+    "done_looks_like": "Agenda-forward call invite sent to each replier.",
+    "deliverable_kind": "message_draft",
+    "deliverable_prompt": "Write a 3-bullet call agenda framed as what the prospect gets from the 15 minutes.",
+    "estimated_minutes": 15,
+    "cooldown_days": 3,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.close.objection_response_kit",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S4_OFFERS_OUT"
+    ],
+    "addresses_bottleneck": "B_OFFERS_NO_CLOSE",
+    "title": "Write direct responses to the 3 objections you keep hearing",
+    "why_now_template": "Same 3 objections mean the offer or positioning has a hole. Address them in writing and resend.",
+    "done_looks_like": "One reply per objection, sent to every open prospect.",
+    "deliverable_kind": "message_draft",
+    "deliverable_prompt": "Ask the founder for the 3 objections they hear most; draft direct, honest, non-defensive responses to each.",
+    "estimated_minutes": 30,
+    "cooldown_days": 3,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.close.pilot_scope_reduction",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S4_OFFERS_OUT"
+    ],
+    "addresses_bottleneck": "B_OFFERS_NO_CLOSE",
+    "title": "Cut scope, hold price \u2014 test lower-friction commitment",
+    "why_now_template": "Persistent price resistance rarely means lower price. It usually means smaller first commitment. Test scope, not discount.",
+    "done_looks_like": "A pilot version of the offer defined: 50-70% of the scope at 60-80% of the price, with a clear upgrade path back to the full engagement.",
+    "deliverable_kind": "text_snippet",
+    "deliverable_prompt": "Guide the founder to design a pilot version of their productized offer that reduces scope without dropping headline price to zero. Rules: (1) name the 1-2 deliverables kept and the 2-3 removed; (2) new price 60-80% of full price; (3) 2-4 week window; (4) explicit upgrade path back to full engagement with credit applied. Do not recommend a straight discount. Do not invent specific customer objection quotes.",
+    "estimated_minutes": 30,
+    "cooldown_days": 21,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.close.request_loss_reason",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S4_OFFERS_OUT"
+    ],
+    "addresses_bottleneck": "B_LOSS_REASON_UNKNOWN",
+    "title": "Ask each lost prospect why \u2014 before diagnosing anything else",
+    "why_now_template": "You cannot fix a pattern you cannot see. Structured loss reasons unlock every close-family intervention downstream.",
+    "done_looks_like": "A short follow-up sent to every lost prospect from the last 30 days asking one question: what was the deciding factor.",
+    "deliverable_kind": "text_snippet",
+    "deliverable_prompt": "Write a 60-90 word follow-up message the founder can send to each lost prospect. One question only: what was the deciding factor in not moving forward, with 5 short options (price, unclear ROI, timing, trust/proof, poor fit) plus a free-text option. Do not invent prospect names or prior conversation details. Frame it as helping the founder improve, not re-selling. End with a note to log each response back into TrueBlazer so the diagnosis sharpens.",
+    "estimated_minutes": 20,
+    "cooldown_days": 30,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.close.roi_case_one_pager",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S4_OFFERS_OUT"
+    ],
+    "addresses_bottleneck": "B_OFFERS_NO_CLOSE",
+    "title": "Build a one-pager showing what the offer changes in dollars",
+    "why_now_template": "When \"unclear ROI\" is the dominant loss reason, the fix is a concrete, buyer-shaped economic case \u2014 not a price cut.",
+    "done_looks_like": "A one-pager the founder can send with future proposals: before/after, quantified impact, timeframe, and one plausible outcome scenario.",
+    "deliverable_kind": "text_snippet",
+    "deliverable_prompt": "Guide the founder to build a one-page ROI case for their productized offer, anchored on the buyer segment. Structure: (1) the current cost of not solving this \u2014 quantified in time or dollars \u2014 using assumptions the founder can defend; (2) what changes after the engagement, in the same units; (3) a plausible payback timeframe; (4) one caveat that keeps it honest. Do not invent specific customer results, logos, or numbers the founder has not shared. Frame the assumptions explicitly as assumptions.",
+    "estimated_minutes": 35,
+    "cooldown_days": 21,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.close.timing_nurture",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S4_OFFERS_OUT"
+    ],
+    "addresses_bottleneck": "B_OFFERS_NO_CLOSE",
+    "title": "Set a 30- and 60-day follow-up sequence for timing losses",
+    "why_now_template": "When \"timing\" is the dominant loss reason, the deal is not dead \u2014 the calendar is wrong.",
+    "done_looks_like": "A 30/60-day follow-up sequence scheduled for each timing-loss prospect with one value-add per touch.",
+    "deliverable_kind": "text_snippet",
+    "deliverable_prompt": "Write a 2-touch follow-up sequence (day 30, day 60) the founder can send to prospects who declined for timing reasons. Each touch: one specific value-add (a data point, a template, a short observation) tied to the buyer segment, and a soft re-open of the conversation. No hard sell in touch 1. Do not invent prior discussion details. 80-120 words per touch.",
+    "estimated_minutes": 25,
+    "cooldown_days": 30,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.list.audience_pull",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH"
+    ],
+    "addresses_bottleneck": "B_NO_BUYER_LIST",
+    "title": "Pull 25 fits from your existing audience",
+    "why_now_template": "You have an audience. Fits are already there \u2014 you just have not looked yet.",
+    "done_looks_like": "25 audience members who match the buyer segment.",
+    "deliverable_kind": "spreadsheet",
+    "deliverable_prompt": "Guide the founder through filtering their existing audience (channel + size in context) for 25 buyer-fit names.",
+    "estimated_minutes": 30,
+    "cooldown_days": 14,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.list.build_25_named",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH"
+    ],
+    "addresses_bottleneck": "B_NO_BUYER_LIST",
+    "title": "Build a list of 25 named buyers",
+    "why_now_template": "You have a locked offer but zero named humans to sell to. 25 is the minimum for signal.",
+    "done_looks_like": "25 rows: name, company, channel, why-they-fit.",
+    "deliverable_kind": "spreadsheet",
+    "deliverable_prompt": "Given the buyer_segment, describe how to find 25 named buyers in the next 60 minutes. Include 3 concrete search strings for LinkedIn / Twitter / communities.",
+    "estimated_minutes": 60,
+    "cooldown_days": 7,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.list.tap_warm_network",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH"
+    ],
+    "addresses_bottleneck": "B_NO_BUYER_LIST",
+    "title": "Pull 10 warm-network buyers first",
+    "why_now_template": "Warm buyers close 5-10x higher than cold. Exhaust the network before touching cold.",
+    "done_looks_like": "10 named people from your existing network who fit the buyer segment.",
+    "deliverable_kind": "spreadsheet",
+    "deliverable_prompt": "Walk the founder through pulling 10 warm-network buyer candidates from LinkedIn 1st-degree, past clients, and their audience.",
+    "estimated_minutes": 30,
+    "cooldown_days": 14,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.offer.define_scope_boundary",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S1_OFFER_SHAPING"
+    ],
+    "addresses_bottleneck": "B_NO_OFFER",
+    "title": "Define what is NOT included",
+    "why_now_template": "Productized means fixed scope. Buyers will not commit to something with unclear boundaries.",
+    "done_looks_like": "A bullet list: 3 things included, 3 things explicitly excluded.",
+    "deliverable_kind": "checklist",
+    "deliverable_prompt": "Draft the in-scope / out-of-scope bullets for this productized offer.",
+    "estimated_minutes": 20,
+    "cooldown_days": 7,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.offer.name_the_offer",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S1_OFFER_SHAPING"
+    ],
+    "addresses_bottleneck": "B_NO_OFFER",
+    "title": "Name the offer",
+    "why_now_template": "A named offer converts higher than \"consulting.\" Name it now.",
+    "done_looks_like": "A memorable 2-4 word name that describes the outcome.",
+    "deliverable_kind": "text_snippet",
+    "deliverable_prompt": "Generate 5 candidate names for this productized offer. Prioritize outcome-oriented, easy to say aloud, no jargon.",
+    "estimated_minutes": 10,
+    "cooldown_days": 14,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.offer.pick_price_anchor",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S1_OFFER_SHAPING"
+    ],
+    "addresses_bottleneck": "B_NO_OFFER",
+    "title": "Set a defensible price anchor",
+    "why_now_template": "Without a price you cannot test demand. Pick one now; you can change it after 5 real conversations.",
+    "done_looks_like": "A single price + one sentence justifying it against buyer ROI.",
+    "deliverable_kind": "text_snippet",
+    "deliverable_prompt": "Propose a starting price for a productized service given the buyer segment and delivery scope. Justify with buyer ROI, not cost-plus.",
+    "estimated_minutes": 20,
+    "cooldown_days": 7,
+    "incompatible_with": [
+      "ps.offer.write_one_liner"
+    ]
+  },
+  {
+    "code": "ps.offer.pilot_frame",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S4_OFFERS_OUT"
+    ],
+    "addresses_bottleneck": "B_CALLS_NO_OFFERS",
+    "title": "Reframe as a paid pilot",
+    "why_now_template": "Full offer too heavy. Pilot lowers the yes-threshold and gets you a paying customer this week.",
+    "done_looks_like": "Pilot offer sent to warmest 2 prospects.",
+    "deliverable_kind": "message_draft",
+    "deliverable_prompt": "Draft a paid pilot version of the offer: shorter timeline, ~1/3 price, defined success metric.",
+    "estimated_minutes": 30,
+    "cooldown_days": 5,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.offer.send_written_proposal",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S4_OFFERS_OUT"
+    ],
+    "addresses_bottleneck": "B_CALLS_NO_OFFERS",
+    "title": "Send a 1-page written offer within 24h",
+    "why_now_template": "Momentum dies fast after calls. One-page written offer, sent today, closes the loop.",
+    "done_looks_like": "A one-page offer PDF/doc sent to every prospect you have called.",
+    "deliverable_kind": "document",
+    "deliverable_prompt": "Draft a 1-page written offer: outcome, scope, timeline, price, next step. Concrete, no fluff.",
+    "estimated_minutes": 45,
+    "cooldown_days": 2,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.offer.write_one_liner",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S1_OFFER_SHAPING"
+    ],
+    "addresses_bottleneck": "B_NO_OFFER",
+    "title": "Write your one-line offer",
+    "why_now_template": "You have no locked offer. Everything downstream stalls until a buyer can repeat what you sell in one sentence.",
+    "done_looks_like": "A single sentence: \"I help {buyer} do {outcome} in {timeframe} for {price}.\"",
+    "deliverable_kind": "text_snippet",
+    "deliverable_prompt": "Draft 3 variants of a one-line productized offer for the founder using their buyer_segment, outcome, and price. Return the tightest one first.",
+    "estimated_minutes": 15,
+    "cooldown_days": 3,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.outreach.audience_cta",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH"
+    ],
+    "addresses_bottleneck": "B_NO_OUTREACH",
+    "title": "Post one CTA to your audience",
+    "why_now_template": "You have an audience but have never asked them to buy. One direct CTA post today.",
+    "done_looks_like": "One post published with a clear ask + how to reply.",
+    "deliverable_kind": "social_post",
+    "deliverable_prompt": "Draft an audience-facing post that describes the offer and invites replies from anyone who wants it.",
+    "estimated_minutes": 20,
+    "cooldown_days": 5,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.outreach.cold_dm_batch",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH"
+    ],
+    "addresses_bottleneck": "B_NO_OUTREACH",
+    "title": "Send 10 targeted cold DMs",
+    "why_now_template": "No warm network available for this buyer. Cold outreach is the path \u2014 but only with a specific hook per person.",
+    "done_looks_like": "10 personalized cold DMs sent. Not a template blast.",
+    "deliverable_kind": "message_draft",
+    "deliverable_prompt": "Draft the outreach frame + 10 personalized cold DMs for this buyer segment. Each DM must reference something specific about the recipient.",
+    "estimated_minutes": 60,
+    "cooldown_days": 2,
+    "incompatible_with": [
+      "ps.outreach.warm_intro_dm"
+    ]
+  },
+  {
+    "code": "ps.outreach.community_value_post",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH"
+    ],
+    "addresses_bottleneck": "B_NO_OUTREACH",
+    "title": "Post a value comment in 3 communities",
+    "why_now_template": "No audience, no warm net. Communities where your buyer already hangs out are the shortest path to a first conversation.",
+    "done_looks_like": "3 substantive answers/comments posted in relevant communities.",
+    "deliverable_kind": "message_draft",
+    "deliverable_prompt": "Identify 3 communities where the buyer segment is active, draft one substantive value-first comment/answer for each.",
+    "estimated_minutes": 45,
+    "cooldown_days": 3,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.outreach.referral_ask",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH"
+    ],
+    "addresses_bottleneck": "B_NO_OUTREACH",
+    "title": "Ask 3 people for one intro each",
+    "why_now_template": "Referrals convert 3x cold. Ask the 3 most-connected people you know for one specific intro each.",
+    "done_looks_like": "3 referral asks sent. Each names the buyer type explicitly.",
+    "deliverable_kind": "message_draft",
+    "deliverable_prompt": "Draft 3 personalized referral-ask messages, each one specifying the exact buyer type and why an intro would help.",
+    "estimated_minutes": 20,
+    "cooldown_days": 5,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.outreach.warm_direct_ask",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH"
+    ],
+    "addresses_bottleneck": "B_NO_OUTREACH",
+    "title": "Ask the 3 strongest-fit reachable contacts today",
+    "why_now_template": "You already have reachable buyers or past clients. The next revenue move is a direct ask, not another preparation step.",
+    "done_looks_like": "3 direct-ask messages sent to the 3 strongest-fit reachable contacts before closing TrueBlazer.",
+    "deliverable_kind": "text_snippet",
+    "deliverable_prompt": "Write a direct-ask message the founder can send today to 3 strongest-fit reachable contacts they choose (past clients, warm connections, or referrers). Do not invent names, companies, or prior interactions \u2014 reference only what the founder can plausibly recall. Anchor on the buyer segment and the productized offer. 90-120 words, direct, no \"leverage\", no \"great job\", one clear ask (a 15-minute conversation or a yes/no on the offer).",
+    "estimated_minutes": 25,
+    "cooldown_days": 7,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.outreach.warm_intro_dm",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH"
+    ],
+    "addresses_bottleneck": "B_NO_OUTREACH",
+    "title": "Send 5 warm DMs today",
+    "why_now_template": "Warm network + no outreach = leaving revenue on the floor. 5 messages, personal, no pitch.",
+    "done_looks_like": "5 DMs sent to warm-network fits. Reply, not pitch.",
+    "deliverable_kind": "message_draft",
+    "deliverable_prompt": "Draft 5 personalized warm DMs opening a conversation (no pitch) for the founder to send to warm-network buyers.",
+    "estimated_minutes": 30,
+    "cooldown_days": 2,
+    "incompatible_with": [
+      "ps.outreach.cold_dm_batch"
+    ]
+  },
+  {
+    "code": "ps.repeat.channel_double_down",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S5_FIRST_REVENUE"
+    ],
+    "addresses_bottleneck": "B_NOT_YET_REPEATABLE",
+    "title": "Run the winning motion again on the winning channel",
+    "why_now_template": "You already know one motion worked. Repeat it before experimenting.",
+    "done_looks_like": "The same message/motion that produced the sale sent to at least 10 lookalike prospects on the same channel this week.",
+    "deliverable_kind": "text_snippet",
+    "deliverable_prompt": "Instruct the founder to replicate the exact outreach motion that produced their first sale \u2014 same channel (from the revenue event source_channel if present, otherwise the winning conversation's channel), same hook, same offer framing. Do not invent prior message text; reference \"the outreach message that led to your first sale\" and ask the founder to reuse it against 10 lookalike prospects this week. Add one line on tracking: log each new conversation to see if reply-rate matches the winning baseline.",
+    "estimated_minutes": 30,
+    "cooldown_days": 14,
+    "incompatible_with": [
+      "ps.reply.rewrite_hook",
+      "ps.reply.channel_switch"
+    ]
+  },
+  {
+    "code": "ps.repeat.lookalike_10",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S5_FIRST_REVENUE"
+    ],
+    "addresses_bottleneck": "B_NOT_YET_REPEATABLE",
+    "title": "Build a 10-name lookalike list of the winning buyer",
+    "why_now_template": "The fastest path to a second sale is finding more of the buyer who just paid you.",
+    "done_looks_like": "10 named prospects added to the buyer list who match the winning buyer's segment, size, and channel.",
+    "deliverable_kind": "text_snippet",
+    "deliverable_prompt": "Guide the founder to build a 10-name lookalike list of the buyer who just paid. Reference the winning buyer's segment (from money_paths.buyer_segment) and the source_channel of the revenue event. Do not invent specific company names or contacts. Provide search cues: role titles, company size, industry, where to look on the winning channel, and what qualification signal proves fit before adding.",
+    "estimated_minutes": 25,
+    "cooldown_days": 14,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.repeat.win_teardown",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S5_FIRST_REVENUE"
+    ],
+    "addresses_bottleneck": "B_NOT_YET_REPEATABLE",
+    "title": "Teardown the win \u2014 what actually worked",
+    "why_now_template": "One sale is evidence worth repeating. Before scaling, capture what worked so it can be reproduced.",
+    "done_looks_like": "A 6-field win teardown captured: buyer traits, channel, hook, timing, price, decision driver.",
+    "deliverable_kind": "text_snippet",
+    "deliverable_prompt": "Prompt the founder through a 15-minute structured teardown of the sale they just closed. Reference only what the revenue event and the winning buyer conversation contain \u2014 do not invent buyer names or quotes. Ask about: who the buyer was (traits and segment fit), which channel produced first contact, the specific hook or message that got a reply, timing/trigger, price and scope, and the one thing that made them say yes. Output as 6 short prompts the founder answers into TrueBlazer.",
+    "estimated_minutes": 20,
+    "cooldown_days": 30,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.reply.channel_switch",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH",
+      "S3_CONVERSATIONS"
+    ],
+    "addresses_bottleneck": "B_NO_REPLIES",
+    "title": "Switch outreach channel",
+    "why_now_template": "Your buyers are not on the channel you are pushing. Try one different channel today.",
+    "done_looks_like": "5 messages sent on a new channel to the same buyer type.",
+    "deliverable_kind": "plan",
+    "deliverable_prompt": "Recommend an alternate channel for this buyer segment given they have not replied on the current channel. Give 3 concrete steps to send 5 messages there today.",
+    "estimated_minutes": 30,
+    "cooldown_days": 7,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.reply.founder_video",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH",
+      "S3_CONVERSATIONS"
+    ],
+    "addresses_bottleneck": "B_NO_REPLIES",
+    "title": "Send a 60-second personal video",
+    "why_now_template": "Video replies convert dramatically higher than text for high-touch offers. Send 3 today.",
+    "done_looks_like": "3 personalized video DMs sent.",
+    "deliverable_kind": "message_draft",
+    "deliverable_prompt": "Write the 60-second script + shot list for 3 personalized founder video DMs to warm-ish prospects.",
+    "estimated_minutes": 40,
+    "cooldown_days": 4,
+    "incompatible_with": []
+  },
+  {
+    "code": "ps.reply.rewrite_hook",
+    "business_pattern": "productized_service",
+    "applicable_stages": [
+      "S2_OUTREACH",
+      "S3_CONVERSATIONS"
+    ],
+    "addresses_bottleneck": "B_NO_REPLIES",
+    "title": "Rewrite your opener with a new hook",
+    "why_now_template": "You sent messages, zero replies. The hook is wrong. Change the first sentence, keep the offer.",
+    "done_looks_like": "A new opener + 5 test sends using it.",
+    "deliverable_kind": "message_draft",
+    "deliverable_prompt": "Analyze what the founder has been sending (assume generic), and rewrite the first 2 sentences with a specific, curiosity-inducing hook.",
+    "estimated_minutes": 25,
+    "cooldown_days": 2,
+    "incompatible_with": []
+  }
+]
