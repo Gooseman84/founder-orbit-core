@@ -38,6 +38,7 @@ const Blueprint = lazy(() => import("./pages/Blueprint"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Billing = lazy(() => import("./pages/Billing"));
 const VentureReview = lazy(() => import("./pages/VentureReview"));
+const LegacyExecutionDashboard = lazy(() => import("./pages/legacy/ExecutionDashboardLegacy"));
 
 /** Logs a deprecation warning and redirects */
 function DeprecatedRedirect({ to, label }: { to: string; label: string }) {
@@ -234,6 +235,16 @@ const App = () => (
             />
             <Route path="/feature-builder" element={<Navigate to="/workspace?tab=feature-builder" replace />} />
             <Route path="/feature-planner" element={<Navigate to="/workspace?tab=feature-builder" replace />} />
+            <Route
+              path="/legacy/execution-dashboard"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <LegacyExecutionDashboard />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
               </Routes>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useVentureState } from "@/hooks/useVentureState";
 import { useOnboardingGuard } from "@/hooks/useOnboardingGuard";
-import { ExecutionDashboard } from "@/components/dashboard/ExecutionDashboard";
+import { MoneyPathHome } from "@/components/money-path/MoneyPathHome";
 import { DiscoveryDashboard } from "@/components/dashboard/DiscoveryDashboard";
 import { ReEntryModal } from "@/components/dashboard/ReEntryModal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,7 +32,7 @@ const Dashboard = () => {
 
   // Execution mode: focused command center
   if (isExecuting && activeVenture) {
-    return <ExecutionDashboard venture={activeVenture} />;
+    return <MoneyPathHome venture={activeVenture} />;
   }
 
   // Discovery mode: full dashboard with exploration
