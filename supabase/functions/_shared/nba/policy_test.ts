@@ -1,22 +1,41 @@
 // Deno test: run with `deno test --allow-read supabase/functions/_shared/nba/policy_test.ts`
-// Proves the closed-loop scoring behavior required by Founder Mode Block 1.
+// Proves the closed-loop scoring behavior required by Founder Mode Block 1 +
+// Repair Block 1.1 (scenarios F–I).
 
 import { assertEquals, assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { selectAction } from "./policy.ts";
-import type { ActionTemplate, FounderContext, MoneyPathState, NbaHistoryEntry } from "./types.ts";
+import type {
+  ActionTemplate, FounderContext, MoneyPathState, NbaHistoryEntry, SelectExtras,
+} from "./types.ts";
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
 const templates: ActionTemplate[] = [
-  // OUTREACH family
+  // LIST family (B_NO_BUYER_LIST, S2)
+  mkTpl("ps.list.build_25_named", "B_NO_BUYER_LIST", "S2_OUTREACH", 7, []),
+  mkTpl("ps.list.tap_warm_network", "B_NO_BUYER_LIST", "S2_OUTREACH", 14, []),
+  mkTpl("ps.list.audience_pull", "B_NO_BUYER_LIST", "S2_OUTREACH", 14, []),
+  // OUTREACH family (B_NO_OUTREACH, S2)
   mkTpl("ps.outreach.warm_intro_dm", "B_NO_OUTREACH", "S2_OUTREACH", 2, ["ps.outreach.cold_dm_batch"]),
   mkTpl("ps.outreach.cold_dm_batch", "B_NO_OUTREACH", "S2_OUTREACH", 2, ["ps.outreach.warm_intro_dm"]),
   mkTpl("ps.outreach.audience_cta", "B_NO_OUTREACH", "S2_OUTREACH", 5, []),
   mkTpl("ps.outreach.referral_ask", "B_NO_OUTREACH", "S2_OUTREACH", 5, []),
   mkTpl("ps.outreach.community_value_post", "B_NO_OUTREACH", "S2_OUTREACH", 3, []),
-  // REPLY family (used to prove D — action loop advances)
+  mkTpl("ps.outreach.warm_direct_ask", "B_NO_OUTREACH", "S2_OUTREACH", 7, []),
+  // REPLY family (B_NO_REPLIES)
   mkTpl("ps.reply.rewrite_hook", "B_NO_REPLIES", "S3_CONVERSATIONS", 2, []),
   mkTpl("ps.reply.founder_video", "B_NO_REPLIES", "S3_CONVERSATIONS", 4, []),
+  mkTpl("ps.reply.channel_switch", "B_NO_REPLIES", "S3_CONVERSATIONS", 7, []),
+  // CLOSE family (B_OFFERS_NO_CLOSE, S4)
+  mkTpl("ps.close.objection_response_kit", "B_OFFERS_NO_CLOSE", "S4_OFFERS_OUT", 3, []),
+  mkTpl("ps.close.roi_case_one_pager",    "B_OFFERS_NO_CLOSE", "S4_OFFERS_OUT", 21, []),
+  mkTpl("ps.close.pilot_scope_reduction", "B_OFFERS_NO_CLOSE", "S4_OFFERS_OUT", 21, []),
+  mkTpl("ps.close.timing_nurture",        "B_OFFERS_NO_CLOSE", "S4_OFFERS_OUT", 30, []),
+  mkTpl("ps.close.request_loss_reason",   "B_LOSS_REASON_UNKNOWN", "S4_OFFERS_OUT", 30, []),
+  // REPEAT family (B_NOT_YET_REPEATABLE, S5)
+  mkTpl("ps.repeat.win_teardown",         "B_NOT_YET_REPEATABLE", "S5_FIRST_REVENUE", 30, []),
+  mkTpl("ps.repeat.lookalike_10",         "B_NOT_YET_REPEATABLE", "S5_FIRST_REVENUE", 14, []),
+  mkTpl("ps.repeat.channel_double_down",  "B_NOT_YET_REPEATABLE", "S5_FIRST_REVENUE", 14, []),
 ];
 
 function mkTpl(
