@@ -79,6 +79,9 @@ function ctx(overrides: Partial<FounderContext>): FounderContext {
     existing_audience_channel: null,
     platform_strengths: [],
     existing_client_access: false,
+    reachable_buyer_count: 0,
+    activatable_audience: false,
+    has_prior_paid_proof: false,
     ...overrides,
   };
 }
