@@ -6,10 +6,14 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { selectAction } from "../_shared/nba/policy.ts";
 import type {
+  ActionSignals,
   ActionTemplate,
+  ActiveSignals,
   FounderContext,
+  LossDistribution,
   MoneyPathState,
   NbaHistoryEntry,
+  SelectExtras,
 } from "../_shared/nba/types.ts";
 
 const corsHeaders = {
