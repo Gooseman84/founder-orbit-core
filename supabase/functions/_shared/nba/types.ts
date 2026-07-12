@@ -20,7 +20,9 @@ export type BottleneckKind =
   | "B_OFFERS_NO_CLOSE"
   | "B_PRICE_OBJECTION"
   | "B_CHANNEL_EXHAUSTED"
-  | "B_DELIVERY_STUCK";
+  | "B_DELIVERY_STUCK"
+  | "B_NOT_YET_REPEATABLE"     // NEW — post-first-revenue, pre-3-wins
+  | "B_LOSS_REASON_UNKNOWN";   // NEW — losses without recorded reasons
 
 export type WarmNetworkStrength = "none" | "weak" | "moderate" | "strong";
 export type SalesComplexity = "self_serve" | "light_touch" | "high_touch";
@@ -45,9 +47,12 @@ export interface MoneyPathState {
     offer_sent_count: number;
     total_conv: number;
   };
+  /** Channel that produced revenue, if any. Path-scoped, never founder-scoped. */
+  winning_channel?: string | null;
 }
 
-/** Founder-side context — advantages + offer characteristics. */
+/** Founder-side context — advantages + offer characteristics.
+ *  Extended with the ECONOMIC LEVERAGE SNAPSHOT (Repair Block 1.1). */
 export interface FounderContext {
   business_pattern: BusinessPattern;
   sales_complexity: SalesComplexity | null;
@@ -58,6 +63,13 @@ export interface FounderContext {
   existing_audience_channel: string | null;
   platform_strengths: string[];
   existing_client_access: boolean;
+  // ── Leverage snapshot (additive) ────────────────────────────────────────
+  /** Named humans reachable today who plausibly fit the buyer segment. */
+  reachable_buyer_count: number;
+  /** Audience the founder can post a commercial CTA to today. */
+  activatable_audience: boolean;
+  /** Has the founder ever been paid for adjacent work. */
+  has_prior_paid_proof: boolean;
 }
 
 /** Content-only template row (from action_templates table). */
@@ -95,4 +107,47 @@ export interface Selection {
   primary: ScoredCandidate | null;
   alternates: ScoredCandidate[]; // up to 2
   library_exhausted: boolean;    // true when only cooldown-blocked options remain
+}
+
+// ── Extras passed to selectAction — kept optional so existing callers work. ──
+
+export interface LossReasonBucket { reason: string; count: number; }
+
+export interface LossDistribution {
+  /** Recent 30-day loss reason counts, most-frequent first. */
+  buckets: LossReasonBucket[];
+  recent_total: number;
+  recent_unknown: number;
+}
+
+export interface ActiveSignals {
+  /** Founder replies but does not ask for the call/offer. Additive urgency,
+   *  never overrides deterministic stage/bottleneck. */
+  avoids_ask: boolean;
+}
+
+export interface SelectExtras {
+  loss_distribution?: LossDistribution;
+  signals?: ActiveSignals;
+}
+
+// ── Economic leverage principle ────────────────────────────────────────────
+/**
+ * hasSufficientLeverage(ctx) — true when the founder already has enough
+ * economic asset that jumping straight to external buyer contact today is the
+ * commercially correct next move, and preparation steps (list-building,
+ * offer-refinement) should be demoted.
+ *
+ * SPECIFICITY-VS-EVIDENCE RULE: templates chosen under this predicate must
+ * NEVER claim to name specific contacts, companies, or prior conversations.
+ * The predicate proves that reachable, relevant buyers exist — not who they
+ * are. Recipient-specific personalization is only allowed when named-contact
+ * evidence exists in production (not in Block 1.1).
+ */
+export function hasSufficientLeverage(ctx: FounderContext): boolean {
+  return (
+    ctx.reachable_buyer_count >= 5 ||
+    ctx.activatable_audience === true ||
+    (ctx.warm_network_strength === "strong" && ctx.existing_client_access === true)
+  );
 }
