@@ -237,7 +237,7 @@ Deno.test("RED TEAM — 7 personas, live template set", async () => {
 
   const report = lines.join("\n");
   console.log(report);
-  await Deno.writeTextFile(new URL("./redteam_report.txt", import.meta.url), report);
+  try { await Deno.writeTextFile(new URL("./redteam_report.txt", import.meta.url), report); } catch { /* --allow-write not granted by test runner; report is in stdout */ }
 
   // The harness does not fail CI on a WEAK verdict — findings first.
   assert(matrix.length === PERSONAS.length);
