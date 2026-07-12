@@ -1,0 +1,203 @@
+
+═════════════════════════════════════════════════════════════════════
+  TRUEBLAZER RED TEAM — Money Path NBA Loop
+═════════════════════════════════════════════════════════════════════
+  Template snapshot     : v1-2026-07-12
+  Template snapshot hash: fc93b92d6d404e2ef4ac482ebcd98e3d61dc0448358d87b4ab9ba79cdc0e2472
+  Templates in snapshot : 20
+  View hash — stage     : 96b9677cb6fd6cc945704a8f8f3adc00beb3b3e70eb4fd24c6284f93f7978b2e
+  View hash — bottleneck: 4f74ab99e99d6ab04b1a86b4bfa70efedf497812438fd93db5eb1e84e7409611
+  Parity migration ref  : 20260712074539_6be83e11-4074-4eda-877a-0fda5b911587.sql
+  LLM personalization   : OFF (template text only)
+
+─── P1 — THE POLISHER ─────────────────────────────────────
+  Narrative       : Independent marketing consultant, 8 yrs, 12 past clients. Strong warm network. $2,500 growth audit. Offer locked. Has edited assets repeatedly. Zero buyer contacts.
+  Raw evidence    : offer_locked=true, conv=0 (contacted=0, replied=0, offer_sent=0, won=0, lost=0), revenue=$0
+  Derived stage   : S2_OUTREACH
+  Derived btlnck  : B_NO_BUYER_LIST
+  Winning template: ps.list.tap_warm_network   (score 180)
+  Top 3 eligible  : ps.list.tap_warm_network 180 | ps.list.build_25_named 110 | ps.list.audience_pull 30
+  Reasons         : matches_bottleneck, warm_network_strong, existing_clients
+  Deliverable text:
+    title: Pull 10 warm-network buyers first
+    why  : Warm buyers close 5-10x higher than cold. Exhaust the network before touching cold.
+    do   : Walk the founder through pulling 10 warm-network buyer candidates from LinkedIn 1st-degree, past clients, and their audience.
+  Behavioral checks:
+    ✅ prescribes warm-network / past-client contact
+    ✅ does NOT recommend branding / landing page
+    ✅ does NOT recommend further offer refinement
+    ❌ produces immediate external buyer contact this session
+    ❌ does NOT terminate at 'build a list' when accessible past clients exist
+  Diagnosis       : QUESTIONABLE
+  Prescription    : ACCEPTABLE
+  Failure class   : B_missing_context
+  Consultant pay? : MARGINAL
+  Remediation     : Add production evidence for known accessible past-client count (e.g. founder_advantages.past_client_count or a light-weight 'accessible buyers' field). Then let the bottleneck rules skip B_NO_BUYER_LIST when the founder already has ≥5 named accessible past clients. Add a template `ps.outreach.warm_direct_ask` that skips the list-building intermediate step.
+  ┌─ COUNTERFACTUAL — IF TRUEBLAZER KNEW THIS ─────────────────────
+  │  Hypothetical evidence not in production schema:
+  │    named_past_clients_count = 12
+  │    warm_contacts_matching_buyer_segment = 8
+  │  With 12 known accessible past clients, commercially correct diagnosis is B_NO_OUTREACH (or a new B_HAS_ACCESSIBLE_BUYERS state) — not B_NO_BUYER_LIST. Prescription becomes direct warm-ask, not list-building.
+  └────────────────────────────────────────────────────────────────
+
+─── P2 — THE LONE EXPERT ─────────────────────────────────────
+  Narrative       : Fractional ops consultant. Deep domain. No warm network. No audience. Buyer segment: 20-100-emp logistics cos. $4,000 diagnostic. Offer locked. Zero outreach.
+  Raw evidence    : offer_locked=true, conv=0 (contacted=0, replied=0, offer_sent=0, won=0, lost=0), revenue=$0
+  Derived stage   : S2_OUTREACH
+  Derived btlnck  : B_NO_BUYER_LIST
+  Winning template: ps.list.build_25_named   (score 170)
+  Top 3 eligible  : ps.list.build_25_named 170 | ps.list.tap_warm_network 65 | ps.list.audience_pull 30
+  Reasons         : matches_bottleneck, no_warm_forces_cold, clear_buyer_segment
+  Deliverable text:
+    title: Build a list of 25 named buyers
+    why  : You have a locked offer but zero named humans to sell to. 25 is the minimum for signal.
+    do   : Given the buyer_segment, describe how to find 25 named buyers in the next 60 minutes. Include 3 concrete search strings for LinkedIn / Twitter / communities.
+  Behavioral checks:
+    ✅ acknowledges no warm network (uses buyer_segment path)
+    ✅ does NOT assume warm intros
+    ✅ leads to outbound contact
+    ✅ produces named-buyer acquisition process
+  Diagnosis       : CORRECT
+  Prescription    : STRONG
+  Failure class   : —
+  Consultant pay? : YES
+  Remediation     : None — this is the ideal case for current library.
+
+─── P3 — THE AUDIENCE HOARDER ─────────────────────────────────────
+  Narrative       : HR consultant. 9,000 LinkedIn followers. Posts regularly. Never sold to audience. $499 manager-training workshop. Offer locked. Zero buyer conversations.
+  Raw evidence    : offer_locked=true, conv=0 (contacted=0, replied=0, offer_sent=0, won=0, lost=0), revenue=$0
+  Derived stage   : S2_OUTREACH
+  Derived btlnck  : B_NO_BUYER_LIST
+  Winning template: ps.list.audience_pull   (score 170)
+  Top 3 eligible  : ps.list.audience_pull 170 | ps.list.build_25_named 165 | ps.list.tap_warm_network 60
+  Reasons         : matches_bottleneck, has_audience
+  Deliverable text:
+    title: Pull 25 fits from your existing audience
+    why  : You have an audience. Fits are already there — you just have not looked yet.
+    do   : Guide the founder through filtering their existing audience (channel + size in context) for 25 buyer-fit names.
+  Behavioral checks:
+    ✅ explicitly uses the existing LinkedIn audience
+    ✅ does NOT prioritize cold outbound
+    ❌ includes a direct commercial CTA or DM path
+  Diagnosis       : CORRECT
+  Prescription    : ACCEPTABLE
+  Failure class   : D_prescription
+  Consultant pay? : MARGINAL
+  Remediation     : Bottleneck ordering ties audience-hoarders to a list-pull step first (B_NO_BUYER_LIST) before an audience CTA (B_NO_OUTREACH). For an audience of 9k with 0 conversations logged, the commercially correct first move is the CTA post itself. Consider a rule: when existing_audience_size ≥ 250 and total_conv = 0, jump straight to audience_cta.
+
+─── P4 — THE GHOSTED OUTREACHER ─────────────────────────────────────
+  Narrative       : Same offer/segment as P2. 20 targeted messages sent. Zero replies. No revenue.
+  Raw evidence    : offer_locked=true, conv=20 (contacted=20, replied=0, offer_sent=0, won=0, lost=0), revenue=$0
+  Derived stage   : S2_OUTREACH
+  Derived btlnck  : B_NO_REPLIES
+  Winning template: — none —   (score n/a)
+  Top 3 eligible  : (none eligible)
+  Reasons         : -
+  Deliverable text:
+    (nothing — library exhausted or no matching template)
+  Behavioral checks:
+    ✅ does NOT repeat the same outreach motion unchanged
+    ❌ isolates one variable (targeting / message / channel / offer)
+    ❌ defines measurable evidence of whether the test worked
+  Diagnosis       : CORRECT
+  Prescription    : WEAK
+  Failure class   : D_prescription
+  Consultant pay? : NO
+  Remediation     : Library gap at B_NO_REPLIES. Add at least two templates: `ps.outreach.reply_diagnostic_ab` (rewrite hook + send to 10 new prospects, measure reply-rate delta) and `ps.outreach.channel_switch` (same message different channel). Both must define the measurable delta.
+
+─── P5 — THE CONVERSATION COLLECTOR ─────────────────────────────────────
+  Narrative       : 8 replies (4 positive). 0 calls booked, 0 offers sent. Keeps scheduling more research calls.
+  Raw evidence    : offer_locked=true, conv=8 (contacted=8, replied=8, offer_sent=0, won=0, lost=0), revenue=$0
+  Derived stage   : S3_CONVERSATIONS
+  Derived btlnck  : B_REPLIES_NO_CALLS
+  Winning template: ps.call.book_conversion_line   (score 100)
+  Top 3 eligible  : ps.call.book_conversion_line 100 | ps.call.value_first_agenda 100
+  Reasons         : matches_bottleneck
+  Deliverable text:
+    title: Ask for the 15-min call directly
+    why  : They replied. You are still chatting. Ask for the call now with a specific window.
+    do   : Draft the exact reply that transitions from chat to a 15-minute call, including 2 specific time windows.
+  Behavioral checks:
+    ✅ moves from research to ask (call or offer)
+    ✅ does NOT recommend another discovery conversation
+    ✅ contains a concrete transition line / script
+  Diagnosis       : CORRECT
+  Prescription    : STRONG
+  Failure class   : —
+  Consultant pay? : YES
+  Remediation     : None if book_conversion_line wins. Missing: the collector-avoidance signal is not modeled (founder keeps booking research calls without an ask) — a founder_signals row like 'AVOIDS_ASK' would let policy add urgency.
+
+─── P6 — THE REJECTED SELLER ─────────────────────────────────────
+  Narrative       : 5 offers sent, 0 closes. Rejection notes cite price and unclear ROI.
+  Raw evidence    : offer_locked=true, conv=5 (contacted=5, replied=5, offer_sent=5, won=0, lost=5), revenue=$0
+  Derived stage   : S4_OFFERS_OUT
+  Derived btlnck  : B_OFFERS_NO_CLOSE
+  Winning template: ps.close.objection_response_kit   (score 100)
+  Top 3 eligible  : ps.close.objection_response_kit 100
+  Reasons         : matches_bottleneck
+  Deliverable text:
+    title: Write direct responses to the 3 objections you keep hearing
+    why  : Same 3 objections mean the offer or positioning has a hole. Address them in writing and resend.
+    do   : Ask the founder for the 3 objections they hear most; draft direct, honest, non-defensive responses to each.
+  Behavioral checks:
+    ✅ uses rejection evidence explicitly
+    ✅ does NOT reflexively lower price
+    ✅ tests one variable at a time
+    ❌ distinguishes price objection from unclear ROI when possible
+  Diagnosis       : CORRECT
+  Prescription    : ACCEPTABLE
+  Failure class   : B_missing_context
+  Consultant pay? : MARGINAL
+  Remediation     : No production evidence path exists for rejection notes / loss reasons. Add buyer_conversations.loss_reason (enum: price, roi_unclear, timing, fit, other) + free-text notes. Then split B_OFFERS_NO_CLOSE into B_PRICE_OBJECTION vs B_ROI_UNCLEAR and add targeted templates for each. Current single objection kit is a generic prompt — same output the founder would get from ChatGPT.
+  ┌─ COUNTERFACTUAL — IF TRUEBLAZER KNEW THIS ─────────────────────
+  │  Hypothetical evidence not in production schema:
+  │    rejection_notes = ["too expensive","unclear ROI","not sure this works for us","price","cheaper option elsewhere"]
+  │  With rejection_notes present, diagnosis should split into B_PRICE_OBJECTION vs B_ROI_UNCLEAR. Neither exists in production evidence today.
+  └────────────────────────────────────────────────────────────────
+
+─── P7 — FIRST REVENUE ─────────────────────────────────────
+  Narrative       : First $2,500 sale logged. Same productized service. One acquisition channel produced the sale.
+  Raw evidence    : offer_locked=true, conv=1 (contacted=1, replied=1, offer_sent=1, won=1, lost=0), revenue=$2500
+  Derived stage   : S5_FIRST_REVENUE
+  Derived btlnck  : B_OFFERS_NO_CLOSE
+  Winning template: — none —   (score n/a)
+  Top 3 eligible  : (none eligible)
+  Reasons         : -
+  Deliverable text:
+    (nothing — library exhausted or no matching template)
+  Behavioral checks:
+    ❌ acknowledges milestone and shifts to repeatability
+    ❌ preserves winning offer / buyer / channel
+    ❌ does NOT return to ideation or offer redesign
+  Diagnosis       : CORRECT
+  Prescription    : WEAK
+  Failure class   : D_prescription
+  Consultant pay? : NO
+  Remediation     : Library gap: no S5_FIRST_REVENUE templates. Bottleneck view also falls through to B_OFFERS_NO_CLOSE for a won sale (won_count>=1 hits ELSE branch). Add explicit stage-5 templates (`ps.repeat.channel_double_down`, `ps.repeat.lookalike_10`, `ps.repeat.win_teardown`) and a distinct bottleneck like B_NOT_YET_REPEATABLE.
+
+═════════════════════════════════════════════════════════════════════
+  RESULT MATRIX
+═════════════════════════════════════════════════════════════════════
+  ID  | Diagnosis     | Prescription | Pay?     | Winner
+  ----+---------------+--------------+----------+------------------------
+  P1  | questionable  | acceptable   | marginal | ps.list.tap_warm_network
+  P2  | correct       | strong       | yes      | ps.list.build_25_named
+  P3  | correct       | acceptable   | marginal | ps.list.audience_pull
+  P4  | correct       | weak         | no       | —
+  P5  | correct       | strong       | yes      | ps.call.book_conversion_line
+  P6  | correct       | acceptable   | marginal | ps.close.objection_response_kit
+  P7  | correct       | weak         | no       | —
+
+  Wrong diagnoses      : 0
+  Questionable diags   : 1
+  Weak prescriptions   : 2
+  Would-not-pay        : 2
+  Would-marginally-pay : 3
+
+  ═══ FINAL VERDICT: WEAK ═══
+
+  Verdict thresholds:
+    STRONG : 0 wrong diagnoses, ≤0 weak prescriptions, 0 would-not-pay, 0 marginal-pay.
+    MIXED  : ≥1 questionable diagnosis OR ≥1 weak prescription OR ≥1 marginal pay.
+    WEAK   : any wrong diagnosis, or ≥3 weak prescriptions, or ≥2 would-not-pay.
+═════════════════════════════════════════════════════════════════════
