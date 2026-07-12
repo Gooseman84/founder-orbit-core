@@ -152,3 +152,82 @@ Deno.test("E2: exhausted library flag set when all matching templates on cooldow
   assertEquals(sel.library_exhausted, true);
   assert(sel.primary !== null, "still returns best cooldown-blocked option so user is never stuck");
 });
+
+// ── Repair Block 1.1: scenarios F–I ─────────────────────────────────────────
+
+Deno.test("F: LEVERAGE BYPASS — reachable buyers + strong warm → warm_direct_ask outranks list.*", () => {
+  const state: MoneyPathState = {
+    ...baseState,
+    stage: "S2_OUTREACH",
+    bottleneck: "B_NO_BUYER_LIST",
+  };
+  const sel = selectAction(templates, state, ctx({
+    warm_network_strength: "strong",
+    existing_client_access: true,
+    reachable_buyer_count: 8,
+  }), []);
+  assert(sel.primary, "must return a primary action");
+  assertEquals(sel.primary!.template.code, "ps.outreach.warm_direct_ask");
+  // And it must outrank every ps.list.* preparation template.
+  const winCode = sel.primary!.template.code;
+  assert(!winCode.startsWith("ps.list."), "leverage bypass must skip list preparation");
+});
+
+Deno.test("G: DOMINANT PRICE SIGNAL — pilot_scope_reduction outranks generic kit, ROI, and any discount", () => {
+  const state: MoneyPathState = {
+    ...baseState,
+    stage: "S4_OFFERS_OUT",
+    bottleneck: "B_OFFERS_NO_CLOSE",
+    evidence: { ...baseState.evidence, total_conv: 5, contacted_count: 5, replied_count: 5, offer_sent_count: 5 },
+  };
+  const extras: SelectExtras = {
+    loss_distribution: {
+      buckets: [{ reason: "price", count: 3 }, { reason: "roi_unclear", count: 2 }],
+      recent_total: 5,
+      recent_unknown: 0,
+    },
+  };
+  const sel = selectAction(templates, state, ctx({}), [], new Date(), extras);
+  assert(sel.primary);
+  assertEquals(sel.primary!.template.code, "ps.close.pilot_scope_reduction");
+});
+
+Deno.test("H: MISSING LOSS INTELLIGENCE — request_loss_reason wins when ≥50% of recent losses have no reason", () => {
+  // Bottleneck for this state is B_LOSS_REASON_UNKNOWN (derived elsewhere).
+  const state: MoneyPathState = {
+    ...baseState,
+    stage: "S4_OFFERS_OUT",
+    bottleneck: "B_LOSS_REASON_UNKNOWN",
+    evidence: { ...baseState.evidence, total_conv: 4, contacted_count: 4, replied_count: 4, offer_sent_count: 4 },
+  };
+  const sel = selectAction(templates, state, ctx({}), []);
+  assert(sel.primary);
+  assertEquals(sel.primary!.template.code, "ps.close.request_loss_reason");
+});
+
+Deno.test("I: FIRST REVENUE SEQUENCE — win_teardown → lookalike_10 → channel_double_down", () => {
+  const state: MoneyPathState = {
+    ...baseState,
+    stage: "S5_FIRST_REVENUE",
+    bottleneck: "B_NOT_YET_REPEATABLE",
+    evidence: { ...baseState.evidence, revenue_cents: 250_000, revenue_count: 1, total_conv: 1, contacted_count: 1, replied_count: 1, offer_sent_count: 1 },
+    winning_channel: "linkedin_dm",
+  };
+  // Step 1 — no history: teardown must win.
+  const sel1 = selectAction(templates, state, ctx({ warm_network_strength: "weak" }), []);
+  assertEquals(sel1.primary?.template.code, "ps.repeat.win_teardown");
+
+  // Step 2 — teardown completed today → lookalike_10 preferred.
+  const nowIso = new Date().toISOString();
+  const sel2 = selectAction(templates, state, ctx({ warm_network_strength: "weak" }), [
+    { template_code: "ps.repeat.win_teardown", served_at: nowIso, outcome: "done" },
+  ]);
+  assertEquals(sel2.primary?.template.code, "ps.repeat.lookalike_10");
+
+  // Step 3 — teardown + lookalike completed → channel_double_down preferred.
+  const sel3 = selectAction(templates, state, ctx({ warm_network_strength: "weak" }), [
+    { template_code: "ps.repeat.win_teardown", served_at: nowIso, outcome: "done" },
+    { template_code: "ps.repeat.lookalike_10", served_at: nowIso, outcome: "done" },
+  ]);
+  assertEquals(sel3.primary?.template.code, "ps.repeat.channel_double_down");
+});
