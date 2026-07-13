@@ -145,14 +145,19 @@ function check_artifact_type(text: string, env: ExecutionEnvelope): string[] {
   return hits;
 }
 
-function check_offer_category_mutation(text: string, ctx: FounderContext): string[] {
+function check_offer_category_mutation(text: string, ctx: FounderContext, env: ExecutionEnvelope): string[] {
   const hits: string[] = [];
-  // Very conservative — only trip on category-swap phrases.
   if (ctx.business_pattern === "productized_service") {
-    const swaps = [
-      [/\b(our|the|this)\s+(software|platform|app|tool|saas)\b/i, "productized_service → software/tool mutation"],
-      [/\b(course|curriculum|cohort|program\s+members)\b/i, "productized_service → course/cohort mutation"],
-    ] as const;
+    // "cohort" is a legitimate statistics term inside a TEST_PLAN; only flag it
+    // when it appears as an offer noun ("cohort program", "program members",
+    // "our course/curriculum"). Same for "our software/platform/app/saas".
+    const swaps: Array<[RegExp, string]> = [
+      [/\b(our|the|this)\s+(software|platform|saas)\b/i, "productized_service → software/platform mutation"],
+      [/\b(our|the|this)\s+(app|tool)\b(?!\s*(is|will|would)\s+not)/i, "productized_service → app/tool mutation"],
+      [/\b(course|curriculum)\b(?!\s+(vitae|vitæ))/i, "productized_service → course/curriculum mutation"],
+      [/\bprogram\s+members\b/i, "productized_service → program mutation"],
+      [/\bcohort\s+(program|members|students|participants)\b/i, "productized_service → cohort program mutation"],
+    ];
     for (const [rx, why] of swaps) if (rx.test(text)) hits.push(why);
   }
   return hits;
