@@ -148,8 +148,8 @@ async function fillDeliverable(
       body: JSON.stringify({
         model: AI_MODEL,
         messages: [
-          { role: "system", content: "You are Mavrik. Direct, financially literate, 2-4 sentences. No 'leverage', no 'great job'." },
-          { role: "user", content: `Founder context:\n- buyer_segment: ${ctx.buyer_segment ?? "unknown"}\n- warm_network: ${ctx.warm_network_strength}\n- audience: ${ctx.existing_audience_size} on ${ctx.existing_audience_channel ?? "none"}\n- stage: ${state.stage}\n- bottleneck: ${state.bottleneck}\n\nTemplate prompt:\n${tpl.deliverable_prompt}\n\nProduce the deliverable text now. No preamble.` },
+          { role: "system", content: SYSTEM_PROMPT_ENVELOPE },
+          { role: "user", content: renderEnvelopePrompt(buildEnvelope(tpl, ctx, state), tpl) },
         ],
       }),
     });
