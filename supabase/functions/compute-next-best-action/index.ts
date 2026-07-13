@@ -14,6 +14,7 @@ import type {
   NbaHistoryEntry,
   SelectExtras,
 } from "../_shared/nba/types.ts";
+import { buildEnvelope, renderEnvelopePrompt, SYSTEM_PROMPT_ENVELOPE } from "../_shared/nba/execution_envelope.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
