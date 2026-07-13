@@ -420,7 +420,7 @@
     "why_now_template": "Your buyers are not on the channel you are pushing. Try one different channel today.",
     "done_looks_like": "5 messages sent on a new channel to the same buyer type.",
     "deliverable_kind": "plan",
-    "deliverable_prompt": "Recommend an alternate channel for this buyer segment given they have not replied on the current channel. Give 3 concrete steps to send 5 messages there today.",
+    "deliverable_prompt": "Produce a TEST PLAN (not advice). Exact fields: FIXED VARIABLES (buyer segment, offer, core message — unchanged), CHANGED VARIABLE (the channel — do NOT pick it yourself; write '⟨FOUNDER: choose one alternate channel you can legitimately use — email, LinkedIn, community, SMS, or other⟩'), COHORT (5 messages to the same buyer type), OBSERVATION (reply-rate after 72h vs baseline reply-rate on current channel), DECISION THRESHOLD (state a concrete rule such as '>=1 reply in 5 = keep testing; 0 replies = the hook, not the channel, is the problem'). Do NOT invent send-times, buyer work-habits, compliance rules, or operational facts about the buyer segment.",
     "estimated_minutes": 30,
     "cooldown_days": 7,
     "incompatible_with": []
