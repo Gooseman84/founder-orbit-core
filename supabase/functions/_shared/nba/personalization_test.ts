@@ -169,7 +169,7 @@ function detectHardFailures(text: string, env: ExecutionEnvelope, ctx: FounderCo
     ...check_market_generalizations(text),
     ...check_strategy_drift(text, env),
     ...check_artifact_type(text, env),
-    ...check_offer_category_mutation(text, ctx),
+    ...check_offer_category_mutation(text, ctx, env),
   ];
 }
 
