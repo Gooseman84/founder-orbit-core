@@ -90,7 +90,7 @@
     "why_now_template": "When \"unclear ROI\" is the dominant loss reason, the fix is a concrete, buyer-shaped economic case \u2014 not a price cut.",
     "done_looks_like": "A one-pager the founder can send with future proposals: before/after, quantified impact, timeframe, and one plausible outcome scenario.",
     "deliverable_kind": "text_snippet",
-    "deliverable_prompt": "Guide the founder to build a one-page ROI case for their productized offer, anchored on the buyer segment. Structure: (1) the current cost of not solving this \u2014 quantified in time or dollars \u2014 using assumptions the founder can defend; (2) what changes after the engagement, in the same units; (3) a plausible payback timeframe; (4) one caveat that keeps it honest. Do not invent specific customer results, logos, or numbers the founder has not shared. Frame the assumptions explicitly as assumptions.",
+    "deliverable_prompt": "Produce the ONE-PAGER itself (not advice). Sections in this order: (1) 'The cost of not solving this' — 2-3 lines quantifying the current pain in the buyer's own units (time or dollars), stating each number as ⟨FOUNDER: assumption⟩ if not supplied; (2) 'What changes after this engagement' — 2-3 lines in the same units; (3) 'Payback' — one line, stated as an assumption tied to the founder's own numbers, NOT a benchmark like '90 days' or 'within the first quarter'; (4) 'Honest caveat' — one line naming what could make this not work. NEVER cite industry benchmarks, 'typical' payback windows, testimonials, or invented customer results.",
     "estimated_minutes": 35,
     "cooldown_days": 21,
     "incompatible_with": []
