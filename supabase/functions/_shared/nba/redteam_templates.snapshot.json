@@ -403,7 +403,7 @@
     "why_now_template": "One sale is evidence worth repeating. Before scaling, capture what worked so it can be reproduced.",
     "done_looks_like": "A 6-field win teardown captured: buyer traits, channel, hook, timing, price, decision driver.",
     "deliverable_kind": "text_snippet",
-    "deliverable_prompt": "Prompt the founder through a 15-minute structured teardown of the sale they just closed. Reference only what the revenue event and the winning buyer conversation contain \u2014 do not invent buyer names or quotes. Ask about: who the buyer was (traits and segment fit), which channel produced first contact, the specific hook or message that got a reply, timing/trigger, price and scope, and the one thing that made them say yes. Output as 6 short prompts the founder answers into TrueBlazer.",
+    "deliverable_prompt": "Produce a FILLABLE 5-minute win-teardown WORKSHEET. Do not pretend to know the answers. Exact shape:\n\nWIN TEARDOWN — 5 MINUTES\n\n1. Buyer: ⟨FOUNDER: who bought (name/role/company size)?⟩\n2. Trigger: ⟨FOUNDER: what event or pain made them start looking?⟩\n3. Channel: [use winning_channel if present in evidence, else ⟨FOUNDER: where the first contact happened⟩]\n4. What they cared about: ⟨FOUNDER: the exact pain or outcome they mentioned⟩\n5. Price: [use revenue_cents if present, else ⟨FOUNDER: price paid⟩]\n6. Why you believe they said yes: ⟨FOUNDER: your best evidence-backed read⟩\n\nEnd with exactly this line: 'Fill these blanks. I will use the answers to find the next 10 buyers who look like this win.'\n\nDo NOT invent buyer identity, quotes, or motivations.",
     "estimated_minutes": 20,
     "cooldown_days": 30,
     "incompatible_with": []
