@@ -90,7 +90,7 @@
     "why_now_template": "When \"unclear ROI\" is the dominant loss reason, the fix is a concrete, buyer-shaped economic case \u2014 not a price cut.",
     "done_looks_like": "A one-pager the founder can send with future proposals: before/after, quantified impact, timeframe, and one plausible outcome scenario.",
     "deliverable_kind": "text_snippet",
-    "deliverable_prompt": "Guide the founder to build a one-page ROI case for their productized offer, anchored on the buyer segment. Structure: (1) the current cost of not solving this \u2014 quantified in time or dollars \u2014 using assumptions the founder can defend; (2) what changes after the engagement, in the same units; (3) a plausible payback timeframe; (4) one caveat that keeps it honest. Do not invent specific customer results, logos, or numbers the founder has not shared. Frame the assumptions explicitly as assumptions.",
+    "deliverable_prompt": "Produce the ONE-PAGER itself (not advice). Sections in this order: (1) 'The cost of not solving this' — 2-3 lines quantifying the current pain in the buyer's own units (time or dollars), stating each number as ⟨FOUNDER: assumption⟩ if not supplied; (2) 'What changes after this engagement' — 2-3 lines in the same units; (3) 'Payback' — one line, stated as an assumption tied to the founder's own numbers, NOT a benchmark like '90 days' or 'within the first quarter'; (4) 'Honest caveat' — one line naming what could make this not work. NEVER cite industry benchmarks, 'typical' payback windows, testimonials, or invented customer results.",
     "estimated_minutes": 35,
     "cooldown_days": 21,
     "incompatible_with": []
@@ -403,7 +403,7 @@
     "why_now_template": "One sale is evidence worth repeating. Before scaling, capture what worked so it can be reproduced.",
     "done_looks_like": "A 6-field win teardown captured: buyer traits, channel, hook, timing, price, decision driver.",
     "deliverable_kind": "text_snippet",
-    "deliverable_prompt": "Prompt the founder through a 15-minute structured teardown of the sale they just closed. Reference only what the revenue event and the winning buyer conversation contain \u2014 do not invent buyer names or quotes. Ask about: who the buyer was (traits and segment fit), which channel produced first contact, the specific hook or message that got a reply, timing/trigger, price and scope, and the one thing that made them say yes. Output as 6 short prompts the founder answers into TrueBlazer.",
+    "deliverable_prompt": "Produce a FILLABLE 5-minute win-teardown WORKSHEET. Do not pretend to know the answers. Exact shape:\n\nWIN TEARDOWN — 5 MINUTES\n\n1. Buyer: ⟨FOUNDER: who bought (name/role/company size)?⟩\n2. Trigger: ⟨FOUNDER: what event or pain made them start looking?⟩\n3. Channel: [use winning_channel if present in evidence, else ⟨FOUNDER: where the first contact happened⟩]\n4. What they cared about: ⟨FOUNDER: the exact pain or outcome they mentioned⟩\n5. Price: [use revenue_cents if present, else ⟨FOUNDER: price paid⟩]\n6. Why you believe they said yes: ⟨FOUNDER: your best evidence-backed read⟩\n\nEnd with exactly this line: 'Fill these blanks. I will use the answers to find the next 10 buyers who look like this win.'\n\nDo NOT invent buyer identity, quotes, or motivations.",
     "estimated_minutes": 20,
     "cooldown_days": 30,
     "incompatible_with": []
@@ -420,7 +420,7 @@
     "why_now_template": "Your buyers are not on the channel you are pushing. Try one different channel today.",
     "done_looks_like": "5 messages sent on a new channel to the same buyer type.",
     "deliverable_kind": "plan",
-    "deliverable_prompt": "Recommend an alternate channel for this buyer segment given they have not replied on the current channel. Give 3 concrete steps to send 5 messages there today.",
+    "deliverable_prompt": "Produce a TEST PLAN (not advice). Exact fields: FIXED VARIABLES (buyer segment, offer, core message — unchanged), CHANGED VARIABLE (the channel — do NOT pick it yourself; write '⟨FOUNDER: choose one alternate channel you can legitimately use — email, LinkedIn, community, SMS, or other⟩'), COHORT (5 messages to the same buyer type), OBSERVATION (reply-rate after 72h vs baseline reply-rate on current channel), DECISION THRESHOLD (state a concrete rule such as '>=1 reply in 5 = keep testing; 0 replies = the hook, not the channel, is the problem'). Do NOT invent send-times, buyer work-habits, compliance rules, or operational facts about the buyer segment.",
     "estimated_minutes": 30,
     "cooldown_days": 7,
     "incompatible_with": []
