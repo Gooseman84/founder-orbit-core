@@ -25,9 +25,12 @@ import { ASSERTIONS } from "./redteam_assertions.ts";
 // Pinned view-definition hashes at snapshot time (SHA-256 of pg_get_viewdef).
 const VIEW_HASHES = {
   v_money_path_stage: "96b9677cb6fd6cc945704a8f8f3adc00beb3b3e70eb4fd24c6284f93f7978b2e",
-  v_active_bottleneck: "REPAIR_BLOCK_1_1_UPDATED (recompute after migration deploy)",
-  migration_ref: "20260712140754_5058ef8c-4feb-4859-9368-70721029df43.sql",
+  v_active_bottleneck: "a762f6eeb843c5d21dbc58297eed92ff6618432f038a1e333adb79c2de23e572",
+  migration_ref: "20260712140724_c8e1eb55-27e2-4bf2-964f-c8cdf952c07d.sql",
 };
+// Pinned live template-set hash accepted at end of Repair Block 1.1 red team.
+const ACCEPTED_TEMPLATE_SET_HASH = "b970caa772c5e248e0d724f134da288b436fa7c0b5990b67be057d3bde0d7858";
+
 
 // ── Canonical serialization ──
 const TEMPLATE_KEY_ORDER = [
