@@ -58,18 +58,36 @@ export interface FounderContext {
   sales_complexity: SalesComplexity | null;
   offer_locked: boolean;
   buyer_segment: string | null;
+  // ── Committed offer evidence (Repair Block 1.3) ────────────────────────
+  offer_title: string | null;
+  offer_description: string | null;
+  price_cents: number | null;
+  delivery_format: string | null;
   warm_network_strength: WarmNetworkStrength;
-  existing_audience_size: number; // 0 when unknown
+  existing_audience_size: number;
   existing_audience_channel: string | null;
   platform_strengths: string[];
   existing_client_access: boolean;
   // ── Leverage snapshot (additive) ────────────────────────────────────────
-  /** Named humans reachable today who plausibly fit the buyer segment. */
   reachable_buyer_count: number;
-  /** Audience the founder can post a commercial CTA to today. */
   activatable_audience: boolean;
-  /** Has the founder ever been paid for adjacent work. */
   has_prior_paid_proof: boolean;
+  // ── Triggering buyer conversation (Repair Block 1.3) ───────────────────
+  /** Deterministically selected buyer_conversation relevant to this action.
+   *  Never fabricated — only present when actual identity evidence exists. */
+  triggering_conversation?: TriggeringConversation | null;
+}
+
+/** Narrowly scoped known-buyer context for actions that operate on an
+ *  existing buyer interaction. Only actual stored evidence is exposed. */
+export interface TriggeringConversation {
+  handle: string;
+  channel: string | null;
+  status: string;
+  loss_reason: string | null;
+  loss_note: string | null;
+  outcome: string | null;
+  last_activity_at: string;
 }
 
 /** Content-only template row (from action_templates table). */
