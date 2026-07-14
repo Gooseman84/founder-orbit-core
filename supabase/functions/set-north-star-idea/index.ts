@@ -220,10 +220,52 @@ serve(async (req) => {
       // Non-fatal, continue
     }
 
-    console.log("set-north-star-idea: successfully set north star", idea_id, "venture:", ventureId, "blueprint:", blueprintUpdated);
+    // Step 5: Canonical Bet → Money Path commit boundary (Repair Block 1.3).
+    // Persists only committed structured Bet evidence. Never invents fields.
+    // price_cents and delivery_format are NULL when not structurally available
+    // upstream — commit_money_path honestly leaves them unset and sales_complexity
+    // remains NULL until deterministic evidence supports classification.
+    let moneyPathId: string | null = null;
+    const commitLineage: Record<string, string> = {};
+    if (ventureId) {
+      try {
+        // Call via a user-scoped client so auth.uid() inside the RPC resolves.
+        const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+          global: { headers: { Authorization: `Bearer ${token}` } },
+        });
+        const offer_title = idea.title ?? null;
+        const offer_description = idea.description ?? null;
+        const buyer_segment = idea.target_customer ?? null;
+        if (offer_title) commitLineage.offer_title = "ideas.title";
+        if (offer_description) commitLineage.offer_description = "ideas.description";
+        if (buyer_segment) commitLineage.buyer_segment = "ideas.target_customer";
+        commitLineage.business_pattern = "default:productized_service";
+        // price_cents and delivery_format are not structurally captured upstream today.
+        const { data: mpRow, error: commitErr } = await supabaseUser.rpc("commit_money_path", {
+          p_venture_id: ventureId,
+          p_business_pattern: "productized_service",
+          p_offer_title: offer_title,
+          p_offer_description: offer_description,
+          p_buyer_segment: buyer_segment,
+          p_price_cents: null,
+          p_delivery_format: null,
+        });
+        if (commitErr) {
+          console.error("set-north-star-idea: commit_money_path failed", commitErr);
+        } else if (mpRow) {
+          moneyPathId = (mpRow as any).id;
+          console.log("set-north-star-idea: committed money_path", moneyPathId, "lineage:", commitLineage);
+        }
+      } catch (e) {
+        console.error("set-north-star-idea: commit_money_path threw", e);
+      }
+    }
+
+    console.log("set-north-star-idea: successfully set north star", idea_id, "venture:", ventureId, "blueprint:", blueprintUpdated, "money_path:", moneyPathId);
 
     return new Response(
-      JSON.stringify({ success: true, northStarIdeaId: idea_id, ventureId, blueprintUpdated }),
+      JSON.stringify({ success: true, northStarIdeaId: idea_id, ventureId, blueprintUpdated, moneyPathId, commitLineage }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

@@ -25,6 +25,10 @@ function baseCtx(over: Partial<FounderContext>): FounderContext {
     sales_complexity: "high_touch",
     offer_locked: true,
     buyer_segment: null,
+    offer_title: null,
+    offer_description: null,
+    price_cents: null,
+    delivery_format: null,
     warm_network_strength: "none",
     existing_audience_size: 0,
     existing_audience_channel: null,
@@ -33,6 +37,7 @@ function baseCtx(over: Partial<FounderContext>): FounderContext {
     reachable_buyer_count: 0,
     activatable_audience: false,
     has_prior_paid_proof: false,
+    triggering_conversation: null,
     ...over,
   };
 }

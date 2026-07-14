@@ -2892,9 +2892,52 @@ export type Database = {
       }
     }
     Functions: {
+      commit_money_path: {
+        Args: {
+          p_business_pattern: Database["public"]["Enums"]["business_pattern"]
+          p_buyer_segment: string
+          p_delivery_format?: string
+          p_offer_description: string
+          p_offer_title: string
+          p_price_cents?: number
+          p_venture_id: string
+        }
+        Returns: {
+          business_pattern: Database["public"]["Enums"]["business_pattern"]
+          buyer_segment: string | null
+          created_at: string
+          current_revenue_cents: number
+          delivery_format: string | null
+          id: string
+          offer_description: string | null
+          offer_locked_at: string | null
+          offer_title: string | null
+          price_cents: number | null
+          sales_complexity:
+            | Database["public"]["Enums"]["sales_complexity"]
+            | null
+          target_customers_for_first_10k: number | null
+          updated_at: string
+          user_id: string
+          venture_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "money_paths"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
+      }
+      derive_sales_complexity: {
+        Args: {
+          p_business_pattern: Database["public"]["Enums"]["business_pattern"]
+          p_delivery_format: string
+        }
+        Returns: Database["public"]["Enums"]["sales_complexity"]
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {

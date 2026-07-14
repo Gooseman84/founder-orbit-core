@@ -61,7 +61,9 @@ async function readContext(
   moneyPathId: string,
 ): Promise<FounderContext | null> {
   const [mpRes, advRes] = await Promise.all([
-    supabase.from("money_paths").select("business_pattern, sales_complexity, offer_locked_at, buyer_segment").eq("id", moneyPathId).maybeSingle(),
+    supabase.from("money_paths").select(
+      "business_pattern, sales_complexity, offer_locked_at, buyer_segment, offer_title, offer_description, price_cents, delivery_format",
+    ).eq("id", moneyPathId).maybeSingle(),
     supabase.from("founder_advantages").select("*").eq("user_id", userId).maybeSingle(),
   ]);
   if (!mpRes.data) return null;
@@ -72,15 +74,75 @@ async function readContext(
     sales_complexity: mp.sales_complexity ?? null,
     offer_locked: !!mp.offer_locked_at,
     buyer_segment: mp.buyer_segment ?? null,
+    offer_title: mp.offer_title ?? null,
+    offer_description: mp.offer_description ?? null,
+    price_cents: mp.price_cents ?? null,
+    delivery_format: mp.delivery_format ?? null,
     warm_network_strength: adv.warm_network_strength ?? "none",
     existing_audience_size: adv.existing_audience_size ?? 0,
     existing_audience_channel: adv.existing_audience_channel ?? null,
     platform_strengths: adv.platform_strengths ?? [],
     existing_client_access: !!adv.existing_client_access,
-    // ── Economic leverage snapshot (Repair Block 1.1) ──
     reachable_buyer_count: Number(adv.reachable_buyer_count ?? 0),
     activatable_audience: !!adv.activatable_audience,
     has_prior_paid_proof: !!adv.has_prior_paid_proof,
+    triggering_conversation: null,
+  };
+}
+
+// ── readTriggeringConversation: deterministically select the buyer_conversation
+//    relevant to the chosen template. Never fabricates. Returns null when no
+//    identity evidence supports the intervention. ──
+async function readTriggeringConversation(
+  supabase: ReturnType<typeof createClient>,
+  moneyPathId: string,
+  templateCode: string,
+  lossDist: LossDistribution,
+): Promise<import("../_shared/nba/types.ts").TriggeringConversation | null> {
+  const selectCols = "handle, channel, status, loss_reason, loss_note, outcome, last_activity_at";
+
+  // Win teardown / repeatability → most recent won buyer with linked revenue.
+  if (templateCode === "ps.repeat.win_teardown" || templateCode === "ps.repeat.lookalike_10") {
+    const { data } = await supabase.from("buyer_conversations")
+      .select(selectCols).eq("money_path_id", moneyPathId).eq("status", "won")
+      .not("revenue_event_id", "is", null)
+      .order("last_activity_at", { ascending: false }).limit(1).maybeSingle();
+    return normalizeTrig(data);
+  }
+
+  // Close / ROI one-pager → recent lost matching dominant loss reason.
+  if (templateCode === "ps.close.roi_case_one_pager") {
+    const dominant = lossDist.buckets[0]?.reason;
+    let q = supabase.from("buyer_conversations")
+      .select(selectCols).eq("money_path_id", moneyPathId).eq("status", "lost");
+    if (dominant) q = q.eq("loss_reason", dominant);
+    const { data } = await q.order("last_activity_at", { ascending: false }).limit(1).maybeSingle();
+    return normalizeTrig(data);
+  }
+
+  // Reply / channel switch / call-conversion → most recent contacted-but-not-replied.
+  if (templateCode === "ps.reply.channel_switch"
+      || templateCode === "ps.call.book_conversion_line"
+      || templateCode === "ps.call.value_first_agenda") {
+    const { data } = await supabase.from("buyer_conversations")
+      .select(selectCols).eq("money_path_id", moneyPathId).eq("status", "contacted")
+      .order("last_activity_at", { ascending: false }).limit(1).maybeSingle();
+    return normalizeTrig(data);
+  }
+
+  return null;
+}
+
+function normalizeTrig(row: any): import("../_shared/nba/types.ts").TriggeringConversation | null {
+  if (!row || !row.handle) return null;
+  return {
+    handle: row.handle,
+    channel: row.channel ?? null,
+    status: row.status,
+    loss_reason: row.loss_reason ?? null,
+    loss_note: row.loss_note ?? null,
+    outcome: row.outcome ?? null,
+    last_activity_at: row.last_activity_at,
   };
 }
 
@@ -222,8 +284,12 @@ serve(async (req) => {
     }
 
 
+    // Resolve triggering conversation deterministically for the chosen template.
+    const trig = await readTriggeringConversation(supabase, mpId as string, selection.primary.template.code, lossDist);
+    const ctxWithTrig: FounderContext = { ...ctx, triggering_conversation: trig };
+
     // Personalize the primary deliverable — safe fallback on failure.
-    const { deliverable, personalized } = await fillDeliverable(selection.primary.template, ctx, state);
+    const { deliverable, personalized } = await fillDeliverable(selection.primary.template, ctxWithTrig, state);
 
     // Log to nba_history as pending (fire and forget errors don't block response).
     const primary = selection.primary.template;
