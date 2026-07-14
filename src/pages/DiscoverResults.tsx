@@ -220,10 +220,19 @@ export default function DiscoverResults() {
     }
   };
 
-  // Handle "This is the one" - set as North Star, save idea, then auto-commit
-  const handleCommit = async (recommendation: Recommendation) => {
+  // Handle "This is the one" — open the Bet confirmation modal so the founder
+  // can confirm/edit the proposed price and delivery format before the
+  // canonical commit_money_path boundary is called.
+  const handleCommit = (recommendation: Recommendation) => {
     if (!user) return;
+    setPendingBet(recommendation);
+  };
 
+  // Confirmed Bet — persist idea, set North Star with structured commercial
+  // evidence, then auto-commit into a 7-day executing venture.
+  const confirmBetCommit = async (values: BetConfirmValues) => {
+    if (!user || !pendingBet) return;
+    const recommendation = pendingBet;
     setCommittingId(recommendation.name);
 
     try {
@@ -261,8 +270,11 @@ export default function DiscoverResults() {
             },
             keyRisk: recommendation.keyRisk,
             firstStep: recommendation.firstStep,
+            proposedPriceUsd: recommendation.proposedPriceUsd ?? null,
+            proposedDeliveryFormat: recommendation.proposedDeliveryFormat ?? null,
           },
           overall_fit_score: recommendation.fitScore,
+          target_customer: recommendation.targetCustomer,
           status: "candidate",
         }]).select("id").single();
 
@@ -270,19 +282,21 @@ export default function DiscoverResults() {
         ideaId = data.id;
       }
 
-      // Step 2: Set this idea as North Star (fires the full cascade:
-      // resets other ideas, links blueprint, creates/reuses venture)
+      // Step 2: Set as North Star — pass founder-confirmed structured
+      // commercial evidence through the canonical commit_money_path boundary.
       try {
         await invokeAuthedFunction("set-north-star-idea", {
-          body: { idea_id: ideaId },
+          body: {
+            idea_id: ideaId,
+            price_cents: values.priceCents,
+            delivery_format: values.deliveryFormat,
+          },
         });
       } catch (nsError) {
         console.error("Failed to set North Star (non-fatal):", nsError);
-        // Don't block the flow — the commit flow will still work
       }
 
-      // Step 3: Auto-commit with 7-day window for first-time onboarding flow
-      // (Skip the Commit page — reduce friction)
+      // Step 3: Auto-commit with 7-day window
       try {
         const { data: ventureData } = await supabase
           .from("ventures")
@@ -295,7 +309,6 @@ export default function DiscoverResults() {
           .maybeSingle();
 
         if (ventureData && (ventureData.venture_state === "inactive" || !ventureData.venture_state)) {
-          // Auto-commit: transition to executing with 7-day window using transitionTo()
           const startDate = new Date();
           const endDate = new Date(startDate);
           endDate.setDate(endDate.getDate() + 7);
@@ -307,30 +320,26 @@ export default function DiscoverResults() {
             success_metric: "Complete my Blueprint and review my 30-day plan",
           };
 
-          // Validate all required fields are present before attempting transition
-          if (!commitmentData.commitment_window_days || !commitmentData.commitment_start_at || !commitmentData.commitment_end_at || !commitmentData.success_metric) {
-            console.error("Missing required commitment fields, falling back to commit page");
-            navigate(`/commit/${ideaId}`);
-            return;
-          }
-
           try {
             const success = await transitionTo(ventureData.id, "executing", commitmentData);
             if (success) {
+              setPendingBet(null);
               navigate(`/blueprint?ventureId=${ventureData.id}&fresh=1`);
               return;
             }
           } catch (transitionError) {
             console.error("Auto-commit failed, falling back to commit page:", transitionError);
+            setPendingBet(null);
             navigate(`/commit/${ideaId}`);
             return;
           }
         }
 
-        // Fallback: if venture doesn't exist or is in unexpected state, use commit page
+        setPendingBet(null);
         navigate(`/commit/${ideaId}`);
       } catch (autoCommitError) {
         console.error("Auto-commit error, falling back to commit page:", autoCommitError);
+        setPendingBet(null);
         navigate(`/commit/${ideaId}`);
       }
     } catch (e: any) {
@@ -344,6 +353,7 @@ export default function DiscoverResults() {
       setCommittingId(null);
     }
   };
+
 
   // Handle "Save for Later"
   const handleSave = async (recommendation: Recommendation) => {
