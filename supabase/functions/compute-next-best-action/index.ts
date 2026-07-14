@@ -284,8 +284,12 @@ serve(async (req) => {
     }
 
 
+    // Resolve triggering conversation deterministically for the chosen template.
+    const trig = await readTriggeringConversation(supabase, mpId as string, selection.primary.template.code, lossDist);
+    const ctxWithTrig: FounderContext = { ...ctx, triggering_conversation: trig };
+
     // Personalize the primary deliverable — safe fallback on failure.
-    const { deliverable, personalized } = await fillDeliverable(selection.primary.template, ctx, state);
+    const { deliverable, personalized } = await fillDeliverable(selection.primary.template, ctxWithTrig, state);
 
     // Log to nba_history as pending (fire and forget errors don't block response).
     const primary = selection.primary.template;
