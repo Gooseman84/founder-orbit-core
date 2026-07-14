@@ -60,19 +60,29 @@ const ARTIFACT_CONTRACT: Record<ArtifactType, string> = {
 };
 
 function offerLines(ctx: FounderContext): string[] {
-  const anyCtx = ctx as unknown as Record<string, unknown>;
-  const title = anyCtx.offer_title as string | undefined;
-  const desc = anyCtx.offer_description as string | undefined;
-  const price = anyCtx.price_cents as number | undefined;
-  const format = anyCtx.delivery_format as string | undefined;
   const lines: string[] = [];
   lines.push(`buyer_segment: ${ctx.buyer_segment ?? "⟨FOUNDER: describe your target buyer⟩"}`);
   lines.push(`business_pattern: ${ctx.business_pattern}`);
   lines.push(`sales_complexity: ${ctx.sales_complexity ?? "unknown"}`);
-  lines.push(`offer_title: ${title ?? "⟨FOUNDER: name of the offer⟩"}`);
-  lines.push(`offer_description: ${desc ?? "⟨FOUNDER: 1-2 sentence description of what the buyer gets⟩"}`);
-  lines.push(`price_cents: ${price ?? "⟨FOUNDER: price⟩"}`);
-  lines.push(`delivery_format: ${format ?? "⟨FOUNDER: how it is delivered⟩"}`);
+  lines.push(`offer_title: ${ctx.offer_title ?? "⟨FOUNDER: name of the offer⟩"}`);
+  lines.push(`offer_description: ${ctx.offer_description ?? "⟨FOUNDER: 1-2 sentence description of what the buyer gets⟩"}`);
+  lines.push(`price_cents: ${ctx.price_cents ?? "⟨FOUNDER: price⟩"}`);
+  lines.push(`delivery_format: ${ctx.delivery_format ?? "⟨FOUNDER: how it is delivered⟩"}`);
+  return lines;
+}
+
+function triggeringLines(ctx: FounderContext): string[] {
+  const t = ctx.triggering_conversation;
+  if (!t) return [];
+  const lines = [
+    `triggering_conversation.handle: ${t.handle}`,
+    `triggering_conversation.channel: ${t.channel ?? "unknown"}`,
+    `triggering_conversation.status: ${t.status}`,
+    `triggering_conversation.last_activity_at: ${t.last_activity_at}`,
+  ];
+  if (t.loss_reason) lines.push(`triggering_conversation.loss_reason: ${t.loss_reason}`);
+  if (t.loss_note) lines.push(`triggering_conversation.loss_note: ${t.loss_note}`);
+  if (t.outcome) lines.push(`triggering_conversation.outcome: ${t.outcome}`);
   return lines;
 }
 
