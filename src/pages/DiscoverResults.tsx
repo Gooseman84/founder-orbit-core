@@ -565,6 +565,13 @@ export default function DiscoverResults() {
           </div>
         )}
       </main>
+      <BetConfirmModal
+        open={pendingBet !== null}
+        recommendation={pendingBet}
+        isSubmitting={committingId !== null}
+        onCancel={() => { if (committingId === null) setPendingBet(null); }}
+        onConfirm={confirmBetCommit}
+      />
     </div>
   );
 }
