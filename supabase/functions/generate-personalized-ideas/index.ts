@@ -276,6 +276,8 @@ Deno.serve(async (req) => {
         fitBreakdown: rec.fitBreakdown,
         keyRisk: rec.keyRisk,
         firstStep: rec.firstStep,
+        proposedPriceUsd: rec.proposedPriceUsd,
+        proposedDeliveryFormat: rec.proposedDeliveryFormat,
       },
       overall_fit_score: rec.fitScore,
       target_customer: rec.targetCustomer,
