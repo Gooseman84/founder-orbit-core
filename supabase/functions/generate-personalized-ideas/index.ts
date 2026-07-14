@@ -67,6 +67,8 @@ interface Recommendation {
   fitBreakdown: FitBreakdown;
   keyRisk: string;
   firstStep: string;
+  proposedPriceUsd: number;
+  proposedDeliveryFormat: string;
 }
 
 interface GenerationResult {
