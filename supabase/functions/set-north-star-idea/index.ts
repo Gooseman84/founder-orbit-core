@@ -56,13 +56,40 @@ serve(async (req) => {
     console.log("set-north-star-idea: authenticated user", userId);
 
     // Parse request body
-    const { idea_id } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { idea_id, price_cents: bodyPriceCents, delivery_format: bodyDeliveryFormat } = body ?? {};
 
     if (!idea_id) {
       return new Response(
         JSON.stringify({ error: "idea_id is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Validate structured commercial inputs (optional but must be well-formed if provided).
+    let priceCents: number | null = null;
+    if (bodyPriceCents !== undefined && bodyPriceCents !== null) {
+      const n = Number(bodyPriceCents);
+      if (!Number.isFinite(n) || n < 0 || n > 100_000_000 || !Number.isInteger(n)) {
+        return new Response(
+          JSON.stringify({ error: "price_cents must be a non-negative integer" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      priceCents = n;
+    }
+    let deliveryFormat: string | null = null;
+    if (typeof bodyDeliveryFormat === "string") {
+      const s = bodyDeliveryFormat.trim();
+      if (s.length > 0) {
+        if (s.length > 240) {
+          return new Response(
+            JSON.stringify({ error: "delivery_format too long" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        deliveryFormat = s;
+      }
     }
 
     console.log("set-north-star-idea: setting north star for idea", idea_id);
