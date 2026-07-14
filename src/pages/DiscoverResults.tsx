@@ -34,6 +34,7 @@ export default function DiscoverResults() {
   const [interviewDate, setInterviewDate] = useState<Date | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [committingId, setCommittingId] = useState<string | null>(null);
+  const [pendingBet, setPendingBet] = useState<Recommendation | null>(null);
   const [error, setError] = useState<string | null>(null);
   
 
