@@ -108,10 +108,10 @@ export function buildEnvelope(
 ): ExecutionEnvelope {
   const base = {
     action_code: tpl.code,
-    allowed_evidence: [...offerLines(ctx), ...evidenceLines(state)],
+    allowed_evidence: [...offerLines(ctx), ...triggeringLines(ctx), ...evidenceLines(state)],
     forbidden_inferences: [...UNIVERSAL_FORBIDDEN],
     missing_evidence_behavior:
-      "When a required specific fact is unknown, insert a concise ⟨FOUNDER: …⟩ marker. Do NOT invent a plausible substitute. Use markers sparingly (max ~4).",
+      "When a required specific fact is unknown, insert a concise ⟨FOUNDER: …⟩ marker. Do NOT invent a plausible substitute. Use markers sparingly (max ~4). When triggering_conversation.handle is present, address that person by their handle instead of a marker.",
   };
 
   switch (tpl.code) {
