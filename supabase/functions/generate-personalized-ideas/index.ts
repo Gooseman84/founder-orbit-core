@@ -429,7 +429,9 @@ Return ONLY valid JSON with this exact structure:
         "marketTiming": number
       },
       "keyRisk": "string",
-      "firstStep": "string"
+      "firstStep": "string",
+      "proposedPriceUsd": number,
+      "proposedDeliveryFormat": "string"
     }
   ],
   "generationNotes": "Any caveats about the recommendations based on low-confidence areas"
