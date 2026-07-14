@@ -13,6 +13,7 @@ import { invokeAuthedFunction } from "@/lib/invokeAuthedFunction";
 import { FunnelStepper } from "@/components/shared/FunnelStepper";
 import { DiscoverResultsLoading } from "@/components/discover/DiscoverResultsLoading";
 import { RecommendationCard } from "@/components/discover/RecommendationCard";
+import { BetConfirmModal, type BetConfirmValues } from "@/components/discover/BetConfirmModal";
 import { RegeneratePanel } from "@/components/discover/RegeneratePanel";
 import { Button } from "@/components/ui/button";
 import type { Recommendation, GenerationResult } from "@/types/recommendation";
