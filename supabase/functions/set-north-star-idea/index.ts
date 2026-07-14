@@ -56,7 +56,8 @@ serve(async (req) => {
     console.log("set-north-star-idea: authenticated user", userId);
 
     // Parse request body
-    const { idea_id } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { idea_id, price_cents: bodyPriceCents, delivery_format: bodyDeliveryFormat } = body ?? {};
 
     if (!idea_id) {
       return new Response(
@@ -65,12 +66,38 @@ serve(async (req) => {
       );
     }
 
+    // Validate structured commercial inputs (optional but must be well-formed if provided).
+    let priceCents: number | null = null;
+    if (bodyPriceCents !== undefined && bodyPriceCents !== null) {
+      const n = Number(bodyPriceCents);
+      if (!Number.isFinite(n) || n < 0 || n > 100_000_000 || !Number.isInteger(n)) {
+        return new Response(
+          JSON.stringify({ error: "price_cents must be a non-negative integer" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      priceCents = n;
+    }
+    let deliveryFormat: string | null = null;
+    if (typeof bodyDeliveryFormat === "string") {
+      const s = bodyDeliveryFormat.trim();
+      if (s.length > 0) {
+        if (s.length > 240) {
+          return new Response(
+            JSON.stringify({ error: "delivery_format too long" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        deliveryFormat = s;
+      }
+    }
+
     console.log("set-north-star-idea: setting north star for idea", idea_id);
 
     // Verify idea exists and belongs to the user, fetch full details
     const { data: idea, error: ideaError } = await supabaseService
       .from("ideas")
-      .select("id, user_id, title, description, target_customer, business_model_type, category")
+      .select("id, user_id, title, description, target_customer, business_model_type, category, source_meta")
       .eq("id", idea_id)
       .eq("user_id", userId)
       .maybeSingle();
@@ -241,15 +268,34 @@ serve(async (req) => {
         if (offer_description) commitLineage.offer_description = "ideas.description";
         if (buyer_segment) commitLineage.buyer_segment = "ideas.target_customer";
         commitLineage.business_pattern = "default:productized_service";
-        // price_cents and delivery_format are not structurally captured upstream today.
+
+        // Structured commercial evidence: prefer explicit founder-confirmed
+        // values from the request body; fall back to the AI-proposed values
+        // stored in ideas.source_meta at Bet-generation time. Never invent.
+        const meta = (idea as any).source_meta ?? {};
+        let finalPriceCents: number | null = priceCents;
+        if (finalPriceCents !== null) {
+          commitLineage.price_cents = "founder_confirmed";
+        } else if (typeof meta.proposedPriceUsd === "number" && Number.isFinite(meta.proposedPriceUsd) && meta.proposedPriceUsd >= 0) {
+          finalPriceCents = Math.round(meta.proposedPriceUsd * 100);
+          commitLineage.price_cents = "generation_proposed";
+        }
+        let finalDeliveryFormat: string | null = deliveryFormat;
+        if (finalDeliveryFormat !== null) {
+          commitLineage.delivery_format = "founder_confirmed";
+        } else if (typeof meta.proposedDeliveryFormat === "string" && meta.proposedDeliveryFormat.trim().length > 0) {
+          finalDeliveryFormat = meta.proposedDeliveryFormat.trim().slice(0, 240);
+          commitLineage.delivery_format = "generation_proposed";
+        }
+
         const { data: mpRow, error: commitErr } = await supabaseUser.rpc("commit_money_path", {
           p_venture_id: ventureId,
           p_business_pattern: "productized_service",
           p_offer_title: offer_title,
           p_offer_description: offer_description,
           p_buyer_segment: buyer_segment,
-          p_price_cents: null,
-          p_delivery_format: null,
+          p_price_cents: finalPriceCents,
+          p_delivery_format: finalDeliveryFormat,
         });
         if (commitErr) {
           console.error("set-north-star-idea: commit_money_path failed", commitErr);

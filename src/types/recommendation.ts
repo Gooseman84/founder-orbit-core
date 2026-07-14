@@ -19,6 +19,9 @@ export interface Recommendation {
   fitBreakdown: FitBreakdown;
   keyRisk: string;
   firstStep: string;
+  // Proposed structured commercial evidence — editable at Bet, persisted at commit.
+  proposedPriceUsd?: number | null;
+  proposedDeliveryFormat?: string | null;
 }
 
 export interface GenerationResult {

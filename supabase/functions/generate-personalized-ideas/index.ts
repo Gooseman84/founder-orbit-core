@@ -67,6 +67,8 @@ interface Recommendation {
   fitBreakdown: FitBreakdown;
   keyRisk: string;
   firstStep: string;
+  proposedPriceUsd: number;
+  proposedDeliveryFormat: string;
 }
 
 interface GenerationResult {
@@ -274,6 +276,8 @@ Deno.serve(async (req) => {
         fitBreakdown: rec.fitBreakdown,
         keyRisk: rec.keyRisk,
         firstStep: rec.firstStep,
+        proposedPriceUsd: rec.proposedPriceUsd,
+        proposedDeliveryFormat: rec.proposedDeliveryFormat,
       },
       overall_fit_score: rec.fitScore,
       target_customer: rec.targetCustomer,
@@ -381,6 +385,8 @@ For EACH idea, provide:
    }
 10. keyRisk: The #1 thing that could kill this idea (be honest, not cheerful)
 11. firstStep: The single most important action to validate this idea in the next 7 days
+12. proposedPriceUsd: A concrete number (integer USD) representing the price ONE buyer pays in the primary revenue transaction. Pick a defensible anchor for this specific offer + buyer segment. Not a range, not "varies" — one number. Founder can edit before commit.
+13. proposedDeliveryFormat: A concrete short phrase describing how the offer is delivered (e.g., "Structured audit + 60-min findings review", "Self-serve template kit", "Weekly 1:1 advisory calls", "4-week cohort workshop"). Must clearly imply whether delivery is self-serve, light-touch, or high-touch. Founder can edit before commit.
 
 RANKING: Order by fitScore descending.
 
@@ -423,7 +429,9 @@ Return ONLY valid JSON with this exact structure:
         "marketTiming": number
       },
       "keyRisk": "string",
-      "firstStep": "string"
+      "firstStep": "string",
+      "proposedPriceUsd": number,
+      "proposedDeliveryFormat": "string"
     }
   ],
   "generationNotes": "Any caveats about the recommendations based on low-confidence areas"
