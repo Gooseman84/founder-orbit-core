@@ -97,7 +97,7 @@ serve(async (req) => {
     // Verify idea exists and belongs to the user, fetch full details
     const { data: idea, error: ideaError } = await supabaseService
       .from("ideas")
-      .select("id, user_id, title, description, target_customer, business_model_type, category")
+      .select("id, user_id, title, description, target_customer, business_model_type, category, source_meta")
       .eq("id", idea_id)
       .eq("user_id", userId)
       .maybeSingle();
