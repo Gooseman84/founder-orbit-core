@@ -246,7 +246,12 @@ serve(async (req) => {
     if (!ventureId) return json({ error: "ventureId required" }, 400);
 
     // Verify ownership + ensure money path exists.
-    const { data: mpId, error: rpcErr } = await supabase.rpc("ensure_money_path", { p_venture_id: ventureId });
+    // ensure_money_path is SECURITY DEFINER and derives the owner from auth.uid(),
+    // so it must be called with the caller's JWT, not the service role key.
+    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: mpId, error: rpcErr } = await userClient.rpc("ensure_money_path", { p_venture_id: ventureId });
     if (rpcErr || !mpId) return json({ error: "money path unavailable" }, 404);
 
     // Read state + context + templates + history + loss dist + signals in parallel.
