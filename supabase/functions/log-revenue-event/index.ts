@@ -22,7 +22,11 @@ serve(async (req) => {
     if (!ventureId) return j({ error: "ventureId required" }, 400);
     if (!Number.isInteger(amountCents) || amountCents <= 0) return j({ error: "amountCents must be positive integer" }, 400);
 
-    const { data: mpId, error: mpErr } = await supabase.rpc("ensure_money_path", { p_venture_id: ventureId });
+    // SECURITY DEFINER RPC derives owner from auth.uid() — needs the caller's JWT.
+    const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: mpId, error: mpErr } = await userClient.rpc("ensure_money_path", { p_venture_id: ventureId });
     if (mpErr || !mpId) return j({ error: "money path unavailable" }, 404);
 
     const insert = await supabase.from("revenue_events").insert({

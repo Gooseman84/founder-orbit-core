@@ -26,7 +26,11 @@ serve(async (req) => {
     if (!ventureId) return j({ error: "ventureId required" }, 400);
     if (status && !VALID.includes(status)) return j({ error: "invalid status" }, 400);
 
-    const { data: mpId, error: mpErr } = await supabase.rpc("ensure_money_path", { p_venture_id: ventureId });
+    // SECURITY DEFINER RPC derives owner from auth.uid() — needs the caller's JWT.
+    const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: mpId, error: mpErr } = await userClient.rpc("ensure_money_path", { p_venture_id: ventureId });
     if (mpErr || !mpId) return j({ error: "money path unavailable" }, 404);
 
     const row: Record<string, unknown> = {
